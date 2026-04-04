@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔗 Affiliate Hub
 
-## Getting Started
+Hub de produtos com links de afiliados para múltiplas plataformas. Sistema completo com painel admin para gerenciar produtos e cupons de desconto.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16.2-black?style=flat-square&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?style=flat-square&logo=prisma)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?style=flat-square&logo=tailwind-css)
 
+## ✨ Features
+
+- 🎨 Interface moderna e responsiva com animações suaves
+- 🛍️ Grid de produtos com efeito masonry
+- 🔗 Suporte para múltiplas plataformas (Amazon, Mercado Livre, Shopee, AliExpress, TikTok)
+- 🎫 Sistema de cupons de desconto
+- 👨‍💼 Painel admin completo
+- 🤖 Scraper automático de dados de produtos
+- 💾 Banco de dados SQLite com Prisma ORM
+- 🎭 Modal interativo para seleção de plataforma
+
+## 🚀 Começando
+
+### Pré-requisitos
+
+- Node.js 18+ 
+- npm ou yarn
+
+### Instalação
+
+1. Clone o repositório:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/seu-usuario/affiliate-hub.git
+cd affiliate-hub
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instale as dependências:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Configure as variáveis de ambiente:
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Configure o banco de dados:
+```bash
+npm run db:push
+```
 
-## Learn More
+5. Inicie o servidor de desenvolvimento:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Acesse no navegador:
+- Site: http://localhost:3000
+- Admin: http://localhost:3000/admin
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Estrutura do Projeto
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+affiliate-hub/
+├── prisma/
+│   └── schema.prisma          # Schema do banco de dados
+├── src/
+│   ├── app/
+│   │   ├── admin/             # Painel administrativo
+│   │   ├── api/               # API Routes
+│   │   │   ├── products/      # CRUD de produtos
+│   │   │   ├── coupons/       # CRUD de cupons
+│   │   │   └── scrape/        # Scraper de produtos
+│   │   └── page.tsx           # Página principal
+│   ├── components/
+│   │   ├── admin/             # Componentes do admin
+│   │   ├── HeroSection.tsx
+│   │   ├── ProductCard.tsx
+│   │   ├── ProductGrid.tsx
+│   │   └── PlatformModal.tsx
+│   └── lib/
+│       ├── prisma.ts          # Cliente Prisma
+│       └── scraper.ts         # Lógica de scraping
+└── package.json
+```
 
-## Deploy on Vercel
+## 🎯 Funcionalidades do Admin
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Gerenciar Produtos
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- ✅ Adicionar produtos automaticamente via URL
+- ✅ Buscar dados (nome, imagem, preço) automaticamente
+- ✅ Adicionar links de múltiplas plataformas
+- ✅ Editar e deletar produtos
+- ✅ Categorização de produtos
+
+### Gerenciar Cupons
+
+- ✅ Criar cupons de desconto
+- ✅ Vincular cupons a produtos específicos
+- ✅ Definir data de expiração
+- ✅ Ativar/desativar cupons
+- ✅ Copiar código do cupom
+
+## 🛠️ Scripts Disponíveis
+
+```bash
+npm run dev          # Inicia servidor de desenvolvimento
+npm run build        # Build para produção
+npm run start        # Inicia servidor de produção
+npm run lint         # Executa linter
+npm run db:push      # Sincroniza schema com banco de dados
+npm run db:studio    # Abre Prisma Studio
+```
+
+## 🎨 Tecnologias
+
+- **Framework:** Next.js 16 (App Router)
+- **Linguagem:** TypeScript
+- **Estilização:** Tailwind CSS 4
+- **Animações:** Framer Motion
+- **Banco de Dados:** SQLite + Prisma ORM
+- **Ícones:** Phosphor Icons
+- **Scraping:** Cheerio
+
+## 📝 Como Adicionar Produtos
+
+1. Acesse o painel admin em `/admin`
+2. Clique em "Adicionar Produto"
+3. Cole o link do produto de qualquer plataforma suportada
+4. Clique em "Buscar" para puxar os dados automaticamente
+5. Adicione links de outras plataformas manualmente
+6. Salve o produto
+
+## 🌐 Plataformas Suportadas
+
+- Amazon
+- Mercado Livre
+- Shopee
+- AliExpress
+- TikTok Shop
+
+## 📦 Deploy
+
+### Vercel (Recomendado)
+
+1. Faça push do código para o GitHub
+2. Importe o projeto na Vercel
+3. Configure a variável de ambiente `DATABASE_URL`
+4. Deploy automático!
+
+### Outras Plataformas
+
+O projeto pode ser deployado em qualquer plataforma que suporte Next.js:
+- Netlify
+- Railway
+- Render
+- AWS Amplify
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT.
+
+## 👨‍💻 Autor
+
+Desenvolvido com ❤️ por [Seu Nome]
+
+---
+
+⭐ Se este projeto foi útil, considere dar uma estrela!

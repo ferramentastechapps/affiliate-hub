@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  description String?
+  imageUrl    String
+  price       Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  links       Link?
+  coupons     Coupon[]
+}
+
+model Link {
+  id           String  @id @default(cuid())
+  productId    String  @unique
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  amazon       String?
+  aliexpress   String?
+  shopee       String?
+  mercadoLivre String?
+  tiktok       String?
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String
+  description String
+  discount    String
+  platform    String
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
