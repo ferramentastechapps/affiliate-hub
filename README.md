@@ -122,6 +122,31 @@ npm run db:studio    # Abre Prisma Studio
 - **Ícones:** Phosphor Icons
 - **Scraping:** Cheerio
 
+## 🤖 Integração com Robô de Promoções
+
+O Affiliate Hub possui uma API completa para integração com robôs que buscam promoções automaticamente.
+
+### Configuração Rápida
+
+1. Configure a API key no `.env`:
+```env
+API_SECRET_KEY="sua-chave-super-secreta-123"
+```
+
+2. Use os endpoints webhook para enviar dados:
+```bash
+# Adicionar produto
+curl -X POST https://seu-dominio.com/api/webhook/products \
+  -H "x-api-key: sua-chave" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Produto","category":"Gaming","imageUrl":"url"}'
+```
+
+3. Veja exemplos completos em:
+- `WEBHOOK.md` - Documentação completa da API
+- `examples/robot-integration.py` - Exemplo em Python
+- `examples/robot-integration.js` - Exemplo em Node.js
+
 ## 📝 Como Adicionar Produtos
 
 1. Acesse o painel admin em `/admin`
