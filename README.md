@@ -126,7 +126,33 @@ npm run db:studio    # Abre Prisma Studio
 
 O Affiliate Hub possui uma API completa para integração com robôs que buscam promoções automaticamente.
 
-### Configuração Rápida
+### Robô Completo Incluído! 🎉
+
+Incluímos um robô Python completo que:
+- 🔍 Busca promoções automaticamente
+- 📦 Adiciona produtos no site
+- 🎫 Adiciona cupons de desconto
+- 📱 Envia notificações para o Telegram
+- ⏰ Execução agendada
+
+**Guia Rápido:**
+```bash
+cd bot
+pip install -r requirements.txt
+cp .env.example .env
+# Configure o .env com suas credenciais
+python main.py --once  # Testar
+python main.py         # Rodar continuamente
+```
+
+Veja a documentação completa em:
+- `bot/README.md` - Documentação completa
+- `bot/QUICKSTART.md` - Guia rápido de 5 minutos
+- `bot/exemplo_scraper_real.py` - Exemplo de scraper real
+
+### API Webhook
+
+Configuração Rápida:
 
 1. Configure a API key no `.env`:
 ```env
