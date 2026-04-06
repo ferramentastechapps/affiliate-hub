@@ -22,8 +22,8 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     return {
       name: name || 'Produto sem nome',
       imageUrl: imageUrl || 'https://via.placeholder.com/800x1000',
-      price,
-      description
+      price: price ?? undefined,
+      description: description ?? undefined
     };
   } catch (error) {
     console.error('Erro ao buscar produto:', error);
