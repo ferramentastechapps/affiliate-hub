@@ -127,9 +127,20 @@ class TelegramNotifier:
     
     def enviar_sync(self, tipo: str, dados: dict):
         """Wrapper síncrono para enviar mensagens"""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        # python-telegram-bot v20 envia sem problemas assim:
         if tipo == 'produto':
-            asyncio.run(self.enviar_produto(dados))
+            loop.run_until_complete(self.enviar_produto(dados))
         elif tipo == 'cupom':
-            asyncio.run(self.enviar_cupom(dados))
+            loop.run_until_complete(self.enviar_cupom(dados))
         elif tipo == 'resumo':
-            asyncio.run(self.enviar_resumo(dados['produtos'], dados['cupons']))
+            loop.run_until_complete(self.enviar_resumo(dados['produtos'], dados['cupons']))
