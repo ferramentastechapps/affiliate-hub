@@ -13,56 +13,93 @@ class PromotionScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
     
-    def buscar_promocoes_pelando(self, limite: int = 20) -> List[Dict]:
-        """Busca as promoções mais quentes do Pelando"""
+    def buscar_promocoes_pelando(self, limite: int = 15) -> List[Dict]:
+        """Busca as promoções mais recentes do Promobit (ex Pelando)"""
         produtos = []
         try:
-            print('🔥 Buscando promoções quentes no Pelando...')
-            response = requests.get('https://www.pelando.com.br/hot', headers=self.headers, timeout=15)
+            print('🔥 Buscando promoções reais no Promobit...')
+            response = requests.get('https://www.promobit.com.br/', headers=self.headers, timeout=15)
             if response.status_code != 200:
-                print(f'❌ Erro HTTP: {response.status_code}')
+                print(f'❌ Erro HTTP Promobit: {response.status_code}')
                 return produtos
             
+            import json
             soup = BeautifulSoup(response.content, 'html.parser')
-            ofertas = soup.find_all('article', class_='thread', limit=limite)
+            script = soup.find('script', id='__NEXT_DATA__')
+            if not script:
+                return produtos
+                
+            data = json.loads(script.string)
+            offers = data.get('props', {}).get('pageProps', {}).get('serverOffers', {}).get('offers', [])
             
-            for oferta in ofertas:
+            for offer in offers[:limite]:
                 try:
-                    produto = self._extrair_dados_oferta(oferta)
-                    if produto:
-                        produtos.append(produto)
-                        print(f'  ✅ {produto["name"][:50]}...')
+                    nome = offer.get('offerTitle', 'Sem título')
+                    link_oferta = f"https://www.promobit.com.br/{offer.get('offerSlug', '')}"
+                    preco = float(offer.get('offerPrice', 0))
+                    
+                    foto = offer.get('offerPhoto')
+                    imagem_url = f"https://i.promobit.com.br{foto}" if foto else 'https://via.placeholder.com/800x1000'
+                    
+                    loja = offer.get('storeName', 'Desconhecido')
+                    links = self._criar_links(link_oferta, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    produtos.append({
+                        'name': nome,
+                        'category': categoria,
+                        'description': f"Oferta na loja {loja} no Promobit",
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'links': links
+                    })
+                    print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
                     print(f'  ⚠️  Erro ao processar oferta: {e}')
-                    continue
+                    
         except Exception as e:
-            print(f'❌ Erro ao buscar no Pelando: {e}')
+            print(f'❌ Erro ao buscar no Promobit: {e}')
         return produtos
     
     def buscar_cupons_pelando(self, limite: int = 10) -> List[Dict]:
-        """Busca cupons no Pelando"""
+        """Busca cupons reais no Promobit"""
         cupons = []
         try:
-            print('🎫 Buscando cupons no Pelando...')
-            response = requests.get('https://www.pelando.com.br/cupons', headers=self.headers, timeout=15)
+            print('🎫 Buscando cupons no Promobit...')
+            response = requests.get('https://www.promobit.com.br/cupons', headers=self.headers, timeout=15)
             if response.status_code != 200:
-                print(f'❌ Erro HTTP: {response.status_code}')
+                print(f'❌ Erro HTTP Promobit Cupons: {response.status_code}')
                 return cupons
-            
+                
+            import json
             soup = BeautifulSoup(response.content, 'html.parser')
-            ofertas = soup.find_all('article', class_='thread', limit=limite)
+            script = soup.find('script', id='__NEXT_DATA__')
+            if not script:
+                return cupons
+                
+            data = json.loads(script.string)
+            lista_cupons = data.get('props', {}).get('pageProps', {}).get('serverCoupons', {}).get('coupons', [])
             
-            for oferta in ofertas:
+            for c in lista_cupons[:limite]:
                 try:
-                    cupom = self._extrair_dados_cupom(oferta)
-                    if cupom:
-                        cupons.append(cupom)
-                        print(f'  ✅ Cupom {cupom["code"]}')
+                    codigo = c.get('couponCode')
+                    if not codigo: continue
+                    
+                    loja = c.get('storeName', 'Vários')
+                    desc = c.get('couponTitle') or c.get('couponInstructions') or 'Cupom de desconto'
+                    desconto = c.get('couponDiscountShort', 'Oferta')
+                    
+                    cupons.append({
+                        'code': codigo.upper(),
+                        'description': desc[:190],
+                        'discount': desconto,
+                        'platform': loja
+                    })
+                    print(f'  ✅ Cupom {codigo}')
                 except Exception as e:
                     print(f'  ⚠️  Erro ao processar cupom: {e}')
-                    continue
         except Exception as e:
-            print(f'❌ Erro ao buscar cupons no Pelando: {e}')
+            print(f'❌ Erro ao buscar cupons: {e}')
         return cupons
 
     def buscar_todas_promocoes(self) -> Dict[str, List]:

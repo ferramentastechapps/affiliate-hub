@@ -30,7 +30,7 @@ Write-Host "Iniciando Deploy na VPS (root@212.85.10.239)..." -ForegroundColor Cy
 Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 
 # O comando SSH abaixo entra no servidor, atualiza o codigo com git pull, instala depedencias do bot e reinicia o robo em background
-$sshCommand = "cd ~/affiliate-hub && git reset --hard && git pull origin $Branch && cd bot && pip3 install -r requirements.txt --break-system-packages && pkill -9 -f main.py; screen -dmS promo-bot python3 main.py; echo 'Robo reiniciado com Sucesso!'"
+$sshCommand = "cd ~/affiliate-hub && git reset --hard && git pull origin $Branch && cd bot && sed -i 's|http://localhost:3000|https://promoflash.usejotashop.com.br|g' ~/affiliate-hub/bot/.env && pip3 install -r requirements.txt --break-system-packages && pkill -9 -f main.py; screen -dmS promo-bot python3 main.py; echo 'Robo reiniciado com Sucesso!'"
 
 ssh -t root@212.85.10.239 $sshCommand
 
