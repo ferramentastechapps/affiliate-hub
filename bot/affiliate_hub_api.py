@@ -1,7 +1,9 @@
 import requests
+import urllib3
 from typing import List, Dict, Optional
 from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class AffiliateHubAPI:
     """Cliente para API do Affiliate Hub"""
@@ -20,7 +22,8 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/products',
                 headers=self.headers,
                 json=produto,
-                timeout=10
+                timeout=10,
+                verify=False
             )
             response.raise_for_status()
             return response.json()
@@ -35,7 +38,8 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/products',
                 headers=self.headers,
                 json={'products': produtos},
-                timeout=30
+                timeout=30,
+                verify=False
             )
             response.raise_for_status()
             return response.json()
@@ -50,7 +54,8 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/coupons',
                 headers=self.headers,
                 json=cupom,
-                timeout=10
+                timeout=10,
+                verify=False
             )
             response.raise_for_status()
             return response.json()
@@ -65,7 +70,8 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/coupons',
                 headers=self.headers,
                 json={'coupons': cupons},
-                timeout=30
+                timeout=30,
+                verify=False
             )
             response.raise_for_status()
             return response.json()
