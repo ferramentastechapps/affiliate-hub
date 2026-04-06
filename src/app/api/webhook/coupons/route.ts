@@ -97,7 +97,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       success: true,
       created: results.length,
-      errors: errors.length,
+      errorsCount: errors.length,
       results,
       errors
     }, { status: 201 });
