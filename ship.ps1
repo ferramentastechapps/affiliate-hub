@@ -29,9 +29,9 @@ Write-Host "Atualizacao enviada ao Github com sucesso!" -ForegroundColor Green
 Write-Host "Iniciando Deploy na VPS (root@212.85.10.239)..." -ForegroundColor Cyan
 Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 
-# O comando SSH abaixo entra no servidor, atualiza o codigo com git pull, instala depedencias do bot e reinicia o robo em background
-$sshCommand = "cd ~/affiliate-hub && git reset --hard && git pull origin $Branch && cd bot && sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affiliate-hub/bot/.env && pip3 install -r requirements.txt --break-system-packages && pkill -9 -f main.py; nohup python3 main.py > bot.log 2>&1 & echo 'Robo reiniciado com Sucesso!'"
+# O comando SSH abaixo entra no servidor, atualiza o codigo com git pull, faz o build do site e reinicia o robo em background
+$sshCommand = "cd ~/affiliate-hub && git reset --hard && git pull origin $Branch && npm ci && npm run build && cd bot && sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affiliate-hub/bot/.env && pip3 install -r requirements.txt --break-system-packages && pkill -9 -f main.py; nohup python3 main.py > bot.log 2>&1 & pm2 restart all; echo 'Deploy completo! Robo e Site reiniciados com Sucesso!'"
 
 ssh -t root@212.85.10.239 $sshCommand
 
-Write-Host "Deploy na VPS finalizado e Robo rodando em Background!" -ForegroundColor Green
+Write-Host "Deploy na VPS finalizado e sistemas rodando!" -ForegroundColor Green

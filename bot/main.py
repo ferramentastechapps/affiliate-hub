@@ -56,13 +56,15 @@ class PromotionBot:
                 
                 if resultado and resultado.get('success'):
                     print(f'✅ {resultado["created"]} produtos adicionados no site')
+                else:
+                    print('⚠️ Falha ao adicionar produtos no site, mas continuaremos com o envio para Telegram')
                     
-                    # 4. Enviar para Telegram
-                    print(f'\n📱 Enviando produtos para Telegram...')
-                    for produto in produtos_novos:
-                        self.telegram.enviar_sync('produto', produto)
-                        self.produtos_enviados.add(produto['name'])
-                        time.sleep(1)  # Evitar rate limit
+                # 4. Enviar para Telegram
+                print(f'\n📱 Enviando produtos para Telegram...')
+                for produto in produtos_novos:
+                    self.telegram.enviar_sync('produto', produto)
+                    self.produtos_enviados.add(produto['name'])
+                    time.sleep(1)  # Evitar rate limit
             
             # 5. Adicionar cupons no site
             if cupons_novos:
@@ -71,13 +73,15 @@ class PromotionBot:
                 
                 if resultado and resultado.get('success'):
                     print(f'✅ {resultado["created"]} cupons adicionados no site')
+                else:
+                    print('⚠️ Falha ao adicionar cupons no site, mas continuaremos com o envio para Telegram')
                     
-                    # 6. Enviar para Telegram
-                    print(f'\n📱 Enviando cupons para Telegram...')
-                    for cupom in cupons_novos:
-                        self.telegram.enviar_sync('cupom', cupom)
-                        self.cupons_enviados.add(cupom['code'])
-                        time.sleep(1)
+                # 6. Enviar para Telegram
+                print(f'\n📱 Enviando cupons para Telegram...')
+                for cupom in cupons_novos:
+                    self.telegram.enviar_sync('cupom', cupom)
+                    self.cupons_enviados.add(cupom['code'])
+                    time.sleep(1)
             
             # 7. Enviar resumo
             if produtos_novos or cupons_novos:
