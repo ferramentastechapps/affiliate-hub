@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Ignorar rota de login e rotas não-admin
   if (request.nextUrl.pathname.startsWith('/admin/login') || !request.nextUrl.pathname.startsWith('/admin')) {
     return NextResponse.next()
