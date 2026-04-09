@@ -7,17 +7,33 @@ export type ScrapedProduct = {
 
 export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct> {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const html = await response.text();
     
     // Detectar plataforma
     const platform = detectPlatform(url);
+    
+    console.log('Platform detected:', platform);
+    console.log('HTML length:', html.length);
     
     // Extrair dados básicos usando regex simples
     const name = extractName(html, platform);
     const imageUrl = extractImage(html, platform);
     const price = extractPrice(html, platform);
     const description = extractDescription(html, platform);
+    
+    console.log('Extracted data:', { name, imageUrl, price, description });
     
     return {
       name: name || 'Produto sem nome',

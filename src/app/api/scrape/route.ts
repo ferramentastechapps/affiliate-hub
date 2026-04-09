@@ -9,12 +9,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'URL é obrigatória' }, { status: 400 });
     }
     
+    console.log('Scraping URL:', url);
+    
     const productData = await scrapeProductFromUrl(url);
+    
+    console.log('Product data scraped:', productData);
     
     return NextResponse.json(productData);
   } catch (error) {
+    console.error('Scrape API error:', error);
     return NextResponse.json(
-      { error: 'Erro ao buscar dados do produto' }, 
+      { error: error instanceof Error ? error.message : 'Erro ao buscar dados do produto' }, 
       { status: 500 }
     );
   }
