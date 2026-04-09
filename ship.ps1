@@ -30,7 +30,32 @@ Write-Host "Iniciando Deploy na VPS (root@212.85.10.239)..." -ForegroundColor Cy
 Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 
 # O comando SSH abaixo entra no servidor, atualiza o codigo com git pull, faz o build do site e reinicia o robo em background
-$sshCommand = "cd ~/affiliate-hub && git reset --hard && git pull origin $Branch && npm ci && npm run build && cd bot && sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affiliate-hub/bot/.env && pip3 install -r requirements.txt --break-system-packages && pkill -9 -f main.py; nohup python3 main.py > bot.log 2>&1 & pm2 restart all; echo 'Deploy completo! Robo e Site reiniciados com Sucesso!'"
+$sshCommand = @"
+cd ~/affiliate-hub && \
+echo '🔄 Atualizando código...' && \
+git reset --hard && \
+git pull origin $Branch && \
+echo '📦 Instalando dependências...' && \
+npm ci && \
+echo '🏗️  Fazendo build do Next.js...' && \
+rm -rf .next && \
+npm run build && \
+echo '🤖 Configurando bot...' && \
+cd bot && \
+sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affiliate-hub/bot/.env && \
+pip3 install -r requirements.txt --break-system-packages && \
+echo '🔄 Reiniciando serviços...' && \
+pkill -9 -f main.py && \
+nohup python3 main.py > bot.log 2>&1 & \
+cd ~/affiliate-hub && \
+pm2 delete nextjs 2>/dev/null || true && \
+pm2 start npm --name nextjs -- start -- -p 3005 && \
+pm2 save && \
+echo '✅ Deploy completo!' && \
+echo '📊 Status dos serviços:' && \
+pm2 status && \
+echo '🌐 Next.js rodando em http://127.0.0.1:3005'
+"@
 
 ssh -t root@212.85.10.239 $sshCommand
 
