@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Optimize font loading
-  optimizeFonts: true,
-  
   // Add logging for debugging
   logging: {
     fetches: {
@@ -11,12 +8,8 @@ const nextConfig: NextConfig = {
     },
   },
   
-  // Ensure proper static file handling
-  experimental: {
-    turbo: {
-      // Add turbopack config if needed
-    },
-  },
+  // Set correct workspace root
+  outputFileTracingRoot: require('path').join(__dirname),
 };
 
 export default nextConfig;
