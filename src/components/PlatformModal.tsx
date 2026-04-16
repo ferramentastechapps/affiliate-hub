@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X, ArrowRight, ShieldCheck, Tag } from "@phosphor-icons/react";
 
 export type AffiliateLinks = {
@@ -34,32 +34,47 @@ function trackAffiliateClick(platform: string, productName: string, url: string)
   }
 }
 
-// Helper to deduce a simulated discount for the layout based on string length/id (matches DailyDeals logic)
+// Helper to deduce a simulated discount
 function getSimulatedDiscount(id: string): number {
   if (!id) return 20;
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return 15 + (Math.abs(hash) % 45); // between 15% and 60%
+  return 15 + (Math.abs(hash) % 45);
 }
 
 export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) {
-  // Prevent body scroll when modal is open
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+
+  // Carrega produtos relacionados ao abrir a modal
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && product) {
       document.body.style.overflow = "hidden";
+      
+      fetch('/api/products')
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Remove o produto atual e seleciona até 4
+                const filtered = data.filter((p: any) => p.id !== product.id).slice(0, 4);
+                setRelatedProducts(filtered);
+            }
+        })
+        .catch(console.error);
+
     } else {
       document.body.style.overflow = "unset";
+      setRelatedProducts([]); // Clear on close
     }
+
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [isOpen, product]);
 
   if (!product) return null;
 
-  // Deduce the first available link and its platform name
   let targetUrl = "";
   let platformName = "";
   
@@ -69,7 +84,6 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
   else if (product.links?.aliexpress) { targetUrl = product.links.aliexpress; platformName = "AliExpress"; }
   else if (product.links?.tiktok) { targetUrl = product.links.tiktok; platformName = "TikTok"; }
   else {
-    // Falha ou não tem links, pegar qualquer uma primeira
     const values = Object.entries(product.links || {});
     const firstValid = values.find(([k, v]) => typeof v === 'string' && v.length > 0);
     if (firstValid) {
@@ -82,6 +96,24 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
     if (!targetUrl) return;
     trackAffiliateClick(platformName, product.name, targetUrl);
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  function handleOpenRelated(relatedItem: any) {
+    if(!relatedItem?.links) return;
+    
+    let target = "";
+    if (relatedItem.links.amazon) target = relatedItem.links.amazon;
+    else if (relatedItem.links.mercadoLivre) target = relatedItem.links.mercadoLivre;
+    else if (relatedItem.links.shopee) target = relatedItem.links.shopee;
+    else if (relatedItem.links.aliexpress) target = relatedItem.links.aliexpress;
+    else {
+      const v = Object.values(relatedItem.links).find(l => typeof l === 'string' && l.length > 0);
+      target = v as string;
+    }
+
+    if(target) {
+        window.open(target, '_blank', 'noopener,noreferrer');
+    }
   }
 
   const discount = getSimulatedDiscount(product.id || 'abc');
@@ -97,13 +129,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 min-h-screen"
         >
-          {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={onClose}
           />
 
-          {/* Modal Container */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ 
@@ -121,11 +151,9 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
               <X size={20} weight="bold" />
             </button>
             
-            <div className="overflow-y-auto hidden-scrollbar flex-1">
+            <div className="overflow-y-auto hidden-scrollbar flex-1 pb-4">
               
-              {/* Product Image Stage */}
               <div className="relative w-full aspect-[4/3] bg-zinc-100 flex items-center justify-center p-8">
-                {/* Badge Desconto */}
                 {price > 0 && (
                   <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
                     <Tag size={20} weight="fill" />
@@ -140,8 +168,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                 />
               </div>
 
-              {/* Product Information Form */}
-              <div className="p-8">
+              <div className="p-8 pb-4">
                 <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
                 <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-6 leading-snug">
                   {product.name}
@@ -167,7 +194,6 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   </div>
                 )}
 
-                {/* Call to Action Primary Button */}
                 <button
                   onClick={handlePlatformClick}
                   className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-lg py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)]"
@@ -176,13 +202,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
-                {/* Trust Elements */}
                 <div className="mt-5 flex items-center justify-center gap-2 text-zinc-400 text-sm font-medium">
                   <ShieldCheck size={18} weight="duotone" className="text-emerald-400" />
                   Loja Segura Verificada
                 </div>
 
-                {/* WhatsApp Group Banner */}
                 <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-2xl p-5 gap-3 flex flex-col items-center text-center shadow-[0_0_40px_rgba(37,211,102,0.1)]">
                   <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#25D366]/20 blur-3xl rounded-full" />
                   <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#25D366]/10 blur-3xl rounded-full" />
@@ -209,11 +233,42 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   </div>
                 </div>
 
-                {/* Legal Text as Requested */}
                 <p className="mt-8 text-[11px] text-zinc-600 leading-tight text-center max-w-sm mx-auto">
                   *Preço e disponibilidade sujeito a alteração a qualquer momento dependendo da loja parceira.
                 </p>
               </div>
+
+              {/* Related Offers Section Inside Modal */}
+              {relatedProducts.length > 0 && (
+                <div className="border-t border-white/5 mt-4 pt-8 px-8 bg-black/20">
+                  <h4 className="text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {relatedProducts.map((relItem) => (
+                       <button 
+                         key={relItem.id}
+                         onClick={() => handleOpenRelated(relItem)}
+                         className="group bg-zinc-900 border border-white/5 hover:border-accent/30 rounded-xl overflow-hidden flex flex-col text-left transition-all hover:scale-[1.02]"
+                       >
+                         <div className="w-full aspect-square bg-zinc-100 flex items-center justify-center p-2">
+                           <img 
+                              src={relItem.imageUrl} 
+                              alt={relItem.name} 
+                              className="w-full h-full object-contain mix-blend-multiply"
+                           />
+                         </div>
+                         <div className="p-3 bg-zinc-900 border-t border-white/5">
+                            <h5 className="font-semibold text-white text-xs line-clamp-2 leading-tight group-hover:text-accent transition-colors">
+                              {relItem.name}
+                            </h5>
+                            <span className="text-accent text-sm font-bold block mt-1">
+                               {relItem.price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(relItem.price) : 'Ver Promoção'}
+                            </span>
+                         </div>
+                       </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>
