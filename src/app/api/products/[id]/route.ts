@@ -10,14 +10,34 @@ export async function PUT(
     const { id } = await params;
     const { name, category, description, imageUrl, price, links } = body;
     
+    // Validação de campos obrigatórios
+    if (!name || !category || !imageUrl) {
+      return NextResponse.json(
+        { error: 'Campos obrigatórios: name, category, imageUrl' },
+        { status: 400 }
+      );
+    }
+    
+    // Verificar se produto existe
+    const existingProduct = await prisma.product.findUnique({
+      where: { id }
+    });
+    
+    if (!existingProduct) {
+      return NextResponse.json(
+        { error: 'Produto não encontrado' },
+        { status: 404 }
+      );
+    }
+    
     const product = await prisma.product.update({
-      where: { id: id },
+      where: { id },
       data: {
         name,
         category,
         description,
         imageUrl,
-        price,
+        price: price ? parseFloat(price) : null,
         links: links ? {
           upsert: {
             create: links,
@@ -30,9 +50,17 @@ export async function PUT(
       }
     });
     
+    console.log('✅ Produto atualizado:', product.id);
     return NextResponse.json(product);
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao atualizar produto' }, { status: 500 });
+    console.error('❌ Erro ao atualizar produto:', error);
+    return NextResponse.json(
+      { 
+        error: 'Erro ao atualizar produto',
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      }, 
+      { status: 500 }
+    );
   }
 }
 
@@ -42,12 +70,33 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.product.delete({
-      where: { id: id }
+    
+    // Verificar se produto existe
+    const existingProduct = await prisma.product.findUnique({
+      where: { id }
     });
     
-    return NextResponse.json({ success: true });
+    if (!existingProduct) {
+      return NextResponse.json(
+        { error: 'Produto não encontrado' },
+        { status: 404 }
+      );
+    }
+    
+    await prisma.product.delete({
+      where: { id }
+    });
+    
+    console.log('✅ Produto deletado:', id);
+    return NextResponse.json({ success: true, message: 'Produto deletado com sucesso' });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao deletar produto' }, { status: 500 });
+    console.error('❌ Erro ao deletar produto:', error);
+    return NextResponse.json(
+      { 
+        error: 'Erro ao deletar produto',
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      }, 
+      { status: 500 }
+    );
   }
 }

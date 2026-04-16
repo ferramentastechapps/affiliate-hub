@@ -3,23 +3,46 @@ import { scrapeProductFromUrl } from '@/lib/scraper';
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json();
+    const body = await request.json();
+    const { url } = body;
     
     if (!url) {
-      return NextResponse.json({ error: 'URL é obrigatória' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'URL é obrigatória' }, 
+        { status: 400 }
+      );
     }
     
-    console.log('Scraping URL:', url);
+    // Validar se é uma URL válida
+    try {
+      new URL(url);
+    } catch {
+      return NextResponse.json(
+        { error: 'URL inválida. Forneça uma URL completa (ex: https://...)' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('🔍 Scraping URL:', url);
     
     const productData = await scrapeProductFromUrl(url);
     
-    console.log('Product data scraped:', productData);
+    console.log('✅ Dados extraídos:', productData);
     
     return NextResponse.json(productData);
   } catch (error) {
-    console.error('Scrape API error:', error);
+    console.error('❌ Erro no scrape:', error);
+    
+    // Retornar mensagem de erro específica
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Erro ao buscar dados do produto';
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro ao buscar dados do produto' }, 
+      { 
+        error: errorMessage,
+        details: 'Verifique se a URL está correta e acessível. Alguns sites podem bloquear scraping.'
+      }, 
       { status: 500 }
     );
   }

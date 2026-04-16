@@ -28,6 +28,61 @@ const platforms = [
   { id: "tiktok", name: "TikTok Shop", icon: ShoppingBag, color: "hover:bg-cyan-500/20 hover:border-cyan-500/50" },
 ];
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📊 TRACKING DE CLIQUES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function trackAffiliateClick(platform: string, productName: string, url: string) {
+  try {
+    // Log no console (desenvolvimento)
+    console.log('🔗 Clique em link de afiliado:', {
+      platform,
+      product: productName,
+      url,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Google Analytics (se configurado)
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'affiliate_click', {
+        event_category: 'Affiliate',
+        event_label: platform,
+        product_name: productName,
+        affiliate_url: url,
+      });
+    }
+
+    // Facebook Pixel (se configurado)
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'Lead', {
+        content_name: productName,
+        content_category: platform,
+      });
+    }
+
+    // Você pode adicionar outros serviços de analytics aqui:
+    // - Plausible Analytics
+    // - Mixpanel
+    // - Amplitude
+    // - Custom API endpoint
+
+    // Exemplo de envio para API própria (descomente se quiser usar)
+    // fetch('/api/analytics/click', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({
+    //     platform,
+    //     productName,
+    //     url,
+    //     timestamp: new Date().toISOString(),
+    //   }),
+    // }).catch(console.error);
+
+  } catch (error) {
+    console.error('Erro ao rastrear clique:', error);
+  }
+}
+
 export function PlatformModal({ isOpen, onClose, productName, links }: PlatformModalProps) {
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -40,6 +95,14 @@ export function PlatformModal({ isOpen, onClose, productName, links }: PlatformM
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  function handlePlatformClick(platform: string, url: string) {
+    // Rastrear o clique
+    trackAffiliateClick(platform, productName, url);
+    
+    // Abrir link em nova aba
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 
   return (
     <AnimatePresence>
@@ -97,11 +160,9 @@ export function PlatformModal({ isOpen, onClose, productName, links }: PlatformM
                 const Icon = platform.icon;
                 
                 return (
-                  <motion.a
+                  <motion.button
                     key={platform.id}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => handlePlatformClick(platform.name, url)}
                     variants={{
                       hidden: { opacity: 0, y: 10 },
                       show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 20 } }
@@ -117,7 +178,7 @@ export function PlatformModal({ isOpen, onClose, productName, links }: PlatformM
                       <Icon size={24} weight="duotone" />
                     </div>
                     <span className="text-lg font-medium tracking-tight text-zinc-100">{platform.name}</span>
-                  </motion.a>
+                  </motion.button>
                 );
               })}
             </motion.div>

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react";
 import Image from "next/image";
+import { useState } from "react";
 import { AffiliateLinks } from "./PlatformModal";
 
 export type Product = {
@@ -19,6 +20,9 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, onClick }: ProductCardProps) {
+  const [imageError, setImageError] = useState(false);
+  const fallbackImage = "https://via.placeholder.com/800x1000/18181b/71717a?text=Imagem+Indisponível";
+
   return (
     <motion.div
       layoutId={`card-${product.id}`}
@@ -37,12 +41,16 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     >
       {/* Aspect Ratio Container for Masonry effect */}
       <div className="relative aspect-[4/5] w-full bg-zinc-950 overflow-hidden">
-        {/* Placeholder for real image since next/image needs config for external URLs */}
-        {/* Using standard img for quick prototyping, can be swapped for next/image later */}
-        <img
-          src={product.imageUrl}
+        {/* Next.js Image com otimização automática */}
+        <Image
+          src={imageError ? fallbackImage : product.imageUrl}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 opacity-80 group-hover:opacity-100"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105 opacity-80 group-hover:opacity-100"
+          onError={() => setImageError(true)}
+          priority={false}
+          quality={85}
         />
         
         {/* Overlay gradient */}
