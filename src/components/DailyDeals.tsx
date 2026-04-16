@@ -32,6 +32,8 @@ function getTimeAgo(dateString?: string | Date) {
 
 export function DailyDeals() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [allProducts, setAllProducts] = useState<(Product & { createdAt?: string })[]>([]);
   const [products, setProducts] = useState<(Product & { createdAt?: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,8 +47,7 @@ export function DailyDeals() {
       const data = await res.json();
       
       if (data && data.length > 0) {
-        // Pega apenas os 4 produtos mais recentes para a seção de promoções rápidas
-        const recentProducts = data.slice(0, 4).map((p: any) => ({
+        const parsedProducts = data.map((p: any) => ({
           id: p.id,
           name: p.name,
           category: p.category,
@@ -61,7 +62,8 @@ export function DailyDeals() {
             tiktok: p.links?.tiktok,
           }
         }));
-        setProducts(recentProducts);
+        setAllProducts(parsedProducts);
+        setProducts(parsedProducts.slice(0, 4));
       }
     } catch (error) {
       console.error("Erro ao buscar promoções:", error);
@@ -80,9 +82,11 @@ export function DailyDeals() {
     );
   }
 
-  if (products.length === 0) {
+  if (allProducts.length === 0) {
     return null; // Não renderizar se não houver promoções
   }
+
+  const displayProducts = showAll ? allProducts : products;
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-16 relative">
@@ -97,13 +101,18 @@ export function DailyDeals() {
           </h2>
           <p className="text-zinc-400 text-sm">As ofertas mais quentes adicionadas recentemente</p>
         </div>
-        <button className="hidden md:flex text-sm font-medium text-accent hover:text-white transition-colors items-center gap-1">
-          Ver todas <ArrowUpRight weight="bold" />
-        </button>
+        {allProducts.length > 4 && (
+          <button 
+            onClick={() => setShowAll(!showAll)}
+            className="flex text-sm font-medium text-accent hover:text-white transition-colors items-center gap-1 bg-accent/10 px-4 py-2 rounded-full hover:bg-accent/20"
+          >
+            {showAll ? "Esconder" : "Ver todas"} <ArrowUpRight weight="bold" className={showAll ? "rotate-180 transition-transform" : "transition-transform"} />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products.map((product, index) => {
+        {displayProducts.map((product, index) => {
           const discount = getSimulatedDiscount(product.id);
           // original price calculation
           const price = product.price || 0;
