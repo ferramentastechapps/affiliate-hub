@@ -59,8 +59,8 @@ export function HeroSection() {
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
         <img 
-          src="https://picsum.photos/seed/setup/800/800" 
-          alt="Setup profile"
+          src="/hero-image.png" 
+          alt="Unboxing tech setup profile"
           className="w-full h-full object-cover opacity-60"
         />
         {/* Floating badge for Taste-skill micro-physics look */}
