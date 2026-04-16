@@ -11,6 +11,7 @@ export type Product = {
   name: string;
   category: string;
   imageUrl: string;
+  price?: number;
   links: AffiliateLinks;
 };
 
