@@ -28,24 +28,24 @@ export function HeroSection() {
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1] mb-6 text-white">
-          Meus Equipamentos & <br/>
+          Produtos que <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-blue-400">
-            Recomendações
+            Testo e Recomendo
           </span>
         </h1>
 
         <p className="text-lg text-zinc-400 leading-relaxed max-w-[50ch] mb-10">
-          Encontre os melhores produtos que uso e recomendo para setup, streaming e home office. Escolha a sua plataforma favorita e compre com segurança.
+          Aqui você encontra a seleção com as melhores ofertas e produtos que já testei na prática. Escolha a sua plataforma favorita e compre com garantia de qualidade.
         </p>
 
         <div className="flex flex-wrap items-center gap-4">
-          <a href="#" className="flex items-center gap-2 px-5 py-3 rounded-full bg-white text-zinc-950 font-semibold hover:scale-105 transition-transform">
+          <a href="https://instagram.com/usejotashop" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-full bg-white text-zinc-950 font-semibold hover:scale-105 transition-transform">
             <InstagramLogo size={20} weight="fill" />
-            @seu_perfil
+            @usejotashop
           </a>
-          <a href="#" className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/10 text-white font-semibold hover:bg-white/20 transition-all">
+          <a href="https://tiktok.com/@jota123testando" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-full bg-white/10 text-white font-semibold hover:bg-white/20 transition-all">
             <TiktokLogo size={20} weight="fill" />
-            @seu_tiktok
+            @jota123testando
           </a>
         </div>
       </motion.div>
