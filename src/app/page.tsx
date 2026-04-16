@@ -132,10 +132,6 @@ export default async function Home() {
       {/* Promocoes do Dia */}
       <DailyDeals />
 
-      {/* Mais Ofertas de Hoje */}
-      <ProductGrid />
-
-
     </main>
   );
 }
