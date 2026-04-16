@@ -120,6 +120,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
   const price = product.price || 0;
   const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
 
+  // Garantir que a URL abra corretamente como um link absoluto
+  const safeTargetUrl = targetUrl && !targetUrl.startsWith("http") 
+    ? "https://" + targetUrl 
+    : targetUrl;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -194,13 +199,18 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   </div>
                 )}
 
-                <button
-                  onClick={handlePlatformClick}
+                <a
+                  href={safeTargetUrl || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    if (targetUrl) trackAffiliateClick(platformName, product.name, targetUrl);
+                  }}
                   className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-lg py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)]"
                 >
                   Ir para Promoção na {platformName}
                   <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
-                </button>
+                </a>
 
                 <div className="mt-5 flex items-center justify-center gap-2 text-zinc-400 text-sm font-medium">
                   <ShieldCheck size={18} weight="duotone" className="text-emerald-400" />
