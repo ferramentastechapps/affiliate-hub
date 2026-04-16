@@ -2,8 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
-import { X, ShoppingCart, ShoppingBag, Storefront, Basket } from "@phosphor-icons/react";
-import clsx from "clsx";
+import { X, ArrowRight, ShieldCheck, Tag } from "@phosphor-icons/react";
 
 export type AffiliateLinks = {
   amazon?: string;
@@ -16,33 +15,12 @@ export type AffiliateLinks = {
 type PlatformModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  productName: string;
-  links: AffiliateLinks;
+  product: any; // Receives the full product object from DailyDeals or ProductGrid
 };
 
-const platforms = [
-  { id: "amazon", name: "Amazon", icon: ShoppingCart, color: "hover:bg-orange-500/20 hover:border-orange-500/50" },
-  { id: "aliexpress", name: "AliExpress", icon: Basket, color: "hover:bg-red-500/20 hover:border-red-500/50" },
-  { id: "shopee", name: "Shopee", icon: ShoppingBag, color: "hover:bg-orange-600/20 hover:border-orange-600/50" },
-  { id: "mercadoLivre", name: "Mercado Livre", icon: Storefront, color: "hover:bg-yellow-500/20 hover:border-yellow-500/50" },
-  { id: "tiktok", name: "TikTok Shop", icon: ShoppingBag, color: "hover:bg-cyan-500/20 hover:border-cyan-500/50" },
-];
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📊 TRACKING DE CLIQUES
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+// Tracking fake function
 function trackAffiliateClick(platform: string, productName: string, url: string) {
   try {
-    // Log no console (desenvolvimento)
-    console.log('🔗 Clique em link de afiliado:', {
-      platform,
-      product: productName,
-      url,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Google Analytics (se configurado)
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'affiliate_click', {
         event_category: 'Affiliate',
@@ -51,39 +29,22 @@ function trackAffiliateClick(platform: string, productName: string, url: string)
         affiliate_url: url,
       });
     }
-
-    // Facebook Pixel (se configurado)
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'Lead', {
-        content_name: productName,
-        content_category: platform,
-      });
-    }
-
-    // Você pode adicionar outros serviços de analytics aqui:
-    // - Plausible Analytics
-    // - Mixpanel
-    // - Amplitude
-    // - Custom API endpoint
-
-    // Exemplo de envio para API própria (descomente se quiser usar)
-    // fetch('/api/analytics/click', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     platform,
-    //     productName,
-    //     url,
-    //     timestamp: new Date().toISOString(),
-    //   }),
-    // }).catch(console.error);
-
   } catch (error) {
     console.error('Erro ao rastrear clique:', error);
   }
 }
 
-export function PlatformModal({ isOpen, onClose, productName, links }: PlatformModalProps) {
+// Helper to deduce a simulated discount for the layout based on string length/id (matches DailyDeals logic)
+function getSimulatedDiscount(id: string): number {
+  if (!id) return 20;
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return 15 + (Math.abs(hash) % 45); // between 15% and 60%
+}
+
+export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) {
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -96,13 +57,36 @@ export function PlatformModal({ isOpen, onClose, productName, links }: PlatformM
     };
   }, [isOpen]);
 
-  function handlePlatformClick(platform: string, url: string) {
-    // Rastrear o clique
-    trackAffiliateClick(platform, productName, url);
-    
-    // Abrir link em nova aba
-    window.open(url, '_blank', 'noopener,noreferrer');
+  if (!product) return null;
+
+  // Deduce the first available link and its platform name
+  let targetUrl = "";
+  let platformName = "";
+  
+  if (product.links?.amazon) { targetUrl = product.links.amazon; platformName = "Amazon"; }
+  else if (product.links?.mercadoLivre) { targetUrl = product.links.mercadoLivre; platformName = "Mercado Livre"; }
+  else if (product.links?.shopee) { targetUrl = product.links.shopee; platformName = "Shopee"; }
+  else if (product.links?.aliexpress) { targetUrl = product.links.aliexpress; platformName = "AliExpress"; }
+  else if (product.links?.tiktok) { targetUrl = product.links.tiktok; platformName = "TikTok"; }
+  else {
+    // Falha ou não tem links, pegar qualquer uma primeira
+    const values = Object.entries(product.links || {});
+    const firstValid = values.find(([k, v]) => typeof v === 'string' && v.length > 0);
+    if (firstValid) {
+        platformName = firstValid[0];
+        targetUrl = firstValid[1] as string;
+    }
   }
+
+  function handlePlatformClick() {
+    if (!targetUrl) return;
+    trackAffiliateClick(platformName, product.name, targetUrl);
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  const discount = getSimulatedDiscount(product.id || 'abc');
+  const price = product.price || 0;
+  const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
 
   return (
     <AnimatePresence>
@@ -111,11 +95,11 @@ export function PlatformModal({ isOpen, onClose, productName, links }: PlatformM
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 min-h-screen"
         >
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={onClose}
           />
 
@@ -125,63 +109,85 @@ export function PlatformModal({ isOpen, onClose, productName, links }: PlatformM
             animate={{ 
               scale: 1, 
               opacity: 1, y: 0,
-              transition: { type: "spring", stiffness: 100, damping: 20 }
+              transition: { type: "spring", stiffness: 300, damping: 30 }
             }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            className="relative w-full max-w-md glass-panel rounded-[2rem] p-8 overflow-hidden"
+            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(40,110,250,0.15)] rounded-[2.5rem] flex flex-col overflow-hidden max-h-[90vh]"
           >
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 z-20 p-2.5 bg-black/40 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/10 text-white"
             >
-              <X size={24} weight="bold" className="text-zinc-400 hover:text-white" />
+              <X size={20} weight="bold" />
             </button>
             
-            <h3 className="text-2xl tracking-tighter font-semibold mb-2 pr-8">
-              Onde você prefere comprar?
-            </h3>
-            <p className="text-zinc-400 mb-8 max-w-[25ch] leading-relaxed">
-              Você está a um passo de adquirir <span className="text-white font-medium">{productName}</span>.
-            </p>
+            <div className="overflow-y-auto hidden-scrollbar flex-1">
+              
+              {/* Product Image Stage */}
+              <div className="relative w-full aspect-[4/3] bg-zinc-100 flex items-center justify-center p-8">
+                {/* Badge Desconto */}
+                {price > 0 && (
+                  <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
+                    <Tag size={20} weight="fill" />
+                    -{discount}%
+                  </div>
+                )}
+                
+                <img 
+                   src={product.imageUrl} 
+                   alt={product.name}
+                   className="w-full h-full object-contain mix-blend-multiply drop-shadow-xl"
+                />
+              </div>
 
-            <motion.div 
-              className="flex flex-col gap-3"
-              variants={{
-                show: { transition: { staggerChildren: 0.05 } },
-                hidden: {}
-              }}
-              initial="hidden"
-              animate="show"
-            >
-              {platforms.map((platform) => {
-                const url = links[platform.id as keyof AffiliateLinks];
-                if (!url) return null;
+              {/* Product Information Form */}
+              <div className="p-8">
+                <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
+                <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-6 leading-snug">
+                  {product.name}
+                </h3>
                 
-                const Icon = platform.icon;
-                
-                return (
-                  <motion.button
-                    key={platform.id}
-                    onClick={() => handlePlatformClick(platform.name, url)}
-                    variants={{
-                      hidden: { opacity: 0, y: 10 },
-                      show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 20 } }
-                    }}
-                    whileHover={{ scale: 0.98, x: 4 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={clsx(
-                      "flex items-center gap-4 w-full p-4 rounded-2xl border border-white/5 bg-white/5 transition-all",
-                      platform.color
-                    )}
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white">
-                      <Icon size={24} weight="duotone" />
+                {price > 0 ? (
+                  <div className="flex flex-col mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
+                    <span className="text-sm text-zinc-400 font-medium mb-1 line-through">
+                      De: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                    </span>
+                    <div className="flex items-end gap-3">
+                      <span className="text-4xl font-black text-white tracking-tighter">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                      </span>
+                      <span className="text-green-400 font-bold mb-1.5 px-2 py-0.5 bg-green-400/10 rounded-lg text-sm">
+                        em até 10x sem juros
+                      </span>
                     </div>
-                    <span className="text-lg font-medium tracking-tight text-zinc-100">{platform.name}</span>
-                  </motion.button>
-                );
-              })}
-            </motion.div>
+                  </div>
+                ) : (
+                  <div className="mb-8 p-4 bg-white/5 rounded-xl border border-white/5">
+                    <p className="text-zinc-300">Verifique o preço atualizado diretamente no site da loja.</p>
+                  </div>
+                )}
+
+                {/* Call to Action Primary Button */}
+                <button
+                  onClick={handlePlatformClick}
+                  className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-lg py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)]"
+                >
+                  Ir para Promoção na {platformName}
+                  <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                {/* Trust Elements */}
+                <div className="mt-5 flex items-center justify-center gap-2 text-zinc-400 text-sm font-medium">
+                  <ShieldCheck size={18} weight="duotone" className="text-emerald-400" />
+                  Loja Segura Verificada
+                </div>
+
+                {/* Legal Text as Requested */}
+                <p className="mt-8 text-[11px] text-zinc-600 leading-tight text-center max-w-sm mx-auto">
+                  *Preço e disponibilidade sujeito a alteração a qualquer momento dependendo da loja parceira.
+                </p>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}

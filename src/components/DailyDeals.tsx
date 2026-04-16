@@ -196,8 +196,7 @@ export function DailyDeals() {
       <PlatformModal 
         isOpen={!!selectedProduct} 
         onClose={() => setSelectedProduct(null)}
-        productName={selectedProduct?.name || ""}
-        links={selectedProduct?.links || {}}
+        product={selectedProduct}
       />
     </section>
   );
