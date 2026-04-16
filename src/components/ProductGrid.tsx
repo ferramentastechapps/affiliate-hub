@@ -147,24 +147,32 @@ export function ProductGrid() {
       const res = await fetch("/api/products");
       const data = await res.json();
       
-      if (data && data.length > 0) {
-        const formattedProducts = data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          imageUrl: p.imageUrl,
-          links: {
-            amazon: p.links?.amazon,
-            mercadoLivre: p.links?.mercadoLivre,
-            shopee: p.links?.shopee,
-            aliexpress: p.links?.aliexpress,
-            tiktok: p.links?.tiktok,
-          }
-        }));
-        setProducts(formattedProducts);
+      if (Array.isArray(data)) {
+        if (data.length === 0) {
+          setProducts([]);
+        } else {
+          const formattedProducts = data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            imageUrl: p.imageUrl,
+            links: {
+              amazon: p.links?.amazon,
+              mercadoLivre: p.links?.mercadoLivre,
+              shopee: p.links?.shopee,
+              aliexpress: p.links?.aliexpress,
+              tiktok: p.links?.tiktok,
+            }
+          }));
+          setProducts(formattedProducts);
+        }
+      } else {
+        console.error("Erro da API. Resposta não é array:", data);
+        setProducts([]);
       }
     } catch (error) {
-      console.error("Erro ao buscar produtos:", error);
+      console.error("Erro real na hora de dar o fetch:", error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -174,6 +182,15 @@ export function ProductGrid() {
     return (
       <div className="text-center py-12 text-zinc-500">
         Carregando produtos...
+      </div>
+    );
+  }
+
+  if (!loading && products.length === 0) {
+    return (
+      <div className="text-center py-20 text-zinc-400">
+        <h3 className="text-xl font-medium mb-2">Nenhum produto encontrado</h3>
+        <p>Ainda não há produtos cadastrados ou ocorreu um erro na busca.</p>
       </div>
     );
   }
