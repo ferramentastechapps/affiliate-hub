@@ -125,10 +125,13 @@ export default async function Home() {
     <main className="flex min-h-screen flex-col items-center overflow-x-hidden pt-20">
       {/* Hero Section */}
       <HeroSection />
-      <DailyDeals />
 
       {/* Cupons Section */}
       <CouponsSection couponsByPlatform={couponsByPlatform} />
+
+      {/* Promocoes do Dia */}
+      <DailyDeals />
+
 
     </main>
   );
