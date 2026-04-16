@@ -196,9 +196,18 @@ export function ProductGrid() {
   }
 
   return (
-    <>
+    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 pb-32">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-semibold tracking-tight text-white mb-2 flex items-center gap-3">
+            Veja mais ofertas de hoje
+          </h2>
+          <p className="text-zinc-400 text-sm">Explore nosso catálogo completo com os melhores preços garantidos.</p>
+        </div>
+      </div>
+
       <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[1400px] mx-auto w-full px-4 md:px-8 pb-32"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full"
         variants={{
           hidden: { opacity: 0 },
           show: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -220,6 +229,6 @@ export function ProductGrid() {
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
       />
-    </>
+    </section>
   );
 }
