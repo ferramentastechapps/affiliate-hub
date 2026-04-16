@@ -72,6 +72,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.ibyteimg.com',
       },
+      // Promobit (Scraper)
+      {
+        protocol: 'https',
+        hostname: '**.promobit.com.br',
+      },
       // Placeholder genérico
       {
         protocol: 'https',
