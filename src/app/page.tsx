@@ -122,16 +122,21 @@ export default async function Home() {
   const couponsByPlatform = await getCouponsByPlatform();
 
   return (
-    <main className="flex min-h-screen flex-col items-center overflow-x-hidden pt-20">
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-20 pb-32 md:pb-8">
       {/* Hero Section */}
-      <HeroSection />
+      <div id="categorias" className="w-full">
+        <HeroSection />
+      </div>
 
       {/* Cupons Section */}
-      <CouponsSection couponsByPlatform={couponsByPlatform} />
+      <div id="cupons" className="w-full">
+        <CouponsSection couponsByPlatform={couponsByPlatform} />
+      </div>
 
       {/* Promocoes do Dia */}
-      <DailyDeals />
-
+      <div id="ofertas" className="w-full">
+        <DailyDeals />
+      </div>
     </main>
   );
 }
