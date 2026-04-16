@@ -90,7 +90,6 @@ async function getCouponsByPlatform() {
   const coupons = await prisma.coupon.findMany({
     where: { 
       isActive: true,
-      // Filtrar cupons expirados
       OR: [
         { expiresAt: null },
         { expiresAt: { gte: new Date() } }
@@ -105,11 +104,17 @@ async function getCouponsByPlatform() {
     return acc;
   }, {} as Record<string, number>);
 
+  // Garante que as lojas principais sempre apareçam, mesmo com 0 cupons
+  const basePlatforms = ["amazon", "shopee", "mercadolivre", "aliexpress"];
+  basePlatforms.forEach(bp => {
+    if (typeof platformCounts[bp] === "undefined") {
+      platformCounts[bp] = 0;
+    }
+  });
+
   return Object.entries(platformCounts).map(([platform, count]) => ({
     platform,
     count,
-    icon: "",
-    color: "",
   }));
 }
 

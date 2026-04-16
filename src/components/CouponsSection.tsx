@@ -44,8 +44,21 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
         .then(res => res.json())
         .then(data => {
             if (Array.isArray(data)) {
+                // Filtra apenas da loja clicada
                 const filtered = data.filter((c: any) => c.platform.toLowerCase() === selectedPlatform.toLowerCase());
-                setCouponsList(filtered);
+                
+                // Remove cupons duplicados (mesmo código)
+                const uniqueCoupons = [];
+                const seenCodes = new Set();
+                for (const c of filtered) {
+                  const upperCode = c.code.toUpperCase();
+                  if (!seenCodes.has(upperCode)) {
+                    seenCodes.add(upperCode);
+                    uniqueCoupons.push(c);
+                  }
+                }
+                
+                setCouponsList(uniqueCoupons);
             }
             setLoading(false);
         })
