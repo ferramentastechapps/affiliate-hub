@@ -7,41 +7,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📦 PRODUTO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NOTA: SQLite não precisa de @db.Text - String já é TEXT por padrão
 model Product {
   id          String   @id @default(cuid())
   name        String
   category    String
-  description String?
-  imageUrl    String
+  description String?  // URLs e textos longos
+  imageUrl    String   // URLs podem ser muito longas
   price       Float?
   originalPrice Float?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   links       Link?
   coupons     Coupon[]
+  
+  @@index([category])
+  @@index([createdAt])
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔗 LINKS DE AFILIADOS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NOTA: SQLite não precisa de @db.Text - String já é TEXT por padrão
 model Link {
   id           String  @id @default(cuid())
   productId    String  @unique
   product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  amazon       String?
+  amazon       String? // URLs de afiliado podem ser muito longas
   aliexpress   String?
   shopee       String?
   mercadoLivre String?
   tiktok       String?
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎫 CUPONS DE DESCONTO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NOTA: SQLite não precisa de @db.Text - String já é TEXT por padrão
 model Coupon {
   id          String   @id @default(cuid())
-  code        String
-  description String
-  discount    String
-  platform    String
-  productId   String?
+  code        String   // Código do cupom (ex: DESCONTO10)
+  description String   // Descrição pode ser longa
+  discount    String   // Valor do desconto (ex: "10% OFF")
+  platform    String   // Plataforma (Amazon, Shopee, etc)
+  productId   String?  // Opcional: cupom específico para um produto
   product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
-  expiresAt   DateTime?
-  isActive    Boolean  @default(true)
+  expiresAt   DateTime? // Data de expiração (opcional)
+  isActive    Boolean  @default(true) // Ativo/Inativo
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  @@index([platform])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@index([productId])
 }

@@ -5,6 +5,9 @@ import { Plus } from "@phosphor-icons/react";
 import { ProductsTab } from "@/components/admin/ProductsTab";
 import { CouponsTab } from "@/components/admin/CouponsTab";
 
+// Página do admin não precisa de revalidação pois é client-side
+// Mas vamos adicionar metadata via layout se necessário
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"products" | "coupons">("products");
 
@@ -13,6 +16,12 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold">Painel Admin</h1>
+          <a
+            href="/"
+            className="text-sm text-zinc-400 hover:text-white transition-colors"
+          >
+            ← Voltar ao site
+          </a>
         </div>
 
         <div className="flex gap-4 mb-8 border-b border-zinc-800">
