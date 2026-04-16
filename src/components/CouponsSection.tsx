@@ -36,6 +36,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
   const [couponsList, setCouponsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [showAllCoupons, setShowAllCoupons] = useState(false);
 
   useEffect(() => {
     if (selectedPlatform) {
@@ -77,31 +78,69 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
 
   if (!couponsByPlatform || couponsByPlatform.length === 0) return null;
 
+  // Organiza: Mercado Livre, Shopee, Amazon -> depois os mais volumosos
+  const sortedCoupons = [...couponsByPlatform].sort((a, b) => {
+    const getPriority = (p: string) => {
+      const lower = p.toLowerCase();
+      if (lower === 'mercadolivre' || lower === 'mercado livre') return 1;
+      if (lower === 'shopee') return 2;
+      if (lower === 'amazon') return 3;
+      return 99;
+    };
+    
+    const pA = getPriority(a.platform);
+    const pB = getPriority(b.platform);
+    
+    if (pA !== pB) return pA - pB;
+    return b.count - a.count;
+  });
+
+  const limit = 8;
+  const displayCoupons = showAllCoupons ? sortedCoupons : sortedCoupons.slice(0, limit);
+
   return (
     <>
       <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-blue-500/20">
-            <Tag size={24} weight="fill" className="text-accent" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-blue-500/20">
+              <Tag size={24} weight="fill" className="text-accent" />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+                Cupons Rápidos
+              </h2>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-              Cupons Rápidos
-            </h2>
-          </div>
+          {sortedCoupons.length > limit && (
+            <button 
+              onClick={() => setShowAllCoupons(!showAllCoupons)}
+              className="flex text-sm font-medium text-accent hover:text-white transition-colors items-center gap-1 bg-accent/10 md:px-4 px-3 py-2 rounded-full hover:bg-accent/20"
+            >
+              <span className="hidden sm:inline">{showAllCoupons ? "Esconder" : "Ver todos"}</span>
+              <span className="sm:hidden">{showAllCoupons ? "Menos" : "Mais"}</span>
+              <div className={showAllCoupons ? "rotate-180 transition-transform" : "transition-transform"}>
+                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4.66663 11.3333L11.3333 4.66663" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4.66663 4.66663H11.3333V11.3333" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                 </svg>
+              </div>
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-          {couponsByPlatform.map((item, index) => {
+          {displayCoupons.map((item, index) => {
             const domain = getDomainFromPlatform(item.platform);
             const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
             return (
               <motion.button
                 key={item.platform}
+                layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.03, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedPlatform(item.platform)}
                 className="relative group w-full text-left focus:outline-none"
               >
