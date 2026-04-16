@@ -14,6 +14,7 @@ model Product {
   description String?
   imageUrl    String
   price       Float?
+  originalPrice Float?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   links       Link?
