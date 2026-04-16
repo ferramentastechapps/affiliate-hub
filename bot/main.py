@@ -12,6 +12,9 @@ from scrapers import PromotionScraper
 from config import SEARCH_INTERVAL_MINUTES
 
 
+import json
+from pathlib import Path
+
 class PromotionBot:
     """Robô principal que coordena tudo"""
     
@@ -19,8 +22,31 @@ class PromotionBot:
         self.api = AffiliateHubAPI()
         self.telegram = TelegramNotifier()
         self.scraper = PromotionScraper()
-        self.produtos_enviados = set()  # Evitar duplicatas
+        
+        self.state_file = Path('bot_state.json')
+        self._load_state()
+        
+    def _load_state(self):
+        self.produtos_enviados = set()
         self.cupons_enviados = set()
+        try:
+            if self.state_file.exists():
+                with open(self.state_file, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                    self.produtos_enviados = set(state.get('produtos', []))
+                    self.cupons_enviados = set(state.get('cupons', []))
+        except Exception as e:
+            print(f'Aviso: Não foi possível carregar o estado anterior: {e}')
+            
+    def _save_state(self):
+        try:
+            with open(self.state_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'produtos': list(self.produtos_enviados),
+                    'cupons': list(self.cupons_enviados)
+                }, f, ensure_ascii=False)
+        except Exception as e:
+            print(f'Aviso: Não foi possível salvar o estado: {e}')
     
     def executar_busca(self):
         """Executa uma busca completa"""
@@ -101,7 +127,9 @@ class PromotionBot:
                     'cupons': len(cupons_novos)
                 })
             
-            print(f'\n✅ Busca concluída!')
+            # 8. Salvar o estado para evitar envios duplicados após reinicialização
+            self._save_state()
+            print(f'\n✅ Busca concluída e estado salvo!')
             
         except Exception as e:
             print(f'\n❌ Erro na busca: {e}')
