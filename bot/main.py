@@ -61,7 +61,18 @@ class PromotionBot:
                     
                 # 4. Enviar para Telegram
                 print(f'\n📱 Enviando produtos para Telegram...')
+                
+                # Mapear os IDs retornados pela API (caso exista)
+                created_products = []
+                if resultado and resultado.get('success') and 'results' in resultado:
+                    created_products = resultado['results']
+                
                 for produto in produtos_novos:
+                    # Encontra o ID do banco de dados pelo nome
+                    matched_db = next((p for p in created_products if p.get('name') == produto['name']), None)
+                    if matched_db and matched_db.get('id'):
+                        produto['id'] = matched_db['id']
+                        
                     self.telegram.enviar_sync('produto', produto)
                     self.produtos_enviados.add(produto['name'])
                     time.sleep(1)  # Evitar rate limit

@@ -132,3 +132,76 @@ export async function PUT(request: Request) {
     );
   }
 }
+
+// Endpoint para atualizar LINKS de um produto específico (Usado pelo Robô Telegram)
+export async function PATCH(request: Request) {
+  if (!validateApiKey(request)) {
+    return NextResponse.json(
+      { error: 'Não autorizado. API key inválida.' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const { productId, platform, link } = body;
+
+    if (!productId || !platform || !link) {
+      return NextResponse.json(
+        { error: 'Campos obrigatórios: productId, platform, link' },
+        { status: 400 }
+      );
+    }
+
+    // O Prisma espera a chave correta no update
+    const validPlatforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok'];
+    if (!validPlatforms.includes(platform)) {
+      return NextResponse.json(
+        { error: `Plataforma inválida. Use uma de: ${validPlatforms.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Primeiro certificamos que o produto existe
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { links: true }
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+    }
+
+    // Atualiza ou cria a entidade Link associada a este produto
+    let updatedLinks;
+    if (product.links) {
+      updatedLinks = await prisma.link.update({
+        where: { productId: productId },
+        data: {
+          [platform]: link
+        }
+      });
+    } else {
+      updatedLinks = await prisma.link.create({
+        data: {
+          productId: productId,
+          [platform]: link
+        }
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Link da ${platform} atualizado com sucesso!`,
+      links: updatedLinks
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error('Erro ao atualizar link de produto:', error);
+    return NextResponse.json(
+      { error: 'Erro ao atualizar link do produto' },
+      { status: 500 }
+    );
+  }
+}
+

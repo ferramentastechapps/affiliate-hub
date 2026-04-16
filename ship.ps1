@@ -51,7 +51,10 @@ pip3 install -r requirements.txt --break-system-packages
 
 echo "🔄 Reiniciando serviços..."
 pkill -9 -f main.py || true
+pkill -9 -f telegram_listener.py || true
+
 nohup python3 main.py > bot.log 2>&1 &
+nohup python3 telegram_listener.py > listener.log 2>&1 &
 
 cd ~/affiliate-hub
 pm2 delete nextjs 2>/dev/null || true

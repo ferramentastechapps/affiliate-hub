@@ -78,3 +78,23 @@ class AffiliateHubAPI:
         except Exception as e:
             print(f'❌ Erro ao adicionar cupons em lote: {e}')
             return None
+
+    def atualizar_link_produto(self, produto_id: str, platform: str, link: str) -> Optional[Dict]:
+        """Atualiza o link de afiliado de um produto existente via Telegram"""
+        try:
+            response = requests.patch(
+                f'{self.base_url}/api/webhook/products',
+                headers=self.headers,
+                json={
+                    'productId': produto_id,
+                    'platform': platform,
+                    'link': link
+                },
+                timeout=15,
+                verify=False
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f'❌ Erro ao atualizar link do produto {produto_id}: {e}')
+            return None

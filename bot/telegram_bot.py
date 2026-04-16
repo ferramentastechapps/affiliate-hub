@@ -102,6 +102,8 @@ class TelegramNotifier:
 {chr(10).join(links_texto)}
 
 🌐 Ver mais: {AFFILIATE_HUB_URL}
+
+<i>ID_DO_PRODUTO: {produto.get('id', 'N/A')}</i>
 """
         
         return mensagem.strip()
