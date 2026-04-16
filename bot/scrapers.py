@@ -35,7 +35,8 @@ class PromotionScraper:
             for offer in offers[:limite]:
                 try:
                     nome = offer.get('offerTitle', 'Sem título')
-                    link_oferta = f"https://www.promobit.com.br/{offer.get('offerSlug', '')}"
+                    # Adiciona 'oferta/' para corrigir o link do Promobit evitando o erro 404
+                    link_oferta = f"https://www.promobit.com.br/oferta/{offer.get('offerSlug', '')}-{offer.get('offerId', '')}"
                     preco = float(offer.get('offerPrice', 0))
                     
                     foto = offer.get('offerPhoto')
