@@ -7,24 +7,34 @@ import { useState } from "react";
 type CouponsByPlatform = {
   platform: string;
   count: number;
-  icon: string;
-  color: string;
 };
 
 type CouponsSectionProps = {
   couponsByPlatform: CouponsByPlatform[];
 };
 
-const platformIcons: Record<string, { icon: string; color: string; name: string }> = {
-  amazon: { icon: "🛒", color: "from-orange-500 to-yellow-500", name: "Amazon" },
-  mercadolivre: { icon: "💛", color: "from-yellow-400 to-yellow-600", name: "Mercado Livre" },
-  shopee: { icon: "🛍️", color: "from-orange-600 to-red-600", name: "Shopee" },
-  aliexpress: { icon: "🎁", color: "from-red-500 to-red-700", name: "AliExpress" },
-  tiktok: { icon: "🎵", color: "from-pink-500 to-purple-600", name: "TikTok" },
-};
+function getDomainFromPlatform(platform: string): string {
+  const p = platform.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+  if (p === 'amazon') return 'amazon.com.br';
+  if (p === 'mercadolivre') return 'mercadolivre.com.br';
+  if (p === 'oboticario' || p === 'boticario') return 'boticario.com.br';
+  if (p === 'deonibus') return 'deonibus.com';
+  if (p === 'lg') return 'lg.com';
+  if (p === 'shopee') return 'shopee.com.br';
+  if (p === 'aliexpress') return 'aliexpress.com';
+  if (p === 'fastshop') return 'fastshop.com.br';
+  if (p === 'nike') return 'nike.com.br';
+  if (p === 'adidas') return 'adidas.com.br';
+  if (p === 'netshoes') return 'netshoes.com.br';
+  if (p === 'zattini') return 'zattini.com.br';
+  if (p === 'magazine' || p === 'magazineluiza' || p === 'magalu') return 'magazineluiza.com.br';
+  return p + '.com.br';
+}
 
 export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+
+  if (!couponsByPlatform || couponsByPlatform.length === 0) return null;
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-8">
@@ -33,60 +43,55 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
           <Tag size={24} weight="fill" className="text-accent" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
-            Cupons das Melhores Lojas
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+            Cupons Rápidos
           </h2>
-          <p className="text-sm text-zinc-400">
-            Economize ainda mais com nossos cupons exclusivos
-          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {couponsByPlatform.map((item, index) => {
-          const platformInfo = platformIcons[item.platform.toLowerCase()] || {
-            icon: "🏪",
-            color: "from-gray-500 to-gray-700",
-            name: item.platform,
-          };
+          const domain = getDomainFromPlatform(item.platform);
+          // O Google Favicon reune imagens perfeitas de favicons corporativos ao redor da web.
+          const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
           return (
             <motion.button
               key={item.platform}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
               onClick={() => setSelectedPlatform(item.platform)}
-              className="relative group"
+              className="relative group w-full text-left"
             >
-              <div className="glass-panel p-6 rounded-2xl hover:scale-105 transition-all duration-300 flex flex-col items-center gap-3">
-                {/* Icon */}
-                <div
-                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${platformInfo.color} flex items-center justify-center text-3xl shadow-lg group-hover:shadow-xl transition-shadow`}
-                >
-                  {platformInfo.icon}
+              <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center justify-between gap-2 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1">
+                
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-white shadow-sm p-1">
+                    <img 
+                      src={iconUrl} 
+                      alt={item.platform} 
+                      className="w-full h-full object-contain mix-blend-multiply"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white truncate capitalize">
+                    {item.platform}
+                  </h3>
                 </div>
 
-                {/* Platform Name */}
-                <h3 className="text-sm font-semibold text-white text-center">
-                  {platformInfo.name}
-                </h3>
-
-                {/* Coupon Count */}
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-accent">
+                <div className="bg-accent/20 px-2.5 py-1 rounded-full shrink-0 flex items-center">
+                  <span className="text-[11px] font-bold text-accent leading-none mt-[1px]">
                     {item.count}
                   </span>
-                  <span className="text-xs text-zinc-400">
-                    {item.count === 1 ? "cupom" : "cupons"}
-                  </span>
                 </div>
 
-                {/* Badge */}
+                {/* Badge de sinalização mínima */}
                 {item.count > 0 && (
-                  <div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                    Novo
-                  </div>
+                  <div className="absolute -top-1 -right-1 bg-accent w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(40,110,250,0.8)]" />
                 )}
               </div>
             </motion.button>
