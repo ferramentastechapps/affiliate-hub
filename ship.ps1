@@ -56,7 +56,7 @@ echo '📊 Status dos serviços:' && \
 pm2 status && \
 echo '🌐 Next.js rodando em http://127.0.0.1:3005'
 "@
-
-ssh -t root@212.85.10.239 $sshCommand
+$cleanCommand = $sshCommand -replace "`r", ""
+ssh -t root@212.85.10.239 $cleanCommand
 
 Write-Host "Deploy na VPS finalizado e sistemas rodando!" -ForegroundColor Green
