@@ -1,0 +1,68 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 COPIE E COLE ESTES COMANDOS NO SEU SERVIDOR VPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 1️⃣ ATUALIZAR BANCO DE DADOS
+cd /root/affiliate-hub
+npx prisma db push
+
+# 2️⃣ MARCAR PRODUTOS COMO PENDING
+sqlite3 prisma/dev.db "UPDATE Product SET status='pending' WHERE status IS NULL OR status='active';"
+
+# 3️⃣ VERIFICAR ATUALIZAÇÃO
+sqlite3 prisma/dev.db "SELECT status, COUNT(*) FROM Product GROUP BY status;"
+
+# 4️⃣ PARAR LISTENER ANTIGO (se existir)
+screen -S telegram-listener -X quit 2>/dev/null
+
+# 5️⃣ INICIAR NOVO LISTENER
+cd /root/affiliate-hub/bot
+screen -S telegram-listener -dm python3 telegram_listener.py
+
+# 6️⃣ VERIFICAR SE ESTÁ RODANDO
+screen -ls
+
+# 7️⃣ VER LOGS DO LISTENER (opcional)
+# screen -r telegram-listener
+# (Ctrl+A, D para sair)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ PRONTO! Agora teste no Telegram:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Envie para o bot: /help
+
+Você deve ver:
+🤖 Comandos Disponíveis
+/aprovar [ID] [LINK]
+/rejeitar [ID]
+/help
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 COMO USAR:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Robô encontra produto → Envia para Telegram
+2. Você recebe mensagem com ID_DO_PRODUTO
+3. Você aprova: /aprovar [ID] https://amzn.to/seulink
+4. Produto aparece no site com SEU link
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 COMANDOS ÚTEIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Ver produtos pendentes
+sqlite3 prisma/dev.db "SELECT id, name, status FROM Product WHERE status='pending' LIMIT 5;"
+
+# Ver produtos ativos
+sqlite3 prisma/dev.db "SELECT id, name, status FROM Product WHERE status='active' LIMIT 5;"
+
+# Ver logs do listener
+screen -r telegram-listener
+
+# Reiniciar listener
+screen -S telegram-listener -X quit
+cd /root/affiliate-hub/bot
+screen -S telegram-listener -dm python3 telegram_listener.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

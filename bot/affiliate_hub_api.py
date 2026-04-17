@@ -98,3 +98,42 @@ class AffiliateHubAPI:
         except Exception as e:
             print(f'❌ Erro ao atualizar link do produto {produto_id}: {e}')
             return None
+    
+    def aprovar_produto(self, produto_id: str, platform: str, affiliate_link: str) -> Optional[Dict]:
+        """Aprova um produto pendente e adiciona o link de afiliado"""
+        try:
+            response = requests.post(
+                f'{self.base_url}/api/webhook/products/approve',
+                headers=self.headers,
+                json={
+                    'productId': produto_id,
+                    'platform': platform,
+                    'affiliateLink': affiliate_link
+                },
+                timeout=15,
+                verify=False
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f'❌ Erro ao aprovar produto {produto_id}: {e}')
+            return None
+    
+    def rejeitar_produto(self, produto_id: str) -> Optional[Dict]:
+        """Rejeita um produto pendente"""
+        try:
+            response = requests.post(
+                f'{self.base_url}/api/webhook/products/reject',
+                headers=self.headers,
+                json={
+                    'productId': produto_id
+                },
+                timeout=15,
+                verify=False
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f'❌ Erro ao rejeitar produto {produto_id}: {e}')
+            return None
+

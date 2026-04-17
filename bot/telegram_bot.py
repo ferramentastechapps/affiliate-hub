@@ -78,31 +78,45 @@ class TelegramNotifier:
         """Formata mensagem de produto"""
         preco = f"💰 <b>R$ {produto['price']:.2f}</b>" if produto.get('price') else ""
         
-        links_texto = []
+        # Link do Promobit para consulta
+        link_promobit = ""
         links = produto.get('links', {})
         
-        if links.get('amazon'):
-            links_texto.append(f"🛒 <a href='{links['amazon']}'>Amazon</a>")
-        if links.get('mercadoLivre'):
-            links_texto.append(f"🛒 <a href='{links['mercadoLivre']}'>Mercado Livre</a>")
-        if links.get('shopee'):
-            links_texto.append(f"🛒 <a href='{links['shopee']}'>Shopee</a>")
-        if links.get('aliexpress'):
-            links_texto.append(f"🛒 <a href='{links['aliexpress']}'>AliExpress</a>")
-        if links.get('tiktok'):
-            links_texto.append(f"🛒 <a href='{links['tiktok']}'>TikTok</a>")
+        # Pegar o primeiro link disponível como referência do Promobit
+        primeiro_link = None
+        for plataforma in ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'tiktok']:
+            if links.get(plataforma):
+                primeiro_link = links[plataforma]
+                break
+        
+        if primeiro_link:
+            link_promobit = f"🔗 <a href='{primeiro_link}'>Ver no Promobit</a>"
         
         mensagem = f"""
-🔥 <b>NOVA PROMOÇÃO!</b>
+🔥 <b>NOVO PRODUTO ENCONTRADO!</b>
+⚠️ <b>AGUARDANDO APROVAÇÃO</b>
 
 📦 <b>{produto['name']}</b>
 🏷️ {produto['category']}
 {preco}
 
-{chr(10).join(links_texto)}
+{link_promobit}
 
-🌐 Ver mais: {AFFILIATE_HUB_URL}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>📋 PARA APROVAR:</b>
 
+1️⃣ Gere seu link de afiliado
+2️⃣ Use o comando:
+
+<code>/aprovar {produto.get('id', 'ID')} [SEU_LINK]</code>
+
+<b>Exemplo:</b>
+<code>/aprovar {produto.get('id', 'ID')} https://amzn.to/abc123</code>
+
+<b>🚫 Para rejeitar:</b>
+<code>/rejeitar {produto.get('id', 'ID')}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <i>ID_DO_PRODUTO: {produto.get('id', 'N/A')}</i>
 """
         

@@ -19,6 +19,7 @@ model Product {
   imageUrl    String   // URLs podem ser muito longas
   price       Float?
   originalPrice Float?
+  status      String   @default("pending") // pending, active, rejected
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   links       Link?
@@ -26,6 +27,7 @@ model Product {
   
   @@index([category])
   @@index([createdAt])
+  @@index([status])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
