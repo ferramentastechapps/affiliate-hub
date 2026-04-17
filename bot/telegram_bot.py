@@ -77,50 +77,59 @@ class TelegramNotifier:
     def _formatar_mensagem_produto(self, produto: dict) -> str:
         """Formata mensagem de produto"""
         preco = f"💰 <b>R$ {produto['price']:.2f}</b>" if produto.get('price') else ""
-        
-        # Link do Promobit para consulta
-        link_promobit = ""
+
+        # Detectar plataforma de origem e montar link
         links = produto.get('links', {})
-        
-        # Pegar o primeiro link disponível como referência do Promobit
+        plataforma_nome = "Desconhecida"
+        plataforma_emoji = "🛒"
         primeiro_link = None
-        for plataforma in ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'tiktok']:
-            if links.get(plataforma):
-                primeiro_link = links[plataforma]
+
+        plataformas = [
+            ('amazon',      '🟠 Amazon',        'Amazon'),
+            ('mercadoLivre','🟡 Mercado Livre',  'Mercado Livre'),
+            ('shopee',      '🟠 Shopee',         'Shopee'),
+            ('aliexpress',  '🔴 AliExpress',     'AliExpress'),
+            ('tiktok',      '⚫ TikTok Shop',    'TikTok Shop'),
+        ]
+
+        for chave, label, nome in plataformas:
+            if links.get(chave):
+                primeiro_link = links[chave]
+                plataforma_nome = label
                 break
-        
+
+        link_promobit = ""
         if primeiro_link:
-            link_promobit = f"🔗 <a href='{primeiro_link}'>Ver no Promobit</a>"
-        
+            link_promobit = f"🔗 <a href='{primeiro_link}'>Ver promoção original</a>"
+
+        produto_id = produto.get('id', 'N/A')
+
         mensagem = f"""
 🔥 <b>NOVO PRODUTO ENCONTRADO!</b>
 ⚠️ <b>AGUARDANDO APROVAÇÃO</b>
 
 📦 <b>{produto['name']}</b>
 🏷️ {produto['category']}
+🏪 Plataforma: <b>{plataforma_nome}</b>
 {preco}
 
 {link_promobit}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>📋 PARA APROVAR:</b>
+<b>📋 PARA APROVAR, envie:</b>
 
-1️⃣ Gere seu link de afiliado
-2️⃣ Use o comando:
-
-<code>/aprovar {produto.get('id', 'ID')} [SEU_LINK]</code>
-
-<b>Exemplo:</b>
-<code>/aprovar {produto.get('id', 'ID')} https://amzn.to/abc123</code>
+<code>/aprovar {produto_id} [SEU_LINK]</code>
 
 <b>🚫 Para rejeitar:</b>
-<code>/rejeitar {produto.get('id', 'ID')}</code>
-
+<code>/rejeitar {produto_id}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<i>ID_DO_PRODUTO: {produto.get('id', 'N/A')}</i>
+
+🆔 <b>ID do Produto:</b>
+<code>{produto_id}</code>
 """
-        
+
         return mensagem.strip()
+
     
     def _formatar_mensagem_cupom(self, cupom: dict) -> str:
         """Formata mensagem de cupom"""
