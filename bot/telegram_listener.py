@@ -7,7 +7,7 @@ import re
 import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
-from config import TELEGRAM_BOT_TOKEN
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID
 from affiliate_hub_api import AffiliateHubAPI
 
 # Inicializa o cliente da API para comunicar com o Next.js
@@ -29,6 +29,53 @@ def infer_platform_from_url(url: str) -> str:
         return 'tiktok'
         
     return 'amazon' # Default fallback
+
+PLATAFORMA_EMOJIS = {
+    'amazon':      '🟠 Amazon',
+    'mercadoLivre':'🟡 Mercado Livre',
+    'shopee':      '🟠 Shopee',
+    'aliexpress':  '🔴 AliExpress',
+    'tiktok':      '⚫ TikTok Shop',
+}
+
+async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str):
+    """Publica a promoção aprovada no grupo de promoções."""
+    if not TELEGRAM_PROMO_GROUP_ID:
+        print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação no grupo.')
+        return
+
+    nome = produto.get('name', 'Produto')
+    preco = produto.get('price')
+    imagem = produto.get('imageUrl')
+    plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
+
+    preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
+
+    mensagem = (
+        f"🔥 <b>PROMOÇÃO DO DIA!</b>\n\n"
+        f"📦 <b>{nome}</b>\n"
+        f"🏪 {plataforma_label}\n"
+        f"{preco_txt}\n\n"
+        f"🔗 <a href='{affiliate_link}'>👉 CLIQUE AQUI PARA COMPRAR</a>"
+    )
+
+    try:
+        if imagem:
+            await context.bot.send_photo(
+                chat_id=TELEGRAM_PROMO_GROUP_ID,
+                photo=imagem,
+                caption=mensagem,
+                parse_mode='HTML'
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=TELEGRAM_PROMO_GROUP_ID,
+                text=mensagem,
+                parse_mode='HTML'
+            )
+        print(f'📢 Promoção publicada no grupo: {nome[:50]}')
+    except Exception as e:
+        print(f'❌ Erro ao publicar no grupo: {e}')
 
 async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -76,12 +123,16 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     resultado = api.aprovar_produto(produto_id, platform, affiliate_link)
 
     if resultado and resultado.get('success'):
+        # Publicar no grupo de promoções
+        produto_info = resultado.get('product', {})
+        await publicar_no_grupo(context, produto_info, platform, affiliate_link)
+
         await msg_status.edit_text(
             f"✅ <b>Produto Aprovado com Sucesso!</b>\n\n"
             f"🆔 ID: <code>{produto_id}</code>\n"
             f"🏪 Plataforma: <b>{platform}</b>\n"
             f"🔗 Link atualizado\n\n"
-            f"O produto agora está visível no site!",
+            f"✅ Promoção publicada no grupo!",
             parse_mode='HTML'
         )
     else:

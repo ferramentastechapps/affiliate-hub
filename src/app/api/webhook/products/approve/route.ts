@@ -76,7 +76,13 @@ export async function POST(request: Request) {
       success: true,
       message: 'Produto aprovado e link atualizado',
       productId,
-      platform
+      platform,
+      product: {
+        name: product.name,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        category: product.category,
+      }
     });
     
   } catch (error) {
