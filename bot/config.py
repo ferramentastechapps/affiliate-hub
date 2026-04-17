@@ -11,6 +11,7 @@ AFFILIATE_HUB_API_KEY = os.getenv('AFFILIATE_HUB_API_KEY')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')         # Chat de aprovação (seu chat privado)
 TELEGRAM_PROMO_GROUP_ID = os.getenv('TELEGRAM_PROMO_GROUP_ID')  # Grupo onde publica as promos aprovadas
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Configurações de busca
 SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 30))

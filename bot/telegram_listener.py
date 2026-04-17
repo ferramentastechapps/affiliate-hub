@@ -7,7 +7,7 @@ import re
 import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
 
 # Inicializa o cliente da API para comunicar com o Next.js
@@ -50,44 +50,26 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     categoria = produto.get('category', 'Setup')
     plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
 
-    import random
-    LEGENDA_ENGRA_POR_CATEGORIA = {
-        'Gaming': [
-            "🎮 O FPS AUMENTA SÓ DE OLHAR",
-            "🕹️ SUA MÃE: 'Outro pacote?' VOCÊ: 'Tava em promoção!'",
-            "🎯 PRA QUEM FALA QUE LAG É DESCULPA",
-            "👾 O SEU SETUP TAVA CHORANDO POR ISSO",
-            "🔥 MAIS BARATO QUE SKIN RARA"
-        ],
-        'Streaming': [
-            "🎥 AGORA A CARA DE SONO FICA EM 4K",
-            "🎙️ ATÉ O VIZINHO VAI OUVIR A QUALIDADE",
-            "💡 LUZ PRA ESCONDER AS OLHEIRAS DO CORUJÃO",
-            "🔴 PRA COMEÇAR A CARREIRA DE STREAMER"
-        ],
-        'Home Office': [
-            "🪑 SUA COLUNA VAI AGRADECER!",
-            "💼 PRA FINGIR QUE TRABALHA AINDA MELHOR",
-            "🖥️ O CHEFE NÃO TÁ VENDO, PODE MUDAR O SETUP",
-            "☕ PRA RENDER +10H DE HOME OFFICE"
-        ],
-        'Setup': [
-            "🔥 AQUELE UPGRADE QUE DEIXA O SETUP BRABO",
-            "⚡ PRA DEIXAR O ESPAÇO PARECENDO A NASA",
-            "🚀 MAIS UMA PEÇA PRO PC DA NASA",
-            "💻 PQ O SEU CANTINHO TAVA PRECISANDO DESSE MIMO"
-        ]
-    }
-    legen_geral = [
-        "🔥 SÓ ACREDITO VENDO... EU VENDO:",
-        "💸 PREÇO DE DESAPEGO! CORRE!",
-        "🛒 ESTAGIÁRIO ERROU O PREÇO DE NOVO",
-        "🧨 PEGA LOGO ANTES QUE AUMENTE",
-        "🚀 ESSE AQUI NÃO DEVE DURAR MUITO TEMPO"
-    ]
+    legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
     
-    lista_legendas = LEGENDA_ENGRA_POR_CATEGORIA.get(categoria, legen_geral)
-    legenda_engracada = random.choice(lista_legendas)
+    import google.generativeai as genai
+    if GEMINI_API_KEY:
+        try:
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = (
+                f"Você é dono de um canal de achadinhos e utilidades. "
+                f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
+                f"para anunciar a venda deste produto: '{nome}'. "
+                f"Exemplos do estilo que eu quero: 'MEU ÚNICO CARDIO NESSE FERIADO', 'PRA NÃO BRIGAR MAIS COM A ESPOSA', "
+                f"'SUA CASA CLAMAVA POR ESSE MIMO', 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'. "
+                f"Seja criativo e focado no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
+            )
+            response = await model.generate_content_async(prompt)
+            if response and response.text:
+                legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
+        except Exception as e:
+            print(f"⚠️ Erro ao gerar legenda no Gemini: {e}")
 
     preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
     
