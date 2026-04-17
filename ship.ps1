@@ -50,6 +50,7 @@ npm run build
 echo "🤖 Configurando bot..."
 cd bot
 sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affiliate-hub/bot/.env
+grep -q 'TELEGRAM_PROMO_GROUP_ID' ~/affiliate-hub/bot/.env || echo 'TELEGRAM_PROMO_GROUP_ID=-5152308507' >> ~/affiliate-hub/bot/.env
 pip3 install -r requirements.txt --break-system-packages
 
 echo "🔄 Reiniciando serviços..."
