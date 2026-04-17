@@ -46,7 +46,7 @@ class PromotionScraper:
                     links = self._criar_links(link_oferta, loja)
                     categoria = self._detectar_categoria(nome)
                     
-                    cupom = offer.get('couponCode') or offer.get('discountCode') or ''
+                    cupom = offer.get('offerCoupon') or offer.get('couponCode') or ''
                     if not cupom:
                         import re
                         match = re.search(r'cupom[:\s]*([a-zA-Z0-9_-]+)', nome, re.IGNORECASE)
@@ -54,7 +54,7 @@ class PromotionScraper:
                             cupom = match.group(1).upper()
                     
                     descricao = f"Oferta na loja {loja} no Promobit"
-                    if cupom:
+                    if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
                     
                     produtos.append({
