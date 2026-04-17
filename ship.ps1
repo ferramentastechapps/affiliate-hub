@@ -40,6 +40,9 @@ git pull origin $Branch
 echo "📦 Instalando dependências..."
 npm install
 
+echo "🗄️  Sincronizando schema do banco de dados..."
+npx prisma db push --accept-data-loss
+
 echo "🏗️  Fazendo build do Next.js..."
 rm -rf .next
 npm run build
