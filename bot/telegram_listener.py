@@ -33,7 +33,8 @@ def infer_platform_from_url(url: str) -> str:
 async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Comando: /aprovar [id] [link_afiliado]
-    Aprova um produto pendente e adiciona o link de afiliado
+    Aprova um produto pendente e adiciona o link de afiliado.
+    Tolerante: encontra o link http em qualquer posição dos argumentos.
     """
     if not context.args or len(context.args) < 2:
         await update.message.reply_text(
@@ -45,23 +46,35 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
             parse_mode='HTML'
         )
         return
-    
-    produto_id = context.args[0]
-    affiliate_link = context.args[1]
-    
-    # Validar URL
-    if not affiliate_link.startswith('http'):
-        await update.message.reply_text("❌ O link deve começar com http:// ou https://")
+
+    # Procura o link (começa com http) em qualquer posição
+    affiliate_link = next((arg for arg in context.args if arg.startswith('http')), None)
+    # O ID é o primeiro argumento que NÃO é um link
+    produto_id = next((arg for arg in context.args if not arg.startswith('http')), None)
+
+    if not affiliate_link:
+        await update.message.reply_text(
+            "❌ Nenhum link encontrado!\n\n"
+            "✅ Formato correto:\n"
+            "<code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
+            "Exemplo:\n"
+            "<code>/aprovar clxyz123 https://amzn.to/abc123</code>",
+            parse_mode='HTML'
+        )
         return
-    
+
+    if not produto_id:
+        await update.message.reply_text("❌ ID do produto não encontrado no comando.")
+        return
+
     # Detectar plataforma
     platform = infer_platform_from_url(affiliate_link)
-    
+
     msg_status = await update.message.reply_text("⏳ Aprovando produto e atualizando link...")
-    
+
     # Chamar API de aprovação
     resultado = api.aprovar_produto(produto_id, platform, affiliate_link)
-    
+
     if resultado and resultado.get('success'):
         await msg_status.edit_text(
             f"✅ <b>Produto Aprovado com Sucesso!</b>\n\n"

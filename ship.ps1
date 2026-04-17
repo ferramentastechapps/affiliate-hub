@@ -53,6 +53,8 @@ sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affi
 pip3 install -r requirements.txt --break-system-packages
 
 echo "🔄 Reiniciando serviços..."
+pm2 delete telegram-bot 2>/dev/null || true
+pm2 delete promoflash-bot 2>/dev/null || true
 pkill -9 -f main.py || true
 pkill -9 -f telegram_listener.py || true
 
