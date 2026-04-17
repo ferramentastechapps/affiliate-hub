@@ -120,10 +120,24 @@ export function DailyDeals() {
 
           // Extrair a plataforma principal
           let mainPlatformText = "Link";
-          if (product.links?.amazon) mainPlatformText = "Amazon";
-          else if (product.links?.mercadoLivre) mainPlatformText = "Mercado Livre";
-          else if (product.links?.shopee) mainPlatformText = "Shopee";
-          else if (product.links?.aliexpress) mainPlatformText = "AliExpress";
+          let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=64";
+          
+          if (product.links?.amazon) { 
+            mainPlatformText = "Amazon"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com.br&sz=64"; 
+          }
+          else if (product.links?.mercadoLivre) { 
+            mainPlatformText = "Mercado Livre"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64"; 
+          }
+          else if (product.links?.shopee) { 
+            mainPlatformText = "Shopee"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=64"; 
+          }
+          else if (product.links?.aliexpress) { 
+            mainPlatformText = "AliExpress"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=64"; 
+          }
 
           return (
             <motion.div
@@ -145,18 +159,18 @@ export function DailyDeals() {
                 {getTimeAgo(product.createdAt)}
               </div>
 
-              {/* Imagem (Area com bg branco para destacar produtos como no mockup) */}
-              <div className="w-full aspect-square bg-zinc-100 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center p-4">
+              {/* Imagem (Area preenchida com a foto e sem efeito de zoom) */}
+              <div className="w-full aspect-[4/3] sm:aspect-square bg-zinc-100 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
-                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 mix-blend-multiply"
-                  style={{ filter: "drop-shadow(0px 10px 15px rgba(0,0,0,0.1))" }}
+                  className="w-full h-full object-cover"
                 />
                 
                 {/* Store mini logo/badge floating on image */}
-                <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md rounded-full shadow-md px-3 py-1.5 border border-zinc-200 flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-zinc-800 uppercase tracking-wider">
+                <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] px-3 py-1.5 border border-zinc-200 flex items-center justify-center gap-1.5">
+                  <img src={mainPlatformLogo} alt={mainPlatformText} className="w-4 h-4 rounded-full object-contain" />
+                  <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">
                     {mainPlatformText}
                   </span>
                 </div>
