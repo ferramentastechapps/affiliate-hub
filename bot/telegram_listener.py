@@ -47,7 +47,47 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     nome = produto.get('name', 'Produto')
     preco = produto.get('price')
     imagem = produto.get('imageUrl')
+    categoria = produto.get('category', 'Setup')
     plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
+
+    import random
+    LEGENDA_ENGRA_POR_CATEGORIA = {
+        'Gaming': [
+            "🎮 O FPS AUMENTA SÓ DE OLHAR",
+            "🕹️ SUA MÃE: 'Outro pacote?' VOCÊ: 'Tava em promoção!'",
+            "🎯 PRA QUEM FALA QUE LAG É DESCULPA",
+            "👾 O SEU SETUP TAVA CHORANDO POR ISSO",
+            "🔥 MAIS BARATO QUE SKIN RARA"
+        ],
+        'Streaming': [
+            "🎥 AGORA A CARA DE SONO FICA EM 4K",
+            "🎙️ ATÉ O VIZINHO VAI OUVIR A QUALIDADE",
+            "💡 LUZ PRA ESCONDER AS OLHEIRAS DO CORUJÃO",
+            "🔴 PRA COMEÇAR A CARREIRA DE STREAMER"
+        ],
+        'Home Office': [
+            "🪑 SUA COLUNA VAI AGRADECER!",
+            "💼 PRA FINGIR QUE TRABALHA AINDA MELHOR",
+            "🖥️ O CHEFE NÃO TÁ VENDO, PODE MUDAR O SETUP",
+            "☕ PRA RENDER +10H DE HOME OFFICE"
+        ],
+        'Setup': [
+            "🔥 AQUELE UPGRADE QUE DEIXA O SETUP BRABO",
+            "⚡ PRA DEIXAR O ESPAÇO PARECENDO A NASA",
+            "🚀 MAIS UMA PEÇA PRO PC DA NASA",
+            "💻 PQ O SEU CANTINHO TAVA PRECISANDO DESSE MIMO"
+        ]
+    }
+    legen_geral = [
+        "🔥 SÓ ACREDITO VENDO... EU VENDO:",
+        "💸 PREÇO DE DESAPEGO! CORRE!",
+        "🛒 ESTAGIÁRIO ERROU O PREÇO DE NOVO",
+        "🧨 PEGA LOGO ANTES QUE AUMENTE",
+        "🚀 ESSE AQUI NÃO DEVE DURAR MUITO TEMPO"
+    ]
+    
+    lista_legendas = LEGENDA_ENGRA_POR_CATEGORIA.get(categoria, legen_geral)
+    legenda_engracada = random.choice(lista_legendas)
 
     preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
     
@@ -58,7 +98,7 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
         cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
 
     mensagem = (
-        f"🔥 <b>PROMOÇÃO DO DIA!</b>\n\n"
+        f"{legenda_engracada}\n\n"
         f"📦 <b>{nome}</b>\n"
         f"🏪 {plataforma_label}\n"
         f"{preco_txt}\n"
