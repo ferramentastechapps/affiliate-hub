@@ -75,30 +75,24 @@ class PromotionBot:
             
             print(f'✨ Novos: {len(produtos_novos)} produtos e {len(cupons_novos)} cupons')
             
-            # 3. Adicionar produtos no site
+            # 3. Adicionar produtos no site e enviar para Telegram com ID
             if produtos_novos:
                 print(f'\n📦 Adicionando {len(produtos_novos)} produtos no site...')
-                resultado = self.api.adicionar_produtos_lote(produtos_novos)
                 
-                if resultado and resultado.get('success'):
-                    print(f'✅ {resultado["created"]} produtos adicionados no site')
-                else:
-                    print('⚠️ Falha ao adicionar produtos no site, mas continuaremos com o envio para Telegram')
-                    
-                # 4. Enviar para Telegram
+                # 4. Adicionar produto por produto para garantir o ID
                 print(f'\n📱 Enviando produtos para Telegram...')
-                
-                # Mapear os IDs retornados pela API (caso exista)
-                created_products = []
-                if resultado and resultado.get('success') and 'results' in resultado:
-                    created_products = resultado['results']
-                
                 for produto in produtos_novos:
-                    # Encontra o ID do banco de dados pelo nome
-                    matched_db = next((p for p in created_products if p.get('name') == produto['name']), None)
-                    if matched_db and matched_db.get('id'):
-                        produto['id'] = matched_db['id']
-                        
+                    # Adicionar individualmente para obter o ID com certeza
+                    resultado = self.api.adicionar_produto(produto)
+                    
+                    if resultado and resultado.get('success') and resultado.get('product', {}).get('id'):
+                        produto['id'] = resultado['product']['id']
+                        print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
+                    else:
+                        erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
+                        print(f'⚠️ Falha ao adicionar "{produto["name"][:40]}": {erro}')
+                        # Mesmo sem ID, envia para o Telegram — mas sem o ID de aprovação
+                    
                     self.telegram.enviar_sync('produto', produto)
                     self.produtos_enviados.add(produto['name'])
                     time.sleep(1)  # Evitar rate limit
