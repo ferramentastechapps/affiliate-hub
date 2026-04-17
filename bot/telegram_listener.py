@@ -23,7 +23,7 @@ def infer_platform_from_url(url: str) -> str:
         return 'shopee'
     if 'aliexpress' in url_lower or 's.click.aliexpress' in url_lower or 'a.aliexpress' in url_lower:
         return 'aliexpress'
-    if 'mercadolivre' in url_lower or 'mercadofree' in url_lower or 'mercadolibre' in url_lower:
+    if 'mercadolivre' in url_lower or 'mercadofree' in url_lower or 'mercadolibre' in url_lower or 'meli.la' in url_lower:
         return 'mercadoLivre'
     if 'tiktok' in url_lower:
         return 'tiktok'
@@ -50,12 +50,19 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
 
     preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
+    
+    descricao_prod = produto.get('description', '')
+    cupom_msg = ""
+    if '🎟️ CUPOM:' in descricao_prod:
+        cupom_extraido = descricao_prod.split('🎟️ CUPOM:')[1].strip()
+        cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
 
     mensagem = (
         f"🔥 <b>PROMOÇÃO DO DIA!</b>\n\n"
         f"📦 <b>{nome}</b>\n"
         f"🏪 {plataforma_label}\n"
-        f"{preco_txt}\n\n"
+        f"{preco_txt}\n"
+        f"{cupom_msg}\n"
         f"🔗 <a href='{affiliate_link}'>👉 CLIQUE AQUI PARA COMPRAR</a>"
     )
 

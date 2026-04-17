@@ -103,6 +103,12 @@ class TelegramNotifier:
             link_promobit = f"🔗 <a href='{primeiro_link}'>Ver promoção original</a>"
 
         produto_id = produto.get('id', 'N/A')
+        descricao_produto = produto.get('description', '')
+        
+        cupom_msg = ""
+        if '🎟️ CUPOM:' in descricao_produto:
+            cupom_extraido = descricao_produto.split('🎟️ CUPOM:')[1].strip()
+            cupom_msg = f"\n🎟️ Cupom: <code>{cupom_extraido}</code>"
 
         mensagem = f"""
 🔥 <b>NOVO PRODUTO ENCONTRADO!</b>
@@ -111,7 +117,7 @@ class TelegramNotifier:
 📦 <b>{produto['name']}</b>
 🏷️ {produto['category']}
 🏪 Plataforma: <b>{plataforma_nome}</b>
-{preco}
+{preco}{cupom_msg}
 
 {link_promobit}
 

@@ -125,6 +125,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
     ? "https://" + targetUrl 
     : targetUrl;
 
+  let displayCoupon = "";
+  if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
+      displayCoupon = product.description.split('🎟️ CUPOM:')[1].trim();
+  }
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -175,9 +180,30 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
 
               <div className="p-8 pb-4">
                 <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
-                <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-6 leading-snug">
+                <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-4 leading-snug">
                   {product.name}
                 </h3>
+
+                {displayCoupon && (
+                  <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 rounded-2xl">
+                    <div className="bg-accent/20 p-2 rounded-xl text-accent">
+                      <Tag size={24} weight="duotone" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">CUPOM DE DESCONTO</span>
+                      <code className="text-white font-mono font-bold text-lg">{displayCoupon}</code>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(displayCoupon);
+                        alert("Cupom copiado!");
+                      }}
+                      className="text-xs bg-accent hover:bg-accent-light text-white px-4 py-2.5 rounded-xl transition-colors font-bold uppercase tracking-wide"
+                    >
+                      COPIAR
+                    </button>
+                  </div>
+                )}
                 
                 {price > 0 ? (
                   <div className="flex flex-col mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
