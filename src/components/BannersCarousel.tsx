@@ -16,35 +16,35 @@ const banners: Banner[] = [
   {
     id: "lg-memberdays",
     name: "LG Member Days",
-    imageUrl: "/banners/lg-memberdays.jpg",
+    imageUrl: "/banners/lg-memberdays.jpg.png",
     category: "eletrodomesticos",
     description: "Até 60% OFF em produtos LG"
   },
   {
     id: "netshoes",
     name: "Netshoes",
-    imageUrl: "/banners/netshoes.jpg",
+    imageUrl: "/banners/netshoes.jpg.png",
     category: "esportes",
     description: "Cupom de até 15% OFF"
   },
   {
     id: "elets-cadeiras",
     name: "Elets Cadeiras",
-    imageUrl: "/banners/elets-cadeiras.jpg",
+    imageUrl: "/banners/elets-cadeiras.jpg.png",
     category: "escritorio",
     description: "Cadeiras com 8% OFF aplicando cupom exclusivo"
   },
   {
     id: "samsung-aniversario",
     name: "Samsung Aniversário",
-    imageUrl: "/banners/samsung-aniversario.jpg",
+    imageUrl: "/banners/samsung-aniversario.jpg.png",
     category: "tecnologia",
     description: "Aniversário Samsung com até 50% OFF + Parcele em até 18x"
   },
   {
     id: "aliexpress-outono",
     name: "AliExpress Saldão de Outono",
-    imageUrl: "/banners/aliexpress-outono.jpg",
+    imageUrl: "/banners/aliexpress-outono.jpg.png",
     category: "moda",
     description: "Saldão de Outono com até 70% OFF"
   }
