@@ -2,6 +2,7 @@ import { DailyDeals } from "@/components/DailyDeals";
 import { ProductGrid } from "@/components/ProductGrid";
 import { CouponsSection } from "@/components/CouponsSection";
 import { HeroSection } from "@/components/HeroSection";
+import { SocialFooter } from "@/components/SocialFooter";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
 
@@ -122,7 +123,7 @@ export default async function Home() {
   const couponsByPlatform = await getCouponsByPlatform();
 
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-20 pb-32 md:pb-8">
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-20 pb-8">
       {/* Hero Section */}
       <div id="categorias" className="w-full">
         <HeroSection />
@@ -137,6 +138,9 @@ export default async function Home() {
       <div id="ofertas" className="w-full">
         <DailyDeals />
       </div>
+
+      {/* Social Footer */}
+      <SocialFooter />
     </main>
   );
 }
