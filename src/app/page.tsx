@@ -3,6 +3,7 @@ import { ProductGrid } from "@/components/ProductGrid";
 import { CouponsSection } from "@/components/CouponsSection";
 import { HeroSection } from "@/components/HeroSection";
 import { SocialFooter } from "@/components/SocialFooter";
+import { StoreFilter } from "@/components/StoreFilter";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
 
@@ -132,6 +133,11 @@ export default async function Home() {
       {/* Cupons Section */}
       <div id="cupons" className="w-full">
         <CouponsSection couponsByPlatform={couponsByPlatform} />
+      </div>
+
+      {/* Filtro por Loja */}
+      <div className="w-full">
+        <StoreFilter />
       </div>
 
       {/* Promocoes do Dia */}
