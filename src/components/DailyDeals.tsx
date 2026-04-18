@@ -125,22 +125,42 @@ export function DailyDeals() {
       {/* Filtro de Categorias */}
       {categories.length > 1 && (
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => {
-                setSelectedCategory(category);
-                setShowAll(false);
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                selectedCategory === category
-                  ? "bg-accent text-white shadow-lg shadow-accent/30"
-                  : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+          {categories.map((category) => {
+            const emoji: Record<string, string> = {
+              'Todas': '🔥',
+              'Smartphones e TV': '📱',
+              'Informática e Games': '🎮',
+              'Casa e Eletrodomésticos': '🏠',
+              'Moda e Acessórios': '👗',
+              'Bebês e Crianças': '🍼',
+              'Saúde e Beleza': '💄',
+              'Esporte e Suplementos': '💪',
+              'Supermercado e Delivery': '🛒',
+              'Livros, eBooks e eReaders': '📚',
+              'Ferramentas e Jardim': '🔧',
+              'Automotivo': '🚗',
+              'Pet': '🐾',
+              'Viagem': '✈️',
+              'Diversos': '📦',
+            };
+            return (
+              <button
+                key={category}
+                onClick={() => {
+                  setSelectedCategory(category);
+                  setShowAll(false);
+                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  selectedCategory === category
+                    ? "bg-accent text-white shadow-lg shadow-accent/30"
+                    : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <span>{emoji[category] ?? '📦'}</span>
+                {category}
+              </button>
+            );
+          })}
         </div>
       )}
 
