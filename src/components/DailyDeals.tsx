@@ -55,6 +55,8 @@ export function DailyDeals() {
           imageUrl: p.imageUrl,
           price: p.price,
           createdAt: p.createdAt,
+          description: p.description,
+          coupons: p.coupons || [],
           links: {
             amazon: p.links?.amazon,
             mercadoLivre: p.links?.mercadoLivre,

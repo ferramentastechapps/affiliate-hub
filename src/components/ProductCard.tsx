@@ -12,6 +12,8 @@ export type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  description?: string;
+  coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: AffiliateLinks;
 };
 

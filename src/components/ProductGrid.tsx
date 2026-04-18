@@ -156,6 +156,8 @@ export function ProductGrid() {
             name: p.name,
             category: p.category,
             imageUrl: p.imageUrl,
+            description: p.description,
+            coupons: p.coupons || [],
             links: {
               amazon: p.links?.amazon,
               mercadoLivre: p.links?.mercadoLivre,

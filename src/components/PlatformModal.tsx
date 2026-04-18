@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { X, ArrowRight, ShieldCheck, Tag } from "@phosphor-icons/react";
+import { CouponModal } from "./CouponModal";
 
 export type AffiliateLinks = {
   amazon?: string;
@@ -46,6 +47,7 @@ function getSimulatedDiscount(id: string): number {
 
 export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [showCouponModal, setShowCouponModal] = useState(false);
 
   // Carrega produtos relacionados ao abrir a modal
   useEffect(() => {
@@ -94,6 +96,19 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
 
   function handlePlatformClick() {
     if (!targetUrl) return;
+    
+    // Se houver cupom, mostrar modal de cupom primeiro
+    if (displayCoupon) {
+      setShowCouponModal(true);
+    } else {
+      // Se não houver cupom, ir direto para a loja
+      trackAffiliateClick(platformName, product.name, targetUrl);
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    }
+  }
+  
+  function handleGoToStore() {
+    if (!targetUrl) return;
     trackAffiliateClick(platformName, product.name, targetUrl);
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
   }
@@ -125,9 +140,13 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
     ? "https://" + targetUrl 
     : targetUrl;
 
+  // Buscar cupom do banco de dados (primeiro cupom ativo do produto)
   let displayCoupon = "";
-  if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
-      displayCoupon = product.description.split('🎟️ CUPOM:')[1].trim();
+  if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
+    displayCoupon = product.coupons[0].code;
+  } else if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
+    // Fallback: extrair da descrição se não houver no banco
+    displayCoupon = product.description.split('🎟️ CUPOM:')[1].trim();
   }
 
   return (
@@ -190,18 +209,9 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                       <Tag size={24} weight="duotone" />
                     </div>
                     <div className="flex-1">
-                      <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">CUPOM DE DESCONTO</span>
+                      <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">CUPOM DISPONÍVEL</span>
                       <code className="text-white font-mono font-bold text-lg">{displayCoupon}</code>
                     </div>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(displayCoupon);
-                        alert("Cupom copiado!");
-                      }}
-                      className="text-xs bg-accent hover:bg-accent-light text-white px-4 py-2.5 rounded-xl transition-colors font-bold uppercase tracking-wide"
-                    >
-                      COPIAR
-                    </button>
                   </div>
                 )}
                 
@@ -225,18 +235,13 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   </div>
                 )}
 
-                <a
-                  href={safeTargetUrl || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
-                    if (targetUrl) trackAffiliateClick(platformName, product.name, targetUrl);
-                  }}
+                <button
+                  onClick={handlePlatformClick}
                   className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-lg py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)]"
                 >
-                  Ir para Promoção na {platformName}
+                  {displayCoupon ? "Ver Cupom e Ir para Loja" : `Ir para Promoção na ${platformName}`}
                   <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
-                </a>
+                </button>
 
                 <div className="mt-5 flex items-center justify-center gap-2 text-zinc-400 text-sm font-medium">
                   <ShieldCheck size={18} weight="duotone" className="text-emerald-400" />
@@ -307,6 +312,19 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
               )}
             </div>
           </motion.div>
+          
+          {/* Modal de Cupom */}
+          {displayCoupon && (
+            <CouponModal
+              isOpen={showCouponModal}
+              onClose={() => setShowCouponModal(false)}
+              couponCode={displayCoupon}
+              productName={product.name}
+              platformName={platformName}
+              affiliateUrl={safeTargetUrl}
+              onGoToStore={handleGoToStore}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>

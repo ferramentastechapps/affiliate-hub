@@ -156,26 +156,9 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
         produto_info = resultado.get('product', {})
         await publicar_no_grupo(context, produto_info, platform, affiliate_link)
 
-        # Enviar cupom separadamente se existir
+        # Verificar se cupom foi salvo no banco
         cupom_info = resultado.get('coupon')
-        if cupom_info and TELEGRAM_PROMO_GROUP_ID:
-            try:
-                mensagem_cupom = (
-                    f"🎫 <b>CUPOM DE DESCONTO!</b>\n\n"
-                    f"💳 <code>{cupom_info['code']}</code>\n"
-                    f"📝 {cupom_info['description']}\n"
-                    f"💰 {cupom_info['discount']}\n"
-                    f"🏪 {cupom_info['platform']}\n\n"
-                    f"🔗 <a href='{affiliate_link}'>👉 USAR CUPOM</a>"
-                )
-                await context.bot.send_message(
-                    chat_id=TELEGRAM_PROMO_GROUP_ID,
-                    text=mensagem_cupom,
-                    parse_mode='HTML'
-                )
-                print(f'🎫 Cupom enviado para o grupo: {cupom_info["code"]}')
-            except Exception as e:
-                print(f'❌ Erro ao enviar cupom para o grupo: {e}')
+        cupom_msg = f"\n🎫 Cupom salvo no banco de dados!" if cupom_info else ""
 
         await msg_status.edit_text(
             f"✅ <b>Produto Aprovado com Sucesso!</b>\n\n"
@@ -183,7 +166,7 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
             f"🏪 Plataforma: <b>{platform}</b>\n"
             f"🔗 Link atualizado\n\n"
             f"✅ Promoção publicada no grupo!"
-            + (f"\n🎫 Cupom enviado!" if cupom_info else ""),
+            + cupom_msg,
             parse_mode='HTML'
         )
     else:
