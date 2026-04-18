@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Affiliate Hub | Top Deals",
+  title: "123 Testando | Top Deals",
   description: "Discover the best products and deals. Choose your preferred platform to buy.",
 };
 

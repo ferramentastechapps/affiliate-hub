@@ -17,7 +17,7 @@ export const revalidate = 60;
 // 📊 METADATA PARA SEO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const metadata: Metadata = {
-  title: "Affiliate Hub | Melhores Ofertas e Cupons de Desconto",
+  title: "123 Testando | Melhores Ofertas e Cupons de Desconto",
   description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre Amazon, Mercado Livre, Shopee, AliExpress e TikTok Shop. Economize agora!",
   keywords: [
     "cupons de desconto",
@@ -35,24 +35,24 @@ export const metadata: Metadata = {
     "home office",
     "streaming"
   ],
-  authors: [{ name: "Affiliate Hub" }],
-  creator: "Affiliate Hub",
-  publisher: "Affiliate Hub",
+  authors: [{ name: "123 Testando" }],
+  creator: "123 Testando",
+  publisher: "123 Testando",
   
   // Open Graph (Facebook, LinkedIn, WhatsApp)
   openGraph: {
     type: "website",
     locale: "pt_BR",
     url: "https://seu-dominio.com",
-    siteName: "Affiliate Hub",
-    title: "Affiliate Hub | Melhores Ofertas e Cupons de Desconto",
+    siteName: "123 Testando",
+    title: "123 Testando | Melhores Ofertas e Cupons de Desconto",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre as principais lojas online.",
     images: [
       {
-        url: "https://seu-dominio.com/og-image.jpg", // Crie esta imagem 1200x630px
+        url: "https://seu-dominio.com/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Affiliate Hub - Melhores Ofertas",
+        alt: "123 Testando - Melhores Ofertas",
       },
     ],
   },
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "Affiliate Hub | Melhores Ofertas e Cupons",
+    title: "123 Testando | Melhores Ofertas e Cupons",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos.",
     images: ["https://seu-dominio.com/og-image.jpg"],
     creator: "@seu_twitter",

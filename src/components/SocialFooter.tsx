@@ -47,7 +47,7 @@ export function SocialFooter() {
 
           {/* Copyright */}
           <div className="text-center text-zinc-500 text-sm mt-4">
-            <p>© {new Date().getFullYear()} Affiliate Hub. Todos os direitos reservados.</p>
+            <p>© {new Date().getFullYear()} 123 Testando. Todos os direitos reservados.</p>
           </div>
         </motion.div>
       </div>
