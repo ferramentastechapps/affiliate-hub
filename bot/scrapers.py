@@ -44,7 +44,13 @@ class PromotionScraper:
                     
                     loja = offer.get('storeName', 'Desconhecido')
                     links = self._criar_links(link_oferta, loja)
-                    categoria = self._detectar_categoria(nome)
+                    
+                    # Tentar pegar categoria do Promobit primeiro
+                    categoria_promobit = offer.get('categoryName') or offer.get('category', {}).get('name')
+                    if categoria_promobit:
+                        categoria = self._mapear_categoria_promobit(categoria_promobit)
+                    else:
+                        categoria = self._detectar_categoria(nome)
                     
                     cupom = offer.get('offerCoupon') or offer.get('couponCode') or ''
                     if not cupom:
@@ -227,18 +233,126 @@ class PromotionScraper:
         else:
             links['amazon'] = link_oferta
         return links
+    
+    def _mapear_categoria_promobit(self, categoria_promobit: str) -> str:
+        """Mapeia categorias do Promobit para as categorias do site"""
+        categoria_lower = categoria_promobit.lower()
+        
+        # Mapeamento de categorias do Promobit para categorias do site
+        mapeamento = {
+            # Eletrônicos e Informática
+            'informática': 'Setup',
+            'computadores': 'Setup',
+            'notebooks': 'Setup',
+            'tablets': 'Setup',
+            'celulares': 'Setup',
+            'smartphones': 'Setup',
+            'eletrônicos': 'Setup',
+            'acessórios': 'Setup',
+            'periféricos': 'Setup',
+            
+            # Gaming
+            'games': 'Gaming',
+            'consoles': 'Gaming',
+            'videogames': 'Gaming',
+            'playstation': 'Gaming',
+            'xbox': 'Gaming',
+            'nintendo': 'Gaming',
+            
+            # Casa e Decoração
+            'casa': 'Home Office',
+            'móveis': 'Home Office',
+            'decoração': 'Home Office',
+            'cama': 'Home Office',
+            'mesa': 'Home Office',
+            'banho': 'Home Office',
+            
+            # Moda e Vestuário
+            'moda': 'Moda',
+            'roupas': 'Moda',
+            'calçados': 'Moda',
+            'tênis': 'Moda',
+            'sapatos': 'Moda',
+            'bolsas': 'Moda',
+            'acessórios': 'Moda',
+            
+            # Beleza e Saúde
+            'beleza': 'Beleza',
+            'perfumes': 'Beleza',
+            'cosméticos': 'Beleza',
+            'saúde': 'Beleza',
+            'cuidados': 'Beleza',
+            
+            # Esportes
+            'esportes': 'Esportes',
+            'fitness': 'Esportes',
+            'academia': 'Esportes',
+            'outdoor': 'Esportes',
+            
+            # Livros e Entretenimento
+            'livros': 'Entretenimento',
+            'filmes': 'Entretenimento',
+            'música': 'Entretenimento',
+            'instrumentos': 'Entretenimento',
+            
+            # Alimentos e Bebidas
+            'alimentos': 'Alimentos',
+            'bebidas': 'Alimentos',
+            'supermercado': 'Alimentos',
+            
+            # Outros
+            'brinquedos': 'Outros',
+            'pet': 'Outros',
+            'automotivo': 'Outros',
+            'ferramentas': 'Outros',
+        }
+        
+        # Procurar correspondência no mapeamento
+        for chave, valor in mapeamento.items():
+            if chave in categoria_lower:
+                return valor
+        
+        # Se não encontrar, tentar detectar pela palavra-chave
+        return self._detectar_categoria(categoria_promobit)
         
     def _detectar_categoria(self, nome: str) -> str:
+        """Detecta categoria baseada no nome do produto"""
         nome_lower = nome.lower()
-        if any(palavra in nome_lower for palavra in ['mouse', 'teclado', 'headset', 'gamer', 'gaming', 'rgb', 'mecânico']):
+        
+        # Gaming
+        if any(palavra in nome_lower for palavra in ['mouse', 'teclado', 'headset', 'gamer', 'gaming', 'rgb', 'mecânico', 'console', 'playstation', 'xbox', 'nintendo', 'controle', 'joystick']):
             return 'Gaming'
-        if any(palavra in nome_lower for palavra in ['webcam', 'microfone', 'ring light', 'iluminação']):
+        
+        # Streaming
+        if any(palavra in nome_lower for palavra in ['webcam', 'microfone', 'ring light', 'iluminação', 'streaming', 'elgato', 'obs']):
             return 'Streaming'
-        if any(palavra in nome_lower for palavra in ['cadeira', 'mesa', 'suporte', 'ergonômico']):
+        
+        # Home Office
+        if any(palavra in nome_lower for palavra in ['cadeira', 'mesa', 'suporte', 'ergonômico', 'escritório', 'office', 'organizador']):
             return 'Home Office'
-        if any(palavra in nome_lower for palavra in ['monitor', 'ssd', 'hd', 'memória', 'processador', 'placa']):
+        
+        # Moda
+        if any(palavra in nome_lower for palavra in ['camiseta', 'calça', 'tênis', 'sapato', 'roupa', 'vestido', 'shorts', 'jaqueta', 'casaco', 'bolsa', 'mochila', 'relógio']):
+            return 'Moda'
+        
+        # Beleza
+        if any(palavra in nome_lower for palavra in ['perfume', 'shampoo', 'condicionador', 'creme', 'maquiagem', 'skincare', 'hidratante', 'sérum']):
+            return 'Beleza'
+        
+        # Esportes
+        if any(palavra in nome_lower for palavra in ['bicicleta', 'bike', 'corrida', 'treino', 'fitness', 'musculação', 'yoga', 'natação']):
+            return 'Esportes'
+        
+        # Alimentos
+        if any(palavra in nome_lower for palavra in ['chocolate', 'café', 'chá', 'whey', 'suplemento', 'proteína', 'vitamina']):
+            return 'Alimentos'
+        
+        # Setup (padrão para eletrônicos)
+        if any(palavra in nome_lower for palavra in ['monitor', 'ssd', 'hd', 'memória', 'processador', 'placa', 'notebook', 'celular', 'tablet', 'fone', 'carregador', 'cabo']):
             return 'Setup'
-        return 'Setup'
+        
+        # Padrão
+        return 'Outros'
     
     def _extrair_preco(self, texto: str) -> Optional[float]:
         try:

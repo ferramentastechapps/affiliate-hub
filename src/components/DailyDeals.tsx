@@ -36,6 +36,7 @@ export function DailyDeals() {
   const [allProducts, setAllProducts] = useState<(Product & { createdAt?: string })[]>([]);
   const [products, setProducts] = useState<(Product & { createdAt?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
 
   useEffect(() => {
     fetchProducts();
@@ -71,6 +72,14 @@ export function DailyDeals() {
       setLoading(false);
     }
   }
+  
+  // Filtrar produtos por categoria
+  const filteredProducts = selectedCategory === "Todas" 
+    ? allProducts 
+    : allProducts.filter(p => p.category === selectedCategory);
+  
+  // Obter categorias únicas
+  const categories = ["Todas", ...Array.from(new Set(allProducts.map(p => p.category)))].filter(Boolean);
 
   if (loading) {
     return (
@@ -86,11 +95,11 @@ export function DailyDeals() {
     return null; // Não renderizar se não houver promoções
   }
 
-  const displayProducts = showAll ? allProducts : products;
+  const displayProducts = showAll ? filteredProducts : filteredProducts.slice(0, 4);
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-16 relative">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-semibold tracking-tight text-white mb-2 flex items-center gap-3">
             Promoções do dia
@@ -101,7 +110,7 @@ export function DailyDeals() {
           </h2>
           <p className="text-zinc-400 text-sm">As ofertas mais quentes adicionadas recentemente</p>
         </div>
-        {allProducts.length > 4 && (
+        {filteredProducts.length > 4 && (
           <button 
             onClick={() => setShowAll(!showAll)}
             className="flex text-sm font-medium text-accent hover:text-white transition-colors items-center gap-1 bg-accent/10 px-4 py-2 rounded-full hover:bg-accent/20"
@@ -110,6 +119,28 @@ export function DailyDeals() {
           </button>
         )}
       </div>
+
+      {/* Filtro de Categorias */}
+      {categories.length > 1 && (
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => {
+                setSelectedCategory(category);
+                setShowAll(false);
+              }}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                selectedCategory === category
+                  ? "bg-accent text-white shadow-lg shadow-accent/30"
+                  : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {displayProducts.map((product, index) => {
