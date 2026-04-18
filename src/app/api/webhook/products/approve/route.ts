@@ -70,6 +70,50 @@ export async function POST(request: Request) {
       });
     }
     
+    // Extrair cupom da descrição do produto (se existir)
+    let couponData = null;
+    if (product.description && product.description.includes('🎟️ CUPOM:')) {
+      const couponMatch = product.description.match(/🎟️ CUPOM:\s*([^\n]+)/);
+      if (couponMatch) {
+        const couponCode = couponMatch[1].trim();
+        
+        // Verificar se o cupom já existe para este produto
+        const existingCoupon = await prisma.coupon.findFirst({
+          where: {
+            code: couponCode,
+            productId: productId
+          }
+        });
+        
+        if (!existingCoupon) {
+          // Criar cupom no banco de dados
+          const platformNames: Record<string, string> = {
+            'amazon': 'Amazon',
+            'mercadoLivre': 'Mercado Livre',
+            'shopee': 'Shopee',
+            'aliexpress': 'AliExpress',
+            'tiktok': 'TikTok Shop'
+          };
+          
+          couponData = await prisma.coupon.create({
+            data: {
+              code: couponCode,
+              description: `Cupom de desconto para ${product.name}`,
+              discount: 'Desconto aplicado',
+              platform: platformNames[platform] || platform,
+              productId: productId,
+              isActive: true
+            }
+          });
+          
+          console.log(`✅ Cupom criado: ${couponCode} para produto ${productId}`);
+        } else {
+          couponData = existingCoupon;
+          console.log(`ℹ️ Cupom já existe: ${couponCode}`);
+        }
+      }
+    }
+    
     console.log(`✅ Produto aprovado: ${productId} | Plataforma: ${platform}`);
     
     return NextResponse.json({
@@ -82,7 +126,15 @@ export async function POST(request: Request) {
         price: product.price,
         imageUrl: product.imageUrl,
         category: product.category,
-      }
+        description: product.description,
+      },
+      coupon: couponData ? {
+        id: couponData.id,
+        code: couponData.code,
+        description: couponData.description,
+        discount: couponData.discount,
+        platform: couponData.platform
+      } : null
     });
     
   } catch (error) {

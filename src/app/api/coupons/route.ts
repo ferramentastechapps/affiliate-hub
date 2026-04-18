@@ -4,6 +4,13 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     const coupons = await prisma.coupon.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gte: new Date() } }
+        ]
+      },
       include: {
         product: true
       },
