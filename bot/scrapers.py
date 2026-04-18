@@ -51,11 +51,30 @@ class PromotionScraper:
                     else:
                         categoria = self._detectar_categoria(nome)
 
-                    cupom = offer.get('offerCoupon') or offer.get('couponCode') or ''
+                    # Cupom: tentar vários campos possíveis do JSON do Promobit
+                    cupom = (
+                        offer.get('offerCoupon') or
+                        offer.get('couponCode') or
+                        offer.get('coupon') or
+                        offer.get('offerCode') or
+                        offer.get('discountCode') or
+                        ''
+                    )
+                    # Fallback: procurar no título
                     if not cupom:
-                        match = re.search(r'cupom[:\s]*([a-zA-Z0-9_-]+)', nome, re.IGNORECASE)
+                        match = re.search(r'cupom[:\s]+([a-zA-Z0-9_-]+)', nome, re.IGNORECASE)
                         if match:
                             cupom = match.group(1).upper()
+                    # Fallback: procurar na descrição da oferta
+                    if not cupom:
+                        descricao_oferta = offer.get('offerDescription', '') or ''
+                        match = re.search(r'cupom[:\s]+([a-zA-Z0-9_-]+)', descricao_oferta, re.IGNORECASE)
+                        if match:
+                            cupom = match.group(1).upper()
+                    # Fallback: extrair do texto completo da oferta
+                    if not cupom:
+                        texto_completo = str(offer)
+                        cupom = self._extrair_cupom_texto(texto_completo)
 
                     descricao = f"Oferta na loja {loja} no Promobit"
                     if cupom and str(cupom).strip():
@@ -119,98 +138,141 @@ class PromotionScraper:
             print(f'❌ Erro ao buscar cupons: {e}')
         return cupons
 
+    # Palavras em maiúsculas que NÃO são cupons
+    _NAO_CUPOM = {
+        'WIFI', 'HDMI', 'USB', 'SSD', 'RAM', 'CPU', 'GPU', 'LED', 'LCD',
+        'UHD', 'FHD', 'QHD', 'HDR', 'PS4', 'PS5', 'PS3', 'OLED', 'QLED',
+        'AMOLED', 'FULL', 'SMART', 'DUAL', 'QUAD', 'CORE', 'PLUS', 'MINI',
+        'ULTRA', 'PRO', 'MAX', 'LITE', 'SLIM', 'TURBO', 'BOOST', 'FAST',
+        'WIFI6', 'WIFI5', 'HDMI2', 'USB3', 'TYPE', 'INCH', 'BTUS', 'BTUH',
+        'SAMSUNG', 'APPLE', 'SONY', 'ASUS', 'INTEL', 'NVIDIA', 'AMD',
+        'EPSON', 'PHILIPS', 'LENOVO', 'XIAOMI', 'MOTOROLA', 'LOGITECH',
+        'INTELBRAS', 'GAINWARD', 'HISENSE', 'SAFETY', 'NINTENDO', 'SWITCH',
+        'GALAXY', 'IPHONE', 'AIRPOD', 'MACBOOK', 'IPAD',
+    }
+
+    def _extrair_cupom_texto(self, texto: str) -> str:
+        """Extrai código de cupom de um texto. Retorna string vazia se não encontrar."""
+        # Padrão 1: letras maiúsculas + números (ex: CAMISA10, KABUM15, MELIMODA18)
+        for m in re.finditer(r'\b([A-Z]{3,}[0-9]{1,4}|[A-Z]{2,}[0-9]{2,}[A-Z]*)\b', texto):
+            c = m.group(1)
+            if c not in self._NAO_CUPOM and len(c) >= 4:
+                return c
+        # Padrão 2: só letras maiúsculas com 5+ chars que não sejam marcas (ex: MELIMODA)
+        for m in re.finditer(r'\b([A-Z]{5,15})\b', texto):
+            c = m.group(1)
+            if c not in self._NAO_CUPOM:
+                return c
+        return ''
+
     def buscar_promocoes_promobyte(self, limite: int = 15) -> List[Dict]:
         """Busca promoções do Promobyte (promobyte.site)"""
         produtos = []
+        vistos: set = set()
+        # Buscar em múltiplas páginas para ter mais variedade
+        urls_busca = [
+            'https://promobyte.site/promocoes-do-dia',
+            'https://promobyte.site/lojas/amazon',
+            'https://promobyte.site/lojas/mercadolivre',
+        ]
         try:
             print('🔥 Buscando promoções no Promobyte...')
-            response = requests.get('https://promobyte.site/promocoes-do-dia', headers=self.headers, timeout=15)
-            if response.status_code != 200:
-                print(f'❌ Erro HTTP Promobyte: {response.status_code}')
-                return produtos
-
-            soup = BeautifulSoup(response.content, 'html.parser')
-
-            # Cada promoção é um <a> com href="/p/CODIGO"
-            cards = soup.select('a[href*="/p/"]')
-
-            for card in cards[:limite]:
+            for url in urls_busca:
+                if len(produtos) >= limite:
+                    break
                 try:
-                    texto = card.get_text(separator=' ', strip=True)
-                    link = card.get('href', '')
-                    if not link.startswith('http'):
-                        link = 'https://promobyte.site' + link
-
-                    # Extrair nome: texto antes do "há Xh"
-                    nome_match = re.split(r'há\s+\d+\s*[mh]', texto)
-                    nome = nome_match[0].strip() if nome_match else texto[:80]
-                    # Remover prefixo de desconto tipo "-47% "
-                    nome = re.sub(r'^-?\d+%\s*', '', nome).strip()
-                    if not nome or len(nome) < 5:
+                    response = requests.get(url, headers=self.headers, timeout=15)
+                    if response.status_code != 200:
                         continue
 
-                    # Extrair preço atual (último valor R$ no texto)
-                    precos = re.findall(r'R\$\s*([\d.,]+)', texto)
-                    preco = None
-                    preco_original = None
-                    if len(precos) >= 2:
-                        preco_original = self._extrair_preco('R$ ' + precos[0])
-                        preco = self._extrair_preco('R$ ' + precos[-1])
-                    elif len(precos) == 1:
-                        preco = self._extrair_preco('R$ ' + precos[0])
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    cards = soup.select('a[href*="/p/"]')
 
-                    # Extrair cupom (palavra em maiúsculas isolada no texto, ex: CAMISA10)
-                    cupom_match = re.search(r'\b([A-Z][A-Z0-9]{3,14})\b', texto)
-                    cupom = ''
-                    if cupom_match:
-                        candidato = cupom_match.group(1)
-                        # Ignorar palavras comuns que não são cupons
-                        ignorar = {'CAMISA', 'WIFI', 'HDMI', 'AMOLED', 'QLED', 'OLED', 'FULL', 'SMART'}
-                        if candidato not in ignorar:
-                            cupom = candidato
+                    for card in cards:
+                        if len(produtos) >= limite:
+                            break
+                        try:
+                            link = card.get('href', '')
+                            if not link.startswith('http'):
+                                link = 'https://promobyte.site' + link
+                            if link in vistos:
+                                continue
+                            vistos.add(link)
 
-                    # Loja: inferir pelo link ou texto
-                    loja = 'Amazon'
-                    texto_lower = texto.lower()
-                    if 'mercado livre' in texto_lower or 'melimoda' in texto_lower or 'meli' in texto_lower:
-                        loja = 'Mercado Livre'
-                    elif 'shopee' in texto_lower:
-                        loja = 'Shopee'
-                    elif 'aliexpress' in texto_lower:
-                        loja = 'AliExpress'
-                    elif 'kabum' in texto_lower:
-                        loja = 'KaBuM'
-                    elif 'magalu' in texto_lower or 'magazine' in texto_lower:
-                        loja = 'Magalu'
-                    elif 'terabyte' in texto_lower:
-                        loja = 'Terabyte'
+                            texto = card.get_text(separator=' ', strip=True)
 
-                    links = self._criar_links(link, loja)
-                    categoria = self._detectar_categoria(nome)
+                            # Nome: texto antes do "há Xh/Xmin"
+                            partes = re.split(r'\s+há\s+\d+\s*[mh]', texto)
+                            nome = re.sub(r'^-?\d+%\s*', '', partes[0].strip())
+                            if not nome or len(nome) < 5:
+                                continue
 
-                    descricao = f"Oferta no Promobyte via {loja}"
-                    if cupom:
-                        descricao += f"\n🎟️ CUPOM: {cupom}"
+                            # Preços
+                            precos_raw = re.findall(r'R\$\s*([\d.,]+)', texto)
+                            preco = None
+                            preco_original = None
+                            if len(precos_raw) >= 2:
+                                preco_original = self._extrair_preco('R$ ' + precos_raw[0])
+                                preco = self._extrair_preco('R$ ' + precos_raw[-1])
+                            elif len(precos_raw) == 1:
+                                preco = self._extrair_preco('R$ ' + precos_raw[0])
 
-                    # Imagem: Promobyte não expõe imagem no listing, usar placeholder
-                    imagem_url = 'https://via.placeholder.com/800x1000'
+                            # Cupom — extrair da parte APÓS o "há Xh" para evitar
+                            # pegar siglas do nome do produto
+                            texto_pos_tempo = texto
+                            if len(partes) > 1:
+                                texto_pos_tempo = ' '.join(partes[1:])
+                            cupom = self._extrair_cupom_texto(texto_pos_tempo)
 
-                    produtos.append({
-                        'name': nome[:200],
-                        'category': categoria,
-                        'description': descricao,
-                        'imageUrl': imagem_url,
-                        'price': preco,
-                        'originalPrice': preco_original,
-                        'links': links
-                    })
-                    print(f'  ✅ [Promobyte] {nome[:50]}...')
+                            loja = self._detectar_loja_promobyte(texto, url)
+                            links = self._criar_links(link, loja)
+                            categoria = self._detectar_categoria(nome)
+
+                            descricao = f"Oferta no Promobyte via {loja}"
+                            if cupom:
+                                descricao += f"\n🎟️ CUPOM: {cupom}"
+
+                            produtos.append({
+                                'name': nome[:200],
+                                'category': categoria,
+                                'description': descricao,
+                                'imageUrl': 'https://via.placeholder.com/800x1000',
+                                'price': preco,
+                                'originalPrice': preco_original,
+                                'links': links
+                            })
+                            cupom_log = f' 🎟️ {cupom}' if cupom else ''
+                            print(f'  ✅ [Promobyte] {nome[:45]}...{cupom_log}')
+                        except Exception as e:
+                            print(f'  ⚠️  Erro ao processar oferta Promobyte: {e}')
                 except Exception as e:
-                    print(f'  ⚠️  Erro ao processar oferta Promobyte: {e}')
+                    print(f'  ⚠️  Erro ao acessar {url}: {e}')
 
         except Exception as e:
             print(f'❌ Erro ao buscar no Promobyte: {e}')
         return produtos
+
+    def _detectar_loja_promobyte(self, texto: str, url: str) -> str:
+        """Detecta a loja de uma oferta do Promobyte"""
+        t = texto.lower()
+        u = url.lower()
+        if 'mercado livre' in t or 'mercadolivre' in t or 'melimoda' in t or 'mercadolivre' in u:
+            return 'Mercado Livre'
+        if 'shopee' in t or 'shopee' in u:
+            return 'Shopee'
+        if 'aliexpress' in t or 'aliexpress' in u:
+            return 'AliExpress'
+        if 'kabum' in t or 'kabum' in u:
+            return 'KaBuM'
+        if 'magalu' in t or 'magazine' in t or 'magalu' in u:
+            return 'Magalu'
+        if 'terabyte' in t or 'terabyte' in u:
+            return 'Terabyte'
+        if 'casas bahia' in t:
+            return 'Casas Bahia'
+        if 'americanas' in t:
+            return 'Americanas'
+        return 'Amazon'
 
     def buscar_promocoes_pelando_site(self, limite: int = 15) -> List[Dict]:
         """Busca promoções do Pelando (pelando.com.br)"""
