@@ -84,9 +84,14 @@ export function StoreFilter() {
   return (
     <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6">
       {/* Título */}
-      <p className="text-zinc-400 text-sm font-medium mb-4">
-        Compre no site de suas lojas favoritas:
-      </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-semibold tracking-tight text-white mb-2">
+            Compre nas suas lojas favoritas
+          </h2>
+          <p className="text-zinc-400 text-sm">Selecione uma loja para ver as ofertas disponíveis</p>
+        </div>
+      </div>
 
       {/* Ícones das lojas */}
       <div className="flex flex-wrap gap-3">
@@ -131,17 +136,20 @@ export function StoreFilter() {
           >
             <div className="mt-6">
               {/* Header da seção */}
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-1 shadow">
-                  <img
-                    src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=64`}
-                    alt={activeStoreInfo?.label}
-                    className="w-full h-full object-contain mix-blend-multiply"
-                  />
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-semibold tracking-tight text-white mb-2 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center p-1 shadow shrink-0">
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=64`}
+                        alt={activeStoreInfo?.label}
+                        className="w-full h-full object-contain mix-blend-multiply"
+                      />
+                    </div>
+                    Ofertas na {activeStoreInfo?.label}
+                  </h2>
+                  <p className="text-zinc-400 text-sm">Produtos disponíveis nesta loja</p>
                 </div>
-                <h3 className="text-white font-bold text-lg">
-                  Ofertas na {activeStoreInfo?.label}
-                </h3>
               </div>
 
               {/* Loading */}
@@ -160,59 +168,77 @@ export function StoreFilter() {
                 </div>
               )}
 
-              {/* Grid de produtos */}
+      {/* Grid de produtos */}
               {!loading && products.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {products.map((product, index) => {
                     const discount = getSimulatedDiscount(product.id);
                     const price = product.price || 0;
                     const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
 
+                    let mainPlatformText = "Link";
+                    let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=64";
+                    if (product.links?.amazon) { mainPlatformText = "Amazon"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com.br&sz=64"; }
+                    else if (product.links?.mercadoLivre) { mainPlatformText = "Mercado Livre"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64"; }
+                    else if (product.links?.shopee) { mainPlatformText = "Shopee"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=64"; }
+                    else if (product.links?.aliexpress) { mainPlatformText = "AliExpress"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=64"; }
+
                     return (
                       <motion.div
                         key={product.id}
-                        initial={{ opacity: 0, y: 16 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.04, type: "spring", stiffness: 120 }}
+                        transition={{ delay: index * 0.1, type: "spring", stiffness: 80 }}
                         onClick={() => setSelectedProduct(product)}
-                        className="group cursor-pointer bg-zinc-900/80 border border-zinc-800/80 hover:border-accent/40 rounded-2xl p-3 flex flex-col transition-all hover:-translate-y-1 hover:shadow-[0_6px_20px_-8px_var(--accent)]"
+                        className="group cursor-pointer bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/80 hover:border-accent/50 rounded-3xl p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_-10px_var(--accent)]"
                       >
-                        {/* Badge desconto */}
-                        <div className="relative w-full aspect-square bg-zinc-100 rounded-xl mb-3 overflow-hidden">
+                        {/* Badge Desconto */}
+                        <div className="absolute top-4 right-4 z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white font-black text-sm px-3 py-1.5 rounded-xl border border-white/20 shadow-lg">
+                          -{discount}%
+                        </div>
+
+                        {/* Imagem */}
+                        <div className="w-full aspect-[4/3] sm:aspect-square bg-zinc-100 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
                           <img
                             src={product.imageUrl}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
-                          {discount > 0 && (
-                            <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
-                              -{discount}%
-                            </div>
-                          )}
+                          {/* Store badge */}
+                          <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] px-3 py-1.5 border border-zinc-200 flex items-center gap-1.5">
+                            <img src={mainPlatformLogo} alt={mainPlatformText} className="w-4 h-4 rounded-full object-contain" />
+                            <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">{mainPlatformText}</span>
+                          </div>
+                          {/* Badge cupom */}
                           {product.coupons && product.coupons.length > 0 && (
-                            <div className="absolute bottom-2 left-2 bg-accent text-white text-[9px] font-bold px-2 py-0.5 rounded-lg">
+                            <div className="absolute top-3 left-3 bg-accent text-white text-[10px] font-bold px-2 py-1 rounded-lg">
                               🎟️ CUPOM
                             </div>
                           )}
                         </div>
 
-                        <p className="text-white text-xs font-medium line-clamp-2 leading-snug mb-2 group-hover:text-accent/90 transition-colors">
-                          {product.name}
-                        </p>
-
-                        <div className="mt-auto">
-                          {price > 0 ? (
-                            <>
-                              <span className="text-zinc-600 text-[10px] line-through block">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                              </span>
-                              <span className="text-white font-bold text-sm">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-accent font-bold text-sm">Ver oferta</span>
-                          )}
+                        {/* Conteúdo */}
+                        <div className="flex flex-col flex-grow">
+                          <span className="text-[11px] font-mono font-medium tracking-wider text-accent/80 uppercase mb-2 line-clamp-1 block">
+                            {product.category}
+                          </span>
+                          <h3 className="text-white font-medium text-[15px] leading-snug line-clamp-2 mb-4 group-hover:text-accent/90 transition-colors">
+                            {product.name}
+                          </h3>
+                          <div className="mt-auto pt-2 border-t border-zinc-800/50 flex flex-col">
+                            {price > 0 ? (
+                              <>
+                                <span className="text-zinc-500 text-xs line-through font-medium mb-0.5">
+                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                                </span>
+                                <span className="text-xl font-bold text-white tracking-tight">
+                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-lg font-bold text-accent">Ver oferta</span>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     );

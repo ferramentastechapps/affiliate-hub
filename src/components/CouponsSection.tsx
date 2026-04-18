@@ -129,7 +129,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {displayCoupons.map((item, index) => {
             const domain = getDomainFromPlatform(item.platform);
             const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
@@ -146,7 +146,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
               >
                 <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center justify-between gap-2 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1">
                   
-                  <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-white shadow-sm p-1">
                       <img 
                         src={iconUrl} 
