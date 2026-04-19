@@ -86,15 +86,30 @@ class PromotionBot:
                     resultado = self.api.adicionar_produto(produto)
                     
                     # DEBUG: Imprimir resultado completo
-                    print(f'🔍 DEBUG - Resultado da API: {resultado}')
+                    print(f'🔍 DEBUG - Resultado da API completo:')
+                    print(f'   Type: {type(resultado)}')
+                    print(f'   Content: {json.dumps(resultado, indent=2, default=str) if resultado else "None"}')
                     
-                    if resultado and resultado.get('success') and resultado.get('product', {}).get('id'):
-                        produto['id'] = resultado['product']['id']
-                        print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
+                    if resultado and resultado.get('success'):
+                        print(f'   ✅ Success = True')
+                        produto_retornado = resultado.get('product')
+                        if produto_retornado:
+                            print(f'   ✅ Product exists')
+                            print(f'   Product keys: {list(produto_retornado.keys())}')
+                            produto_id = produto_retornado.get('id')
+                            if produto_id:
+                                produto['id'] = produto_id
+                                print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
+                            else:
+                                print(f'   ❌ ID não encontrado no product')
+                                print(f'   Product content: {json.dumps(produto_retornado, indent=2, default=str)}')
+                        else:
+                            print(f'   ❌ Product não existe na resposta')
+                            print(f'   Resposta completa: {json.dumps(resultado, indent=2, default=str)}')
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'⚠️ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                        print(f'🔍 DEBUG - Estrutura do resultado: {resultado}')
+                        print(f'🔍 DEBUG - Estrutura do resultado: {json.dumps(resultado, indent=2, default=str) if resultado else "None"}')
                         # Mesmo sem ID, envia para o Telegram — mas sem o ID de aprovação
                     
                     self.telegram.enviar_sync('produto', produto)

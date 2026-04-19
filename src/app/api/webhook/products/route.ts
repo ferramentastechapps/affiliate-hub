@@ -46,9 +46,29 @@ export async function POST(request: Request) {
       }
     });
 
+    // Log para debug
+    console.log('✅ Produto criado:', {
+      id: product.id,
+      name: product.name,
+      hasId: !!product.id,
+      allKeys: Object.keys(product)
+    });
+
     return NextResponse.json({
       success: true,
-      product
+      product: {
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        description: product.description,
+        imageUrl: product.imageUrl,
+        price: product.price,
+        originalPrice: product.originalPrice,
+        status: product.status,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        links: product.links
+      }
     }, { status: 201 });
 
   } catch (error) {

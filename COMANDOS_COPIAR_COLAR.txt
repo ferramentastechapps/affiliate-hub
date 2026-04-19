@@ -62,11 +62,12 @@ Você deve ver:
 🔍 COMANDOS ÚTEIS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# 🧪 TESTAR SE API RETORNA ID DO PRODUTO
+# 🧪 TESTAR SE API RETORNA ID DO PRODUTO (NOVO!)
 cd /root/affiliate-hub/bot
-python3 test_api_id.py
+python3 test_api_response.py
 
 # Ver produtos pendentes
+cd /root/affiliate-hub
 sqlite3 prisma/dev.db "SELECT id, name, status FROM Product WHERE status='pending' LIMIT 5;"
 
 # Ver produtos ativos
@@ -79,5 +80,30 @@ screen -r telegram-listener
 screen -S telegram-listener -X quit
 cd /root/affiliate-hub/bot
 screen -S telegram-listener -dm python3 telegram_listener.py
+
+# 🔍 TESTAR BOT UMA VEZ (com logs de debug)
+cd /root/affiliate-hub/bot
+python3 main.py --once
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🐛 DIAGNÓSTICO DO PROBLEMA DO ID:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 1️⃣ TESTAR API ISOLADAMENTE (Recomendado primeiro!)
+cd /root/affiliate-hub/bot
+python3 test_api_response.py
+
+# 2️⃣ TESTAR BOT COMPLETO UMA VEZ
+cd /root/affiliate-hub/bot
+python3 main.py --once
+
+# 3️⃣ VER LOGS DO NEXT.JS
+cd /root/affiliate-hub
+screen -r nextjs
+
+# 4️⃣ VERIFICAR BANCO DE DADOS
+cd /root/affiliate-hub
+npx prisma studio
+# Acesse: http://seu-ip:5555
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

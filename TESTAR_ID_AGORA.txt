@@ -1,0 +1,146 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 DIAGNÓSTICO: ID DO PRODUTO NÃO APARECE NO TELEGRAM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COPIE E COLE ESTES COMANDOS NO SEU SERVIDOR:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1️⃣ TESTE RÁPIDO - VERIFICAR SE API RETORNA O ID
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd /root/affiliate-hub/bot
+python3 test_api_response.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ O QUE VOCÊ DEVE VER:
+
+Se estiver funcionando, você verá algo como:
+
+🧪 Testando criação de produto...
+📦 Produto: TESTE - Produto para verificar ID
+
+📋 RESPOSTA DA API:
+============================================================
+Type: <class 'dict'>
+
+Conteúdo completo:
+{
+  "success": true,
+  "product": {
+    "id": "clxyz123abc",    <-- ESTE É O ID QUE DEVE APARECER
+    "name": "TESTE - Produto para verificar ID",
+    ...
+  }
+}
+
+🔍 ANÁLISE DA ESTRUTURA:
+✓ 'success' presente: True
+✓ 'success' = True: True
+✓ 'product' presente: True
+✓ 'product' é dict: True
+✓ Keys em 'product': ['id', 'name', 'category', ...]
+✓ 'id' presente em 'product': True
+
+✅ ID ENCONTRADO: clxyz123abc
+   Tipo do ID: <class 'str'>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2️⃣ SE O TESTE ACIMA FUNCIONAR - TESTAR O BOT COMPLETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd /root/affiliate-hub/bot
+python3 main.py --once
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ O QUE VOCÊ DEVE VER:
+
+Procure por linhas como:
+
+🔍 DEBUG API - Status Code: 201
+🔍 DEBUG API - Response Text: {"success":true,"product":{"id":"clxyz123"...
+🔍 DEBUG API - JSON Parsed: {'success': True, 'product': {'id': 'clxyz123'...
+
+🔍 DEBUG - Resultado da API completo:
+   Type: <class 'dict'>
+   Content: {
+     "success": true,
+     "product": {
+       "id": "clxyz123abc",
+       ...
+     }
+   }
+
+✅ Produto adicionado com ID: clxyz123abc | Nome do Produto
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3️⃣ SE O ID NÃO APARECER - VERIFICAR LOGS DO NEXT.JS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Ver logs do servidor Next.js
+screen -r nextjs
+
+# Procure por linhas como:
+# ✅ Produto criado: { id: 'clxyz123', name: '...', hasId: true, ... }
+
+# Para sair dos logs: Ctrl+A, depois D
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4️⃣ VERIFICAR SE O SERVIDOR NEXT.JS ESTÁ RODANDO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+netstat -tlnp | grep 3005
+
+# Se não aparecer nada, inicie o servidor:
+cd /root/affiliate-hub
+screen -S nextjs -dm npm run dev
+
+# Aguarde 10 segundos
+sleep 10
+
+# Teste novamente
+netstat -tlnp | grep 3005
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5️⃣ VERIFICAR VARIÁVEIS DE AMBIENTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd /root/affiliate-hub/bot
+cat config.py | grep AFFILIATE_HUB_URL
+
+# Deve mostrar algo como:
+# AFFILIATE_HUB_URL = 'http://localhost:3005'
+# ou
+# AFFILIATE_HUB_URL = 'https://seu-dominio.com'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6️⃣ TESTAR ENDPOINT DIRETAMENTE COM CURL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Substitua SUA_API_KEY pela sua chave real do .env
+cd /root/affiliate-hub
+API_KEY=$(grep AFFILIATE_HUB_API_KEY .env | cut -d '=' -f2)
+
+curl -X POST http://localhost:3005/api/webhook/products \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $API_KEY" \
+  -d '{
+    "name": "Teste Manual CURL",
+    "category": "Teste",
+    "imageUrl": "https://via.placeholder.com/300",
+    "price": 99.99
+  }'
+
+# Você deve ver uma resposta JSON com o ID:
+# {"success":true,"product":{"id":"clxyz123",...}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 DEPOIS DE EXECUTAR OS TESTES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Copie TODA a saída do teste 1️⃣ (test_api_response.py)
+2. Compartilhe comigo
+3. Vamos identificar exatamente onde o ID está se perdendo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

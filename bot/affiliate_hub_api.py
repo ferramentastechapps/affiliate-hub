@@ -26,9 +26,19 @@ class AffiliateHubAPI:
                 verify=False
             )
             response.raise_for_status()
-            return response.json()
+            
+            # DEBUG: Log da resposta bruta
+            print(f'🔍 DEBUG API - Status Code: {response.status_code}')
+            print(f'🔍 DEBUG API - Response Text: {response.text[:500]}')
+            
+            resultado = response.json()
+            print(f'🔍 DEBUG API - JSON Parsed: {resultado}')
+            
+            return resultado
         except Exception as e:
             print(f'❌ Erro ao adicionar produto: {e}')
+            import traceback
+            traceback.print_exc()
             return None
     
     def adicionar_produtos_lote(self, produtos: List[Dict]) -> Optional[Dict]:
