@@ -85,12 +85,16 @@ class PromotionBot:
                     # Adicionar individualmente para obter o ID com certeza
                     resultado = self.api.adicionar_produto(produto)
                     
+                    # DEBUG: Imprimir resultado completo
+                    print(f'🔍 DEBUG - Resultado da API: {resultado}')
+                    
                     if resultado and resultado.get('success') and resultado.get('product', {}).get('id'):
                         produto['id'] = resultado['product']['id']
                         print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'⚠️ Falha ao adicionar "{produto["name"][:40]}": {erro}')
+                        print(f'🔍 DEBUG - Estrutura do resultado: {resultado}')
                         # Mesmo sem ID, envia para o Telegram — mas sem o ID de aprovação
                     
                     self.telegram.enviar_sync('produto', produto)

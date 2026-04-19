@@ -76,6 +76,9 @@ class TelegramNotifier:
     
     def _formatar_mensagem_produto(self, produto: dict) -> str:
         """Formata mensagem de produto"""
+        # DEBUG: Imprimir produto recebido
+        print(f'🔍 DEBUG - Produto recebido no Telegram: {produto}')
+        
         preco = f"💰 <b>R$ {produto['price']:.2f}</b>" if produto.get('price') else ""
 
         # Detectar plataforma de origem e montar link
@@ -103,6 +106,7 @@ class TelegramNotifier:
             link_promobit = f"🔗 <a href='{primeiro_link}'>Ver promoção original</a>"
 
         produto_id = produto.get('id', 'N/A')
+        print(f'🔍 DEBUG - ID do produto: {produto_id}')
         descricao_produto = produto.get('description', '')
         
         cupom_msg = ""
