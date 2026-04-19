@@ -2,6 +2,17 @@
 🚀 COPIE E COLE ESTES COMANDOS NO SEU SERVIDOR VPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+# 0️⃣ VERIFICAR SE O SERVIDOR NEXT.JS ESTÁ RODANDO
+netstat -tlnp | grep 3005
+
+# Se não aparecer nada, o servidor não está rodando. Inicie com:
+cd /root/affiliate-hub
+screen -S nextjs -dm npm run dev
+
+# Aguarde 10 segundos e verifique novamente:
+sleep 10
+netstat -tlnp | grep 3005
+
 # 1️⃣ ATUALIZAR BANCO DE DADOS
 cd /root/affiliate-hub
 npx prisma db push
@@ -50,6 +61,10 @@ Você deve ver:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔍 COMANDOS ÚTEIS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 🧪 TESTAR SE API RETORNA ID DO PRODUTO
+cd /root/affiliate-hub/bot
+python3 test_api_id.py
 
 # Ver produtos pendentes
 sqlite3 prisma/dev.db "SELECT id, name, status FROM Product WHERE status='pending' LIMIT 5;"

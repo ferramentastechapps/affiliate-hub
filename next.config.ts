@@ -44,6 +44,9 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Adicionar configuração vazia do turbopack para silenciar o erro
+  turbopack: {},
+  
   // Add logging for debugging
   logging: {
     fetches: {

@@ -17,8 +17,8 @@ Foram adicionados logs de debug em 3 pontos:
 ### Teste 1: Verificar se a API está retornando o ID
 
 ```bash
-cd bot
-python test_api_id.py
+cd /root/affiliate-hub/bot
+python3 test_api_id.py
 ```
 
 Este script vai:
@@ -29,8 +29,8 @@ Este script vai:
 ### Teste 2: Rodar o bot e verificar os logs
 
 ```bash
-cd bot
-python main.py
+cd /root/affiliate-hub/bot
+python3 main.py
 ```
 
 Quando um novo produto for encontrado, você verá logs como:
