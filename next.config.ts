@@ -45,8 +45,16 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // Adicionar configuração vazia do turbopack para silenciar o erro
-  turbopack: {},
+  // Configuração do Turbopack
+  turbopack: {
+    root: require('path').join(__dirname),
+  },
+  
+  // Permitir acesso do domínio em desenvolvimento
+  allowedDevOrigins: ['123testando.usejotashop.com.br'],
+  
+  // Metadados base para Open Graph
+  metadataBase: new URL('https://123testando.usejotashop.com.br'),
   
   // Add logging for debugging
   logging: {
@@ -54,9 +62,6 @@ const nextConfig: NextConfig = {
       fullUrl: true,
     },
   },
-  
-  // Set correct workspace root
-  outputFileTracingRoot: require('path').join(__dirname),
 
   // Configuração de imagens externas
   images: {
