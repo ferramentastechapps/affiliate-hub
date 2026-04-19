@@ -1,0 +1,117 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 COMANDOS PARA DEPLOY DO PWA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 1. Atualizar banco de dados (adiciona tabela PushSubscription)
+npx prisma db push
+
+# 2. Build do projeto
+npm run build
+
+# 3. Restart do PM2
+pm2 restart affiliate-hub
+
+# 4. Ver logs
+pm2 logs affiliate-hub
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔑 ADICIONAR NO .ENV (se ainda não tiver)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NEXT_PUBLIC_VAPID_PUBLIC_KEY="BIOpgm4eWwsHEcmJVFO0-TnlypaVUpqxn-rKo4rpZd70fhABDpa-kvo0up_1aCIkwXlRaHm1SYgaxwT89nVkyCY"
+VAPID_PRIVATE_KEY="n5qO5WeoJxRoDJmXl9U3mXymuR9w5coio80mSS4ZASs"
+VAPID_SUBJECT="mailto:seu-email@exemplo.com"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 TESTAR NOTIFICAÇÃO PUSH (CURL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+curl -X POST http://localhost:3000/api/push/send \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: SUA_API_SECRET_KEY_AQUI" \
+  -d '{
+    "title": "🔥 Teste de notificação",
+    "body": "Mouse Gamer por R$ 89,90 (50% OFF)",
+    "icon": "/icons/icon-192x192.png",
+    "url": "/"
+  }'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 VERIFICAR SERVICE WORKER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# No Chrome DevTools:
+# 1. F12 → Application → Service Workers
+# 2. Deve mostrar: sw.js ativo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 LIGHTHOUSE PWA SCORE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# No Chrome DevTools:
+# 1. F12 → Lighthouse
+# 2. Marque "Progressive Web App"
+# 3. Clique em "Analyze page load"
+# 4. Score deve ser 100/100
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🐛 LIMPAR CACHE (se tiver problemas)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# No Chrome DevTools:
+# 1. F12 → Application → Clear storage
+# 2. Clique em "Clear site data"
+# 3. Recarregue: Ctrl+Shift+R
+
+# Ou no console do navegador:
+localStorage.removeItem('installBannerDismissed')
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 TESTAR NO CELULAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Android (Chrome):
+# 1. Abra o site
+# 2. Aguarde 3 segundos
+# 3. Banner de instalação aparece
+# 4. Clique em "Instalar agora"
+
+# iOS (Safari):
+# 1. Abra o site
+# 2. Aguarde 3 segundos
+# 3. Banner aparece
+# 4. Clique em "Ver instruções"
+# 5. Siga os passos mostrados
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ CHECKLIST RÁPIDO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] npx prisma db push
+[ ] npm run build
+[ ] pm2 restart affiliate-hub
+[ ] Testar no Chrome Desktop (F12 → Application)
+[ ] Testar instalação (banner ou ícone ➕)
+[ ] Testar notificações (botão na home)
+[ ] Testar offline (Network → Offline)
+[ ] Lighthouse PWA: 100/100
+[ ] Testar no Android
+[ ] Testar no iOS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 ARQUIVOS CRIADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ next.config.ts - Configurado com next-pwa
+✅ public/offline.html - Página offline customizada
+✅ src/components/InstallBanner.tsx - Banner de instalação
+✅ src/components/PushNotificationButton.tsx - Botão de notificações
+✅ src/app/api/push/subscribe/route.ts - API para salvar subscriptions
+✅ src/app/api/push/send/route.ts - API para enviar notificações
+✅ bot/send_push_notification.py - Script Python para enviar push
+✅ prisma/schema.prisma - Tabela PushSubscription adicionada
+✅ PWA_GUIA_COMPLETO.md - Documentação completa
+✅ TESTAR_PWA.md - Guia de testes
+✅ COMANDOS_PWA.txt - Este arquivo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

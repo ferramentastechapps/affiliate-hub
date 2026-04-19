@@ -4,6 +4,7 @@ import { CouponsSection } from "@/components/CouponsSection";
 import { HeroSection } from "@/components/HeroSection";
 import { SocialFooter } from "@/components/SocialFooter";
 import { StoreFilter } from "@/components/StoreFilter";
+import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
 
@@ -133,6 +134,11 @@ export default async function Home() {
       {/* Cupons Section */}
       <div id="cupons" className="w-full">
         <CouponsSection couponsByPlatform={couponsByPlatform} />
+      </div>
+
+      {/* Botão de Notificações Push */}
+      <div className="w-full max-w-7xl px-4 py-6 flex justify-center">
+        <PushNotificationButton />
       </div>
 
       {/* Filtro por Loja */}

@@ -1,4 +1,47 @@
 import type { NextConfig } from "next";
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/.*\.(jpg|jpeg|png|gif|webp|avif|svg)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "product-images",
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 86400, // 24 horas
+        },
+      },
+    },
+    {
+      urlPattern: /\/api\/products/,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "api-products",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 300, // 5 minutos
+        },
+      },
+    },
+    {
+      urlPattern: /\/api\/coupons/,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "api-coupons",
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 300,
+        },
+      },
+    },
+  ],
+});
 
 const nextConfig: NextConfig = {
   // Add logging for debugging
@@ -99,4 +142,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

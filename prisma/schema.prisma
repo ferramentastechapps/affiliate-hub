@@ -67,3 +67,16 @@ model Coupon {
   @@index([expiresAt])
   @@index([productId])
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🔔 PUSH SUBSCRIPTIONS (NOTIFICAÇÕES)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model PushSubscription {
+  id          String   @id @default(cuid())
+  endpoint    String   @unique // URL do endpoint de push
+  p256dh      String   // Chave pública do cliente
+  auth        String   // Chave de autenticação
+  createdAt   DateTime @default(now())
+  
+  @@index([endpoint])
+}

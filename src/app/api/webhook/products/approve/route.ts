@@ -116,6 +116,38 @@ export async function POST(request: Request) {
     
     console.log(`✅ Produto aprovado: ${productId} | Plataforma: ${platform}`);
     
+    // Enviar notificação push para todos os inscritos
+    try {
+      const pushPayload = {
+        title: '🔥 Nova promoção disponível!',
+        body: `${product.name} por R$ ${product.price?.toFixed(2) || '0.00'}`,
+        icon: product.imageUrl || '/icons/icon-192x192.png',
+        url: `/?product=${productId}`,
+        productId: productId,
+      };
+
+      // Adiciona desconto se houver preço original
+      if (product.originalPrice && product.price) {
+        const discount = ((product.originalPrice - product.price) / product.originalPrice) * 100;
+        pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
+      }
+
+      // Envia notificação (não aguarda resposta para não bloquear)
+      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.API_SECRET_KEY || '',
+        },
+        body: JSON.stringify(pushPayload),
+      }).catch(err => console.error('Erro ao enviar push notification:', err));
+      
+      console.log('📱 Notificação push enviada');
+    } catch (pushError) {
+      console.error('❌ Erro ao enviar notificação push:', pushError);
+      // Não falha a aprovação se a notificação falhar
+    }
+    
     return NextResponse.json({
       success: true,
       message: 'Produto aprovado e link atualizado',
