@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+// @ts-ignore - next-pwa types incompatibility
 import withPWAInit from "next-pwa";
 
 const withPWA = withPWAInit({
@@ -145,4 +146,5 @@ const nextConfig: NextConfig = {
   },
 };
 
+// @ts-ignore - next-pwa types incompatibility
 export default withPWA(nextConfig);
