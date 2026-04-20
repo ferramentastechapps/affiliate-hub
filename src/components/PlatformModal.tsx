@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { X, ArrowRight, ShieldCheck, Tag } from "@phosphor-icons/react";
 import { CouponModal } from "./CouponModal";
 
-export type AffiliateLinks = {
   amazon?: string;
   aliexpress?: string;
   shopee?: string;
   mercadoLivre?: string;
   tiktok?: string;
+  netshoes?: string;
+  magalu?: string;
+  kabum?: string;
 };
 
 type PlatformModalProps = {
@@ -79,12 +81,14 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
 
   let targetUrl = "";
   let platformName = "";
-  
   if (product.links?.amazon) { targetUrl = product.links.amazon; platformName = "Amazon"; }
   else if (product.links?.mercadoLivre) { targetUrl = product.links.mercadoLivre; platformName = "Mercado Livre"; }
   else if (product.links?.shopee) { targetUrl = product.links.shopee; platformName = "Shopee"; }
   else if (product.links?.aliexpress) { targetUrl = product.links.aliexpress; platformName = "AliExpress"; }
   else if (product.links?.tiktok) { targetUrl = product.links.tiktok; platformName = "TikTok"; }
+  else if (product.links?.netshoes) { targetUrl = product.links.netshoes; platformName = "Netshoes"; }
+  else if (product.links?.magalu) { targetUrl = product.links.magalu; platformName = "Magalu"; }
+  else if (product.links?.kabum) { targetUrl = product.links.kabum; platformName = "Kabum"; }
   else {
     const values = Object.entries(product.links || {});
     const firstValid = values.find(([k, v]) => typeof v === 'string' && v.length > 0);
@@ -121,6 +125,9 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
     else if (relatedItem.links.mercadoLivre) target = relatedItem.links.mercadoLivre;
     else if (relatedItem.links.shopee) target = relatedItem.links.shopee;
     else if (relatedItem.links.aliexpress) target = relatedItem.links.aliexpress;
+    else if (relatedItem.links.netshoes) target = relatedItem.links.netshoes;
+    else if (relatedItem.links.magalu) target = relatedItem.links.magalu;
+    else if (relatedItem.links.kabum) target = relatedItem.links.kabum;
     else {
       const v = Object.values(relatedItem.links).find(l => typeof l === 'string' && l.length > 0);
       target = v as string;

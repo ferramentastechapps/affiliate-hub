@@ -43,6 +43,9 @@ model Link {
   shopee       String?
   mercadoLivre String?
   tiktok       String?
+  netshoes     String?
+  magalu       String?
+  kabum        String?
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

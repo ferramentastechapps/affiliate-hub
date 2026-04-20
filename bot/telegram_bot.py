@@ -84,18 +84,20 @@ class TelegramNotifier:
         # Detectar plataforma de origem e montar link
         links = produto.get('links', {})
         plataforma_nome = "Desconhecida"
-        plataforma_emoji = "🛒"
         primeiro_link = None
 
-        plataformas = [
-            ('amazon',      '🟠 Amazon',        'Amazon'),
-            ('mercadoLivre','🟡 Mercado Livre',  'Mercado Livre'),
-            ('shopee',      '🟠 Shopee',         'Shopee'),
-            ('aliexpress',  '🔴 AliExpress',     'AliExpress'),
-            ('tiktok',      '⚫ TikTok Shop',    'TikTok Shop'),
-        ]
+        PLATAFORMA_EMOJIS = {
+            'amazon':      '🟠 Amazon',
+            'mercadoLivre':'🟡 Mercado Livre',
+            'shopee':      '🟠 Shopee',
+            'aliexpress':  '🔴 AliExpress',
+            'tiktok':      '⚫ TikTok Shop',
+            'netshoes':    '🟣 Netshoes',
+            'magalu':      '🔵 Magalu',
+            'kabum':       '🔵 Kabum',
+        }
 
-        for chave, label, nome in plataformas:
+        for chave, label in PLATAFORMA_EMOJIS.items():
             if links.get(chave):
                 primeiro_link = links[chave]
                 plataforma_nome = label
