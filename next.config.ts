@@ -1,47 +1,50 @@
 import type { NextConfig } from "next";
-// @ts-ignore - next-pwa types incompatibility
-import withPWAInit from "next-pwa";
+import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
-  register: true,
-  skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/.*\.(jpg|jpeg|png|gif|webp|avif|svg)$/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "product-images",
-        expiration: {
-          maxEntries: 200,
-          maxAgeSeconds: 86400, // 24 horas
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  workboxOptions: {
+    disableDevLogs: true,
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/.*\.(jpg|jpeg|png|gif|webp|avif|svg)$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "product-images",
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 86400, // 24 horas
+          },
         },
       },
-    },
-    {
-      urlPattern: /\/api\/products/,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "api-products",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 300, // 5 minutos
+      {
+        urlPattern: /\/api\/products/,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "api-products",
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 300, // 5 minutos
+          },
         },
       },
-    },
-    {
-      urlPattern: /\/api\/coupons/,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "api-coupons",
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 300,
+      {
+        urlPattern: /\/api\/coupons/,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "api-coupons",
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 300,
+          },
         },
       },
-    },
-  ],
+    ],
+  },
 });
 
 const nextConfig: NextConfig = {
@@ -52,9 +55,6 @@ const nextConfig: NextConfig = {
   
   // Permitir acesso do domínio em desenvolvimento
   allowedDevOrigins: ['123testando.usejotashop.com.br'],
-  
-  // Metadados base para Open Graph
-  metadataBase: new URL('https://123testando.usejotashop.com.br'),
   
   // Add logging for debugging
   logging: {
@@ -151,5 +151,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// @ts-ignore - next-pwa types incompatibility
 export default withPWA(nextConfig);
