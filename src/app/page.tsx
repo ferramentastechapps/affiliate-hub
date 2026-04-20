@@ -102,7 +102,17 @@ async function getCouponsByPlatform() {
   });
 
   const platformCounts = coupons.reduce((acc, coupon) => {
-    const platform = coupon.platform.toLowerCase();
+    let platform = coupon.platform.toLowerCase();
+    
+    // Normalizações
+    if (platform === 'mercado livre' || platform === 'mercadolivre') {
+      platform = 'mercadolivre';
+    } else if (platform === 'magalu' || platform === 'magazine') {
+      platform = 'magazineluiza';
+    } else if (platform === 'boticario') {
+      platform = 'oboticario';
+    }
+
     acc[platform] = (acc[platform] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);

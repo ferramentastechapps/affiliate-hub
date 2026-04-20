@@ -46,7 +46,16 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
         .then(data => {
             if (Array.isArray(data)) {
                 // Filtra apenas da loja clicada
-                const filtered = data.filter((c: any) => c.platform.toLowerCase() === selectedPlatform.toLowerCase());
+                const normalize = (p: string) => {
+                  const l = p.toLowerCase();
+                  if (l === 'mercado livre' || l === 'mercadolivre') return 'mercadolivre';
+                  if (l === 'magalu' || l === 'magazine') return 'magazineluiza';
+                  if (l === 'boticario') return 'oboticario';
+                  return l;
+                };
+                
+                const sel = normalize(selectedPlatform);
+                const filtered = data.filter((c: any) => normalize(c.platform) === sel);
                 
                 // Remove cupons duplicados (mesmo código)
                 const uniqueCoupons = [];
