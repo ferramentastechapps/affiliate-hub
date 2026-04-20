@@ -480,8 +480,15 @@ class PromotionScraper:
             links['shopee'] = link_oferta
         elif 'aliexpress' in loja_lower:
             links['aliexpress'] = link_oferta
+        elif 'netshoes' in loja_lower:
+            links['netshoes'] = link_oferta
+        elif 'magalu' in loja_lower or 'magazine luiza' in loja_lower:
+            links['magalu'] = link_oferta
+        elif 'kabum' in loja_lower:
+            links['kabum'] = link_oferta
         else:
-            links['amazon'] = link_oferta
+            # Se não souber a loja, deixa vazio para não cadastrar como amazon errado
+            pass
         return links
 
     @staticmethod

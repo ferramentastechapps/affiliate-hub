@@ -191,6 +191,18 @@ export function DailyDeals() {
             mainPlatformText = "AliExpress"; 
             mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=64"; 
           }
+          else if (product.links?.netshoes) { 
+            mainPlatformText = "Netshoes"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=netshoes.com.br&sz=64"; 
+          }
+          else if (product.links?.magalu) { 
+            mainPlatformText = "Magalu"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=magazineluiza.com.br&sz=64"; 
+          }
+          else if (product.links?.kabum) { 
+            mainPlatformText = "Kabum"; 
+            mainPlatformLogo = "https://www.google.com/s2/favicons?domain=kabum.com.br&sz=64"; 
+          }
 
           return (
             <motion.div

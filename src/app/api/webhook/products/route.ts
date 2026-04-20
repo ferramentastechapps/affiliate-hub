@@ -38,6 +38,9 @@ export async function POST(request: Request) {
             shopee: body.links.shopee || null,
             aliexpress: body.links.aliexpress || null,
             tiktok: body.links.tiktok || null,
+            netshoes: body.links.netshoes || null,
+            magalu: body.links.magalu || null,
+            kabum: body.links.kabum || null,
           }
         } : undefined
       },
@@ -120,6 +123,9 @@ export async function PUT(request: Request) {
                 shopee: productData.links.shopee || null,
                 aliexpress: productData.links.aliexpress || null,
                 tiktok: productData.links.tiktok || null,
+                netshoes: productData.links.netshoes || null,
+                magalu: productData.links.magalu || null,
+                kabum: productData.links.kabum || null,
               }
             } : undefined
           },
@@ -174,7 +180,7 @@ export async function PATCH(request: Request) {
     }
 
     // O Prisma espera a chave correta no update
-    const validPlatforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok'];
+    const validPlatforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'];
     if (!validPlatforms.includes(platform)) {
       return NextResponse.json(
         { error: `Plataforma inválida. Use uma de: ${validPlatforms.join(', ')}` },

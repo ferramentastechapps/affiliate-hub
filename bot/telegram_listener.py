@@ -27,6 +27,12 @@ def infer_platform_from_url(url: str) -> str:
         return 'mercadoLivre'
     if 'tiktok' in url_lower:
         return 'tiktok'
+    if 'netshoes' in url_lower:
+        return 'netshoes'
+    if 'magazineluiza' in url_lower or 'magalu' in url_lower:
+        return 'magalu'
+    if 'kabum' in url_lower:
+        return 'kabum'
         
     return 'amazon' # Default fallback
 
@@ -36,6 +42,9 @@ PLATAFORMA_EMOJIS = {
     'shopee':      '🟠 Shopee',
     'aliexpress':  '🔴 AliExpress',
     'tiktok':      '⚫ TikTok Shop',
+    'netshoes':    '🟣 Netshoes',
+    'magalu':      '🔵 Magalu',
+    'kabum':       '🔵 Kabum',
 }
 
 async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str):
