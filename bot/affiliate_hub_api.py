@@ -99,7 +99,7 @@ class AffiliateHubAPI:
             print(f'❌ Erro ao atualizar link do produto {produto_id}: {e}')
             return None
     
-    def aprovar_produto(self, produto_id: str, platform: str, affiliate_link: str) -> Optional[Dict]:
+    def aprovar_produto(self, produto_id: str, platform: str, affiliate_link: str, image_url: str = None) -> Optional[Dict]:
         """Aprova um produto pendente e adiciona o link de afiliado"""
         try:
             print(f'🔄 Enviando requisição de aprovação...')
@@ -109,14 +109,19 @@ class AffiliateHubAPI:
             print(f'   Link: {affiliate_link}')
             print(f'   Headers: {self.headers}')
             
+            payload = {
+                'productId': produto_id,
+                'platform': platform,
+                'affiliateLink': affiliate_link
+            }
+            if image_url:
+                payload['imageUrl'] = image_url
+                print(f'   ImageUrl: {image_url}')
+            
             response = requests.post(
                 f'{self.base_url}/api/webhook/products/approve',
                 headers=self.headers,
-                json={
-                    'productId': produto_id,
-                    'platform': platform,
-                    'affiliateLink': affiliate_link
-                },
+                json=payload,
                 timeout=15,
                 verify=False
             )

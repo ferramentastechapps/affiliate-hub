@@ -192,11 +192,20 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
 
     # Captura foto enviada junto com o comando (como legenda da foto)
     foto_file_id = None
+    foto_url_publica = None
     if update.message and update.message.photo:
         # Pega a maior resolução disponível
         foto_file_id = update.message.photo[-1].file_id
         print(f'📸 Foto personalizada recebida para produto {produto_id}')
         print(f'   File ID: {foto_file_id}')
+        
+        # Obter URL pública da foto via Telegram
+        try:
+            foto_file = await context.bot.get_file(foto_file_id)
+            foto_url_publica = foto_file.file_path
+            print(f'   URL pública: {foto_url_publica}')
+        except Exception as e:
+            print(f'⚠️ Erro ao obter URL da foto: {e}')
 
     # Detectar plataforma
     platform = infer_platform_from_url(affiliate_link)
@@ -206,7 +215,7 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
 
     # Chamar API de aprovação
     print(f'🔄 Chamando API de aprovação...')
-    resultado = api.aprovar_produto(produto_id, platform, affiliate_link)
+    resultado = api.aprovar_produto(produto_id, platform, affiliate_link, foto_url_publica)
     
     print(f'📥 Resposta da API:')
     print(f'   Resultado: {resultado}')
