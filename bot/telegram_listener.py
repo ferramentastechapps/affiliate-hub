@@ -356,7 +356,7 @@ def run_listener():
     app.add_handler(CommandHandler("start", handle_help_command))
 
     # Foto com legenda /aprovar (usuário envia foto + /aprovar como legenda)
-    app.add_handler(MessageHandler(filters.PHOTO & filters.Caption(pattern=r'^/aprovar'), handle_aprovar_command))
+    app.add_handler(MessageHandler(filters.PHOTO & filters.CAPTION & filters.Regex(r'^/aprovar'), handle_aprovar_command))
 
     # Método legado: responder à mensagem
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_reply))
