@@ -102,15 +102,21 @@ async function getCouponsByPlatform() {
   });
 
   const platformCounts = coupons.reduce((acc, coupon) => {
-    let platform = coupon.platform.toLowerCase();
+    let platform = coupon.platform.toLowerCase().trim();
     
-    // Normalizações
-    if (platform === 'mercado livre' || platform === 'mercadolivre') {
+    // Normalizações mais abrangentes
+    if (platform.includes('mercado') || platform === 'mercadolivre' || platform === 'meli') {
       platform = 'mercadolivre';
-    } else if (platform === 'magalu' || platform === 'magazine') {
+    } else if (platform.includes('magalu') || platform.includes('magazine')) {
       platform = 'magazineluiza';
-    } else if (platform === 'boticario') {
+    } else if (platform.includes('boticario')) {
       platform = 'oboticario';
+    } else if (platform.includes('shopee')) {
+      platform = 'shopee';
+    } else if (platform.includes('amazon')) {
+      platform = 'amazon';
+    } else if (platform.includes('aliexpress') || platform === 'ali') {
+      platform = 'aliexpress';
     }
 
     acc[platform] = (acc[platform] || 0) + 1;
