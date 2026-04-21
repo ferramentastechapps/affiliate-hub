@@ -65,7 +65,7 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     if GEMINI_API_KEY:
         try:
             genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.0-flash')
             prompt = (
                 f"Você é dono de um canal de achadinhos e utilidades. "
                 f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
@@ -100,6 +100,9 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     try:
         # Prioridade: foto enviada pelo admin > imageUrl do produto
         foto_para_usar = foto_file_id or imagem
+        print(f'📸 foto_file_id (admin): {foto_file_id}')
+        print(f'🖼️ imageUrl (produto): {imagem}')
+        print(f'✅ foto_para_usar: {foto_para_usar}')
         if foto_para_usar:
             await context.bot.send_photo(
                 chat_id=TELEGRAM_PROMO_GROUP_ID,
