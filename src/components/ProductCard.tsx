@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useState } from "react";
-import { AffiliateLinks } from "./PlatformModal";
+import { ProductLinks } from "./PlatformModal";
 
 export type Product = {
   id: string;
@@ -14,7 +14,7 @@ export type Product = {
   price?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
-  links: AffiliateLinks;
+  links: ProductLinks;
 };
 
 type ProductCardProps = {

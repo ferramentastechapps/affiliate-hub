@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { X, ArrowRight, ShieldCheck, Tag } from "@phosphor-icons/react";
 import { CouponModal } from "./CouponModal";
 
-type ProductLinks = {
+export type ProductLinks = {
   amazon?: string;
   aliexpress?: string;
   shopee?: string;
