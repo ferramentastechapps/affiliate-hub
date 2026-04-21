@@ -124,15 +124,22 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     Aceita foto junto com o comando (envie a foto com /aprovar como legenda).
     Tolerante: encontra o link http em qualquer posição dos argumentos.
     """
+    print(f'🔍 DEBUG - handle_aprovar_command chamado')
+    print(f'   update.message: {update.message}')
+    print(f'   update.message.photo: {update.message.photo if update.message else None}')
+    print(f'   update.message.caption: {update.message.caption if update.message else None}')
+    print(f'   update.message.text: {update.message.text if update.message else None}')
+    print(f'   context.args: {context.args}')
+    
     # Quando vem como legenda de foto, context.args pode estar vazio — parsear manualmente
     args = context.args or []
-    if not args and update.message.caption:
+    if not args and update.message and update.message.caption:
         partes = update.message.caption.split()
         args = partes[1:]  # remove o "/aprovar"
+        print(f'   Args extraídos da caption: {args}')
 
     print(f'🔍 DEBUG - Comando /aprovar recebido')
-    print(f'   Args: {args}')
-    print(f'   Caption: {update.message.caption if update.message else None}')
+    print(f'   Args finais: {args}')
 
     if len(args) < 2:
         await update.message.reply_text(
@@ -172,10 +179,11 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
 
     # Captura foto enviada junto com o comando (como legenda da foto)
     foto_file_id = None
-    if update.message.photo:
+    if update.message and update.message.photo:
         # Pega a maior resolução disponível
         foto_file_id = update.message.photo[-1].file_id
         print(f'📸 Foto personalizada recebida para produto {produto_id}')
+        print(f'   File ID: {foto_file_id}')
 
     # Detectar plataforma
     platform = infer_platform_from_url(affiliate_link)
@@ -349,14 +357,15 @@ def run_listener():
     
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Comandos
+    # IMPORTANTE: Foto com legenda /aprovar DEVE vir ANTES do CommandHandler
+    # para capturar fotos com legenda antes de processar como comando de texto
+    app.add_handler(MessageHandler(filters.PHOTO & filters.CAPTION & filters.Regex(r'^/aprovar'), handle_aprovar_command))
+
+    # Comandos de texto
     app.add_handler(CommandHandler("aprovar", handle_aprovar_command))
     app.add_handler(CommandHandler("rejeitar", handle_rejeitar_command))
     app.add_handler(CommandHandler("help", handle_help_command))
     app.add_handler(CommandHandler("start", handle_help_command))
-
-    # Foto com legenda /aprovar (usuário envia foto + /aprovar como legenda)
-    app.add_handler(MessageHandler(filters.PHOTO & filters.CAPTION & filters.Regex(r'^/aprovar'), handle_aprovar_command))
 
     # Método legado: responder à mensagem
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_reply))
