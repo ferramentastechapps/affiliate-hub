@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { validateApiKey } from '@/lib/auth';
 
 /**
  * POST /api/webhook/products/reject
  * Rejeita um produto pendente
  */
 export async function POST(request: Request) {
+  // Validar API Key
+  if (!validateApiKey(request)) {
+    return NextResponse.json(
+      { error: 'Não autorizado. API key inválida.' },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { productId } = body;
