@@ -54,10 +54,15 @@ export async function POST(request: Request) {
       );
     }
     
-    // Atualizar status do produto para active
+    // Atualizar status do produto para active + imageUrl se fornecida
+    const updateData: { status: string; imageUrl?: string } = { status: 'active' };
+    if (body.imageUrl) {
+      updateData.imageUrl = body.imageUrl;
+    }
+    
     await prisma.product.update({
       where: { id: productId },
-      data: { status: 'active' }
+      data: updateData
     });
     
     // Atualizar ou criar o link de afiliado
