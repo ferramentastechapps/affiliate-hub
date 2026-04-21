@@ -130,6 +130,10 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
         partes = update.message.caption.split()
         args = partes[1:]  # remove o "/aprovar"
 
+    print(f'🔍 DEBUG - Comando /aprovar recebido')
+    print(f'   Args: {args}')
+    print(f'   Caption: {update.message.caption if update.message else None}')
+
     if len(args) < 2:
         await update.message.reply_text(
             "❌ Uso incorreto!\n\n"
@@ -147,6 +151,9 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     affiliate_link = next((arg for arg in args if arg.startswith('http')), None)
     # O ID é o primeiro argumento que NÃO é um link
     produto_id = next((arg for arg in args if not arg.startswith('http')), None)
+
+    print(f'   ID extraído: {produto_id}')
+    print(f'   Link extraído: {affiliate_link}')
 
     if not affiliate_link:
         await update.message.reply_text(
@@ -172,15 +179,23 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
 
     # Detectar plataforma
     platform = infer_platform_from_url(affiliate_link)
+    print(f'   Plataforma detectada: {platform}')
 
     msg_status = await update.message.reply_text("⏳ Aprovando produto e atualizando link...")
 
     # Chamar API de aprovação
+    print(f'🔄 Chamando API de aprovação...')
     resultado = api.aprovar_produto(produto_id, platform, affiliate_link)
+    
+    print(f'📥 Resposta da API:')
+    print(f'   Resultado: {resultado}')
 
     if resultado and resultado.get('success'):
         # Publicar no grupo de promoções
         produto_info = resultado.get('product', {})
+        print(f'✅ Produto aprovado com sucesso!')
+        print(f'   Publicando no grupo...')
+        
         await publicar_no_grupo(context, produto_info, platform, affiliate_link, foto_file_id)
 
         # Verificar se cupom foi salvo no banco
@@ -199,6 +214,7 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
         )
     else:
         erro_msg = resultado.get('error') if resultado else "Erro na comunicação com a API."
+        print(f'❌ Erro ao aprovar: {erro_msg}')
         await msg_status.edit_text(f"❌ Falha ao aprovar: {erro_msg}")
 
 async def handle_rejeitar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
