@@ -78,40 +78,25 @@ class PromotionBot:
             # 3. Adicionar produtos no site e enviar para Telegram com ID
             if produtos_novos:
                 print(f'\n📦 Adicionando {len(produtos_novos)} produtos no site...')
+                print(f'📱 Enviando produtos para Telegram...')
                 
-                # 4. Adicionar produto por produto para garantir o ID
-                print(f'\n📱 Enviando produtos para Telegram...')
                 for produto in produtos_novos:
-                    # Adicionar individualmente para obter o ID com certeza
+                    # Adicionar produto na API
                     resultado = self.api.adicionar_produto(produto)
                     
-                    # DEBUG: Imprimir resultado completo
-                    print(f'🔍 DEBUG - Resultado da API completo:')
-                    print(f'   Type: {type(resultado)}')
-                    print(f'   Content: {json.dumps(resultado, indent=2, default=str) if resultado else "None"}')
-                    
                     if resultado and resultado.get('success'):
-                        print(f'   ✅ Success = True')
                         produto_retornado = resultado.get('product')
-                        if produto_retornado:
-                            print(f'   ✅ Product exists')
-                            print(f'   Product keys: {list(produto_retornado.keys())}')
-                            produto_id = produto_retornado.get('id')
-                            if produto_id:
-                                produto['id'] = produto_id
-                                print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
-                            else:
-                                print(f'   ❌ ID não encontrado no product')
-                                print(f'   Product content: {json.dumps(produto_retornado, indent=2, default=str)}')
+                        if produto_retornado and produto_retornado.get('id'):
+                            # Capturar o ID retornado pela API
+                            produto['id'] = produto_retornado['id']
+                            print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
-                            print(f'   ❌ Product não existe na resposta')
-                            print(f'   Resposta completa: {json.dumps(resultado, indent=2, default=str)}')
+                            print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
-                        print(f'⚠️ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                        print(f'🔍 DEBUG - Estrutura do resultado: {json.dumps(resultado, indent=2, default=str) if resultado else "None"}')
-                        # Mesmo sem ID, envia para o Telegram — mas sem o ID de aprovação
+                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
                     
+                    # Enviar para Telegram (com ou sem ID)
                     self.telegram.enviar_sync('produto', produto)
                     self.produtos_enviados.add(produto['name'])
                     time.sleep(1)  # Evitar rate limit
