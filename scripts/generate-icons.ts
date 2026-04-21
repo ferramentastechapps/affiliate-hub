@@ -13,7 +13,7 @@ const PWA_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
 async function generatePwaIcons() {
   for (const size of PWA_SIZES) {
     await sharp(SOURCE)
-      .resize(size, size, { fit: 'contain', background: { r: 255, g: 107, b: 53, alpha: 1 } })
+      .resize(size, size, { fit: 'contain', background: { r: 9, g: 9, b: 11, alpha: 1 } })
       .png()
       .toFile(path.join(OUT, `icon-${size}x${size}.png`));
     console.log(`✅ icon-${size}x${size}.png`);
@@ -23,7 +23,7 @@ async function generatePwaIcons() {
 // ── Apple Touch Icon 180x180 ─────────────────────────────────
 async function generateAppleTouchIcon() {
   await sharp(SOURCE)
-    .resize(180, 180, { fit: 'contain', background: { r: 255, g: 107, b: 53, alpha: 1 } })
+    .resize(180, 180, { fit: 'contain', background: { r: 9, g: 9, b: 11, alpha: 1 } })
     .png()
     .toFile(path.join(OUT, 'apple-touch-icon.png'));
   console.log('✅ apple-touch-icon.png');
@@ -32,20 +32,20 @@ async function generateAppleTouchIcon() {
 // ── Favicons ─────────────────────────────────────────────────
 async function generateFavicons() {
   await sharp(SOURCE)
-    .resize(32, 32, { fit: 'contain', background: { r: 255, g: 107, b: 53, alpha: 1 } })
+    .resize(32, 32, { fit: 'contain', background: { r: 9, g: 9, b: 11, alpha: 1 } })
     .png()
     .toFile(path.join(OUT, 'favicon-32x32.png'));
   console.log('✅ favicon-32x32.png');
 
   await sharp(SOURCE)
-    .resize(16, 16, { fit: 'contain', background: { r: 255, g: 107, b: 53, alpha: 1 } })
+    .resize(16, 16, { fit: 'contain', background: { r: 9, g: 9, b: 11, alpha: 1 } })
     .png()
     .toFile(path.join(OUT, 'favicon-16x16.png'));
   console.log('✅ favicon-16x16.png');
 
   // favicon.ico = 32x32 PNG copiado (browsers aceitam PNG como .ico)
   await sharp(SOURCE)
-    .resize(32, 32, { fit: 'contain', background: { r: 255, g: 107, b: 53, alpha: 1 } })
+    .resize(32, 32, { fit: 'contain', background: { r: 9, g: 9, b: 11, alpha: 1 } })
     .png()
     .toFile(path.join(process.cwd(), 'public', 'favicon.ico'));
   console.log('✅ favicon.ico');
@@ -63,13 +63,13 @@ async function generateMaskableIcon() {
     .png()
     .toBuffer();
 
-  // Cria fundo laranja e compõe o logo centralizado
+  // Cria fundo escuro e compõe o logo centralizado
   await sharp({
     create: {
       width: SIZE,
       height: SIZE,
       channels: 4,
-      background: { r: 255, g: 107, b: 53, alpha: 255 },
+      background: { r: 9, g: 9, b: 11, alpha: 255 },
     },
   })
     .composite([{ input: logoBuffer, gravity: 'center' }])
