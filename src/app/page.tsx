@@ -141,7 +141,7 @@ export default async function Home() {
   const couponsByPlatform = await getCouponsByPlatform();
 
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-20 pb-8">
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8">
       {/* Hero Section */}
       <div id="categorias" className="w-full">
         <HeroSection />
