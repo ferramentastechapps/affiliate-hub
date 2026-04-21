@@ -126,12 +126,6 @@ async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_
     print(f'📸 Foto recebida com legenda: {caption}')
     
     if caption.strip().startswith('/aprovar'):
-        # Injeta os args manualmente e chama o handler de aprovação
-        partes = caption.split()
-        context._application  # garante que context está pronto
-        # Simula os args do comando
-        context._chat_data  # acessa o chat data
-        # Passa direto para o handler com a caption como fonte dos args
         await handle_aprovar_command(update, context)
     else:
         print(f'📸 Foto com legenda ignorada (não é /aprovar): {caption[:50]}')
