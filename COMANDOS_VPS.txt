@@ -1,0 +1,139 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 📋 COMANDOS PARA COPIAR E COLAR NA VPS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PASSO 1: CONECTAR NA VPS (execute no Windows PowerShell)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ssh root@212.85.10.239
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PASSO 2: DIAGNÓSTICO RÁPIDO (execute DENTRO da VPS)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Ver processos rodando
+pm2 status
+
+# Ver processos Python e Node
+ps aux | grep -E 'node|python' | grep -v grep
+
+# Ver portas em uso
+netstat -tulpn | grep -E '3005|3006'
+
+# Ver projetos na home
+ls -la ~/ | grep -E 'affiliate|crypto|signal'
+
+# Testar porta 3005
+curl http://127.0.0.1:3005
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PASSO 3: DIAGNÓSTICO COMPLETO (RECOMENDADO)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Baixar e executar script de diagnóstico
+cd ~/affiliate-hub
+curl -O https://raw.githubusercontent.com/seu-usuario/affiliate-hub/main/diagnosticar-vps.sh
+chmod +x diagnosticar-vps.sh
+./diagnosticar-vps.sh
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PASSO 4: CORREÇÃO AUTOMÁTICA (se o diagnóstico confirmar problema)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Baixar e executar script de correção
+cd ~/affiliate-hub
+curl -O https://raw.githubusercontent.com/seu-usuario/affiliate-hub/main/separar-projetos-vps.sh
+chmod +x separar-projetos-vps.sh
+./separar-projetos-vps.sh
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PASSO 5: CORREÇÃO MANUAL (alternativa ao script automático)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 1. Parar todos os processos
+pm2 delete all
+pkill -9 -f python3
+pkill -9 -f node
+
+# 2. Ir para o projeto
+cd ~/affiliate-hub
+
+# 3. Atualizar código
+git reset --hard
+git pull origin main
+
+# 4. Instalar dependências
+npm install
+
+# 5. Sincronizar banco
+npx prisma db push --accept-data-loss
+
+# 6. Build
+rm -rf .next
+npm run build
+
+# 7. Configurar bot
+cd bot
+pip3 install -r requirements.txt --break-system-packages
+nohup python3 -u main.py > bot.log 2>&1 &
+nohup python3 -u telegram_listener.py > listener.log 2>&1 &
+
+# 8. Iniciar Next.js
+cd ~/affiliate-hub
+pm2 start npm --name "affiliate-hub" -- start -- -p 3005
+pm2 save
+
+# 9. Verificar Nginx
+cat /etc/nginx/sites-enabled/123testando.useiotashop.com.br
+
+# 10. Se o Nginx estiver apontando para porta errada, corrigir:
+cat > /etc/nginx/sites-available/123testando.useiotashop.com.br << 'EOF'
+server {
+    listen 80;
+    server_name 123testando.useiotashop.com.br;
+
+    location / {
+        proxy_pass http://127.0.0.1:3005;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOF
+
+# 11. Habilitar e recarregar Nginx
+ln -sf /etc/nginx/sites-available/123testando.useiotashop.com.br /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+
+# 12. Testar
+curl http://127.0.0.1:3005
+pm2 status
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# COMANDOS ÚTEIS PARA MONITORAMENTO
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Ver logs do PM2
+pm2 logs
+
+# Ver logs do Nginx
+tail -f /var/log/nginx/error.log
+
+# Ver logs do bot
+tail -f ~/affiliate-hub/bot/bot.log
+tail -f ~/affiliate-hub/bot/listener.log
+
+# Reiniciar apenas o Next.js
+pm2 restart affiliate-hub
+
+# Ver uso de memória
+pm2 monit
