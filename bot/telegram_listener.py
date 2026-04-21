@@ -78,7 +78,7 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
             if response and response.text:
                 legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
         except Exception as e:
-            print(f"⚠️ Erro ao gerar legenda no Gemini: {e}")
+            print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
 
     preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
     
@@ -119,6 +119,22 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
         print(f'📢 Promoção publicada no grupo: {nome[:50]}')
     except Exception as e:
         print(f'❌ Erro ao publicar no grupo: {e}')
+
+async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Intercepta fotos com legenda e redireciona para /aprovar se necessário."""
+    caption = update.message.caption or ''
+    print(f'📸 Foto recebida com legenda: {caption}')
+    
+    if caption.strip().startswith('/aprovar'):
+        # Injeta os args manualmente e chama o handler de aprovação
+        partes = caption.split()
+        context._application  # garante que context está pronto
+        # Simula os args do comando
+        context._chat_data  # acessa o chat data
+        # Passa direto para o handler com a caption como fonte dos args
+        await handle_aprovar_command(update, context)
+    else:
+        print(f'📸 Foto com legenda ignorada (não é /aprovar): {caption[:50]}')
 
 async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -362,7 +378,7 @@ def run_listener():
 
     # IMPORTANTE: Foto com legenda /aprovar DEVE vir ANTES do CommandHandler
     # para capturar fotos com legenda antes de processar como comando de texto
-    app.add_handler(MessageHandler(filters.PHOTO & filters.CAPTION & filters.Regex(r'^/aprovar'), handle_aprovar_command))
+    app.add_handler(MessageHandler(filters.PHOTO & filters.CAPTION, handle_foto_com_legenda))
 
     # Comandos de texto
     app.add_handler(CommandHandler("aprovar", handle_aprovar_command))
