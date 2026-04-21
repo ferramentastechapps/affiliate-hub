@@ -47,10 +47,13 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
             if (Array.isArray(data)) {
                 // Filtra apenas da loja clicada
                 const normalize = (p: string) => {
-                  const l = p.toLowerCase();
-                  if (l === 'mercado livre' || l === 'mercadolivre') return 'mercadolivre';
-                  if (l === 'magalu' || l === 'magazine') return 'magazineluiza';
-                  if (l === 'boticario') return 'oboticario';
+                  const l = p.toLowerCase().trim();
+                  if (l.includes('mercado') || l === 'mercadolivre' || l === 'meli') return 'mercadolivre';
+                  if (l.includes('magalu') || l.includes('magazine')) return 'magazineluiza';
+                  if (l.includes('boticario')) return 'oboticario';
+                  if (l.includes('shopee')) return 'shopee';
+                  if (l.includes('amazon')) return 'amazon';
+                  if (l.includes('aliexpress') || l === 'ali') return 'aliexpress';
                   return l;
                 };
                 
