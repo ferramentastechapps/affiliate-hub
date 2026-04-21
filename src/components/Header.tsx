@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { AuthButton } from "./AuthButton";
 import { AuthPanel } from "./AuthPanel";
 import { useState, useEffect } from "react";
@@ -8,10 +8,6 @@ import { useState, useEffect } from "react";
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { scrollY } = useScroll();
-  
-  const headerOpacity = useTransform(scrollY, [0, 100], [0.95, 1]);
-  const headerBlur = useTransform(scrollY, [0, 100], [8, 16]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,20 +20,12 @@ export function Header() {
 
   return (
     <>
-      <motion.header
-        style={{
-          opacity: headerOpacity,
-        }}
+      <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
           isScrolled ? "py-3" : "py-4"
         }`}
       >
-        <motion.div
-          style={{
-            backdropFilter: `blur(${headerBlur}px)`,
-          }}
-          className="max-w-7xl mx-auto px-4 sm:px-6"
-        >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div
             className={`glass-panel rounded-[2rem] px-6 transition-all duration-300 ${
               isScrolled ? "py-3" : "py-4"
@@ -79,8 +67,8 @@ export function Header() {
               <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
             </div>
           </div>
-        </motion.div>
-      </motion.header>
+        </div>
+      </header>
 
       {/* Auth Panel */}
       <AuthPanel isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
