@@ -43,7 +43,7 @@ export function Header() {
                 <img
                   src="/logo2.png"
                   alt="Logo"
-                  className="h-8 sm:h-10 w-auto"
+                  className="h-10 sm:h-14 w-auto"
                 />
               </motion.a>
 
