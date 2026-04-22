@@ -25,7 +25,7 @@ export function Header() {
           isScrolled ? "py-3" : "py-4"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div
             className={`glass-panel rounded-[2rem] px-4 transition-all duration-300 ${
               isScrolled ? "py-2" : "py-3"
@@ -43,7 +43,7 @@ export function Header() {
                 <img
                   src="/logo2.png"
                   alt="Logo"
-                  className="h-48 sm:h-56 w-auto"
+                  className="h-10 sm:h-12 w-auto"
                 />
               </motion.a>
 
