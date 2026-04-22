@@ -44,7 +44,7 @@ export function Header() {
               </motion.a>
 
               {/* Desktop Navigation */}
-              <nav className="hidden md:flex items-center gap-1">
+              <nav className="hidden md:flex items-center gap-2">
                 <NavLink href="#inicio">Início</NavLink>
                 <NavLink href="#categorias">Categorias</NavLink>
                 <NavLink href="#cupons">Cupons</NavLink>
@@ -82,7 +82,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: "spring", stiffness: 400, damping: 20 }}
-      className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+      className="px-5 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors min-h-[44px] flex items-center"
     >
       {children}
     </motion.a>

@@ -84,8 +84,8 @@ export function InstallBanner() {
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-2xl p-4 max-w-md mx-auto border border-orange-400/20">
           <button
             onClick={handleDismiss}
-            className="absolute top-2 right-2 p-1 rounded-full hover:bg-white/20 transition-colors"
-            aria-label="Fechar"
+            aria-label="Fechar banner de instalação"
+            className="absolute top-2 right-2 p-2 rounded-full hover:bg-white/20 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
           >
             <X size={20} weight="bold" className="text-white" />
           </button>
@@ -105,7 +105,7 @@ export function InstallBanner() {
 
               <button
                 onClick={handleInstallClick}
-                className="w-full bg-white text-orange-600 font-semibold py-2.5 px-4 rounded-xl hover:bg-orange-50 transition-colors flex items-center justify-center gap-2 shadow-lg"
+                className="w-full bg-white text-orange-600 font-semibold py-3 px-4 rounded-xl hover:bg-orange-50 transition-colors flex items-center justify-center gap-2 shadow-lg min-h-[48px]"
               >
                 {isIOS ? (
                   <>
@@ -185,7 +185,7 @@ export function InstallBanner() {
 
             <button
               onClick={() => setShowIOSInstructions(false)}
-              className="w-full mt-6 bg-orange-500 text-white font-semibold py-3 rounded-xl hover:bg-orange-600 transition-colors"
+              className="w-full mt-6 bg-orange-500 text-white font-semibold py-3.5 rounded-xl hover:bg-orange-600 transition-colors min-h-[52px]"
             >
               Entendi!
             </button>

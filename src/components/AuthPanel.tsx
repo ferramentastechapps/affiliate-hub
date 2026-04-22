@@ -201,7 +201,9 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                               setErrors(prev => ({ ...prev, loginEmail: "" }));
                             }}
                             placeholder="seu@email.com"
-                            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500"
+                            autoComplete="email"
+                            inputMode="email"
+                            className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500 text-base"
                           />
                         </div>
                         {errors.loginEmail && (
@@ -231,12 +233,14 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                               setErrors(prev => ({ ...prev, loginPassword: "" }));
                             }}
                             placeholder="••••••••"
-                            className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500"
+                            autoComplete="current-password"
+                            className="w-full pl-12 pr-14 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500 text-base"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                           >
                             {showPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
                           </button>
@@ -253,13 +257,13 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                       </div>
 
                       {/* Remember & Forgot */}
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="flex items-center justify-between gap-4">
+                        <label className="flex items-center gap-3 cursor-pointer group min-h-[44px]">
                           <input
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="w-4 h-4 rounded border-white/20 bg-white/5 text-accent focus:ring-2 focus:ring-accent focus:ring-offset-0 cursor-pointer"
+                            className="w-5 h-5 rounded border-white/20 bg-white/5 text-accent focus:ring-2 focus:ring-accent focus:ring-offset-0 cursor-pointer"
                           />
                           <span className="text-sm text-zinc-400 group-hover:text-white transition-colors">
                             Lembrar de mim
@@ -267,7 +271,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         </label>
                         <button
                           type="button"
-                          className="text-sm text-accent hover:text-accent/80 transition-colors"
+                          className="text-sm text-accent hover:text-accent/80 transition-colors min-h-[44px] px-2"
                         >
                           Esqueci minha senha
                         </button>
@@ -280,7 +284,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-3 bg-accent hover:bg-accent/90 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                        className="w-full py-4 bg-accent hover:bg-accent/90 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden min-h-[52px] text-base"
                       >
                         {isLoading ? (
                           <motion.div

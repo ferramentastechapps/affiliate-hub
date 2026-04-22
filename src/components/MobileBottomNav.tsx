@@ -42,41 +42,45 @@ export function MobileBottomNav() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="fixed bottom-4 left-4 right-4 z-50 md:hidden flex items-stretch gap-3 h-[4.5rem]"
+          className="fixed bottom-4 left-4 right-4 z-50 md:hidden flex items-stretch gap-3"
         >
           {/* Pílula Principal (Navegação Branca) */}
-          <div className="flex-1 bg-white rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-black/5 flex items-center justify-between px-2">
+          <div className="flex-1 bg-white rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-black/5 flex items-center justify-between px-1">
             
             <button 
               onClick={() => scrollTo('inicio')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 text-zinc-900"
+              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-900 min-h-[56px] py-2"
+              aria-label="Ir para início"
             >
-              <House size={26} weight="duotone" />
-              <span className="text-[10px] font-bold">Início</span>
+              <House size={24} weight="duotone" />
+              <span className="text-[11px] font-bold leading-tight">Início</span>
             </button>
             
             <button 
               onClick={() => scrollTo('categorias')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors"
+              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors min-h-[56px] py-2"
+              aria-label="Ir para categorias"
             >
-              <Tag size={26} weight="duotone" />
-              <span className="text-[10px] font-bold">Categorias</span>
+              <Tag size={24} weight="duotone" />
+              <span className="text-[11px] font-bold leading-tight">Categorias</span>
             </button>
 
             <button 
               onClick={() => scrollTo('cupons')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors"
+              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors min-h-[56px] py-2"
+              aria-label="Ir para cupons"
             >
-              <Ticket size={26} weight="duotone" />
-              <span className="text-[10px] font-bold">Cupons</span>
+              <Ticket size={24} weight="duotone" />
+              <span className="text-[11px] font-bold leading-tight">Cupons</span>
             </button>
 
             <button 
               onClick={() => scrollTo('ofertas')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-1 active:scale-95 text-accent"
+              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-accent min-h-[56px] py-2"
+              aria-label="Ir para ofertas"
             >
-              <Sparkle size={26} weight="duotone" />
-              <span className="text-[10px] font-bold">Ofertas</span>
+              <Sparkle size={24} weight="duotone" />
+              <span className="text-[11px] font-bold leading-tight">Ofertas</span>
             </button>
             
           </div>
@@ -86,13 +90,14 @@ export function MobileBottomNav() {
             href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
             target="_blank"
             rel="noopener noreferrer"
-            className="w-[4.5rem] bg-zinc-900 rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/10 flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
+            aria-label="Entrar no grupo do WhatsApp"
+            className="w-[4.5rem] bg-zinc-900 rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/10 flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-transform min-h-[56px] py-2"
           >
             <div className="relative">
-               <WhatsappLogo size={28} weight="fill" className="text-[#25D366]" />
+               <WhatsappLogo size={26} weight="fill" className="text-[#25D366]" />
                <div className="absolute inset-0 rounded-full animate-ping bg-[#25D366]/30" />
             </div>
-            <span className="text-[10px] font-bold text-white mt-1">Grupo</span>
+            <span className="text-[11px] font-bold text-white mt-0.5 leading-tight">Grupo</span>
           </a>
 
         </motion.div>
