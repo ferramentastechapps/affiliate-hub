@@ -153,9 +153,7 @@ export default async function Home() {
       </div>
 
       {/* Botão de Notificações Push */}
-      <div className="w-full max-w-7xl px-4 py-6 flex justify-center">
-        <PushNotificationButton />
-      </div>
+      {/* removido */}
 
       {/* Filtro por Loja */}
       <div className="w-full">
