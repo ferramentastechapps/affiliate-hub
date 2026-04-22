@@ -164,7 +164,8 @@ export function DailyDeals() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Carrossel horizontal em mobile, grid em desktop */}
+      <div className="flex lg:grid lg:grid-cols-4 gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide lg:overflow-visible">
         {displayProducts.map((product, index) => {
           const discount = getSimulatedDiscount(product.id);
           // original price calculation
@@ -211,7 +212,7 @@ export function DailyDeals() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, type: "spring", stiffness: 80 }}
               onClick={() => setSelectedProduct(product)}
-              className="group cursor-pointer bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/80 hover:border-accent/50 rounded-3xl p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_-10px_var(--accent)]"
+              className="group cursor-pointer bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/80 hover:border-accent/50 rounded-3xl p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_-10px_var(--accent)] min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-start"
             >
               {/* Badge Desconto */}
               <div className="absolute top-4 right-4 z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white font-black text-sm px-3 py-1.5 rounded-xl border border-white/20 shadow-lg flex items-center gap-1">

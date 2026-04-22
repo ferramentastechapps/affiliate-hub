@@ -2,7 +2,7 @@ import { DailyDeals } from "@/components/DailyDeals";
 import { ProductGrid } from "@/components/ProductGrid";
 import { CouponsSection } from "@/components/CouponsSection";
 import { HeroSection } from "@/components/HeroSection";
-import { SocialFooter } from "@/components/SocialFooter";
+import { Footer } from "@/components/Footer";
 import { StoreFilter } from "@/components/StoreFilter";
 import { CategoriesSection } from "@/components/CategoriesSection";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
@@ -171,8 +171,8 @@ export default async function Home() {
         <CategoriesSection />
       </div>
 
-      {/* Social Footer */}
-      <SocialFooter />
+      {/* Footer com Grupos e Redes Sociais */}
+      <Footer />
     </main>
   );
 }
