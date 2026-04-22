@@ -27,8 +27,8 @@ export function Header() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div
-            className={`glass-panel rounded-[2rem] px-6 transition-all duration-300 ${
-              isScrolled ? "py-3" : "py-4"
+            className={`glass-panel rounded-[2rem] px-4 transition-all duration-300 ${
+              isScrolled ? "py-2" : "py-3"
             }`}
           >
             <div className="flex items-center justify-between">
