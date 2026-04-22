@@ -41,18 +41,10 @@ export function Header() {
                 className="flex items-center gap-3"
               >
                 <img
-                  src="/logo.png"
-                  alt="123 Testando"
-                  className="w-8 h-8 sm:w-10 sm:h-10"
+                  src="/logo2.png"
+                  alt="Logo"
+                  className="h-8 sm:h-10 w-auto"
                 />
-                <div className="hidden sm:block">
-                  <h1 className="text-lg font-bold tracking-tight leading-none">
-                    123 Testando
-                  </h1>
-                  <p className="text-xs text-zinc-400 leading-none mt-0.5">
-                    Melhores ofertas
-                  </p>
-                </div>
               </motion.a>
 
               {/* Desktop Navigation */}
