@@ -141,7 +141,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {displayCoupons.map((item, index) => {
             const domain = getDomainFromPlatform(item.platform);
             const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
@@ -154,12 +154,12 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedPlatform(item.platform)}
-                className="relative group w-full text-left focus:outline-none"
+                className="relative group text-left focus:outline-none shrink-0"
               >
-                <div className="bg-white/5 backdrop-blur-md p-3 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center justify-between gap-2 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1">
+                <div className="bg-white/5 backdrop-blur-md px-3 py-2 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center gap-2 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1 whitespace-nowrap">
                   
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-white shadow-sm p-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-white shadow-sm p-0.5">
                       <img 
                         src={iconUrl} 
                         alt={item.platform} 
@@ -170,13 +170,13 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                         }}
                       />
                     </div>
-                    <h3 className="text-sm font-semibold text-white truncate capitalize">
+                    <h3 className="text-xs font-semibold text-white capitalize">
                       {item.platform}
                     </h3>
                   </div>
 
-                  <div className="bg-accent/20 px-2.5 py-1 rounded-full shrink-0 flex items-center">
-                    <span className="text-[11px] font-bold text-accent leading-none mt-[1px]">
+                  <div className="bg-accent/20 px-2 py-0.5 rounded-full shrink-0 flex items-center">
+                    <span className="text-[10px] font-bold text-accent leading-none">
                       {item.count}
                     </span>
                   </div>
