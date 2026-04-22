@@ -100,7 +100,7 @@ export function CategoriesSection() {
           <button
             key={category.key}
             onClick={() => setActiveCategory(activeCategory === category.key ? null : category.key)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-2xl border transition-all duration-200 whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-3 rounded-2xl border transition-all duration-200 whitespace-nowrap shrink-0 min-h-[48px] ${
               activeCategory === category.key
                 ? "bg-accent/15 border-accent/50 shadow-lg shadow-accent/10"
                 : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
@@ -143,7 +143,7 @@ export function CategoriesSection() {
 
               {/* Loading */}
               {loading && (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {[1,2,3,4].map(i => (
                     <div key={i} className="h-52 bg-zinc-900/50 rounded-2xl animate-pulse" />
                   ))}

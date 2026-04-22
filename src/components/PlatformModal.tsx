@@ -179,11 +179,12 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
               transition: { type: "spring", stiffness: 300, damping: 30 }
             }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(40,110,250,0.15)] rounded-[2.5rem] flex flex-col overflow-hidden max-h-[90vh]"
+            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(40,110,250,0.15)] rounded-[2rem] sm:rounded-[2.5rem] flex flex-col overflow-hidden max-h-[90vh] mx-2 sm:mx-0"
           >
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 z-20 p-2.5 bg-black/40 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/10 text-white"
+              aria-label="Fechar modal"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 p-3 bg-black/40 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/10 text-white min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <X size={20} weight="bold" />
             </button>
@@ -205,20 +206,20 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                 />
               </div>
 
-              <div className="p-8 pb-4">
+              <div className="p-6 sm:p-8 pb-4">
                 <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
                 <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-4 leading-snug">
                   {product.name}
                 </h3>
 
                 {displayCoupon && (
-                  <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-6 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 rounded-2xl">
                     <div className="bg-accent/20 p-2 rounded-xl text-accent">
                       <Tag size={24} weight="duotone" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">CUPOM DISPONÍVEL</span>
-                      <code className="text-white font-mono font-bold text-lg">{displayCoupon}</code>
+                      <code className="text-white font-mono font-bold text-base sm:text-lg break-all">{displayCoupon}</code>
                     </div>
                   </div>
                 )}
@@ -245,7 +246,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
 
                 <button
                   onClick={handlePlatformClick}
-                  className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-lg py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)]"
+                  className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)] min-h-[56px]"
                 >
                   {displayCoupon ? "Ver Cupom e Ir para Loja" : `Ir para Promoção na ${platformName}`}
                   <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
@@ -256,12 +257,12 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   Loja Segura Verificada
                 </div>
 
-                <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-2xl p-5 gap-3 flex flex-col items-center text-center shadow-[0_0_40px_rgba(37,211,102,0.1)]">
+                <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-2xl p-4 sm:p-5 gap-3 flex flex-col items-center text-center shadow-[0_0_40px_rgba(37,211,102,0.1)]">
                   <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#25D366]/20 blur-3xl rounded-full" />
                   <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#25D366]/10 blur-3xl rounded-full" />
                   
                   <div className="relative z-10">
-                    <h4 className="text-white font-bold text-[15px] mb-1">
+                    <h4 className="text-white font-bold text-sm sm:text-[15px] mb-1">
                       Já está no nosso grupo de promoções?
                     </h4>
                     <p className="text-emerald-100/70 text-xs mb-4 max-w-[260px] mx-auto leading-relaxed">
@@ -272,7 +273,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                       href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1DA851] text-zinc-950 font-bold text-sm py-3 px-5 rounded-xl transition-all hover:scale-[1.02]"
+                      className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1DA851] text-zinc-950 font-bold text-sm py-3.5 px-5 rounded-xl transition-all hover:scale-[1.02] min-h-[48px]"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a5.8 5.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372C7.382 7.07 6.61 7.79 6.61 9.253c0 1.463 1.11 2.876 1.26 3.074.148.198 2.094 3.196 5.076 4.482.71.306 1.264.489 1.696.625.714.227 1.365.195 1.876.118.575-.087 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.82 11.82 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413Z"/>
@@ -289,14 +290,14 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
 
               {/* Related Offers Section Inside Modal */}
               {relatedProducts.length > 0 && (
-                <div className="border-t border-white/5 mt-4 pt-8 px-8 bg-black/20">
-                  <h4 className="text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
+                <div className="border-t border-white/5 mt-4 pt-6 sm:pt-8 px-4 sm:px-8 bg-black/20">
+                  <h4 className="text-base sm:text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {relatedProducts.map((relItem) => (
                        <button 
                          key={relItem.id}
                          onClick={() => handleOpenRelated(relItem)}
-                         className="group bg-zinc-900 border border-white/5 hover:border-accent/30 rounded-xl overflow-hidden flex flex-col text-left transition-all hover:scale-[1.02]"
+                         className="group bg-zinc-900 border border-white/5 hover:border-accent/30 rounded-xl overflow-hidden flex flex-col text-left transition-all hover:scale-[1.02] min-h-[44px]"
                        >
                          <div className="w-full aspect-square bg-zinc-100 flex items-center justify-center p-2">
                            <img 

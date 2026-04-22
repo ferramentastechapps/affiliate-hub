@@ -115,7 +115,7 @@ export function DailyDeals() {
         {filteredProducts.length > 4 && (
           <button 
             onClick={() => setShowAll(!showAll)}
-            className="flex text-sm font-medium text-accent hover:text-white transition-colors items-center gap-1 bg-accent/10 px-4 py-2 rounded-full hover:bg-accent/20"
+            className="flex text-sm font-medium text-accent hover:text-white transition-colors items-center gap-1 bg-accent/10 px-4 py-2.5 rounded-full hover:bg-accent/20 min-h-[44px]"
           >
             {showAll ? "Esconder" : "Ver todas"} <ArrowUpRight weight="bold" className={showAll ? "rotate-180 transition-transform" : "transition-transform"} />
           </button>
@@ -124,7 +124,7 @@ export function DailyDeals() {
 
       {/* Filtro de Categorias */}
       {categories.length > 1 && (
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2.5 mb-8 overflow-x-auto pb-2 scrollbar-hide">
           {categories.map((category) => {
             const emoji: Record<string, string> = {
               'Todas': '🔥',
@@ -150,7 +150,7 @@ export function DailyDeals() {
                   setSelectedCategory(category);
                   setShowAll(false);
                 }}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 min-h-[44px] ${
                   selectedCategory === category
                     ? "bg-accent text-white shadow-lg shadow-accent/30"
                     : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
@@ -164,7 +164,7 @@ export function DailyDeals() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {displayProducts.map((product, index) => {
           const discount = getSimulatedDiscount(product.id);
           // original price calculation

@@ -154,9 +154,9 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedPlatform(item.platform)}
-                className="relative group text-left focus:outline-none shrink-0"
+                className="relative group text-left focus:outline-none shrink-0 min-h-[48px]"
               >
-                <div className="bg-white/5 backdrop-blur-md px-4 py-3 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center gap-3 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1 whitespace-nowrap">
+                <div className="bg-white/5 backdrop-blur-md px-4 py-3 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center gap-3 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1 whitespace-nowrap min-h-[48px]">
                   
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-white shadow-sm p-1">
@@ -214,23 +214,27 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner">
+              <div className="flex items-center justify-between p-5 sm:p-6 border-b border-white/5 bg-white/5">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner shrink-0">
                     <img src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(selectedPlatform)}&sz=64`} alt="logo" className="w-full h-full object-contain mix-blend-multiply" />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white capitalize">{selectedPlatform}</h3>
-                    <p className="text-zinc-400 text-sm">Cupons Exclusivos</p>
+                  <div className="min-w-0">
+                    <h3 className="text-lg sm:text-xl font-bold text-white capitalize truncate">{selectedPlatform}</h3>
+                    <p className="text-zinc-400 text-xs sm:text-sm">Cupons Exclusivos</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedPlatform(null)} className="p-3 bg-black/20 rounded-full hover:bg-white/10 text-white transition-colors">
+                <button 
+                  onClick={() => setSelectedPlatform(null)} 
+                  aria-label="Fechar modal de cupons"
+                  className="p-3 bg-black/20 rounded-full hover:bg-white/10 text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"
+                >
                   <X size={20} weight="bold" />
                 </button>
               </div>
               
               {/* Content / Scrollable */}
-              <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex flex-col gap-4">
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
@@ -238,33 +242,33 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                   </div>
                 ) : couponsList.length > 0 ? (
                   couponsList.map(coupon => (
-                    <div key={coupon.id} className="relative bg-[#111] border border-white/5 rounded-[1.5rem] p-5 flex flex-col gap-4 group hover:border-accent/30 transition-colors">
+                    <div key={coupon.id} className="relative bg-[#111] border border-white/5 rounded-[1.5rem] p-4 sm:p-5 flex flex-col gap-4 group hover:border-accent/30 transition-colors">
                       {/* Pontilhado lateral de ingresso */}
                       <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-zinc-900 rounded-full border-r border-white/5" />
                       <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-zinc-900 rounded-full border-l border-white/5" />
 
-                      <div className="pl-4 pr-1">
+                      <div className="pl-2 sm:pl-4 pr-1">
                         <div className="flex justify-between items-start gap-4 mb-2">
                           <div>
-                            <h4 className="font-bold text-lg text-white leading-tight">{coupon.discount} OFF</h4>
-                            <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">{coupon.description}</p>
+                            <h4 className="font-bold text-base sm:text-lg text-white leading-tight">{coupon.discount} OFF</h4>
+                            <p className="text-xs sm:text-sm text-zinc-400 mt-1.5 leading-relaxed">{coupon.description}</p>
                           </div>
                         </div>
                         
                         <div className="mt-5 flex items-center bg-black rounded-xl p-1 border border-white/5">
-                          <div className="flex-1 text-center font-mono font-bold tracking-widest text-zinc-300 pt-[2px]">
+                          <div className="flex-1 text-center font-mono font-bold tracking-widest text-zinc-300 pt-[2px] text-sm sm:text-base break-all px-2">
                             {coupon.code}
                           </div>
                           <button 
                             onClick={() => copyToClipboard(coupon.code)}
-                            className={`px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 font-bold transition-all ${
+                            className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg flex items-center justify-center gap-2 font-bold transition-all text-sm min-h-[44px] shrink-0 ${
                               copied === coupon.code 
                                 ? "bg-emerald-500 text-white" 
                                 : "bg-white text-black hover:bg-zinc-200"
                             }`}
                           >
                             {copied === coupon.code ? <Check size={18} weight="bold" /> : <Copy size={18} weight="bold" />}
-                            {copied === coupon.code ? "Copiado!" : "Copiar"}
+                            <span className="hidden sm:inline">{copied === coupon.code ? "Copiado!" : "Copiar"}</span>
                           </button>
                         </div>
                       </div>

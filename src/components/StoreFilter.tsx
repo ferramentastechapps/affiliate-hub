@@ -99,7 +99,7 @@ export function StoreFilter() {
           <button
             key={store.key}
             onClick={() => setActiveStore(activeStore === store.key ? null : store.key)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-2xl border transition-all duration-200 whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-3 rounded-2xl border transition-all duration-200 whitespace-nowrap shrink-0 min-h-[48px] ${
               activeStore === store.key
                 ? "bg-accent/15 border-accent/50 shadow-lg shadow-accent/10"
                 : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
@@ -170,7 +170,7 @@ export function StoreFilter() {
 
       {/* Grid de produtos */}
               {!loading && products.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {products.map((product, index) => {
                     const discount = getSimulatedDiscount(product.id);
                     const price = product.price || 0;
