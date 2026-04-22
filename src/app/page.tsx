@@ -4,6 +4,7 @@ import { CouponsSection } from "@/components/CouponsSection";
 import { HeroSection } from "@/components/HeroSection";
 import { SocialFooter } from "@/components/SocialFooter";
 import { StoreFilter } from "@/components/StoreFilter";
+import { CategoriesSection } from "@/components/CategoriesSection";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
@@ -163,6 +164,11 @@ export default async function Home() {
       {/* Promocoes do Dia */}
       <div id="ofertas" className="w-full">
         <DailyDeals />
+      </div>
+
+      {/* Categorias */}
+      <div className="w-full">
+        <CategoriesSection />
       </div>
 
       {/* Social Footer */}
