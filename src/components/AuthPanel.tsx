@@ -117,8 +117,8 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
               <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl border-b border-white/10 z-10">
                 <div className="flex items-center justify-between p-6">
                   <div className="flex items-center gap-3">
-                    <img src="/logo.png" alt="Logo" className="w-8 h-8" />
-                    <h2 className="text-xl font-bold tracking-tight">123 Testando</h2>
+                    <img src="/logo2.png" alt="Logo" className="h-8 w-auto" />
+                    <h2 className="text-xl font-bold tracking-tight"></h2>
                   </div>
                   <motion.button
                     onClick={onClose}
