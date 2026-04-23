@@ -187,11 +187,11 @@ export function CategoriesSection() {
                         </div>
 
                         {/* Imagem */}
-                        <div className="w-full aspect-[4/3] sm:aspect-square bg-zinc-100 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
+                        <div className="w-full aspect-[4/3] sm:aspect-square bg-white rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center p-2">
                           <img
                             src={product.imageUrl}
                             alt={product.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                           />
                           {/* Store badge */}
                           <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] px-3 py-1.5 border border-zinc-200 flex items-center gap-1.5">
