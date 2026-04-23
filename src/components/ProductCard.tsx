@@ -43,14 +43,14 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
       className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[2.5rem] bg-zinc-900 border border-zinc-800 transition-all hover:border-accent hover:shadow-[0_0_40px_-15px_var(--accent)]"
     >
       {/* Aspect Ratio Container for Masonry effect */}
-      <div className="relative aspect-[4/5] w-full bg-white overflow-hidden">
+      <div className="relative aspect-[4/5] w-full bg-zinc-900 overflow-hidden">
         {/* Next.js Image com otimização automática */}
         <Image
           src={imageError ? fallbackImage : product.imageUrl}
           alt={product.name}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-contain p-4 transition-transform duration-700 ease-out group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           onError={() => setImageError(true)}
           priority={false}
           quality={85}

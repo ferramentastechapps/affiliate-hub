@@ -226,11 +226,11 @@ export function DailyDeals() {
               </div>
 
               {/* Imagem (Area preenchida com a foto e sem efeito de zoom) */}
-              <div className="w-full aspect-[4/3] sm:aspect-square bg-white rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center p-2">
+              <div className="w-full aspect-[4/3] sm:aspect-square bg-zinc-900 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
                 
                 {/* Store mini logo/badge floating on image */}
