@@ -236,11 +236,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                     <span className="text-sm text-zinc-400 font-medium mb-1 line-through">
                       De: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                     </span>
-                    <div className="flex items-end gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                       <span className="text-4xl font-black text-white tracking-tighter">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                       </span>
-                      <span className="text-green-400 font-bold mb-1.5 px-2 py-0.5 bg-green-400/10 rounded-lg text-sm">
+                      <span className="text-green-400 font-bold text-xs sm:text-sm px-3 py-1.5 bg-green-400/10 rounded-lg self-start sm:self-auto sm:mb-1.5">
                         em até 10x sem juros
                       </span>
                     </div>

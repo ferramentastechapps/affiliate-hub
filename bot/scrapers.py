@@ -353,18 +353,62 @@ class PromotionScraper:
             print(f'❌ Erro ao buscar no Pelando: {e}')
         return produtos
 
+    def buscar_promocoes_tiktok(self, limite: int = 10) -> List[Dict]:
+        """
+        Busca promoções do TikTok Shop
+        
+        NOTA: TikTok Shop não tem API pública oficial para scraping.
+        Esta função é um placeholder que você pode adaptar de 3 formas:
+        
+        1. MANUAL: Adicionar produtos manualmente via admin
+        2. WEBHOOK: Configurar webhook do TikTok Seller Center (se você for vendedor)
+        3. SCRAPING AVANÇADO: Usar Selenium/Playwright para simular navegação
+        
+        Por enquanto, retorna lista vazia. Para ativar:
+        - Descomente o código abaixo e adapte conforme necessário
+        """
+        produtos = []
+        try:
+            print('🎵 Buscando promoções no TikTok Shop...')
+            
+            # OPÇÃO 1: Scraping básico (pode não funcionar devido a proteções anti-bot)
+            # response = requests.get('https://shop.tiktok.com/view/promo', headers=self.headers, timeout=15)
+            # if response.status_code == 200:
+            #     soup = BeautifulSoup(response.content, 'html.parser')
+            #     # Adaptar seletores conforme estrutura do site
+            
+            # OPÇÃO 2: Se você tem links específicos de afiliado TikTok
+            # links_afiliados_tiktok = [
+            #     'https://www.tiktok.com/@loja/video/123456789',
+            #     # Adicione seus links aqui
+            # ]
+            # for link in links_afiliados_tiktok:
+            #     # Processar cada link
+            
+            # OPÇÃO 3: Integração com TikTok Seller API (requer conta de vendedor)
+            # Documentação: https://seller.tiktokglobalshop.com/document
+            
+            print('⚠️  TikTok Shop: Adicione produtos manualmente via admin ou configure API')
+            print('   Documentação: https://seller.tiktokglobalshop.com/document')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no TikTok Shop: {e}')
+        
+        return produtos
+
     def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte e Pelando"""
+        """Busca promoções em todas as plataformas: Promobit, Promobyte, Pelando e TikTok"""
         print('\n📡 Buscando em múltiplas fontes...')
 
         produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
         produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte
         produtos_pelando   = self.buscar_promocoes_pelando_site()  # Pelando
+        produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
 
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_pelando:
+        for p in produtos_promobit + produtos_promobyte + produtos_pelando + produtos_tiktok:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
@@ -373,7 +417,8 @@ class PromotionScraper:
         print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos '
               f'({len(produtos_promobit)} Promobit | '
               f'{len(produtos_promobyte)} Promobyte | '
-              f'{len(produtos_pelando)} Pelando)')
+              f'{len(produtos_pelando)} Pelando | '
+              f'{len(produtos_tiktok)} TikTok)')
 
         todos_cupons = self.buscar_cupons_pelando()
 

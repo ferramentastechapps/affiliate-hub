@@ -332,6 +332,136 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         erro_msg = resultado.get('error') if resultado else "Erro na comunicação com a API."
         await msg_status.edit_text(f"❌ Falha ao aprovar: {erro_msg}")
 
+async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Comando: /tiktok [link] [nome] [preço] [categoria]
+    Adiciona um produto do TikTok Shop rapidamente
+    
+    Exemplo:
+    /tiktok https://www.tiktok.com/@loja/video/123 Bolsa Feminina 39.90 Moda
+    """
+    if not context.args or len(context.args) < 4:
+        await update.message.reply_text(
+            "❌ Uso incorreto!\n\n"
+            "✅ Formato correto:\n"
+            "<code>/tiktok [LINK] [NOME] [PREÇO] [CATEGORIA]</code>\n\n"
+            "📸 Envie a foto com a legenda:\n"
+            "<code>/tiktok [LINK] [NOME] [PREÇO] [CATEGORIA]</code>\n\n"
+            "Exemplo:\n"
+            "<code>/tiktok https://www.tiktok.com/@loja/video/123 Bolsa_Feminina 39.90 Moda</code>\n\n"
+            "📋 Categorias disponíveis:\n"
+            "• Smartphones\n"
+            "• Informatica\n"
+            "• Casa\n"
+            "• Moda\n"
+            "• Bebes\n"
+            "• Saude\n"
+            "• Esporte\n"
+            "• Supermercado\n"
+            "• Livros\n"
+            "• Ferramentas\n"
+            "• Automotivo\n"
+            "• Pet\n"
+            "• Viagem\n"
+            "• Diversos",
+            parse_mode='HTML'
+        )
+        return
+
+    # Extrair argumentos
+    link_tiktok = context.args[0]
+    nome_produto = ' '.join(context.args[1:-2])  # Tudo entre link e preço
+    preco = context.args[-2]
+    categoria_curta = context.args[-1]
+
+    # Mapear categoria curta para categoria completa
+    categorias_map = {
+        'smartphones': 'Smartphones e TV',
+        'informatica': 'Informática e Games',
+        'casa': 'Casa e Eletrodomésticos',
+        'moda': 'Moda e Acessórios',
+        'bebes': 'Bebês e Crianças',
+        'saude': 'Saúde e Beleza',
+        'esporte': 'Esporte e Suplementos',
+        'supermercado': 'Supermercado e Delivery',
+        'livros': 'Livros, eBooks e eReaders',
+        'ferramentas': 'Ferramentas e Jardim',
+        'automotivo': 'Automotivo',
+        'pet': 'Pet',
+        'viagem': 'Viagem',
+        'diversos': 'Diversos'
+    }
+    
+    categoria = categorias_map.get(categoria_curta.lower(), 'Diversos')
+
+    # Validar link TikTok
+    if 'tiktok.com' not in link_tiktok.lower():
+        await update.message.reply_text("❌ O link não parece ser do TikTok!")
+        return
+
+    # Validar preço
+    try:
+        preco_float = float(preco.replace(',', '.'))
+    except:
+        await update.message.reply_text("❌ Preço inválido! Use formato: 39.90 ou 39,90")
+        return
+
+    # Capturar foto se enviada
+    foto_url = None
+    if update.message and update.message.photo:
+        foto_file_id = update.message.photo[-1].file_id
+        try:
+            foto_file = await context.bot.get_file(foto_file_id)
+            foto_url = foto_file.file_path
+            print(f'📸 Foto TikTok capturada: {foto_url}')
+        except Exception as e:
+            print(f'⚠️ Erro ao obter foto: {e}')
+
+    msg_status = await update.message.reply_text("⏳ Adicionando produto do TikTok...")
+
+    # Criar payload do produto
+    produto_data = {
+        'name': nome_produto,
+        'category': categoria,
+        'description': f'Oferta exclusiva no TikTok Shop',
+        'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
+        'price': preco_float,
+        'links': {
+            'tiktok': link_tiktok
+        },
+        'status': 'approved'  # Já aprovado direto
+    }
+
+    # Adicionar produto via API
+    try:
+        resultado = api.adicionar_produto_direto(produto_data)
+        
+        if resultado and resultado.get('success'):
+            produto_info = resultado.get('product', {})
+            produto_id = produto_info.get('id', 'N/A')
+            
+            # Publicar no grupo
+            await publicar_no_grupo(context, produto_info, 'tiktok', link_tiktok, 
+                                   update.message.photo[-1].file_id if update.message.photo else None)
+            
+            await msg_status.edit_text(
+                f"✅ <b>Produto TikTok Adicionado!</b>\n\n"
+                f"🆔 ID: <code>{produto_id}</code>\n"
+                f"📦 Nome: {nome_produto}\n"
+                f"💰 Preço: R$ {preco_float:.2f}\n"
+                f"📂 Categoria: {categoria}\n"
+                f"🎵 Plataforma: TikTok Shop\n\n"
+                f"✅ Publicado no grupo de promoções!",
+                parse_mode='HTML'
+            )
+        else:
+            erro = resultado.get('error', 'Erro desconhecido') if resultado else 'Erro na API'
+            await msg_status.edit_text(f"❌ Erro ao adicionar: {erro}")
+            
+    except Exception as e:
+        print(f'❌ Erro ao adicionar produto TikTok: {e}')
+        await msg_status.edit_text(f"❌ Erro: {str(e)}")
+
 async def handle_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de ajuda"""
     help_text = """
@@ -345,6 +475,10 @@ Exemplo: <code>/aprovar clxyz123 https://amzn.to/abc</code>
 Rejeita um produto (não aparecerá no site)
 Exemplo: <code>/rejeitar clxyz123</code>
 
+<b>/tiktok [LINK] [NOME] [PREÇO] [CATEGORIA]</b>
+Adiciona produto do TikTok Shop rapidamente
+Exemplo: <code>/tiktok https://tiktok.com/@loja/video/123 Bolsa_Feminina 39.90 Moda</code>
+
 <b>/help</b>
 Mostra esta mensagem de ajuda
 
@@ -355,6 +489,10 @@ Mostra esta mensagem de ajuda
 2️⃣ Envia para você com ID_DO_PRODUTO
 3️⃣ Você usa /aprovar com SEU link
 4️⃣ Produto aparece no site com SEU link
+
+<b>🎵 TikTok Shop:</b>
+Use /tiktok para adicionar produtos rapidamente!
+Envie a foto junto com o comando.
 
 <b>🔗 Plataformas Suportadas:</b>
 • Amazon (amzn.to, amazon.com.br)
@@ -386,6 +524,7 @@ def run_listener():
     # Comandos de texto
     app.add_handler(CommandHandler("aprovar", handle_aprovar_command))
     app.add_handler(CommandHandler("rejeitar", handle_rejeitar_command))
+    app.add_handler(CommandHandler("tiktok", handle_tiktok_command))
     app.add_handler(CommandHandler("help", handle_help_command))
     app.add_handler(CommandHandler("start", handle_help_command))
 
