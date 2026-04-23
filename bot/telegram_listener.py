@@ -121,14 +121,19 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
         print(f'❌ Erro ao publicar no grupo: {e}')
 
 async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Intercepta fotos com legenda e redireciona para /aprovar se necessário."""
+    """Intercepta fotos com legenda e redireciona para /aprovar ou /tiktok se necessário."""
     caption = update.message.caption or ''
     print(f'📸 Foto recebida com legenda: {caption}')
     
     if caption.strip().startswith('/aprovar'):
         await handle_aprovar_command(update, context)
+    elif caption.strip().startswith('/tiktok'):
+        # Popula context.args a partir da legenda
+        partes = caption.split()
+        context.args = partes[1:]
+        await handle_tiktok_command(update, context)
     else:
-        print(f'📸 Foto com legenda ignorada (não é /aprovar): {caption[:50]}')
+        print(f'📸 Foto com legenda ignorada: {caption[:50]}')
 
 async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
