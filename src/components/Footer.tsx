@@ -1,18 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { WhatsappLogo, TelegramLogo, InstagramLogo, TwitterLogo, Heart } from "@phosphor-icons/react";
+import { WhatsappLogo, TelegramLogo, InstagramLogo, VideoCamera, Heart } from "@phosphor-icons/react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
-  const socialLinks = [
+  const communityLinks = [
     {
       name: "WhatsApp",
       icon: WhatsappLogo,
       url: "https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_tTelegram",
       color: "hover:bg-green-500/20 hover:text-green-400 hover:border-green-500/50",
       bgColor: "bg-green-500/10",
+      description: "Grupo WhatsApp",
     },
     {
       name: "Telegram",
@@ -20,6 +21,22 @@ export function Footer() {
       url: "https://t.me/+OFDVybtJcc40YmZh",
       color: "hover:bg-blue-500/20 hover:text-blue-400 hover:border-blue-500/50",
       bgColor: "bg-blue-500/10",
+      description: "Canal Telegram",
+    },
+  ];
+
+  const socialLinks = [
+    {
+      name: "Instagram",
+      icon: InstagramLogo,
+      url: "https://www.instagram.com/jota123testando?igsh=MTBuY3dueWQ4N3c3Mw%3D%3D&utm_source=qr",
+      color: "hover:bg-pink-500/20 hover:text-pink-400 hover:border-pink-500/50",
+    },
+    {
+      name: "TikTok",
+      icon: VideoCamera,
+      url: "https://www.tiktok.com/@jota123testando?_r=1&_t=ZS-95lRBdrstLW",
+      color: "hover:bg-purple-500/20 hover:text-purple-400 hover:border-purple-500/50",
     },
   ];
 
@@ -43,8 +60,8 @@ export function Footer() {
           </motion.div>
 
           {/* Botões de Grupos */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            {socialLinks.map((social, index) => (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            {communityLinks.map((social, index) => (
               <motion.a
                 key={social.name}
                 href={social.url}
@@ -63,7 +80,7 @@ export function Footer() {
                 </div>
                 <div className="text-left flex-1">
                   <div className="text-sm font-semibold text-white">
-                    Grupo {social.name}
+                    {social.description}
                   </div>
                   <div className="text-xs text-zinc-400">
                     Clique para entrar
@@ -72,6 +89,29 @@ export function Footer() {
                 <div className="text-zinc-500 group-hover:text-white transition-colors">
                   →
                 </div>
+              </motion.a>
+            ))}
+          </div>
+
+          {/* Redes Sociais */}
+          <div className="flex items-center justify-center gap-3 mb-12">
+            <span className="text-zinc-500 text-sm mr-2">Siga-nos:</span>
+            {socialLinks.map((social, index) => (
+              <motion.a
+                key={social.name}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                whileHover={{ scale: 1.1, y: -2 }}
+                whileTap={{ scale: 0.9 }}
+                className={`p-3 rounded-xl bg-zinc-900/50 border border-zinc-800/80 transition-all duration-300 ${social.color}`}
+                aria-label={social.name}
+              >
+                <social.icon size={24} weight="fill" />
               </motion.a>
             ))}
           </div>
