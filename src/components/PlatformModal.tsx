@@ -191,7 +191,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
             
             <div className="overflow-y-auto hidden-scrollbar flex-1 pb-4">
               
-              <div className="relative w-full aspect-[4/3] bg-zinc-100 flex items-center justify-center p-8">
+              <div className="relative w-full aspect-[3/4] bg-zinc-900 flex items-center justify-center p-4">
                 {price > 0 && (
                   <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
                     <Tag size={20} weight="fill" />
@@ -202,7 +202,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                 <img 
                    src={product.imageUrl} 
                    alt={product.name}
-                   className="w-full h-full object-contain mix-blend-multiply drop-shadow-xl"
+                   className="w-full h-full object-cover rounded-2xl"
                 />
               </div>
 
@@ -299,11 +299,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                          onClick={() => handleOpenRelated(relItem)}
                          className="group bg-zinc-900 border border-white/5 hover:border-accent/30 rounded-xl overflow-hidden flex flex-col text-left transition-all hover:scale-[1.02] min-h-[44px]"
                        >
-                         <div className="w-full aspect-square bg-zinc-100 flex items-center justify-center p-2">
+                         <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl flex items-center justify-center overflow-hidden">
                            <img 
                               src={relItem.imageUrl} 
                               alt={relItem.name} 
-                              className="w-full h-full object-contain mix-blend-multiply"
+                              className="w-full h-full object-cover"
                            />
                          </div>
                          <div className="p-3 bg-zinc-900 border-t border-white/5">
