@@ -353,22 +353,22 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
             "📸 Envie a foto com a legenda:\n"
             "<code>/tiktok [LINK] [NOME] [PREÇO] [CATEGORIA]</code>\n\n"
             "Exemplo:\n"
-            "<code>/tiktok https://www.tiktok.com/@loja/video/123 Bolsa_Feminina 39.90 Moda</code>\n\n"
-            "📋 Categorias disponíveis:\n"
-            "• Smartphones\n"
-            "• Informatica\n"
-            "• Casa\n"
-            "• Moda\n"
-            "• Bebes\n"
-            "• Saude\n"
-            "• Esporte\n"
-            "• Supermercado\n"
-            "• Livros\n"
-            "• Ferramentas\n"
-            "• Automotivo\n"
-            "• Pet\n"
-            "• Viagem\n"
-            "• Diversos",
+            "<code>/tiktok https://www.tiktok.com/@loja/video/123 Bolsa_Feminina 39.90 moda</code>\n\n"
+            "📋 Categorias (use o atalho):\n"
+            "• <b>smartphones</b> - Smartphones e TV\n"
+            "• <b>informatica</b> - Informática e Games\n"
+            "• <b>casa</b> - Casa e Eletrodomésticos\n"
+            "• <b>moda</b> - Moda e Acessórios\n"
+            "• <b>bebes</b> - Bebês e Crianças\n"
+            "• <b>saude</b> - Saúde e Beleza\n"
+            "• <b>esporte</b> - Esporte e Suplementos\n"
+            "• <b>supermercado</b> - Supermercado e Delivery\n"
+            "• <b>livros</b> - Livros, eBooks e eReaders\n"
+            "• <b>ferramentas</b> - Ferramentas e Jardim\n"
+            "• <b>automotivo</b> - Automotivo\n"
+            "• <b>pet</b> - Pet\n"
+            "• <b>viagem</b> - Viagem\n"
+            "• <b>diversos</b> - Diversos",
             parse_mode='HTML'
         )
         return
@@ -431,10 +431,10 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
         'description': f'Oferta exclusiva no TikTok Shop',
         'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
         'price': preco_float,
+        'status': 'approved',  # IMPORTANTE: Já aprovado direto
         'links': {
             'tiktok': link_tiktok
-        },
-        'status': 'approved'  # Já aprovado direto
+        }
     }
 
     # Adicionar produto via API

@@ -31,6 +31,7 @@ export async function POST(request: Request) {
         imageUrl: body.imageUrl,
         price: body.price ? parseFloat(body.price) : null,
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
+        status: body.status || 'pending', // Permite definir status customizado
         links: body.links ? {
           create: {
             amazon: body.links.amazon || null,
@@ -116,6 +117,7 @@ export async function PUT(request: Request) {
             imageUrl: productData.imageUrl,
             price: productData.price ? parseFloat(productData.price) : null,
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+            status: productData.status || 'pending', // Permite definir status customizado
             links: productData.links ? {
               create: {
                 amazon: productData.links.amazon || null,
