@@ -98,6 +98,25 @@ class AffiliateHubAPI:
         except Exception as e:
             print(f'❌ Erro ao atualizar link do produto {produto_id}: {e}')
             return None
+
+    def adicionar_produto_direto(self, produto: Dict) -> Optional[Dict]:
+        """
+        Adiciona um produto diretamente (já aprovado)
+        Usado para produtos do TikTok e outros adicionados manualmente
+        """
+        try:
+            response = requests.post(
+                f'{self.base_url}/api/webhook/products',
+                headers=self.headers,
+                json=produto,
+                timeout=10,
+                verify=False
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f'❌ Erro ao adicionar produto direto: {e}')
+            return None
     
     def aprovar_produto(self, produto_id: str, platform: str, affiliate_link: str, image_url: str = None) -> Optional[Dict]:
         """Aprova um produto pendente e adiciona o link de afiliado"""
