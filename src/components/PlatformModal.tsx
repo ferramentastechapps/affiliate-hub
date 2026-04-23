@@ -102,8 +102,8 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
   function handlePlatformClick() {
     if (!targetUrl) return;
     
-    // Se houver cupom, mostrar modal de cupom primeiro
-    if (displayCoupon) {
+    // Se houver cupom válido, mostrar modal de cupom primeiro
+    if (displayCoupon && displayCoupon.toUpperCase() !== "NORMAL") {
       setShowCouponModal(true);
     } else {
       // Se não houver cupom, ir direto para a loja
@@ -151,10 +151,17 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
   // Buscar cupom do banco de dados (primeiro cupom ativo do produto)
   let displayCoupon = "";
   if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
-    displayCoupon = product.coupons[0].code;
+    const firstCoupon = product.coupons[0];
+    // Só mostrar se o código não for "NORMAL" ou vazio
+    if (firstCoupon.code && firstCoupon.code.toUpperCase() !== "NORMAL") {
+      displayCoupon = firstCoupon.code;
+    }
   } else if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
     // Fallback: extrair da descrição se não houver no banco
-    displayCoupon = product.description.split('🎟️ CUPOM:')[1].trim();
+    const extracted = product.description.split('🎟️ CUPOM:')[1].trim();
+    if (extracted && extracted.toUpperCase() !== "NORMAL") {
+      displayCoupon = extracted;
+    }
   }
 
   return (
@@ -212,7 +219,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   {product.name}
                 </h3>
 
-                {displayCoupon && (
+                {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
                   <div className="flex items-center gap-3 mb-6 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 rounded-2xl">
                     <div className="bg-accent/20 p-2 rounded-xl text-accent">
                       <Tag size={24} weight="duotone" />
@@ -248,7 +255,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                   onClick={handlePlatformClick}
                   className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)] min-h-[56px]"
                 >
-                  {displayCoupon ? "Ver Cupom e Ir para Loja" : `Ir para Promoção na ${platformName}`}
+                  {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" ? "Ver Cupom e Ir para Loja" : `Ir para ${platformName}`}
                   <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
@@ -323,7 +330,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
           </motion.div>
           
           {/* Modal de Cupom */}
-          {displayCoupon && (
+          {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
             <CouponModal
               isOpen={showCouponModal}
               onClose={() => setShowCouponModal(false)}
