@@ -225,8 +225,8 @@ export function DailyDeals() {
                 {getTimeAgo(product.createdAt)}
               </div>
 
-              {/* Imagem (Area preenchida com a foto e sem efeito de zoom) */}
-              <div className="w-full aspect-[4/3] sm:aspect-square bg-zinc-900 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
+              {/* Imagem (Area maior verticalmente) */}
+              <div className="w-full aspect-[3/4] bg-zinc-900 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
@@ -244,17 +244,17 @@ export function DailyDeals() {
 
               {/* Content */}
               <div className="flex flex-col flex-grow">
-                <span className="text-[11px] font-mono font-medium tracking-wider text-accent/80 uppercase mb-2 line-clamp-1 block">
+                <span className="text-[10px] font-normal tracking-wide text-zinc-500 uppercase mb-2 line-clamp-1 block">
                   {product.category}
                 </span>
-                <h3 className="text-white font-medium text-[15px] leading-snug line-clamp-2 mb-4 group-hover:text-accent/90 transition-colors">
+                <h3 className="text-white font-bold text-base sm:text-lg leading-snug line-clamp-2 mb-4">
                   {product.name}
                 </h3>
 
                 <div className="mt-auto pt-2 border-t border-zinc-800/50 flex flex-col">
                   {price > 0 ? (
                     <>
-                      <span className="text-zinc-500 text-xs line-through font-medium mb-0.5">
+                      <span className="text-zinc-500 text-xs line-through font-normal mb-0.5">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                       </span>
                       <div className="flex items-baseline gap-1">

@@ -166,11 +166,6 @@ export default async function Home() {
         <DailyDeals />
       </div>
 
-      {/* Categorias */}
-      <div className="w-full">
-        <CategoriesSection />
-      </div>
-
       {/* Footer com Grupos e Redes Sociais */}
       <Footer />
     </main>
