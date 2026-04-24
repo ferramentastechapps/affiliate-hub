@@ -431,7 +431,7 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
         'description': f'Oferta exclusiva no TikTok Shop',
         'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
         'price': preco_float,
-        'status': 'approved',  # IMPORTANTE: Já aprovado direto
+        'status': 'active',  # Status correto para aparecer no site
         'links': {
             'tiktok': link_tiktok
         }
