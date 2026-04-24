@@ -54,17 +54,23 @@ grep -q 'TELEGRAM_PROMO_GROUP_ID' ~/affiliate-hub/bot/.env || echo 'TELEGRAM_PRO
 pip3 install -r requirements.txt --break-system-packages
 
 echo "🔄 Reiniciando serviços..."
-pm2 delete telegram-bot 2>/dev/null || true
-pm2 delete promoflash-bot 2>/dev/null || true
-pkill -9 -f main.py || true
-pkill -9 -f telegram_listener.py || true
-
-nohup python3 -u main.py > bot.log 2>&1 &
-nohup python3 -u telegram_listener.py > listener.log 2>&1 &
-
 cd ~/affiliate-hub
-pm2 delete nextjs 2>/dev/null || true
-pm2 start npm --name "nextjs" -- start -- -p 3005
+
+# Reiniciar ou criar o Next.js no PM2
+if pm2 list | grep -q "nextjs"; then
+  pm2 restart nextjs
+else
+  pm2 start npm --name "nextjs" -- start -- -p 3005
+fi
+
+# Reiniciar ou criar o bot no PM2
+cd ~/affiliate-hub/bot
+if pm2 list | grep -q "affiliate-bot"; then
+  pm2 restart affiliate-bot
+else
+  pm2 start telegram_listener.py --name affiliate-bot --interpreter python3
+fi
+
 pm2 save
 
 echo "✅ Deploy completo!"
