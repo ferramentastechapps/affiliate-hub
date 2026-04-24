@@ -170,6 +170,7 @@ export async function POST(request: Request) {
       product: {
         name: product.name,
         price: product.price,
+        originalPrice: product.originalPrice,
         imageUrl: product.imageUrl,
         category: product.category,
         description: product.description,
