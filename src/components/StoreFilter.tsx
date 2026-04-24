@@ -182,6 +182,7 @@ export function StoreFilter() {
                     else if (product.links?.mercadoLivre) { mainPlatformText = "Mercado Livre"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64"; }
                     else if (product.links?.shopee) { mainPlatformText = "Shopee"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=64"; }
                     else if (product.links?.aliexpress) { mainPlatformText = "AliExpress"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=64"; }
+                    else if (product.links?.tiktok) { mainPlatformText = "TikTok Shop"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=tiktok.com&sz=64"; }
 
                     return (
                       <motion.div
