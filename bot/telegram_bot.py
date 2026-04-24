@@ -100,6 +100,10 @@ class TelegramNotifier:
                 plataforma_nome = label
                 break
 
+        # Se não reconheceu a plataforma mas tem storeName, usa ele
+        if plataforma_nome == "Desconhecida" and produto.get('storeName'):
+            plataforma_nome = f"🛒 {produto['storeName']}"
+
         link_promobit = ""
         if primeiro_link:
             link_promobit = f"🔗 <a href='{primeiro_link}'>Ver promoção original</a>"
