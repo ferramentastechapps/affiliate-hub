@@ -86,7 +86,8 @@ class PromotionScraper:
                         'description': descricao,
                         'imageUrl': imagem_url,
                         'price': preco,
-                        'links': links
+                        'links': links,
+                        'storeName': loja
                     })
                     print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
@@ -520,7 +521,7 @@ class PromotionScraper:
         loja_lower = loja.lower()
         if 'amazon' in loja_lower:
             links['amazon'] = link_oferta
-        elif 'mercado livre' in loja_lower or 'mercadolivre' in loja_lower:
+        elif 'mercado livre' in loja_lower or 'mercadolivre' in loja_lower or 'meli' in loja_lower:
             links['mercadoLivre'] = link_oferta
         elif 'shopee' in loja_lower:
             links['shopee'] = link_oferta
@@ -528,12 +529,16 @@ class PromotionScraper:
             links['aliexpress'] = link_oferta
         elif 'netshoes' in loja_lower:
             links['netshoes'] = link_oferta
-        elif 'magalu' in loja_lower or 'magazine luiza' in loja_lower:
+        elif 'magalu' in loja_lower or 'magazine luiza' in loja_lower or 'magazine' in loja_lower:
             links['magalu'] = link_oferta
         elif 'kabum' in loja_lower:
             links['kabum'] = link_oferta
+        elif 'tiktok' in loja_lower:
+            links['tiktok'] = link_oferta
         else:
-            # Loja desconhecida: salva o link mesmo assim para aparecer na notificação
+            # Lojas sem campo próprio: salva como amazon (campo genérico de link)
+            # Inclui: Adidas, Nike, Centauro, Renner, C&A, Riachuelo, Zara,
+            # Casas Bahia, Americanas, Submarino, Ponto, Fast Shop, etc.
             if link_oferta:
                 links['amazon'] = link_oferta
         return links
