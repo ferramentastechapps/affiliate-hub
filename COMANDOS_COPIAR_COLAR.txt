@@ -1,109 +1,46 @@
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 COPIE E COLE ESTES COMANDOS NO SEU SERVIDOR VPS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# COMANDOS PARA COPIAR E COLAR NO VPS
 
-# 0️⃣ VERIFICAR SE O SERVIDOR NEXT.JS ESTÁ RODANDO
-netstat -tlnp | grep 3005
+## ✅ BOT JÁ ESTÁ RODANDO!
 
-# Se não aparecer nada, o servidor não está rodando. Inicie com:
-cd /root/affiliate-hub
-screen -S nextjs -dm npm run dev
+## Ver logs em tempo real (para testar /tiktok)
+pm2 logs affiliate-bot --lines 50
 
-# Aguarde 10 segundos e verifique novamente:
-sleep 10
-netstat -tlnp | grep 3005
+## Parar de ver logs
+Ctrl + C
 
-# 1️⃣ ATUALIZAR BANCO DE DADOS
-cd /root/affiliate-hub
-npx prisma db push
+## Ver status do bot
+pm2 list
 
-# 2️⃣ MARCAR PRODUTOS COMO PENDING
-sqlite3 prisma/dev.db "UPDATE Product SET status='pending' WHERE status IS NULL OR status='active';"
+## Reiniciar bot (se precisar)
+pm2 restart affiliate-bot
 
-# 3️⃣ VERIFICAR ATUALIZAÇÃO
-sqlite3 prisma/dev.db "SELECT status, COUNT(*) FROM Product GROUP BY status;"
+## Parar bot
+pm2 stop affiliate-bot
 
-# 4️⃣ PARAR LISTENER ANTIGO (se existir)
-screen -S telegram-listener -X quit 2>/dev/null
+## Ver últimas 100 linhas de log
+pm2 logs affiliate-bot --lines 100
 
-# 5️⃣ INICIAR NOVO LISTENER
+---
+
+## 🎵 TESTAR COMANDO /TIKTOK
+
+1. Abra o terminal e rode:
+   pm2 logs affiliate-bot --lines 50
+
+2. No Telegram, envie uma FOTO com a legenda:
+   /tiktok https://www.tiktok.com/@loja/video/123 Controle_PS4 89.90 informatica
+
+3. Veja os logs no terminal para verificar se funcionou
+
+4. Abra o site para ver se o produto apareceu
+
+---
+
+## 🔧 VERIFICAR CONFIGURAÇÃO (se não funcionar)
+
 cd /root/affiliate-hub/bot
-screen -S telegram-listener -dm python3 telegram_listener.py
+cat .env | grep -E "AFFILIATE_HUB_URL|AFFILIATE_HUB_API_KEY"
 
-# 6️⃣ VERIFICAR SE ESTÁ RODANDO
-screen -ls
-
-# 7️⃣ VER LOGS DO LISTENER (opcional)
-# screen -r telegram-listener
-# (Ctrl+A, D para sair)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ PRONTO! Agora teste no Telegram:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Envie para o bot: /help
-
-Você deve ver:
-🤖 Comandos Disponíveis
-/aprovar [ID] [LINK]
-/rejeitar [ID]
-/help
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 COMO USAR:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. Robô encontra produto → Envia para Telegram
-2. Você recebe mensagem com ID_DO_PRODUTO
-3. Você aprova: /aprovar [ID] https://amzn.to/seulink
-4. Produto aparece no site com SEU link
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔍 COMANDOS ÚTEIS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# 🧪 TESTAR SE API RETORNA ID DO PRODUTO (NOVO!)
-cd /root/affiliate-hub/bot
-python3 test_api_response.py
-
-# Ver produtos pendentes
-cd /root/affiliate-hub
-sqlite3 prisma/dev.db "SELECT id, name, status FROM Product WHERE status='pending' LIMIT 5;"
-
-# Ver produtos ativos
-sqlite3 prisma/dev.db "SELECT id, name, status FROM Product WHERE status='active' LIMIT 5;"
-
-# Ver logs do listener
-screen -r telegram-listener
-
-# Reiniciar listener
-screen -S telegram-listener -X quit
-cd /root/affiliate-hub/bot
-screen -S telegram-listener -dm python3 telegram_listener.py
-
-# 🔍 TESTAR BOT UMA VEZ (com logs de debug)
-cd /root/affiliate-hub/bot
-python3 main.py --once
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🐛 DIAGNÓSTICO DO PROBLEMA DO ID:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# 1️⃣ TESTAR API ISOLADAMENTE (Recomendado primeiro!)
-cd /root/affiliate-hub/bot
-python3 test_api_response.py
-
-# 2️⃣ TESTAR BOT COMPLETO UMA VEZ
-cd /root/affiliate-hub/bot
-python3 main.py --once
-
-# 3️⃣ VER LOGS DO NEXT.JS
-cd /root/affiliate-hub
-screen -r nextjs
-
-# 4️⃣ VERIFICAR BANCO DE DADOS
-cd /root/affiliate-hub
-npx prisma studio
-# Acesse: http://seu-ip:5555
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Deve mostrar:
+AFFILIATE_HUB_URL=https://seu-site.com
+AFFILIATE_HUB_API_KEY=sua-chave-secreta
