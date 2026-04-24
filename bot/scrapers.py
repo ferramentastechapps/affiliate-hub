@@ -482,7 +482,8 @@ class PromotionScraper:
             'description': descricao,
             'imageUrl': imagem_url,
             'price': preco,
-            'links': links
+            'links': links,
+            'storeName': loja  # nome original da loja para exibir na notificação
         }
 
     def _extrair_dados_cupom(self, oferta) -> Dict:
@@ -532,8 +533,9 @@ class PromotionScraper:
         elif 'kabum' in loja_lower:
             links['kabum'] = link_oferta
         else:
-            # Se não souber a loja, deixa vazio para não cadastrar como amazon errado
-            pass
+            # Loja desconhecida: salva o link mesmo assim para aparecer na notificação
+            if link_oferta:
+                links['amazon'] = link_oferta
         return links
 
     @staticmethod
