@@ -1,0 +1,69 @@
+=================================================================
+🔍 COMANDOS PARA DIAGNOSTICAR FONTES DE PROMOÇÕES
+=================================================================
+
+📋 COPIE E COLE ESTES COMANDOS NA VPS:
+
+# 1. Conectar na VPS (substitua SEU_IP pelo IP da VPS)
+ssh root@SEU_IP
+
+# 2. Ir para pasta do bot
+cd /root/affiliate-hub/bot
+
+# 3. Dar permissão de execução
+chmod +x RODAR_DIAGNOSTICO.sh
+
+# 4. Rodar diagnóstico completo
+./RODAR_DIAGNOSTICO.sh
+
+=================================================================
+
+OU, se preferir rodar diretamente:
+
+cd /root/affiliate-hub/bot
+python3 diagnostico_completo.py
+
+=================================================================
+
+📊 O QUE O DIAGNÓSTICO VAI MOSTRAR:
+
+✅ Promobit:
+   - Status HTTP (deve ser 200)
+   - Quantas ofertas foram encontradas
+   - Exemplo da primeira oferta
+
+❌ Promobyte:
+   - Status HTTP de cada URL
+   - Quantos cards foram encontrados
+   - Se encontrou 0 cards, mostra os primeiros links (para debug)
+
+❌ Pelando:
+   - Status HTTP
+   - Quantos cards foram encontrados
+   - Se encontrou 0 cards, mostra os primeiros links (para debug)
+
+=================================================================
+
+🎯 POSSÍVEIS RESULTADOS:
+
+CENÁRIO 1: Status 403 ou 503
+   → Site está bloqueando o bot
+   → Solução: Usar Selenium/Playwright ou proxies
+
+CENÁRIO 2: Status 200 mas 0 cards encontrados
+   → Seletor CSS está desatualizado
+   → Solução: Atualizar seletor em scrapers.py
+
+CENÁRIO 3: Status 200 e cards encontrados
+   → Scraper está funcionando!
+   → Problema pode ser na deduplicação
+
+=================================================================
+
+📝 DEPOIS DE RODAR O DIAGNÓSTICO:
+
+1. Copie o resultado completo
+2. Cole aqui no chat
+3. Vou analisar e criar a solução específica
+
+=================================================================

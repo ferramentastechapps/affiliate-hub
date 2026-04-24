@@ -183,11 +183,14 @@ class PromotionScraper:
                     break
                 try:
                     response = requests.get(url, headers=self.headers, timeout=15)
+                    print(f'   📡 {url} - Status: {response.status_code}')
                     if response.status_code != 200:
+                        print(f'   ⚠️  Pulando URL (status {response.status_code})')
                         continue
 
                     soup = BeautifulSoup(response.content, 'html.parser')
                     cards = soup.select('a[href*="/p/"]')
+                    print(f'   📦 Encontrados {len(cards)} cards nesta página')
 
                     for card in cards:
                         if len(produtos) >= limite:
@@ -248,10 +251,12 @@ class PromotionScraper:
                         except Exception as e:
                             print(f'  ⚠️  Erro ao processar oferta Promobyte: {e}')
                 except Exception as e:
-                    print(f'  ⚠️  Erro ao acessar {url}: {e}')
+                    print(f'  ❌ Erro ao acessar {url}: {e}')
 
         except Exception as e:
             print(f'❌ Erro ao buscar no Promobyte: {e}')
+        
+        print(f'   ✅ Total Promobyte: {len(produtos)} produtos')
         return produtos
 
     def _detectar_loja_promobyte(self, texto: str, url: str) -> str:
@@ -282,6 +287,7 @@ class PromotionScraper:
         try:
             print('🔥 Buscando promoções no Pelando...')
             response = requests.get('https://www.pelando.com.br', headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
             if response.status_code != 200:
                 print(f'❌ Erro HTTP Pelando: {response.status_code}')
                 return produtos
@@ -290,6 +296,7 @@ class PromotionScraper:
 
             # Links de deals: /d/slug-HASH
             cards = soup.select('a[href*="/d/"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
             vistos = set()
 
             for card in cards:
@@ -354,6 +361,8 @@ class PromotionScraper:
 
         except Exception as e:
             print(f'❌ Erro ao buscar no Pelando: {e}')
+        
+        print(f'   ✅ Total Pelando: {len(produtos)} produtos')
         return produtos
 
     def buscar_promocoes_tiktok(self, limite: int = 10) -> List[Dict]:
