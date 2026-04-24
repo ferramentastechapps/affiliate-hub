@@ -62,6 +62,7 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
     
     import google.generativeai as genai
+    import asyncio
     if GEMINI_API_KEY:
         try:
             genai.configure(api_key=GEMINI_API_KEY)
@@ -74,11 +75,16 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
                 f"'SUA CASA CLAMAVA POR ESSE MIMO', 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'. "
                 f"Seja criativo e focado no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
             )
-            response = await model.generate_content_async(prompt)
+            response = await asyncio.to_thread(model.generate_content, prompt)
             if response and response.text:
                 legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
+                print(f"✅ Legenda Gemini gerada: {legenda_engracada}")
+            else:
+                print("⚠️ Gemini retornou resposta vazia, usando legenda padrão")
         except Exception as e:
             print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
+    else:
+        print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
 
     preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
     
