@@ -106,7 +106,11 @@ class TelegramNotifier:
 
         link_promobit = ""
         if primeiro_link:
-            link_promobit = f"🔗 <a href='{primeiro_link}'>Ver promoção original</a>"
+            # Se o link é do Promobit, deixa claro que é para ver a oferta original
+            if 'promobit.com.br' in primeiro_link:
+                link_promobit = f"🔗 <a href='{primeiro_link}'>👆 Ver oferta no Promobit (pegue o link da loja aqui)</a>"
+            else:
+                link_promobit = f"🔗 <a href='{primeiro_link}'>Ver promoção original</a>"
 
         produto_id = produto.get('id', 'N/A')
         descricao_produto = produto.get('description', '')
