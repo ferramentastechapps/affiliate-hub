@@ -86,13 +86,18 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     else:
         print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
 
-    preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>" if preco else ""
+    preco_original = produto.get('originalPrice')
+    if preco_original and preco and float(preco_original) > float(preco):
+        preco_txt = f"💰 de <s>R$ {float(preco_original):.2f}</s> por <b>R$ {float(preco):.2f}</b>".replace('.', ',')
+    else:
+        preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>".replace('.', ',') if preco else ""
     
     descricao_prod = produto.get('description', '')
     cupom_msg = ""
     if '🎟️ CUPOM:' in descricao_prod:
         cupom_extraido = descricao_prod.split('🎟️ CUPOM:')[1].strip()
-        cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
+        if cupom_extraido.upper() != 'NORMAL' and cupom_extraido != '':
+            cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
 
     mensagem = (
         f"{legenda_engracada}\n\n"
