@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const products = await prisma.product.findMany({
       where: {
-        status: 'active' // Apenas produtos aprovados
+        status: { in: ['active', 'approved'] } // Produtos aprovados
       },
       include: {
         links: true,
