@@ -118,7 +118,8 @@ class TelegramNotifier:
         cupom_msg = ""
         if '🎟️ CUPOM:' in descricao_produto:
             cupom_extraido = descricao_produto.split('🎟️ CUPOM:')[1].strip()
-            cupom_msg = f"\n🎟️ Cupom: <code>{cupom_extraido}</code>"
+            if cupom_extraido.upper() != 'NORMAL' and cupom_extraido != '':
+                cupom_msg = f"\n🎟️ Cupom: <code>{cupom_extraido}</code>"
 
         mensagem = f"""
 🔥 <b>NOVO PRODUTO ENCONTRADO!</b>

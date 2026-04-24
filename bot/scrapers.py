@@ -240,7 +240,8 @@ class PromotionScraper:
                                 'imageUrl': 'https://via.placeholder.com/800x1000',
                                 'price': preco,
                                 'originalPrice': preco_original,
-                                'links': links
+                                'links': links,
+                                'storeName': loja
                             })
                             cupom_log = f' 🎟️ {cupom}' if cupom else ''
                             print(f'  ✅ [Promobyte] {nome[:45]}...{cupom_log}')
@@ -344,7 +345,8 @@ class PromotionScraper:
                         'description': f"Oferta no Pelando via {loja}",
                         'imageUrl': 'https://via.placeholder.com/800x1000',
                         'price': preco,
-                        'links': links
+                        'links': links,
+                        'storeName': loja
                     })
                     print(f'  ✅ [Pelando] {nome[:50]}...')
                 except Exception as e:
