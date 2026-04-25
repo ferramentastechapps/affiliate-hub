@@ -55,7 +55,7 @@ def testar_promobit():
 
 def testar_promobyte():
     print('\n' + '='*70)
-    print('🔥 TESTANDO: PROMOBYTE')
+    print('🔥 TESTANDO: PROMOBYTE (CORRIGIDO)')
     print('='*70)
     
     urls = [
@@ -76,31 +76,19 @@ def testar_promobyte():
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 
-                # Testar diferentes seletores
-                cards_p = soup.select('a[href*="/p/"]')
+                # Testar seletor CORRIGIDO
                 cards_promo = soup.select('a[href*="/promo"]')
-                cards_oferta = soup.select('a[href*="/oferta"]')
-                all_links = soup.find_all('a', href=True)
                 
-                print(f'   📦 Cards com /p/: {len(cards_p)}')
-                print(f'   📦 Cards com /promo: {len(cards_promo)}')
-                print(f'   📦 Cards com /oferta: {len(cards_oferta)}')
-                print(f'   📦 Total de links: {len(all_links)}')
+                print(f'   📦 Cards com /promo: {len(cards_promo)} ✅ CORRIGIDO!')
                 
-                if cards_p:
-                    total_cards += len(cards_p)
+                if cards_promo:
+                    total_cards += len(cards_promo)
                     print(f'   ✅ Primeiro card encontrado:')
-                    primeiro = cards_p[0]
+                    primeiro = cards_promo[0]
                     print(f'      Link: {primeiro.get("href", "N/A")[:60]}...')
                     print(f'      Texto: {primeiro.get_text(strip=True)[:60]}...')
                 else:
-                    print(f'   ⚠️  Nenhum card /p/ encontrado!')
-                    # Mostrar alguns links para debug
-                    print(f'   🔍 Primeiros 5 links encontrados:')
-                    for i, link in enumerate(all_links[:5], 1):
-                        href = link.get('href', '')
-                        if href:
-                            print(f'      {i}. {href[:60]}')
+                    print(f'   ⚠️  Nenhum card /promo encontrado!')
                             
             else:
                 print(f'   ❌ Erro HTTP: {response.status_code}')
@@ -163,6 +151,48 @@ def testar_pelando():
         traceback.print_exc()
         return False
 
+def testar_hardmob():
+    print('\n' + '='*70)
+    print('🔥 TESTANDO: HARDMOB (SUBSTITUI PELANDO)')
+    print('='*70)
+    
+    try:
+        url = 'https://www.hardmob.com.br/forums/407-Promocoes'
+        print(f'📡 URL: {url}')
+        response = requests.get(url, headers=headers, timeout=15)
+        print(f'✅ Status Code: {response.status_code}')
+        print(f'📦 Tamanho: {len(response.content)} bytes')
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Hardmob usa estrutura de fórum
+            topicos = soup.select('li.threadbit')
+            
+            print(f'📦 Tópicos encontrados: {len(topicos)}')
+            
+            if topicos:
+                print(f'✅ Primeiro tópico:')
+                primeiro = topicos[0]
+                titulo = primeiro.select_one('a.title')
+                if titulo:
+                    print(f'   Título: {titulo.get_text(strip=True)[:60]}...')
+                    print(f'   Link: {titulo.get("href", "N/A")[:60]}...')
+                return True
+            else:
+                print(f'⚠️  Nenhum tópico encontrado!')
+                return False
+                
+        else:
+            print(f'❌ Erro HTTP: {response.status_code}')
+            return False
+            
+    except Exception as e:
+        print(f'❌ ERRO: {e}')
+        import traceback
+        traceback.print_exc()
+        return False
+
 def main():
     print('\n🤖 DIAGNÓSTICO COMPLETO DE FONTES DE PROMOÇÕES')
     print('='*70)
@@ -170,7 +200,7 @@ def main():
     resultados = {
         'Promobit': testar_promobit(),
         'Promobyte': testar_promobyte(),
-        'Pelando': testar_pelando()
+        'Hardmob': testar_hardmob()
     }
     
     print('\n' + '='*70)
@@ -186,16 +216,24 @@ def main():
     print('='*70)
     
     if not resultados['Promobyte']:
-        print('⚠️  PROMOBYTE: Seletor CSS pode estar desatualizado ou site bloqueando bot')
-        print('   Solução: Atualizar seletores ou usar Selenium/Playwright')
+        print('⚠️  PROMOBYTE: Ainda com problemas após correção')
+        print('   Solução: Verificar estrutura HTML manualmente')
+    else:
+        print('✅ PROMOBYTE: Corrigido! Agora busca /promo ao invés de /p/')
     
-    if not resultados['Pelando']:
-        print('⚠️  PELANDO: Seletor CSS pode estar desatualizado ou site bloqueando bot')
-        print('   Solução: Atualizar seletores ou usar Selenium/Playwright')
+    if not resultados['Hardmob']:
+        print('⚠️  HARDMOB: Não conseguiu buscar tópicos')
+        print('   Solução: Verificar se site está acessível')
+    else:
+        print('✅ HARDMOB: Funcionando como alternativa ao Pelando!')
     
-    if resultados['Promobit'] and not (resultados['Promobyte'] or resultados['Pelando']):
-        print('\n🎯 APENAS PROMOBIT ESTÁ FUNCIONANDO!')
-        print('   Isso explica por que você só vê produtos do Promobit no site.')
+    total_funcionando = sum(resultados.values())
+    print(f'\n🎯 TOTAL: {total_funcionando}/3 fontes funcionando')
+    
+    if total_funcionando >= 2:
+        print('✅ Ótimo! Você terá variedade de promoções de múltiplas fontes!')
+    elif total_funcionando == 1:
+        print('⚠️  Apenas 1 fonte funcionando. Considere adicionar mais fontes.')
 
 if __name__ == '__main__':
     main()
