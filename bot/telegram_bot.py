@@ -117,8 +117,9 @@ class TelegramNotifier:
         
         cupom_msg = ""
         if '🎟️ CUPOM:' in descricao_produto:
-            cupom_extraido = descricao_produto.split('🎟️ CUPOM:')[1].strip()
-            if cupom_extraido.upper() != 'NORMAL' and cupom_extraido != '':
+            cupom_extraido = descricao_produto.split('🎟️ CUPOM:')[1].split('\n')[0].strip()
+            _invalidos = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
+            if cupom_extraido.upper() not in _invalidos:
                 cupom_msg = f"\n🎟️ Cupom: <code>{cupom_extraido}</code>"
 
         mensagem = f"""
