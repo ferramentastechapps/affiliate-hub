@@ -52,12 +52,19 @@ class PromotionScraper:
                         categoria = self._detectar_categoria(nome)
 
                     # Cupom: tentar vários campos possíveis do JSON do Promobit
-                    cupom = (
-                        offer.get('offerCoupon') or
-                        offer.get('couponCode') or
-                        offer.get('coupon') or
-                        offer.get('offerCode') or
-                        offer.get('discountCode') or
+                    # Nota: 'coupon' pode retornar "NORMAL" (tipo de desconto), não um código real
+                    _VALORES_INVALIDOS_CUPOM = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
+                    def _cupom_valido(v):
+                        return v and str(v).strip().upper() not in _VALORES_INVALIDOS_CUPOM
+
+                    cupom = next(
+                        (v for v in [
+                            offer.get('offerCoupon'),
+                            offer.get('couponCode'),
+                            offer.get('coupon'),
+                            offer.get('offerCode'),
+                            offer.get('discountCode'),
+                        ] if _cupom_valido(v)),
                         ''
                     )
                     # Fallback: procurar no título
