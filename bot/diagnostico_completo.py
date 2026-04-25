@@ -193,6 +193,92 @@ def testar_hardmob():
         traceback.print_exc()
         return False
 
+def testar_zoom():
+    print('\n' + '='*70)
+    print('🔥 TESTANDO: ZOOM (COMPARADOR DE PREÇOS)')
+    print('='*70)
+    
+    try:
+        url = 'https://www.zoom.com.br/ofertas'
+        print(f'📡 URL: {url}')
+        response = requests.get(url, headers=headers, timeout=15)
+        print(f'✅ Status Code: {response.status_code}')
+        print(f'📦 Tamanho: {len(response.content)} bytes')
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Testar diferentes seletores
+            cards_product = soup.select('div[data-product]')
+            cards_article = soup.select('article.product')
+            cards_link = soup.select('a[href*="/produto/"]')
+            
+            print(f'📦 Cards com data-product: {len(cards_product)}')
+            print(f'📦 Cards article.product: {len(cards_article)}')
+            print(f'📦 Links /produto/: {len(cards_link)}')
+            
+            total = len(cards_product) + len(cards_article) + len(cards_link)
+            
+            if total > 0:
+                print(f'✅ Total de cards encontrados: {total}')
+                return True
+            else:
+                print(f'⚠️  Nenhum card encontrado!')
+                return False
+                
+        else:
+            print(f'❌ Erro HTTP: {response.status_code}')
+            return False
+            
+    except Exception as e:
+        print(f'❌ ERRO: {e}')
+        import traceback
+        traceback.print_exc()
+        return False
+
+def testar_buscape():
+    print('\n' + '='*70)
+    print('🔥 TESTANDO: BUSCAPÉ (OFERTAS E CUPONS)')
+    print('='*70)
+    
+    try:
+        url = 'https://www.buscape.com.br/ofertas'
+        print(f'📡 URL: {url}')
+        response = requests.get(url, headers=headers, timeout=15)
+        print(f'✅ Status Code: {response.status_code}')
+        print(f'📦 Tamanho: {len(response.content)} bytes')
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Testar diferentes seletores
+            cards_offer = soup.select('div.offer-card')
+            cards_article = soup.select('article.offer')
+            cards_link = soup.select('a[href*="/oferta/"]')
+            
+            print(f'📦 Cards div.offer-card: {len(cards_offer)}')
+            print(f'📦 Cards article.offer: {len(cards_article)}')
+            print(f'📦 Links /oferta/: {len(cards_link)}')
+            
+            total = len(cards_offer) + len(cards_article) + len(cards_link)
+            
+            if total > 0:
+                print(f'✅ Total de cards encontrados: {total}')
+                return True
+            else:
+                print(f'⚠️  Nenhum card encontrado!')
+                return False
+                
+        else:
+            print(f'❌ Erro HTTP: {response.status_code}')
+            return False
+            
+    except Exception as e:
+        print(f'❌ ERRO: {e}')
+        import traceback
+        traceback.print_exc()
+        return False
+
 def main():
     print('\n🤖 DIAGNÓSTICO COMPLETO DE FONTES DE PROMOÇÕES')
     print('='*70)
@@ -200,7 +286,9 @@ def main():
     resultados = {
         'Promobit': testar_promobit(),
         'Promobyte': testar_promobyte(),
-        'Hardmob': testar_hardmob()
+        'Hardmob': testar_hardmob(),
+        'Zoom': testar_zoom(),
+        'Buscapé': testar_buscape()
     }
     
     print('\n' + '='*70)
@@ -227,11 +315,25 @@ def main():
     else:
         print('✅ HARDMOB: Funcionando como alternativa ao Pelando!')
     
-    total_funcionando = sum(resultados.values())
-    print(f'\n🎯 TOTAL: {total_funcionando}/3 fontes funcionando')
+    if not resultados['Zoom']:
+        print('⚠️  ZOOM: Não conseguiu buscar ofertas')
+        print('   Solução: Verificar seletores CSS ou usar Selenium')
+    else:
+        print('✅ ZOOM: Funcionando! Comparador de preços ativo!')
     
-    if total_funcionando >= 2:
-        print('✅ Ótimo! Você terá variedade de promoções de múltiplas fontes!')
+    if not resultados['Buscapé']:
+        print('⚠️  BUSCAPÉ: Não conseguiu buscar ofertas')
+        print('   Solução: Verificar seletores CSS ou usar Selenium')
+    else:
+        print('✅ BUSCAPÉ: Funcionando! Ofertas e cupons ativos!')
+    
+    total_funcionando = sum(resultados.values())
+    print(f'\n🎯 TOTAL: {total_funcionando}/5 fontes funcionando')
+    
+    if total_funcionando >= 3:
+        print('✅ Excelente! Você terá grande variedade de promoções!')
+    elif total_funcionando >= 2:
+        print('✅ Bom! Você terá variedade de promoções de múltiplas fontes!')
     elif total_funcionando == 1:
         print('⚠️  Apenas 1 fonte funcionando. Considere adicionar mais fontes.')
 
