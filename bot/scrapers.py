@@ -444,6 +444,200 @@ class PromotionScraper:
         print(f'   ✅ Total Gatry: {len(produtos)} produtos')
         return produtos
 
+    def buscar_promocoes_zoom(self, limite: int = 15) -> List[Dict]:
+        """Busca ofertas do Zoom (comparador de preços)"""
+        produtos = []
+        try:
+            print('🔥 Buscando ofertas no Zoom...')
+            url = 'https://www.zoom.com.br/ofertas'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Zoom: {response.status_code}')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Zoom usa cards de produto
+            cards = soup.select('div[data-product], article.product, div.ProductCard, a[href*="/produto/"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('h2, h3, .product-name, .ProductCard__Name, [class*="title"]')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get_text(strip=True)
+                    
+                    # Link do produto
+                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/produto/"]')
+                    link = link_elem.get('href', '') if link_elem else ''
+                    
+                    if link and not link.startswith('http'):
+                        link = 'https://www.zoom.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('.price, .ProductCard__Price, [class*="price"]')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                        if imagem_url.startswith('//'):
+                            imagem_url = 'https:' + imagem_url
+                    
+                    # Detectar loja (Zoom mostra várias lojas, pegar a mais barata)
+                    loja = 'Amazon'  # Default
+                    loja_elem = card.select_one('.store-name, .seller, [class*="store"]')
+                    if loja_elem:
+                        loja_texto = loja_elem.get_text(strip=True).lower()
+                        if 'mercado livre' in loja_texto:
+                            loja = 'Mercado Livre'
+                        elif 'shopee' in loja_texto:
+                            loja = 'Shopee'
+                        elif 'kabum' in loja_texto:
+                            loja = 'KaBuM'
+                        elif 'magalu' in loja_texto:
+                            loja = 'Magalu'
+                    
+                    links = self._criar_links(link, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': f"Melhor preço no Zoom via {loja}",
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'links': links,
+                        'storeName': loja
+                    })
+                    print(f'  ✅ [Zoom] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar produto Zoom: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Zoom: {e}')
+        
+        print(f'   ✅ Total Zoom: {len(produtos)} produtos')
+        return produtos
+
+    def buscar_promocoes_buscape(self, limite: int = 15) -> List[Dict]:
+        """Busca ofertas e cupons do Buscapé"""
+        produtos = []
+        try:
+            print('🔥 Buscando ofertas no Buscapé...')
+            url = 'https://www.buscape.com.br/ofertas'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Buscapé: {response.status_code}')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Buscapé usa cards de oferta
+            cards = soup.select('div.offer-card, article.offer, div[data-offer], a[href*="/oferta/"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('h2, h3, .offer-title, .product-title, [class*="title"]')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get_text(strip=True)
+                    
+                    # Link
+                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/oferta/"], a[href*="/produto/"]')
+                    link = link_elem.get('href', '') if link_elem else ''
+                    
+                    if link and not link.startswith('http'):
+                        link = 'https://www.buscape.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('.price, .offer-price, [class*="price"]')
+                    preco = None
+                    preco_original = None
+                    
+                    if preco_elem:
+                        texto_preco = preco_elem.get_text()
+                        precos = re.findall(r'R\$\s*([\d.,]+)', texto_preco)
+                        if len(precos) >= 2:
+                            preco_original = self._extrair_preco('R$ ' + precos[0])
+                            preco = self._extrair_preco('R$ ' + precos[-1])
+                        elif len(precos) == 1:
+                            preco = self._extrair_preco('R$ ' + precos[0])
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                        if imagem_url.startswith('//'):
+                            imagem_url = 'https:' + imagem_url
+                    
+                    # Detectar loja
+                    loja = 'Amazon'
+                    loja_elem = card.select_one('.store, .seller, [class*="store"]')
+                    if loja_elem:
+                        loja_texto = loja_elem.get_text(strip=True).lower()
+                        if 'mercado livre' in loja_texto:
+                            loja = 'Mercado Livre'
+                        elif 'shopee' in loja_texto:
+                            loja = 'Shopee'
+                        elif 'kabum' in loja_texto:
+                            loja = 'KaBuM'
+                        elif 'magalu' in loja_texto:
+                            loja = 'Magalu'
+                        elif 'americanas' in loja_texto:
+                            loja = 'Americanas'
+                    
+                    # Buscar cupom no card
+                    cupom = ''
+                    cupom_elem = card.select_one('.coupon, [class*="cupom"]')
+                    if cupom_elem:
+                        cupom = cupom_elem.get_text(strip=True)
+                    
+                    links = self._criar_links(link, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Oferta no Buscapé via {loja}"
+                    if cupom:
+                        descricao += f"\n🎟️ CUPOM: {cupom}"
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': preco_original,
+                        'links': links,
+                        'storeName': loja
+                    })
+                    cupom_log = f' 🎟️ {cupom}' if cupom else ''
+                    print(f'  ✅ [Buscapé] {nome[:45]}...{cupom_log}')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Buscapé: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Buscapé: {e}')
+        
+        print(f'   ✅ Total Buscapé: {len(produtos)} produtos')
+        return produtos
+
     def buscar_promocoes_hardmob(self, limite: int = 15) -> List[Dict]:
         """Busca promoções do Hardmob (fórum de promoções) - DESABILITADO (403)"""
         produtos = []
@@ -565,28 +759,28 @@ class PromotionScraper:
         return produtos
 
     def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry e TikTok"""
+        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé e TikTok"""
         print('\n📡 Buscando em múltiplas fontes...')
 
         produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
         produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte (corrigido)
-        produtos_gatry     = self.buscar_promocoes_gatry()         # Gatry (novo)
+        produtos_gatry     = self.buscar_promocoes_gatry()         # Gatry
+        produtos_zoom      = self.buscar_promocoes_zoom()          # Zoom (novo)
+        produtos_buscape   = self.buscar_promocoes_buscape()       # Buscapé (novo)
         produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
 
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_tiktok:
+        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
                 todos_produtos.append(p)
 
-        print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos '
-              f'({len(produtos_promobit)} Promobit | '
-              f'{len(produtos_promobyte)} Promobyte | '
-              f'{len(produtos_gatry)} Gatry | '
-              f'{len(produtos_tiktok)} TikTok)')
+        print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
+        print(f'   🔥 Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)} | Gatry: {len(produtos_gatry)}')
+        print(f'   🔍 Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | TikTok: {len(produtos_tiktok)}')
 
         todos_cupons = self.buscar_cupons_pelando()
 
