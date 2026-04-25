@@ -25,8 +25,14 @@ class AffiliateHubAPI:
                 timeout=10,
                 verify=False
             )
+            print(f'   [API] Status: {response.status_code} | Body: {response.text[:300]}')
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            print(f'   [API] ID retornado: {data.get("product", {}).get("id", "NÃO ENCONTRADO")}')
+            return data
+        except requests.exceptions.HTTPError as e:
+            print(f'❌ Erro HTTP ao adicionar produto: {e} | Resposta: {e.response.text[:300] if e.response else "sem resposta"}')
+            return None
         except Exception as e:
             print(f'❌ Erro ao adicionar produto: {e}')
             return None
