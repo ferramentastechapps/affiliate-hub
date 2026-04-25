@@ -189,7 +189,8 @@ class PromotionScraper:
                         continue
 
                     soup = BeautifulSoup(response.content, 'html.parser')
-                    cards = soup.select('a[href*="/p/"]')
+                    # Promobyte mudou de /p/ para /promo
+                    cards = soup.select('a[href*="/promo"]')
                     print(f'   📦 Encontrados {len(cards)} cards nesta página')
 
                     for card in cards:
@@ -365,6 +366,83 @@ class PromotionScraper:
         print(f'   ✅ Total Pelando: {len(produtos)} produtos')
         return produtos
 
+    def buscar_promocoes_hardmob(self, limite: int = 15) -> List[Dict]:
+        """Busca promoções do Hardmob (fórum de promoções)"""
+        produtos = []
+        try:
+            print('🔥 Buscando promoções no Hardmob...')
+            url = 'https://www.hardmob.com.br/forums/407-Promocoes'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Hardmob: {response.status_code}')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Hardmob usa estrutura de fórum - buscar tópicos
+            topicos = soup.select('li.threadbit')
+            print(f'   📦 Encontrados {len(topicos)} tópicos')
+            
+            for topico in topicos[:limite]:
+                try:
+                    # Título do tópico
+                    titulo_elem = topico.select_one('a.title')
+                    if not titulo_elem:
+                        continue
+                    
+                    nome = titulo_elem.get_text(strip=True)
+                    link = titulo_elem.get('href', '')
+                    
+                    if not link.startswith('http'):
+                        link = 'https://www.hardmob.com.br' + link
+                    
+                    # Filtrar apenas tópicos de promoção (que mencionam preço ou loja)
+                    texto_lower = nome.lower()
+                    if not any(x in texto_lower for x in ['r$', 'reais', 'amazon', 'mercado', 'shopee', 'kabum', 'off', '%']):
+                        continue
+                    
+                    # Tentar extrair preço do título
+                    precos = re.findall(r'R\$\s*([\d.,]+)', nome)
+                    preco = self._extrair_preco('R$ ' + precos[0]) if precos else None
+                    
+                    # Detectar loja
+                    loja = 'Amazon'
+                    if 'mercado livre' in texto_lower or 'mercadolivre' in texto_lower:
+                        loja = 'Mercado Livre'
+                    elif 'shopee' in texto_lower:
+                        loja = 'Shopee'
+                    elif 'kabum' in texto_lower:
+                        loja = 'KaBuM'
+                    elif 'magalu' in texto_lower:
+                        loja = 'Magalu'
+                    elif 'aliexpress' in texto_lower:
+                        loja = 'AliExpress'
+                    
+                    links = self._criar_links(link, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': f"Oferta no Hardmob via {loja}",
+                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'price': preco,
+                        'links': links,
+                        'storeName': loja
+                    })
+                    print(f'  ✅ [Hardmob] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar tópico Hardmob: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Hardmob: {e}')
+        
+        print(f'   ✅ Total Hardmob: {len(produtos)} produtos')
+        return produtos
+
     def buscar_promocoes_tiktok(self, limite: int = 10) -> List[Dict]:
         """
         Busca promoções do TikTok Shop
@@ -409,18 +487,18 @@ class PromotionScraper:
         return produtos
 
     def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte, Pelando e TikTok"""
+        """Busca promoções em todas as plataformas: Promobit, Promobyte, Hardmob e TikTok"""
         print('\n📡 Buscando em múltiplas fontes...')
 
         produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
-        produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte
-        produtos_pelando   = self.buscar_promocoes_pelando_site()  # Pelando
+        produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte (corrigido)
+        produtos_hardmob   = self.buscar_promocoes_hardmob()       # Hardmob (substitui Pelando)
         produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
 
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_pelando + produtos_tiktok:
+        for p in produtos_promobit + produtos_promobyte + produtos_hardmob + produtos_tiktok:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
@@ -429,7 +507,7 @@ class PromotionScraper:
         print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos '
               f'({len(produtos_promobit)} Promobit | '
               f'{len(produtos_promobyte)} Promobyte | '
-              f'{len(produtos_pelando)} Pelando | '
+              f'{len(produtos_hardmob)} Hardmob | '
               f'{len(produtos_tiktok)} TikTok)')
 
         todos_cupons = self.buscar_cupons_pelando()
