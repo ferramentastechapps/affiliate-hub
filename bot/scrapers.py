@@ -366,8 +366,86 @@ class PromotionScraper:
         print(f'   ✅ Total Pelando: {len(produtos)} produtos')
         return produtos
 
+    def buscar_promocoes_gatry(self, limite: int = 15) -> List[Dict]:
+        """Busca promoções do Gatry (agregador de promoções)"""
+        produtos = []
+        try:
+            print('🔥 Buscando promoções no Gatry...')
+            url = 'https://gatry.com/promocoes'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Gatry: {response.status_code}')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Gatry usa cards de promoção
+            cards = soup.select('article.deal-card, div.deal-item, a[href*="/deal/"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Buscar título
+                    titulo_elem = card.select_one('h2, h3, .deal-title, .title')
+                    if not titulo_elem:
+                        continue
+                    
+                    nome = titulo_elem.get_text(strip=True)
+                    
+                    # Buscar link
+                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/deal/"]')
+                    link = link_elem.get('href', '') if link_elem else ''
+                    
+                    if not link.startswith('http'):
+                        link = 'https://gatry.com' + link
+                    
+                    # Buscar preço
+                    preco_elem = card.select_one('.price, .deal-price, [class*="price"]')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Detectar loja do texto
+                    texto_lower = nome.lower()
+                    loja = 'Amazon'
+                    if 'mercado livre' in texto_lower or 'mercadolivre' in texto_lower:
+                        loja = 'Mercado Livre'
+                    elif 'shopee' in texto_lower:
+                        loja = 'Shopee'
+                    elif 'kabum' in texto_lower:
+                        loja = 'KaBuM'
+                    elif 'magalu' in texto_lower:
+                        loja = 'Magalu'
+                    elif 'aliexpress' in texto_lower:
+                        loja = 'AliExpress'
+                    
+                    links = self._criar_links(link, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': f"Oferta no Gatry via {loja}",
+                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'price': preco,
+                        'links': links,
+                        'storeName': loja
+                    })
+                    print(f'  ✅ [Gatry] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar card Gatry: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Gatry: {e}')
+        
+        print(f'   ✅ Total Gatry: {len(produtos)} produtos')
+        return produtos
+
     def buscar_promocoes_hardmob(self, limite: int = 15) -> List[Dict]:
-        """Busca promoções do Hardmob (fórum de promoções)"""
+        """Busca promoções do Hardmob (fórum de promoções) - DESABILITADO (403)"""
         produtos = []
         try:
             print('🔥 Buscando promoções no Hardmob...')
@@ -376,7 +454,7 @@ class PromotionScraper:
             print(f'   📡 Status: {response.status_code}')
             
             if response.status_code != 200:
-                print(f'❌ Erro HTTP Hardmob: {response.status_code}')
+                print(f'⚠️  Hardmob bloqueado (403) - pulando...')
                 return produtos
 
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -487,18 +565,18 @@ class PromotionScraper:
         return produtos
 
     def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte, Hardmob e TikTok"""
+        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry e TikTok"""
         print('\n📡 Buscando em múltiplas fontes...')
 
         produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
         produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte (corrigido)
-        produtos_hardmob   = self.buscar_promocoes_hardmob()       # Hardmob (substitui Pelando)
+        produtos_gatry     = self.buscar_promocoes_gatry()         # Gatry (novo)
         produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
 
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_hardmob + produtos_tiktok:
+        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_tiktok:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
@@ -507,7 +585,7 @@ class PromotionScraper:
         print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos '
               f'({len(produtos_promobit)} Promobit | '
               f'{len(produtos_promobyte)} Promobyte | '
-              f'{len(produtos_hardmob)} Hardmob | '
+              f'{len(produtos_gatry)} Gatry | '
               f'{len(produtos_tiktok)} TikTok)')
 
         todos_cupons = self.buscar_cupons_pelando()
