@@ -92,12 +92,11 @@ class PromotionBot:
                             print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
+                        # Enviar para Telegram somente após ter o ID
+                        self.telegram.enviar_sync('produto', produto)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                    
-                    # Enviar para Telegram (com ou sem ID)
-                    self.telegram.enviar_sync('produto', produto)
                     self.produtos_enviados.add(produto['name'])
                     time.sleep(1)  # Evitar rate limit
             
