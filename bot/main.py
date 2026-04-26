@@ -87,17 +87,16 @@ class PromotionBot:
                     if resultado and resultado.get('success'):
                         produto_retornado = resultado.get('product')
                         if produto_retornado and produto_retornado.get('id'):
-                            # Capturar o ID retornado pela API
                             produto['id'] = produto_retornado['id']
                             print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
-                        # Enviar para Telegram somente após ter o ID
+                        # Só marca como enviado e notifica se a API funcionou
                         self.telegram.enviar_sync('produto', produto)
+                        self.produtos_enviados.add(produto['name'])
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
-                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                    self.produtos_enviados.add(produto['name'])
+                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro} — será tentado novamente')
                     time.sleep(1)  # Evitar rate limit
             
             # 5. Adicionar cupons no site
