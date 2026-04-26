@@ -21,7 +21,9 @@ function getDomainFromPlatform(platform: string): string {
   if (p === 'deonibus') return 'deonibus.com';
   if (p === 'lg') return 'lg.com';
   if (p === 'shopee') return 'shopee.com.br';
-  if (p === 'aliexpress') return 'aliexpress.com';
+  if (p === 'aliexpress' || p === 'ali') return 'aliexpress.com';
+  if (p === 'tiktok' || p === 'tiktokshop') return 'tiktok.com';
+  if (p === 'kabum') return 'kabum.com.br';
   if (p === 'fastshop') return 'fastshop.com.br';
   if (p === 'nike') return 'nike.com.br';
   if (p === 'adidas') return 'adidas.com.br';
@@ -54,6 +56,8 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                   if (l.includes('shopee')) return 'shopee';
                   if (l.includes('amazon')) return 'amazon';
                   if (l.includes('aliexpress') || l === 'ali') return 'aliexpress';
+                  if (l.includes('tiktok')) return 'tiktok';
+                  if (l.includes('kabum')) return 'kabum';
                   return l;
                 };
                 
@@ -90,13 +94,17 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
 
   if (!couponsByPlatform || couponsByPlatform.length === 0) return null;
 
-  // Organiza: Mercado Livre, Shopee, Amazon -> depois os mais volumosos
+  // Organiza na mesma ordem das lojas favoritas
   const sortedCoupons = [...couponsByPlatform].sort((a, b) => {
     const getPriority = (p: string) => {
       const lower = p.toLowerCase();
-      if (lower === 'mercadolivre' || lower === 'mercado livre') return 1;
-      if (lower === 'shopee') return 2;
-      if (lower === 'amazon') return 3;
+      if (lower === 'amazon') return 1;
+      if (lower === 'mercadolivre' || lower === 'mercado livre') return 2;
+      if (lower === 'shopee') return 3;
+      if (lower === 'aliexpress') return 4;
+      if (lower === 'tiktok') return 5;
+      if (lower === 'kabum') return 6;
+      if (lower === 'magazineluiza' || lower === 'magalu') return 7;
       return 99;
     };
     
@@ -120,7 +128,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                Cupons Rápidos
+                Cupons das suas lojas preferidas
               </h2>
             </div>
           </div>
@@ -141,7 +149,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
           )}
         </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto pb-3 pt-2 scrollbar-hide overflow-y-visible">
           {displayCoupons.map((item, index) => {
             const domain = getDomainFromPlatform(item.platform);
             const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
@@ -154,7 +162,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedPlatform(item.platform)}
-                className="relative group text-left focus:outline-none shrink-0 min-h-[48px]"
+                className="relative group text-left focus:outline-none shrink-0 min-h-[48px] overflow-visible"
               >
                 <div className="bg-white/5 backdrop-blur-md px-4 py-3 rounded-2xl hover:bg-white/10 transition-all duration-300 flex items-center gap-3 border border-white/10 hover:border-accent/40 hover:shadow-lg hover:-translate-y-1 whitespace-nowrap min-h-[48px]">
                   
@@ -180,11 +188,11 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                       {item.count}
                     </span>
                   </div>
-
-                  {item.count > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-accent w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(40,110,250,0.8)]" />
-                  )}
                 </div>
+
+                {item.count > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-accent w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(40,110,250,0.8)]" />
+                )}
               </motion.button>
             );
           })}

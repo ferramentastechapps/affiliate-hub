@@ -118,6 +118,10 @@ async function getCouponsByPlatform() {
       platform = 'amazon';
     } else if (platform.includes('aliexpress') || platform === 'ali') {
       platform = 'aliexpress';
+    } else if (platform.includes('tiktok')) {
+      platform = 'tiktok';
+    } else if (platform.includes('kabum')) {
+      platform = 'kabum';
     }
 
     acc[platform] = (acc[platform] || 0) + 1;
@@ -125,7 +129,7 @@ async function getCouponsByPlatform() {
   }, {} as Record<string, number>);
 
   // Garante que as lojas principais sempre apareçam, mesmo com 0 cupons
-  const basePlatforms = ["amazon", "shopee", "mercadolivre", "aliexpress"];
+  const basePlatforms = ["amazon", "mercadolivre", "shopee", "aliexpress", "tiktok", "kabum", "magazineluiza"];
   basePlatforms.forEach(bp => {
     if (typeof platformCounts[bp] === "undefined") {
       platformCounts[bp] = 0;

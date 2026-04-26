@@ -114,7 +114,7 @@ class PromotionBot:
                 for cupom in cupons_novos:
                     self.telegram.enviar_sync('cupom', cupom)
                     self.cupons_enviados.add(cupom['code'])
-                    time.sleep(1)
+                    time.sleep(3)  # Evitar flood control do Telegram
             
             # 7. Enviar resumo
             if produtos_novos or cupons_novos:
