@@ -4,12 +4,10 @@ import { useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { ProductsTab } from "@/components/admin/ProductsTab";
 import { CouponsTab } from "@/components/admin/CouponsTab";
-
-// Página do admin não precisa de revalidação pois é client-side
-// Mas vamos adicionar metadata via layout se necessário
+import { BannersTab } from "@/components/admin/BannersTab";
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<"products" | "coupons">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "coupons" | "banners">("products");
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -45,10 +43,21 @@ export default function AdminPage() {
           >
             Cupons
           </button>
+          <button
+            onClick={() => setActiveTab("banners")}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === "banners"
+                ? "text-accent border-b-2 border-accent"
+                : "text-zinc-500 hover:text-white"
+            }`}
+          >
+            Banners
+          </button>
         </div>
 
         {activeTab === "products" && <ProductsTab />}
         {activeTab === "coupons" && <CouponsTab />}
+        {activeTab === "banners" && <BannersTab />}
       </div>
     </div>
   );
