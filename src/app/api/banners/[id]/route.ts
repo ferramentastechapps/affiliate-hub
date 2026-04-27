@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { title, imageDesktop, imageMobile, link, order, isActive } = body;
 
     const banner = await prisma.banner.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(title !== undefined && { title }),
         ...(imageDesktop !== undefined && { imageDesktop }),
@@ -25,9 +26,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await prisma.banner.delete({ where: { id: params.id } });
+    const { id } = await params;
+    await prisma.banner.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('❌ Erro ao deletar banner:', error);
