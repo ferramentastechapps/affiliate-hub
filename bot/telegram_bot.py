@@ -16,15 +16,43 @@ class TelegramNotifier:
         try:
             # Formatar mensagem
             mensagem = self._formatar_mensagem_produto(produto)
-            
-            # Enviar foto com legenda
-            if produto.get('imageUrl'):
-                await self.bot.send_photo(
-                    chat_id=self.chat_id,
-                    photo=produto['imageUrl'],
-                    caption=mensagem,
-                    parse_mode=ParseMode.HTML
-                )
+            print(f'📝 Mensagem formatada ({len(mensagem)} chars): {mensagem[:100]}...')
+
+            imagem = produto.get('imageUrl', '')
+            # Placeholder não funciona como foto — envia só texto
+            usar_foto = bool(imagem and 'placeholder' not in imagem)
+
+            if usar_foto:
+                # caption tem limite de 1024 chars no Telegram
+                if len(mensagem) > 1024:
+                    # Envia foto sem legenda e depois o texto completo
+                    try:
+                        await self.bot.send_photo(
+                            chat_id=self.chat_id,
+                            photo=imagem,
+                        )
+                    except Exception as foto_err:
+                        print(f'⚠️ Erro ao enviar foto, continuando sem ela: {foto_err}')
+                    await self.bot.send_message(
+                        chat_id=self.chat_id,
+                        text=mensagem,
+                        parse_mode=ParseMode.HTML
+                    )
+                else:
+                    try:
+                        await self.bot.send_photo(
+                            chat_id=self.chat_id,
+                            photo=imagem,
+                            caption=mensagem,
+                            parse_mode=ParseMode.HTML
+                        )
+                    except Exception as foto_err:
+                        print(f'⚠️ Erro ao enviar foto ({foto_err}), enviando só texto...')
+                        await self.bot.send_message(
+                            chat_id=self.chat_id,
+                            text=mensagem,
+                            parse_mode=ParseMode.HTML
+                        )
             else:
                 await self.bot.send_message(
                     chat_id=self.chat_id,
@@ -36,6 +64,8 @@ class TelegramNotifier:
             
         except Exception as e:
             print(f'❌ Erro ao enviar para Telegram: {e}')
+            import traceback
+            traceback.print_exc()
     
     async def enviar_cupom(self, cupom: dict):
         """Envia notificação de cupom para o Telegram"""
