@@ -48,14 +48,6 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // Configuração do Turbopack
-  turbopack: {
-    root: require('path').join(__dirname),
-  },
-  
-  // Permitir acesso do domínio em desenvolvimento
-  allowedDevOrigins: ['123testando.usejotashop.com.br'],
-  
   // Add logging for debugging
   logging: {
     fetches: {
