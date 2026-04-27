@@ -93,6 +93,7 @@ class PromotionScraper:
                         'description': descricao,
                         'imageUrl': imagem_url,
                         'price': preco,
+                        'originalPrice': float(offer.get('offerOriginalPrice', 0)) if offer.get('offerOriginalPrice') else None,
                         'links': links,
                         'storeName': loja
                     })
@@ -331,7 +332,14 @@ class PromotionScraper:
 
                     # Preço
                     precos = re.findall(r'R\$\s*([\d.,]+)', texto)
-                    preco = self._extrair_preco('R$ ' + precos[0]) if precos else None
+                    preco = None
+                    preco_original = None
+                    if precos:
+                        if len(precos) >= 2:
+                            preco_original = self._extrair_preco('R$ ' + precos[0])
+                            preco = self._extrair_preco('R$ ' + precos[-1])
+                        else:
+                            preco = self._extrair_preco('R$ ' + precos[0])
 
                     # Loja
                     loja = 'Amazon'
@@ -360,6 +368,7 @@ class PromotionScraper:
                         'description': f"Oferta no Pelando via {loja}",
                         'imageUrl': 'https://via.placeholder.com/800x1000',
                         'price': preco,
+                        'originalPrice': preco_original,
                         'links': links,
                         'storeName': loja
                     })
