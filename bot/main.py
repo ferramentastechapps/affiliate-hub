@@ -79,6 +79,8 @@ class PromotionBot:
             if produtos_novos:
                 print(f'\n📦 Adicionando {len(produtos_novos)} produtos no site...')
                 print(f'📱 Enviando produtos para Telegram...')
+                print(f'🔗 API URL: {self.api.base_url}')
+                print(f'🔑 API Key: {self.api.headers.get("x-api-key", "NÃO CONFIGURADA")[:15]}...')
                 
                 for produto in produtos_novos:
                     # Adicionar produto na API
@@ -91,12 +93,19 @@ class PromotionBot:
                             print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
-                        # Só marca como enviado e notifica se a API funcionou
+                        # Envia para Telegram e marca como enviado
                         self.telegram.enviar_sync('produto', produto)
                         self.produtos_enviados.add(produto['name'])
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
-                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro} — será tentado novamente')
+                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
+                        # Mesmo com falha na API, envia para Telegram com ID temporário
+                        # para que o admin saiba que o produto foi encontrado
+                        if not produto.get('id'):
+                            produto['id'] = f'ERRO-API-{produto["name"][:20].replace(" ", "_")}'
+                        print(f'📱 Enviando para Telegram mesmo sem ID válido...')
+                        self.telegram.enviar_sync('produto', produto)
+                        self.produtos_enviados.add(produto['name'])
                     time.sleep(1)  # Evitar rate limit
             
             # 5. Adicionar cupons no site
