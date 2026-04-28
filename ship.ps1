@@ -63,12 +63,24 @@ else
   pm2 start npm --name "nextjs" -- start -- -p 3005
 fi
 
-# Reiniciar ou criar o bot no PM2
+# Matar processos python órfãos rodando main.py (nohup antigo)
+pkill -f "python3.*main.py" || true
+
+# Reiniciar ou criar os bots no PM2
 cd ~/affiliate-hub/bot
-if pm2 list | grep -q "affiliate-bot"; then
-  pm2 restart affiliate-bot
+
+# Listener do Telegram
+if pm2 list | grep -q "affiliate-listener"; then
+  pm2 restart affiliate-listener
 else
-  pm2 start telegram_listener.py --name affiliate-bot --interpreter python3
+  pm2 start telegram_listener.py --name affiliate-listener --interpreter python3
+fi
+
+# Scraper Principal (Robô de Promoções)
+if pm2 list | grep -q "affiliate-scraper"; then
+  pm2 restart affiliate-scraper
+else
+  pm2 start main.py --name affiliate-scraper --interpreter python3
 fi
 
 pm2 save
