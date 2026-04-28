@@ -9,7 +9,7 @@ pm2 restart affiliate-bot --update-env
 sleep 2
 echo "Bot reiniciado! Forcando busca manual..."
 cd ~/affiliate-hub/bot
-timeout 120 python3 main.py --once 2>&1 | tail -50
+timeout 120 python3 main.py --once 2>&1
 "@
 
 $cleanCommand = $sshCommand -replace "`r", ""
