@@ -5,7 +5,7 @@ from pathlib import Path
 # Carrega o .env da raiz do projeto (um nível acima da pasta bot/)
 _root = Path(__file__).parent.parent
 load_dotenv(_root / '.env')
-load_dotenv()  # fallback: .env no diretório atual
+load_dotenv(override=True)  # fallback: .env no diretório atual (sobrescreve se houver conflito)
 
 # Affiliate Hub
 AFFILIATE_HUB_URL = os.getenv('AFFILIATE_HUB_URL', 'http://localhost:3000')
