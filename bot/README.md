@@ -1,16 +1,48 @@
-# 🤖 Robô de Promoções Automático
+# 🤖 Robô de Promoções Automático v2.0
 
-Robô que busca promoções e cupons automaticamente, adiciona no site e envia notificações para o Telegram.
+Bot automatizado que busca promoções em múltiplas fontes, filtra por qualidade e envia para aprovação no Telegram.
+
+## 🚀 Novidades v2.0
+
+### ⚡ Performance
+- **Busca Paralela**: 6-8x mais rápido (10-15s ao invés de 90-120s)
+- **Intervalo Reduzido**: Busca a cada 15 minutos (antes: 30 min)
+- **4x mais promoções por hora**: ~320-480 produtos/hora
+
+### 🎯 Qualidade
+- **Sistema de Score**: Cada promoção recebe nota de 0-100
+- **Filtros Automáticos**: Remove promoções ruins automaticamente
+- **Alertas Urgentes**: Destaque para super ofertas (score ≥70)
+
+### 🛒 Novas Fontes
+- ✅ Amazon Brasil (Ofertas do Dia)
+- ✅ Mercado Livre (Ofertas)
+- ✅ Promobit (ex-Pelando)
+- ✅ Promobyte
+- ✅ Gatry
+- ✅ Zoom
+- ✅ Buscapé
+
+### 💬 Mensagens Melhoradas
+- Desconto percentual calculado
+- Score de qualidade visível
+- Cupons destacados
+- Emojis baseados na qualidade
+
+---
 
 ## 🎯 Funcionalidades
 
-- ✅ Busca promoções em múltiplas plataformas (Amazon, Mercado Livre, Shopee)
+- ✅ Busca promoções em 7 fontes simultaneamente (paralelo)
+- ✅ Sistema de score de qualidade (0-100)
+- ✅ Filtros automáticos de qualidade
 - ✅ Adiciona produtos automaticamente no Affiliate Hub
 - ✅ Adiciona cupons de desconto automaticamente
 - ✅ Envia notificações para canal/grupo do Telegram
+- ✅ Alertas especiais para super ofertas
 - ✅ Evita duplicatas
-- ✅ Execução agendada (a cada X minutos)
-- ✅ Filtro por desconto mínimo
+- ✅ Execução agendada (a cada 15 minutos)
+- ✅ Filtro por desconto mínimo e score
 
 ## 📋 Pré-requisitos
 
