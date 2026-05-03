@@ -77,12 +77,23 @@ class PromotionBot:
             
             # 3. Adicionar produtos no site e enviar para Telegram com ID
             if produtos_novos:
-                print(f'\n📦 Adicionando {len(produtos_novos)} produtos no site...')
-                print(f'📱 Enviando produtos para Telegram...')
+                print(f'\n📦 Processando {len(produtos_novos)} produtos novos...')
+                print(f'📱 Enviando para Telegram...')
                 print(f'🔗 API URL: {self.api.base_url}')
                 print(f'🔑 API Key: {self.api.headers.get("x-api-key", "NÃO CONFIGURADA")[:15]}...')
                 
-                for produto in produtos_novos:
+                # Separar produtos por prioridade
+                produtos_urgentes = [p for p in produtos_novos if p.get('qualityScore', 0) >= 70]
+                produtos_normais = [p for p in produtos_novos if p.get('qualityScore', 0) < 70]
+                
+                if produtos_urgentes:
+                    print(f'\n🚨 {len(produtos_urgentes)} PRODUTOS URGENTES (score ≥70)!')
+                
+                # Processar produtos urgentes primeiro
+                for produto in produtos_urgentes:
+                    score = produto.get('qualityScore', 0)
+                    print(f'\n🔥 URGENTE (score {score}): {produto["name"][:50]}...')
+                    
                     # Adicionar produto na API
                     resultado = self.api.adicionar_produto(produto)
                     
@@ -90,7 +101,38 @@ class PromotionBot:
                         produto_retornado = resultado.get('product')
                         if produto_retornado and produto_retornado.get('id'):
                             produto['id'] = produto_retornado['id']
-                            print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
+                            print(f'✅ Produto adicionado com ID: {produto["id"]}')
+                        else:
+                            print(f'⚠️ Produto adicionado mas ID não retornado')
+                        
+                        # Envia como URGENTE
+                        self.telegram.enviar_sync('produto_urgente', produto)
+                        time.sleep(2)  # Pausa menor para urgentes
+                        self.telegram.enviar_sync('produto', produto)
+                        self.produtos_enviados.add(produto['name'])
+                    else:
+                        erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
+                        print(f'❌ Falha ao adicionar: {erro}')
+                        if not produto.get('id'):
+                            produto['id'] = f'ERRO-API-{produto["name"][:20].replace(" ", "_")}'
+                        self.telegram.enviar_sync('produto_urgente', produto)
+                        time.sleep(2)
+                        self.telegram.enviar_sync('produto', produto)
+                        self.produtos_enviados.add(produto['name'])
+                    
+                    time.sleep(1)
+                
+                # Processar produtos normais
+                for produto in produtos_normais:
+                    score = produto.get('qualityScore', 0)
+                    # Adicionar produto na API
+                    resultado = self.api.adicionar_produto(produto)
+                    
+                    if resultado and resultado.get('success'):
+                        produto_retornado = resultado.get('product')
+                        if produto_retornado and produto_retornado.get('id'):
+                            produto['id'] = produto_retornado['id']
+                            print(f'✅ [Score {score}] ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
                         # Envia para Telegram e marca como enviado
@@ -99,8 +141,6 @@ class PromotionBot:
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                        # Mesmo com falha na API, envia para Telegram com ID temporário
-                        # para que o admin saiba que o produto foi encontrado
                         if not produto.get('id'):
                             produto['id'] = f'ERRO-API-{produto["name"][:20].replace(" ", "_")}'
                         print(f'📱 Enviando para Telegram mesmo sem ID válido...')

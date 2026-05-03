@@ -2,7 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 import re
-from config import CATEGORIES, MIN_DISCOUNT_PERCENT
+import concurrent.futures
+from config import CATEGORIES, MIN_DISCOUNT_PERCENT, MIN_QUALITY_SCORE
 
 
 class PromotionScraper:
@@ -774,31 +775,316 @@ class PromotionScraper:
         
         return produtos
 
+    def buscar_promocoes_amazon(self, limite: int = 20) -> List[Dict]:
+        """Busca ofertas do dia na Amazon Brasil"""
+        produtos = []
+        try:
+            print('🛒 Buscando ofertas na Amazon...')
+            url = 'https://www.amazon.com.br/gp/goldbox'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Amazon bloqueou (status {response.status_code})')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Amazon usa estrutura complexa - buscar cards de oferta
+            cards = soup.select('div[data-deal-id], div.DealCard, div[class*="deal"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('a[aria-label], span[class*="title"], div[class*="title"]')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get('aria-label') or nome_elem.get_text(strip=True)
+                    if not nome or len(nome) < 10:
+                        continue
+                    
+                    # Link
+                    link_elem = card.select_one('a[href*="/dp/"], a[href*="/gp/"]')
+                    link = ''
+                    if link_elem:
+                        link = link_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = 'https://www.amazon.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('span[class*="price"], span.a-price span.a-offscreen')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Preço original (desconto)
+                    preco_original = None
+                    original_elem = card.select_one('span[class*="original"], span.a-text-strike')
+                    if original_elem:
+                        preco_original = self._extrair_preco(original_elem.get_text())
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                    
+                    # Desconto percentual
+                    desconto_elem = card.select_one('span[class*="percent"], span[class*="badge"]')
+                    desconto_texto = ''
+                    if desconto_elem:
+                        desconto_texto = desconto_elem.get_text(strip=True)
+                    
+                    links = {'amazon': link} if link else {}
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Oferta do Dia Amazon"
+                    if desconto_texto:
+                        descricao += f" - {desconto_texto}"
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': preco_original,
+                        'links': links,
+                        'storeName': 'Amazon'
+                    })
+                    print(f'  ✅ [Amazon] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Amazon: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar na Amazon: {e}')
+        
+        print(f'   ✅ Total Amazon: {len(produtos)} produtos')
+        return produtos
+
+    def buscar_promocoes_mercadolivre(self, limite: int = 20) -> List[Dict]:
+        """Busca ofertas do dia no Mercado Livre"""
+        produtos = []
+        try:
+            print('🛍️ Buscando ofertas no Mercado Livre...')
+            url = 'https://www.mercadolivre.com.br/ofertas'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Mercado Livre bloqueou (status {response.status_code})')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Mercado Livre usa estrutura de cards
+            cards = soup.select('li.promotion-item, div.poly-card, a[href*="/p/MLB"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('h2, h3, p.poly-component__title, span.poly-component__title')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get_text(strip=True)
+                    if not nome or len(nome) < 10:
+                        continue
+                    
+                    # Link
+                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/p/"], a[href*="/MLB"]')
+                    link = ''
+                    if link_elem:
+                        link = link_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = 'https://www.mercadolivre.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('span.andes-money-amount__fraction, span[class*="price"]')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Preço original
+                    preco_original = None
+                    original_elem = card.select_one('s, del, span[class*="previous"]')
+                    if original_elem:
+                        preco_original = self._extrair_preco(original_elem.get_text())
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                        # Melhorar qualidade da imagem
+                        if imagem_url and 'http' in imagem_url:
+                            imagem_url = imagem_url.replace('-I.jpg', '-O.jpg')
+                    
+                    # Desconto
+                    desconto_elem = card.select_one('span[class*="discount"], span.andes-money-amount__discount')
+                    desconto_texto = ''
+                    if desconto_elem:
+                        desconto_texto = desconto_elem.get_text(strip=True)
+                    
+                    links = {'mercadoLivre': link} if link else {}
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Oferta Mercado Livre"
+                    if desconto_texto:
+                        descricao += f" - {desconto_texto}"
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': preco_original,
+                        'links': links,
+                        'storeName': 'Mercado Livre'
+                    })
+                    print(f'  ✅ [Mercado Livre] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Mercado Livre: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Mercado Livre: {e}')
+        
+        print(f'   ✅ Total Mercado Livre: {len(produtos)} produtos')
+        return produtos
+
+    def _calcular_score_promocao(self, produto: Dict) -> int:
+        """
+        Calcula score de qualidade da promoção (0-100)
+        Score alto = promoção melhor
+        """
+        score = 0
+        
+        # 1. Desconto real (0-35 pontos)
+        if produto.get('originalPrice') and produto.get('price'):
+            try:
+                desconto = (1 - produto['price'] / produto['originalPrice']) * 100
+                if desconto >= 60: score += 35
+                elif desconto >= 50: score += 30
+                elif desconto >= 40: score += 25
+                elif desconto >= 30: score += 20
+                elif desconto >= 20: score += 15
+                elif desconto >= 10: score += 10
+            except:
+                pass
+        
+        # 2. Loja confiável (0-20 pontos)
+        lojas_premium = ['Amazon', 'Mercado Livre', 'Magalu', 'KaBuM']
+        lojas_boas = ['Shopee', 'Americanas', 'Casas Bahia', 'Terabyte']
+        
+        loja = produto.get('storeName', '')
+        if loja in lojas_premium:
+            score += 20
+        elif loja in lojas_boas:
+            score += 15
+        elif loja:
+            score += 10
+        
+        # 3. Tem cupom adicional (0-15 pontos)
+        descricao = produto.get('description', '')
+        if 'CUPOM' in descricao.upper() or 'CÓDIGO' in descricao.upper():
+            score += 15
+        
+        # 4. Categoria popular (0-10 pontos)
+        categorias_populares = [
+            'Smartphones e TV',
+            'Informática e Games',
+            'Casa e Eletrodomésticos',
+            'Moda e Acessórios'
+        ]
+        if produto.get('category') in categorias_populares:
+            score += 10
+        
+        # 5. Imagem real (0-10 pontos)
+        imagem = produto.get('imageUrl', '')
+        if imagem and 'placeholder' not in imagem:
+            score += 10
+        
+        # 6. Preço razoável (0-10 pontos)
+        preco = produto.get('price')
+        if preco:
+            if 20 <= preco <= 5000:  # Faixa de preço normal
+                score += 10
+            elif 5 <= preco < 20 or 5000 < preco <= 10000:
+                score += 5
+        
+        return min(score, 100)  # Máximo 100
+
     def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé e TikTok"""
-        print('\n📡 Buscando em múltiplas fontes...')
+        """Busca promoções em PARALELO em todas as plataformas - 3x mais rápido!"""
+        print('\n📡 Buscando em múltiplas fontes (PARALELO)...')
 
-        produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
-        produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte (corrigido)
-        produtos_gatry     = self.buscar_promocoes_gatry()         # Gatry
-        produtos_zoom      = self.buscar_promocoes_zoom()          # Zoom (novo)
-        produtos_buscape   = self.buscar_promocoes_buscape()       # Buscapé (novo)
-        produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
+        # Buscar em paralelo usando ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            futures = {
+                executor.submit(self.buscar_promocoes_pelando): 'Promobit',
+                executor.submit(self.buscar_promocoes_promobyte): 'Promobyte',
+                executor.submit(self.buscar_promocoes_gatry): 'Gatry',
+                executor.submit(self.buscar_promocoes_zoom): 'Zoom',
+                executor.submit(self.buscar_promocoes_buscape): 'Buscapé',
+                executor.submit(self.buscar_promocoes_amazon): 'Amazon',
+                executor.submit(self.buscar_promocoes_mercadolivre): 'Mercado Livre',
+                executor.submit(self.buscar_cupons_pelando): 'Cupons',
+            }
+            
+            produtos_por_fonte = {}
+            todos_cupons = []
+            
+            for future in concurrent.futures.as_completed(futures):
+                fonte = futures[future]
+                try:
+                    resultado = future.result(timeout=30)
+                    if fonte == 'Cupons':
+                        todos_cupons = resultado
+                    else:
+                        produtos_por_fonte[fonte] = resultado
+                    print(f'   ✅ {fonte}: {len(resultado)} itens')
+                except Exception as e:
+                    print(f'   ❌ Erro em {fonte}: {e}')
+                    produtos_por_fonte[fonte] = []
 
-        # Combinar e deduplicar por nome normalizado
+        # Combinar todos os produtos
         todos_produtos = []
+        for produtos in produtos_por_fonte.values():
+            todos_produtos.extend(produtos)
+
+        # Deduplicar por nome normalizado
+        produtos_unicos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok:
+        for p in todos_produtos:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
-                todos_produtos.append(p)
+                produtos_unicos.append(p)
 
-        print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
-        print(f'   🔥 Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)} | Gatry: {len(produtos_gatry)}')
-        print(f'   🔍 Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | TikTok: {len(produtos_tiktok)}')
+        # Calcular score e filtrar
+        produtos_com_score = []
+        for p in produtos_unicos:
+            score = self._calcular_score_promocao(p)
+            p['qualityScore'] = score
+            if score >= MIN_QUALITY_SCORE:
+                produtos_com_score.append(p)
 
-        todos_cupons = self.buscar_cupons_pelando()
+        # Ordenar por score (melhores primeiro)
+        produtos_com_score.sort(key=lambda x: x['qualityScore'], reverse=True)
+
+        print(f'\n📊 Resultados:')
+        print(f'   🔍 Total encontrado: {len(todos_produtos)} produtos')
+        print(f'   ✨ Únicos: {len(produtos_unicos)} produtos')
+        print(f'   🔥 Qualidade alta (score ≥{MIN_QUALITY_SCORE}): {len(produtos_com_score)} produtos')
+        print(f'   🎫 Cupons: {len(todos_cupons)}')
+
+        todos_cupons = todos_cupons if todos_cupons else []
 
         if not todos_produtos:
             print('⚠️ Usando dados de backup para produtos...')
