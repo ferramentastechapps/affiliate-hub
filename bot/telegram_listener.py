@@ -47,7 +47,7 @@ PLATAFORMA_EMOJIS = {
     'kabum':       '🔵 Kabum',
 }
 
-async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None):
+async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None, custom_caption: str = None):
     """Publica a promoção aprovada no grupo de promoções."""
     if not TELEGRAM_PROMO_GROUP_ID:
         print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação no grupo.')
@@ -61,30 +61,70 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
 
     legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
     
-    import google.generativeai as genai
-    import asyncio
-    if GEMINI_API_KEY:
+    from pathlib import Path
+    arquivo_legendas = Path(__file__).parent / 'legendas_salvas.txt'
+    
+    if custom_caption:
+        legenda_engracada = custom_caption.strip()
+        # Salva para aprender
         try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-2.0-flash')
-            prompt = (
-                f"Você é dono de um canal de achadinhos e utilidades. "
-                f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
-                f"para anunciar a venda deste produto: '{nome}'. "
-                f"Exemplos do estilo que eu quero: 'MEU ÚNICO CARDIO NESSE FERIADO', 'PRA NÃO BRIGAR MAIS COM A ESPOSA', "
-                f"'SUA CASA CLAMAVA POR ESSE MIMO', 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'. "
-                f"Seja criativo e focado no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
-            )
-            response = await asyncio.to_thread(model.generate_content, prompt)
-            if response and response.text:
-                legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
-                print(f"✅ Legenda Gemini gerada: {legenda_engracada}")
-            else:
-                print("⚠️ Gemini retornou resposta vazia, usando legenda padrão")
+            with open(arquivo_legendas, 'a', encoding='utf-8') as f:
+                f.write(legenda_engracada + '\n')
+            # Manter apenas as últimas 50
+            with open(arquivo_legendas, 'r', encoding='utf-8') as f:
+                linhas = f.readlines()
+            if len(linhas) > 50:
+                with open(arquivo_legendas, 'w', encoding='utf-8') as f:
+                    f.writelines(linhas[-50:])
         except Exception as e:
-            print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
+            print(f"Erro ao salvar legenda: {e}")
     else:
-        print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
+        import google.generativeai as genai
+        import asyncio
+        import random
+        
+        # Lê exemplos salvos
+        exemplos_salvos = ""
+        try:
+            if arquivo_legendas.exists():
+                with open(arquivo_legendas, 'r', encoding='utf-8') as f:
+                    linhas = [l.strip() for l in f.readlines() if l.strip()]
+                if linhas:
+                    amostra = random.sample(linhas, min(5, len(linhas)))
+                    exemplos_salvos = "Exemplos reais de legendas que eu já criei (siga ESSE MESMO ESTILO E VIBE):\n- " + "\n- ".join(amostra)
+        except Exception as e:
+            print(f"Erro ao ler legendas salvas: {e}")
+            
+        if not exemplos_salvos:
+            exemplos_salvos = (
+                "Exemplos do estilo que eu quero:\n"
+                "- 'MEU ÚNICO CARDIO NESSE FERIADO'\n"
+                "- 'PRA NÃO BRIGAR MAIS COM A ESPOSA'\n"
+                "- 'SUA CASA CLAMAVA POR ESSE MIMO'\n"
+                "- 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'"
+            )
+
+        if GEMINI_API_KEY:
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                model = genai.GenerativeModel('gemini-2.0-flash')
+                prompt = (
+                    f"Você é dono de um canal de achadinhos e utilidades. "
+                    f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
+                    f"para anunciar a venda deste produto: '{nome}'.\n\n"
+                    f"{exemplos_salvos}\n\n"
+                    f"Seja criativo, NUNCA REPITA OS EXEMPLOS EXATAMENTE. Crie uma frase nova baseada neles, focada no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
+                )
+                response = await asyncio.to_thread(model.generate_content, prompt)
+                if response and response.text:
+                    legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
+                    print(f"✅ Legenda Gemini gerada: {legenda_engracada}")
+                else:
+                    print("⚠️ Gemini retornou resposta vazia, usando legenda padrão")
+            except Exception as e:
+                print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
+        else:
+            print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
 
     preco_original = produto.get('originalPrice')
     if preco_original and preco and float(preco_original) > float(preco):
@@ -145,7 +185,8 @@ async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_
         context.args = partes[1:]
         await handle_tiktok_command(update, context)
     else:
-        print(f'📸 Foto com legenda ignorada: {caption[:50]}')
+        print(f'📸 Foto com legenda recebida (não é comando), tentando processar como promo...')
+        await handle_forwarded_or_text_promo(update, context)
 
 async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -189,8 +230,13 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     # O ID é o primeiro argumento que NÃO é um link
     produto_id = next((arg for arg in args if not arg.startswith('http')), None)
 
+    # O que sobrar é a legenda customizada
+    outros_args = [arg for arg in args if arg != affiliate_link and arg != produto_id]
+    custom_caption = " ".join(outros_args) if outros_args else None
+
     print(f'   ID extraído: {produto_id}')
     print(f'   Link extraído: {affiliate_link}')
+    print(f'   Legenda extraída: {custom_caption}')
 
     if not affiliate_link:
         await update.message.reply_text(
@@ -243,7 +289,7 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
         print(f'✅ Produto aprovado com sucesso!')
         print(f'   Publicando no grupo...')
         
-        await publicar_no_grupo(context, produto_info, platform, affiliate_link, foto_file_id)
+        await publicar_no_grupo(context, produto_info, platform, affiliate_link, foto_file_id, custom_caption)
 
         # Verificar se cupom foi salvo no banco
         cupom_info = resultado.get('coupon')
@@ -297,6 +343,121 @@ async def handle_rejeitar_command(update: Update, context: ContextTypes.DEFAULT_
     else:
         erro_msg = resultado.get('error') if resultado else "Erro na comunicação com a API."
         await msg_status.edit_text(f"❌ Falha ao rejeitar: {erro_msg}")
+
+async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Processa textos (encaminhados ou não) que contenham link para cadastrar como pendente"""
+    text = update.message.text or update.message.caption or ""
+    
+    # Se for uma resposta a uma mensagem (o handle_reply cuida disso)
+    if update.message.reply_to_message:
+        reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
+        if "ID_DO_PRODUTO:" in reply_text:
+            # Deixa o handle_reply normal processar
+            return await handle_reply(update, context)
+            
+    # Ignorar se for comando explícito
+    if text.strip().startswith('/'):
+        return
+
+    # Verificar se tem link
+    import re
+    if 'http' not in text.lower():
+        return
+        
+    msg_status = await update.message.reply_text("⏳ Analisando oferta encaminhada...")
+    
+    import google.generativeai as genai
+    import json
+    
+    try:
+        if not GEMINI_API_KEY:
+            await msg_status.edit_text("❌ GEMINI_API_KEY não configurada. Não é possível extrair os dados da promoção.")
+            return
+
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        prompt = (
+            f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
+            f"{text}\n\n"
+            f"Responda APENAS em um JSON válido com estas exatas chaves:\n"
+            f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
+            f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
+            f"- link: URL completa para compra do produto (string)\n"
+            f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
+            f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
+        )
+        
+        response = await asyncio.to_thread(model.generate_content, prompt)
+        
+        texto_limpo = response.text.replace('```json', '').replace('```', '').strip()
+        dados = json.loads(texto_limpo)
+        
+        nome = dados.get('name') or 'Produto Encontrado'
+        preco = dados.get('price')
+        link = dados.get('link')
+        cupom = dados.get('coupon')
+        
+        if not link:
+            await msg_status.edit_text("❌ Não consegui extrair um link válido dessa mensagem.")
+            return
+            
+        # Pegar a foto original se a mensagem tiver foto
+        foto_url = None
+        if update.message.photo:
+            foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
+            foto_url = foto_file.file_path
+            
+        # Determinar categoria
+        from config import CATEGORY_KEYWORDS
+        categoria = 'Diversos'
+        nome_lower = nome.lower()
+        for cat, keywords in CATEGORY_KEYWORDS.items():
+            if any(k in nome_lower for k in keywords):
+                categoria = cat
+                break
+                
+        platform = infer_platform_from_url(link)
+        
+        descricao = f"Oferta encaminhada de grupos"
+        if cupom:
+            descricao += f"\n🎟️ CUPOM: {cupom}"
+            
+        produto_data = {
+            'name': nome,
+            'category': categoria,
+            'description': descricao,
+            'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
+            'price': preco,
+            'originalPrice': None,
+            'links': {
+                platform: link
+            },
+            'storeName': platform.capitalize()
+        }
+        
+        print(f"📦 Enviando produto encaminhado: {produto_data}")
+        resultado = api.adicionar_produto(produto_data)
+        
+        if resultado and resultado.get('success'):
+            produto_id = resultado.get('product', {}).get('id', 'N/A')
+            await msg_status.edit_text(
+                f"✅ <b>Oferta capturada com sucesso!</b>\n\n"
+                f"📦 {nome}\n"
+                f"💰 Preço: R$ {preco if preco else 'N/A'}\n\n"
+                f"O produto foi enviado para o sistema como <b>Pendente</b>.\n"
+                f"<i>Você receberá a notificação padrão para aprovar com seu link de afiliado!</i>",
+                parse_mode='HTML'
+            )
+        else:
+            erro = resultado.get('error', 'Erro desconhecido') if resultado else "Sem resposta da API"
+            await msg_status.edit_text(f"❌ Falha ao salvar a promoção: {erro}")
+            
+    except json.JSONDecodeError:
+        print(f"❌ Erro de JSON ao processar mensagem encaminhada")
+        await msg_status.edit_text("❌ Erro ao extrair dados. Tente formatar a mensagem de outra forma.")
+    except Exception as e:
+        print(f"❌ Erro ao processar mensagem encaminhada: {e}")
+        await msg_status.edit_text("❌ Não consegui entender essa mensagem ou houve um erro interno.")
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -545,13 +706,15 @@ def run_listener():
     app.add_handler(CommandHandler("help", handle_help_command))
     app.add_handler(CommandHandler("start", handle_help_command))
 
-    # Método legado: responder à mensagem
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_reply))
+    # Mensagens de texto gerais (Pode ser encaminhado, texto puro ou reply)
+    # Se for uma reply "ID_DO_PRODUTO", o handle_forwarded_or_text_promo repassa pro handle_reply.
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_forwarded_or_text_promo))
     
     app.add_error_handler(error_handler)
 
-    # Inicia o polling
-    app.run_polling()
+    # Inicia o polling — drop_pending_updates garante que este listener
+    # assuma o controle mesmo se outro processo Bot() estava ativo antes
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     try:
