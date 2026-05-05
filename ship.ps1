@@ -66,8 +66,9 @@ else
   pm2 start npm --name "nextjs" -- start -- -p 3005
 fi
 
-# Matar processos python órfãos rodando main.py (nohup antigo)
+# Matar processos python órfãos rodando main.py e telegram_listener.py (nohup antigo)
 pkill -f "python3.*main.py" || true
+pkill -f "python3.*telegram_listener.py" || true
 
 # Reiniciar ou criar os bots no PM2
 cd ~/affiliate-hub/bot
