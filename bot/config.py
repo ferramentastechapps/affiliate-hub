@@ -18,9 +18,10 @@ TELEGRAM_PROMO_GROUP_ID = os.getenv('TELEGRAM_PROMO_GROUP_ID')  # Grupo onde pub
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Configurações de busca
-SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 15))  # Reduzido de 30 para 15
+SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 2))  # Reduzido de 15 para 2 minutos
 MIN_DISCOUNT_PERCENT = int(os.getenv('MIN_DISCOUNT_PERCENT', 20))
 MIN_QUALITY_SCORE = int(os.getenv('MIN_QUALITY_SCORE', 30))  # Score mínimo para enviar promoção
+DEBUG_FILTROS = os.getenv('DEBUG_FILTROS', 'false').lower() == 'true'  # Modo debug para ver tudo
 
 # Categorias (mesmas do site)
 CATEGORIES = [
