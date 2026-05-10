@@ -1,0 +1,128 @@
+# ═══════════════════════════════════════════════════════════════
+# 🚀 COMANDOS PARA TESTAR AS MELHORIAS - COPIE E COLE
+# ═══════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────
+# 1️⃣ TESTE RÁPIDO (Recomendado - 5 minutos)
+# ─────────────────────────────────────────────────────────────────
+cd bot
+python testar_novas_fontes.py
+
+
+# ─────────────────────────────────────────────────────────────────
+# 2️⃣ TESTE COMPLETO (Uma busca completa - 10 minutos)
+# ─────────────────────────────────────────────────────────────────
+cd bot
+python main.py --once
+
+
+# ─────────────────────────────────────────────────────────────────
+# 3️⃣ MODO DEBUG (Ver TUDO sem filtros)
+# ─────────────────────────────────────────────────────────────────
+# Primeiro, edite o arquivo .env e adicione esta linha:
+# DEBUG_FILTROS=true
+
+# Depois execute:
+cd bot
+python main.py --once
+
+
+# ─────────────────────────────────────────────────────────────────
+# 4️⃣ TESTAR FONTE INDIVIDUAL
+# ─────────────────────────────────────────────────────────────────
+
+# Shopee Flash Sale:
+cd bot
+python -c "from scrapers import PromotionScraper; s = PromotionScraper(); print(len(s.buscar_promocoes_shopee()), 'produtos')"
+
+# Cuponomia:
+cd bot
+python -c "from scrapers import PromotionScraper; s = PromotionScraper(); print(len(s.buscar_cupons_cuponomia()), 'cupons')"
+
+# Méliuz:
+cd bot
+python -c "from scrapers import PromotionScraper; s = PromotionScraper(); print(len(s.buscar_promocoes_meliuz()), 'produtos')"
+
+# Hardmob:
+cd bot
+python -c "from scrapers import PromotionScraper; s = PromotionScraper(); print(len(s.buscar_promocoes_hardmob_fixed()), 'produtos')"
+
+
+# ─────────────────────────────────────────────────────────────────
+# 5️⃣ RODAR EM PRODUÇÃO (Loop contínuo)
+# ─────────────────────────────────────────────────────────────────
+cd bot
+python main.py
+
+
+# ─────────────────────────────────────────────────────────────────
+# 6️⃣ CONFIGURAÇÕES NO .env
+# ─────────────────────────────────────────────────────────────────
+
+# Padrão (Recomendado):
+SEARCH_INTERVAL_MINUTES=2
+MIN_QUALITY_SCORE=30
+DEBUG_FILTROS=false
+
+# Debug (Ver tudo):
+SEARCH_INTERVAL_MINUTES=5
+MIN_QUALITY_SCORE=10
+DEBUG_FILTROS=true
+
+# Seletivo (Só o melhor):
+SEARCH_INTERVAL_MINUTES=2
+MIN_QUALITY_SCORE=50
+DEBUG_FILTROS=false
+
+
+# ─────────────────────────────────────────────────────────────────
+# 7️⃣ VERIFICAR SINTAXE
+# ─────────────────────────────────────────────────────────────────
+cd bot
+python -c "import scrapers; import config; print('✅ Sintaxe OK')"
+
+
+# ─────────────────────────────────────────────────────────────────
+# 8️⃣ VER LOGS EM TEMPO REAL (Linux/Mac)
+# ─────────────────────────────────────────────────────────────────
+cd bot
+python main.py 2>&1 | tee bot.log
+
+
+# ─────────────────────────────────────────────────────────────────
+# 9️⃣ TROUBLESHOOTING
+# ─────────────────────────────────────────────────────────────────
+
+# Nenhum produto encontrado?
+# 1. Ative debug no .env:
+DEBUG_FILTROS=true
+
+# 2. Reduza score mínimo:
+MIN_QUALITY_SCORE=10
+
+# 3. Execute:
+cd bot
+python main.py --once
+
+
+# Fonte específica sempre falha?
+cd bot
+python testar_novas_fontes.py
+
+
+# Verificar dependências:
+cd bot
+pip install -r requirements.txt
+
+
+# ═══════════════════════════════════════════════════════════════
+# 📚 DOCUMENTAÇÃO
+# ═══════════════════════════════════════════════════════════════
+# 
+# MELHORIAS_BOT_IMPLEMENTADAS.md  → Documentação técnica completa
+# TESTAR_MELHORIAS.md             → Guia detalhado de testes
+# RESUMO_MELHORIAS.md             → Resumo executivo
+# IMPLEMENTADO_AGORA.md           → Resumo visual
+# COMANDOS_TESTE.txt              → Este arquivo
+#
+# ═══════════════════════════════════════════════════════════════
