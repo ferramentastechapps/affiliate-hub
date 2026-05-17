@@ -107,7 +107,7 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
         if GEMINI_API_KEY:
             try:
                 genai.configure(api_key=GEMINI_API_KEY)
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                model = genai.GenerativeModel('gemini-2.5-flash')
                 prompt = (
                     f"Você é dono de um canal de achadinhos e utilidades. "
                     f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
@@ -375,7 +375,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             return
 
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = (
             f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
             f"{text}\n\n"
