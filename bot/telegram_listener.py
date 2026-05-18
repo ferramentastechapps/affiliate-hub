@@ -9,6 +9,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
+from telegram_bot import TelegramNotifier
 
 # Inicializa o cliente da API para comunicar com o Next.js
 api = AffiliateHubAPI()
@@ -440,12 +441,21 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         
         if resultado and resultado.get('success'):
             produto_id = resultado.get('product', {}).get('id', 'N/A')
+            produto_data['id'] = produto_id
+            
+            # Notifica os administradores para aprovação usando o notifier padrão
+            try:
+                notifier = TelegramNotifier()
+                await notifier.enviar_produto(produto_data)
+            except Exception as e:
+                print(f"⚠️ Erro ao enviar notificação de aprovação: {e}")
+                
             await msg_status.edit_text(
                 f"✅ <b>Oferta capturada com sucesso!</b>\n\n"
                 f"📦 {nome}\n"
                 f"💰 Preço: R$ {preco if preco else 'N/A'}\n\n"
                 f"O produto foi enviado para o sistema como <b>Pendente</b>.\n"
-                f"<i>Você receberá a notificação padrão para aprovar com seu link de afiliado!</i>",
+                f"<i>A notificação de aprovação foi enviada!</i>",
                 parse_mode='HTML'
             )
         else:
