@@ -774,6 +774,74 @@ class PromotionScraper:
         
         return produtos
 
+    def buscar_promocoes_pechinchou(self, limite: int = 15) -> List[Dict]:
+        """Busca as promoções mais recentes do Pechinchou"""
+        produtos = []
+        try:
+            print('🔥 Buscando promoções no Pechinchou...')
+            response = requests.get('https://pechinchou.com.br/', headers=self.headers, timeout=15)
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Pechinchou: {response.status_code}')
+                return produtos
+
+            import json
+            soup = BeautifulSoup(response.content, 'html.parser')
+            script = soup.find('script', id='__NEXT_DATA__')
+            if not script:
+                return produtos
+
+            data = json.loads(script.string)
+            results = data.get('props', {}).get('pageProps', {}).get('promos', {}).get('results', [])
+
+            for promo in results[:limite]:
+                try:
+                    nome = promo.get('title', 'Sem título')
+                    link_oferta = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
+                    preco = float(promo.get('price', 0))
+                    
+                    foto = promo.get('image')
+                    imagem_url = foto if foto else 'https://via.placeholder.com/800x1000'
+
+                    loja_dict = promo.get('store') or {}
+                    loja = loja_dict.get('name', 'Desconhecido')
+                    
+                    links = self._criar_links(link_oferta, loja)
+
+                    categoria_str = promo.get('subcategory', {}).get('category', {}).get('name')
+                    if categoria_str:
+                        categoria = self._detectar_categoria(categoria_str)
+                    else:
+                        categoria = self._detectar_categoria(nome)
+
+                    cupom = ''
+                    cupons_list = promo.get('coupons', [])
+                    if cupons_list and isinstance(cupons_list, list) and len(cupons_list) > 0:
+                        cupom = cupons_list[0]
+                    
+                    descricao = f"Oferta na loja {loja} no Pechinchou"
+                    if cupom and str(cupom).strip():
+                        descricao += f"\n🎟️ CUPOM: {cupom}"
+
+                    produtos.append({
+                        'name': nome,
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': float(promo.get('old_price', 0)) if promo.get('old_price') else None,
+                        'links': links,
+                        'storeName': loja
+                    })
+                    print(f'  ✅ [Pechinchou] {nome[:45]}...')
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta: {e}')
+
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Pechinchou: {e}')
+        
+        print(f'   ✅ Total Pechinchou: {len(produtos)} produtos')
+        return produtos
+
     def buscar_todas_promocoes(self) -> Dict[str, List]:
         """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé e TikTok"""
         print('\n📡 Buscando em múltiplas fontes...')
@@ -784,11 +852,12 @@ class PromotionScraper:
         produtos_zoom      = self.buscar_promocoes_zoom()          # Zoom (novo)
         produtos_buscape   = self.buscar_promocoes_buscape()       # Buscapé (novo)
         produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
+        produtos_pechinchou = self.buscar_promocoes_pechinchou()   # Pechinchou
 
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok:
+        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
@@ -796,7 +865,7 @@ class PromotionScraper:
 
         print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
         print(f'   🔥 Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)} | Gatry: {len(produtos_gatry)}')
-        print(f'   🔍 Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | TikTok: {len(produtos_tiktok)}')
+        print(f'   🔍 Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | Pechinchou: {len(produtos_pechinchou)}')
 
         todos_cupons = self.buscar_cupons_pelando()
 
