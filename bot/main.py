@@ -33,7 +33,13 @@ class PromotionBot:
             if self.state_file.exists():
                 with open(self.state_file, 'r', encoding='utf-8') as f:
                     state = json.load(f)
-                    self.produtos_enviados = set(state.get('produtos', []))
+                    
+                    # Normalizar os produtos do estado antigo para evitar reenvio
+                    loaded_produtos = state.get('produtos', [])
+                    for p in loaded_produtos:
+                        chave = self.scraper._normalizar(p)[:60] if hasattr(self.scraper, '_normalizar') else p
+                        self.produtos_enviados.add(chave)
+                        
                     self.cupons_enviados = set(state.get('cupons', []))
         except Exception as e:
             print(f'Aviso: Não foi possível carregar o estado anterior: {e}')
@@ -63,10 +69,11 @@ class PromotionBot:
             print(f'\n📊 Encontrados: {len(produtos)} produtos e {len(cupons)} cupons')
             
             # 2. Filtrar produtos novos
-            produtos_novos = [
-                p for p in produtos 
-                if p['name'] not in self.produtos_enviados
-            ]
+            produtos_novos = []
+            for p in produtos:
+                chave = self.scraper._normalizar(p['name'])[:60]
+                if chave not in self.produtos_enviados:
+                    produtos_novos.append(p)
             
             cupons_novos = [
                 c for c in cupons 
@@ -95,7 +102,8 @@ class PromotionBot:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
                         # Envia para Telegram e marca como enviado
                         self.telegram.enviar_sync('produto', produto)
-                        self.produtos_enviados.add(produto['name'])
+                        chave = self.scraper._normalizar(produto['name'])[:60]
+                        self.produtos_enviados.add(chave)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
