@@ -92,7 +92,7 @@ export function InstallBanner() {
 
           <div className="flex items-start gap-3 pr-6">
             <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <img src="/icons/icon-72x72.png" alt="Economiza ai" className="w-10 h-10" />
+              <img src="/icons/icon-72x72.png?v=2" alt="Economiza ai" className="w-10 h-10" />
             </div>
 
             <div className="flex-1">

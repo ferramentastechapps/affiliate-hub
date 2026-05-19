@@ -37,14 +37,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "32x32" },
-      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192x192.png",  sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512x512.png",  sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico?v=2", sizes: "32x32" },
+      { url: "/icons/favicon-16x16.png?v=2", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png?v=2", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png?v=2",  sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png?v=2",  sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
     ],
   },
   openGraph: {
@@ -53,13 +53,13 @@ export const metadata: Metadata = {
     siteName: "Economiza ai",
     title: "Economiza ai | Melhores Cupons e Promoções",
     description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
-    images: [{ url: "/icons/og-image.png", width: 1200, height: 630, alt: "Economiza ai" }],
+    images: [{ url: "/icons/og-image.png?v=2", width: 1200, height: 630, alt: "Economiza ai" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Economiza ai | Melhores Cupons e Promoções",
     description: "Melhores cupons e promoções do Brasil.",
-    images: ["/icons/og-image.png"],
+    images: ["/icons/og-image.png?v=2"],
   },
 };
 
