@@ -27,13 +27,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "123 Testando | Melhores Cupons e Promoções",
+  title: "Economiza ai | Melhores Cupons e Promoções",
   description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "123 Testando",
+    title: "Economiza ai",
   },
   icons: {
     icon: [
@@ -50,14 +50,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    siteName: "123 Testando",
-    title: "123 Testando | Melhores Cupons e Promoções",
+    siteName: "Economiza ai",
+    title: "Economiza ai | Melhores Cupons e Promoções",
     description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
-    images: [{ url: "/icons/og-image.png", width: 1200, height: 630, alt: "123 Testando" }],
+    images: [{ url: "/icons/og-image.png", width: 1200, height: 630, alt: "Economiza ai" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "123 Testando | Melhores Cupons e Promoções",
+    title: "Economiza ai | Melhores Cupons e Promoções",
     description: "Melhores cupons e promoções do Brasil.",
     images: ["/icons/og-image.png"],
   },

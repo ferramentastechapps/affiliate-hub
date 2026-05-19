@@ -113,13 +113,13 @@ export function Footer() {
           >
             <div className="flex items-center gap-3">
               <img
-                src="/logo2.png"
-                alt="123 Testando"
+                src="/Logo.png"
+                alt="Economiza ai"
                 className="h-8 w-auto"
               />
             </div>
             <p className="text-zinc-500 text-sm flex items-center gap-1.5">
-              © {currentYear} 123 Testando. Feito com <Heart size={14} weight="fill" className="text-red-500" /> para você economizar
+              © {currentYear} Economiza ai. Feito com <Heart size={14} weight="fill" className="text-red-500" /> para você economizar
             </p>
           </motion.div>
 
@@ -167,7 +167,7 @@ export function Footer() {
           <p className="text-zinc-600 text-xs text-center max-w-4xl mx-auto leading-relaxed">
             Os preços e disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. 
             Verifique sempre as condições no site da loja antes de finalizar sua compra. 
-            123 Testando não é responsável por transações realizadas em sites de terceiros.
+            Economiza ai não é responsável por transações realizadas em sites de terceiros.
           </p>
         </motion.div>
       </div>

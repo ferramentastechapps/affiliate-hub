@@ -20,7 +20,7 @@ export const revalidate = 60;
 // 📊 METADATA PARA SEO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const metadata: Metadata = {
-  title: "123 Testando | Melhores Ofertas e Cupons de Desconto",
+  title: "Economiza ai | Melhores Ofertas e Cupons de Desconto",
   description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre Amazon, Mercado Livre, Shopee, AliExpress e TikTok Shop. Economize agora!",
   keywords: [
     "cupons de desconto",
@@ -38,24 +38,23 @@ export const metadata: Metadata = {
     "home office",
     "streaming"
   ],
-  authors: [{ name: "123 Testando" }],
-  creator: "123 Testando",
-  publisher: "123 Testando",
-  
+  authors: [{ name: "Economiza ai" }],
+  creator: "Economiza ai",
+  publisher: "Economiza ai",  
   // Open Graph (Facebook, LinkedIn, WhatsApp)
   openGraph: {
     type: "website",
     locale: "pt_BR",
     url: "https://seu-dominio.com",
-    siteName: "123 Testando",
-    title: "123 Testando | Melhores Ofertas e Cupons de Desconto",
+    siteName: "Economiza ai",
+    title: "Economiza ai | Melhores Ofertas e Cupons de Desconto",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre as principais lojas online.",
     images: [
       {
         url: "https://seu-dominio.com/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "123 Testando - Melhores Ofertas",
+        alt: "Economiza ai - Melhores Ofertas",
       },
     ],
   },
@@ -63,7 +62,7 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "123 Testando | Melhores Ofertas e Cupons",
+    title: "Economiza ai | Melhores Ofertas e Cupons",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos.",
     images: ["https://seu-dominio.com/og-image.jpg"],
     creator: "@seu_twitter",

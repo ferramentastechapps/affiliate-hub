@@ -92,12 +92,12 @@ export function InstallBanner() {
 
           <div className="flex items-start gap-3 pr-6">
             <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <img src="/icons/icon-72x72.png" alt="123 Testando" className="w-10 h-10" />
+              <img src="/icons/icon-72x72.png" alt="Economiza ai" className="w-10 h-10" />
             </div>
 
             <div className="flex-1">
               <h3 className="text-white font-bold text-base mb-1">
-                Instale o 123 Testando
+                Instale o Economiza ai
               </h3>
               <p className="text-white/90 text-sm mb-3">
                 Receba promoções na hora e acesse offline!
