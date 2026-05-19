@@ -7,7 +7,7 @@ import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
   // URL base do site (ALTERE PARA SEU DOMÍNIO)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://seu-dominio.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizai.usejotashop.com.br';
 
   return {
     rules: [
