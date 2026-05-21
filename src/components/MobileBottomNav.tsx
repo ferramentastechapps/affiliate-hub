@@ -27,6 +27,10 @@ export function MobileBottomNav() {
   }, [lastScrollY]);
 
   const scrollTo = (id: string) => {
+    if (id === "categorias") {
+      window.dispatchEvent(new CustomEvent("open-categories"));
+      return;
+    }
     const el = document.getElementById(id);
     if (el) {
       const y = el.getBoundingClientRect().top + window.scrollY - 80; // 80px offset pro header
