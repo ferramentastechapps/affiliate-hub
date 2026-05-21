@@ -99,3 +99,21 @@ model PushSubscription {
   
   @@index([endpoint])
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 👤 USUÁRIOS E AUTENTICAÇÃO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String?  // Hashed password (null for Google-only users)
+  image     String?  // URL da imagem de perfil (ex: Google avatar)
+  googleId  String?  @unique // ID do Google para OAuth
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([googleId])
+}
+

@@ -2,7 +2,8 @@
 
 import { X, Eye, EyeSlash, GoogleLogo, EnvelopeSimple, LockKey, User } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "./AuthProvider";
 
 interface AuthPanelProps {
   isOpen: boolean;
@@ -12,10 +13,14 @@ interface AuthPanelProps {
 type AuthTab = "login" | "signup";
 
 export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
+  const { login, signup, loginWithGoogle, error, clearError } = useAuth();
+
   const [activeTab, setActiveTab] = useState<AuthTab>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Form states
   const [loginEmail, setLoginEmail] = useState("");
@@ -31,12 +36,76 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   // Validation states
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Efeito para inicializar o SDK do Google de forma totalmente robusta e integrada
+  useEffect(() => {
+    if (!isOpen) return;
+
+    clearError();
+    setInfoMessage(null);
+
+    const initGoogleSDK = () => {
+      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      const google = (window as any).google;
+      if (!googleClientId || !google) return false;
+
+      try {
+        // Inicializa o cliente do Google
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: async (response: any) => {
+            setIsGoogleLoading(true);
+            clearError();
+            const success = await loginWithGoogle(response.credential);
+            setIsGoogleLoading(false);
+            if (success) {
+              onClose();
+            }
+          },
+          auto_select: false,
+        });
+
+        // Tenta renderizar o botão oficial no container adequado
+        const btnId = activeTab === "login" ? "google-signin-btn-login" : "google-signin-btn-signup";
+        const container = document.getElementById(btnId);
+        if (container) {
+          google.accounts.id.renderButton(container, {
+            theme: "filled_black",
+            size: "large",
+            width: container.clientWidth || 380,
+            text: activeTab === "login" ? "signin_with" : "signup_with",
+            shape: "pill",
+          });
+        }
+
+        // Tenta disparar o One Tap para máxima fluidez na gaveta
+        google.accounts.id.prompt();
+
+        return true;
+      } catch (err) {
+        console.error("Falha ao inicializar botões Google Identity:", err);
+        return false;
+      }
+    };
+
+    // Polling robusto de 300ms caso o script do Google ainda esteja carregando em conexões lentas
+    if (!initGoogleSDK()) {
+      const interval = setInterval(() => {
+        if (initGoogleSDK()) {
+          clearInterval(interval);
+        }
+      }, 300);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, activeTab]);
+
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+    setInfoMessage(null);
     const newErrors: Record<string, string> = {};
 
     if (!loginEmail) newErrors.loginEmail = "E-mail é obrigatório";
@@ -51,14 +120,18 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     }
 
     setIsLoading(true);
-    // TODO: Implementar lógica de login real
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const success = await login(loginEmail, loginPassword);
     setIsLoading(false);
-    onClose();
+    
+    if (success) {
+      onClose();
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+    setInfoMessage(null);
     const newErrors: Record<string, string> = {};
 
     if (!signupName) newErrors.signupName = "Nome é obrigatório";
@@ -79,15 +152,17 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     }
 
     setIsLoading(true);
-    // TODO: Implementar lógica de cadastro real
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const success = await signup(signupName, signupEmail, signupPassword);
     setIsLoading(false);
-    onClose();
+    
+    if (success) {
+      onClose();
+    }
   };
 
-  const handleGoogleAuth = () => {
-    // TODO: Implementar autenticação com Google
-    console.log("Google auth");
+  const handleForgotPassword = () => {
+    clearError();
+    setInfoMessage("Para redefinir sua senha, por favor entre em contato com nosso suporte oficial ou canais de atendimento.");
   };
 
   return (
@@ -132,7 +207,6 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                       alt="Economiza ai"
                       className="hidden dark:block h-7 w-auto"
                     />
-                    <h2 className="text-xl font-bold tracking-tight"></h2>
                   </div>
                   <motion.button
                     onClick={onClose}
@@ -151,6 +225,8 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                     onClick={() => {
                       setActiveTab("login");
                       setErrors({});
+                      clearError();
+                      setInfoMessage(null);
                     }}
                     className="relative flex-1 py-3 text-sm font-medium transition-colors"
                   >
@@ -169,6 +245,8 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                     onClick={() => {
                       setActiveTab("signup");
                       setErrors({});
+                      clearError();
+                      setInfoMessage(null);
                     }}
                     className="relative flex-1 py-3 text-sm font-medium transition-colors"
                   >
@@ -188,6 +266,34 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
 
               {/* Content */}
               <div className="flex-1 p-6">
+                
+                {/* Alertas de Erro e Info */}
+                <AnimatePresence mode="wait">
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl mb-6 flex items-start gap-3"
+                    >
+                      <div className="flex-1 font-medium">{error}</div>
+                      <button onClick={clearError} className="text-red-400 hover:text-white text-xs font-bold">X</button>
+                    </motion.div>
+                  )}
+
+                  {infoMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="p-4 bg-accent/10 border border-accent/20 text-accent text-sm rounded-xl mb-6 flex items-start gap-3"
+                    >
+                      <div className="flex-1 font-medium">{infoMessage}</div>
+                      <button onClick={() => setInfoMessage(null)} className="text-accent hover:text-white text-xs font-bold">X</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <AnimatePresence mode="wait">
                   {activeTab === "login" ? (
                     <motion.form
@@ -285,6 +391,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         </label>
                         <button
                           type="button"
+                          onClick={handleForgotPassword}
                           className="text-sm text-accent hover:text-accent/80 transition-colors min-h-[44px] px-2"
                         >
                           Esqueci minha senha
@@ -294,7 +401,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                       {/* Submit Button */}
                       <motion.button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoading || isGoogleLoading}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -321,18 +428,18 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         </div>
                       </div>
 
-                      {/* Google Button */}
-                      <motion.button
-                        type="button"
-                        onClick={handleGoogleAuth}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium transition-colors flex items-center justify-center gap-3"
-                      >
-                        <GoogleLogo size={20} weight="bold" />
-                        Continuar com Google
-                      </motion.button>
+                      {/* Google Identity Services Official Button Container */}
+                      <div className="w-full flex flex-col items-center justify-center min-h-[48px]">
+                        {isGoogleLoading ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto"
+                          />
+                        ) : (
+                          <div id="google-signin-btn-login" className="w-full flex justify-center" />
+                        )}
+                      </div>
                     </motion.form>
                   ) : (
                     <motion.form
@@ -515,7 +622,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                       {/* Submit Button */}
                       <motion.button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoading || isGoogleLoading}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -542,18 +649,18 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         </div>
                       </div>
 
-                      {/* Google Button */}
-                      <motion.button
-                        type="button"
-                        onClick={handleGoogleAuth}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium transition-colors flex items-center justify-center gap-3"
-                      >
-                        <GoogleLogo size={20} weight="bold" />
-                        Cadastrar com Google
-                      </motion.button>
+                      {/* Google Identity Services Official Button Container */}
+                      <div className="w-full flex flex-col items-center justify-center min-h-[48px]">
+                        {isGoogleLoading ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto"
+                          />
+                        ) : (
+                          <div id="google-signin-btn-signup" className="w-full flex justify-center" />
+                        )}
+                      </div>
                     </motion.form>
                   )}
                 </AnimatePresence>
