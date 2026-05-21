@@ -38,7 +38,7 @@ export function Header() {
                 <img
                   src="/icons/icon-192x192.png"
                   alt="Economiza ai Logo Icon"
-                  className="h-8 w-8 p-1 object-contain"
+                  className="h-10 w-10 p-1 object-contain"
                 />
                 <img
                   src="/logo 2 preto.png"
