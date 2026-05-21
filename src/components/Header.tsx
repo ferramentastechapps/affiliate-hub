@@ -28,7 +28,6 @@ export function Header() {
             className={`glass-panel rounded-2xl px-4 py-2 transition-all duration-300`}
           >
             <div className="flex items-center justify-between">
-              {/* Logo */}
               <motion.a
                 href="/"
                 whileHover={{ scale: 1.02 }}
@@ -40,6 +39,16 @@ export function Header() {
                   src="/Logo.png"
                   alt="Economiza ai"
                   className="h-12 w-auto"
+                />
+                <img
+                  src="/logo 2 preto.png"
+                  alt="Economiza ai"
+                  className="h-8 w-auto dark:hidden"
+                />
+                <img
+                  src="/logo 2 branco.png"
+                  alt="Economiza ai"
+                  className="hidden dark:block h-8 w-auto"
                 />
               </motion.a>
 
