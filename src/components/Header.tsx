@@ -76,6 +76,10 @@ export function Header() {
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
+    if (href === "#categorias") {
+      window.dispatchEvent(new CustomEvent("open-categories"));
+      return;
+    }
     const id = href.replace("#", "");
     const el = document.getElementById(id);
     if (el) {
