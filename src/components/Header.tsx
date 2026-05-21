@@ -43,12 +43,12 @@ export function Header() {
                 <img
                   src="/logo 2 preto.png"
                   alt="Economiza ai"
-                  className="h-8 w-auto dark:hidden"
+                  className="h-12 w-auto dark:hidden"
                 />
                 <img
                   src="/logo 2 branco.png"
                   alt="Economiza ai"
-                  className="hidden dark:block h-8 w-auto"
+                  className="hidden dark:block h-12 w-auto"
                 />
               </motion.a>
 
