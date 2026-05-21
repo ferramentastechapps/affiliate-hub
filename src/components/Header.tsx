@@ -36,19 +36,14 @@ export function Header() {
                 className="flex items-center gap-3"
               >
                 <img
-                  src="/Logo.png"
-                  alt="Economiza ai"
-                  className="h-12 w-auto"
-                />
-                <img
                   src="/logo 2 preto.png"
                   alt="Economiza ai"
-                  className="h-24 w-auto dark:hidden"
+                  className="h-7 w-auto dark:hidden"
                 />
                 <img
                   src="/logo 2 branco.png"
                   alt="Economiza ai"
-                  className="hidden dark:block h-24 w-auto"
+                  className="hidden dark:block h-7 w-auto"
                 />
               </motion.a>
 

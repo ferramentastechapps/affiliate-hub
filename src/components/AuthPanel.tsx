@@ -117,16 +117,15 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
               <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl border-b border-white/10 z-10">
                 <div className="flex items-center justify-between p-6">
                   <div className="flex items-center gap-3">
-                    <img src="/Logo.png" alt="Logo" className="h-8 w-auto" />
                     <img
                       src="/logo 2 preto.png"
                       alt="Economiza ai"
-                      className="h-16 w-auto dark:hidden"
+                      className="h-7 w-auto dark:hidden"
                     />
                     <img
                       src="/logo 2 branco.png"
                       alt="Economiza ai"
-                      className="hidden dark:block h-16 w-auto"
+                      className="hidden dark:block h-7 w-auto"
                     />
                     <h2 className="text-xl font-bold tracking-tight"></h2>
                   </div>
