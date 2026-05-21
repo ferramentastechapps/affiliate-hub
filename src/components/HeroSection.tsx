@@ -2,7 +2,7 @@
 
 import { motion, Variants } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Tag, Ticket, Users, Storefront, ShieldCheck } from "@phosphor-icons/react";
+import { Tag, Ticket } from "@phosphor-icons/react";
 import { BannersCarousel } from "./BannersCarousel";
 
 export function HeroSection() {
@@ -102,36 +102,6 @@ export function HeroSection() {
               <Ticket size={20} weight="bold" />
               <span>Explorar Cupons</span>
             </button>
-          </motion.div>
-
-          {/* Seção de Estatísticas */}
-          <motion.div 
-            variants={itemVariants}
-            className={`grid grid-cols-3 gap-6 mt-12 w-full pt-8 border-t border-zinc-800/60 ${hasBanners ? "" : "max-w-2xl mx-auto"}`}
-          >
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-              <span className="text-2xl md:text-3xl font-black text-white tracking-tight">1M+</span>
-              <span className="text-[11px] md:text-xs text-zinc-500 font-semibold uppercase tracking-wider flex items-center gap-1.5 mt-1 justify-center lg:justify-start">
-                <Users size={14} className="text-zinc-500" />
-                Usuários
-              </span>
-            </div>
-
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left border-x border-zinc-800/60 px-4">
-              <span className="text-2xl md:text-3xl font-black text-white tracking-tight">300+</span>
-              <span className="text-[11px] md:text-xs text-zinc-500 font-semibold uppercase tracking-wider flex items-center gap-1.5 mt-1 justify-center lg:justify-start">
-                <Storefront size={14} className="text-zinc-500" />
-                Lojas Parceiras
-              </span>
-            </div>
-
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-              <span className="text-2xl md:text-3xl font-black text-white tracking-tight">100k+</span>
-              <span className="text-[11px] md:text-xs text-zinc-500 font-semibold uppercase tracking-wider flex items-center gap-1.5 mt-1 justify-center lg:justify-start">
-                <Tag size={14} className="text-zinc-500" />
-                Promoções Verif.
-              </span>
-            </div>
           </motion.div>
         </motion.div>
 
