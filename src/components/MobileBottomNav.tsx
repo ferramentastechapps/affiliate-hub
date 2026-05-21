@@ -70,15 +70,6 @@ export function MobileBottomNav() {
             </button>
 
             <button 
-              onClick={() => scrollTo('cupons')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors min-h-[56px] py-2"
-              aria-label="Ir para cupons"
-            >
-              <Ticket size={24} weight="duotone" />
-              <span className="text-[11px] font-bold leading-tight">Cupons</span>
-            </button>
-
-            <button 
               onClick={() => scrollTo('ofertas')} 
               className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-accent min-h-[56px] py-2"
               aria-label="Ir para ofertas"

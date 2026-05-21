@@ -56,7 +56,6 @@ export function Header() {
               <nav className="hidden md:flex items-center gap-2">
                 <NavLink href="#inicio">Início</NavLink>
                 <NavLink href="#categorias">Categorias</NavLink>
-                <NavLink href="#cupons">Cupons</NavLink>
                 <NavLink href="#ofertas">Ofertas</NavLink>
               </nav>
 
