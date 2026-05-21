@@ -120,12 +120,12 @@ export function Footer() {
               <img
                 src="/logo 2 preto.png"
                 alt="Economiza ai"
-                className="h-8 w-auto dark:hidden"
+                className="h-16 w-auto dark:hidden"
               />
               <img
                 src="/logo 2 branco.png"
                 alt="Economiza ai"
-                className="hidden dark:block h-8 w-auto"
+                className="hidden dark:block h-16 w-auto"
               />
             </div>
             <p className="text-zinc-500 text-sm flex items-center gap-1.5">
