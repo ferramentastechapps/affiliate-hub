@@ -5,6 +5,8 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { InstallBanner } from "@/components/InstallBanner";
 import { Header } from "@/components/Header";
+import { AuthProvider } from "@/components/AuthProvider";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -74,13 +76,20 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
     >
       <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans">
-        <Header />
-        <ToastProvider>
-          {children}
-        </ToastProvider>
-        <MobileBottomNav />
-        <InstallBanner />
+        <AuthProvider>
+          <Header />
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+          <MobileBottomNav />
+          <InstallBanner />
+        </AuthProvider>
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
 }
+
