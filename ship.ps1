@@ -35,7 +35,8 @@ set -e
 cd ~/affiliate-hub
 echo "🔄 Atualizando código..."
 git reset --hard
-git pull origin $Branch
+git fetch origin
+git reset --hard origin/$Branch
 
 echo "📦 Instalando dependências..."
 npm install
