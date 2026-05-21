@@ -116,7 +116,12 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
               {/* Header */}
               <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl border-b border-white/10 z-10">
                 <div className="flex items-center justify-between p-6">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <img
+                      src="/icons/icon-192x192.png"
+                      alt="Economiza ai Logo Icon"
+                      className="h-8 w-8 rounded-xl object-contain shadow-sm"
+                    />
                     <img
                       src="/logo 2 preto.png"
                       alt="Economiza ai"
