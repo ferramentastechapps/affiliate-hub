@@ -147,8 +147,13 @@ export default async function Home() {
   return (
     <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8">
       {/* Hero Section */}
-      <div id="categorias" className="w-full">
+      <div className="w-full">
         <HeroSection />
+      </div>
+
+      {/* Categories Section */}
+      <div id="categorias" className="w-full">
+        <CategoriesSection />
       </div>
 
       {/* Cupons Section */}
