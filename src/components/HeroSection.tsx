@@ -2,7 +2,7 @@
 
 import { motion, Variants } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Tag, Ticket } from "@phosphor-icons/react";
+import { Tag } from "@phosphor-icons/react";
 import { BannersCarousel } from "./BannersCarousel";
 
 export function HeroSection() {
@@ -93,14 +93,6 @@ export function HeroSection() {
             >
               <Tag size={20} weight="bold" />
               <span>Ver Ofertas do Dia</span>
-            </button>
-
-            <button
-              onClick={() => scrollToSection("cupons")}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-zinc-800 hover:border-zinc-700 font-semibold px-8 py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 text-base cursor-pointer min-h-[48px]"
-            >
-              <Ticket size={20} weight="bold" />
-              <span>Explorar Cupons</span>
             </button>
           </motion.div>
         </motion.div>
