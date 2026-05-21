@@ -2,16 +2,41 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Tag } from "@phosphor-icons/react";
+import {
+  X,
+  Tag,
+  DeviceMobile,
+  GameController,
+  House,
+  TShirt,
+  Baby,
+  Sparkle,
+  Barbell,
+  ShoppingCart,
+  BookOpen,
+  Wrench,
+  Car,
+  PawPrint,
+  Airplane,
+  Package
+} from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
 
 const CATEGORIES = [
-  { key: "gaming", label: "Gaming", icon: "🎮" },
-  { key: "setup", label: "Setup", icon: "🖥️" },
-  { key: "home-office", label: "Home Office", icon: "💼" },
-  { key: "streaming", label: "Streaming", icon: "🎥" },
-  { key: "smartphones-tv", label: "Smartphones e TV", icon: "📱" },
-  { key: "bebes-criancas", label: "Bebês e Crianças", icon: "👶" },
+  { key: "smartphones-tv", label: "Smartphones e TV", icon: DeviceMobile },
+  { key: "games", label: "Informática e Games", icon: GameController },
+  { key: "casa", label: "Casa e Eletrodomésticos", icon: House },
+  { key: "moda", label: "Moda e Acessórios", icon: TShirt },
+  { key: "bebes", label: "Bebês e Crianças", icon: Baby },
+  { key: "saude", label: "Saúde e Beleza", icon: Sparkle },
+  { key: "esporte", label: "Esporte e Suplementos", icon: Barbell },
+  { key: "supermercado", label: "Supermercado e Delivery", icon: ShoppingCart },
+  { key: "livros", label: "Livros, eBooks e eReaders", icon: BookOpen },
+  { key: "ferramentas", label: "Ferramentas e Jardim", icon: Wrench },
+  { key: "automotivo", label: "Automotivo", icon: Car },
+  { key: "pet", label: "Pet", icon: PawPrint },
+  { key: "viagem", label: "Viagem", icon: Airplane },
+  { key: "diversos", label: "Diversos", icon: Package }
 ];
 
 type Product = {
@@ -88,9 +113,9 @@ export function CategoriesModal() {
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
 
+        const activeCatObj = CATEGORIES.find((c) => c.key === activeCategory);
         const filtered = data.filter((p) => {
-          const category = p.category?.toLowerCase().replace(/\s+/g, "-") || "";
-          return category === activeCategory;
+          return p.category === activeCatObj?.label;
         });
 
         setProducts(
@@ -191,15 +216,21 @@ export function CategoriesModal() {
                           activeCategory === category.key ? null : category.key
                         )
                       }
-                      className={`flex items-center gap-3 px-5 py-4 rounded-2xl border transition-all duration-200 text-left ${
+                      className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all duration-300 text-left ${
                         activeCategory === category.key
                           ? "bg-accent/15 border-accent/50 shadow-lg shadow-accent/10"
                           : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                       }`}
                     >
-                      <span className="text-3xl">{category.icon}</span>
+                      <div className={`p-2 rounded-xl transition-all duration-300 ${
+                        activeCategory === category.key
+                          ? "bg-accent/20 text-accent"
+                          : "bg-white/5 text-zinc-400"
+                      }`}>
+                        <category.icon size={24} weight={activeCategory === category.key ? "fill" : "duotone"} />
+                      </div>
                       <span
-                        className={`text-sm sm:text-base font-bold ${
+                        className={`text-sm sm:text-base font-bold transition-colors duration-300 ${
                           activeCategory === category.key
                             ? "text-white"
                             : "text-zinc-300"
@@ -224,8 +255,12 @@ export function CategoriesModal() {
                     >
                       <div className="flex items-center justify-between mb-6">
                         <div>
-                          <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 flex items-center gap-2">
-                            <span className="text-2xl">{activeCategoryInfo?.icon}</span>
+                          <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 flex items-center gap-3">
+                            {activeCategoryInfo && (
+                              <div className="p-2 rounded-xl bg-accent/20 text-accent">
+                                <activeCategoryInfo.icon size={26} weight="fill" />
+                              </div>
+                            )}
                             {activeCategoryInfo?.label}
                           </h3>
                           <p className="text-zinc-400 text-xs sm:text-sm">
