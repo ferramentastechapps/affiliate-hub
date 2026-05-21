@@ -117,6 +117,16 @@ export function Footer() {
                 alt="Economiza ai"
                 className="h-8 w-auto"
               />
+              <img
+                src="/logo 2 preto.png"
+                alt="Economiza ai"
+                className="h-5 w-auto dark:hidden"
+              />
+              <img
+                src="/logo 2 branco.png"
+                alt="Economiza ai"
+                className="hidden dark:block h-5 w-auto"
+              />
             </div>
             <p className="text-zinc-500 text-sm flex items-center gap-1.5">
               © {currentYear} Economiza ai. Feito com <Heart size={14} weight="fill" className="text-red-500" /> para você economizar

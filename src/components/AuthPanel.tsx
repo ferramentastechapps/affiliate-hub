@@ -118,6 +118,16 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                 <div className="flex items-center justify-between p-6">
                   <div className="flex items-center gap-3">
                     <img src="/Logo.png" alt="Logo" className="h-8 w-auto" />
+                    <img
+                      src="/logo 2 preto.png"
+                      alt="Economiza ai"
+                      className="h-5 w-auto dark:hidden"
+                    />
+                    <img
+                      src="/logo 2 branco.png"
+                      alt="Economiza ai"
+                      className="hidden dark:block h-5 w-auto"
+                    />
                     <h2 className="text-xl font-bold tracking-tight"></h2>
                   </div>
                   <motion.button
