@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   /* Using a deep charcoal / Zinc-950 as the background */
   --background: #09090b; 
