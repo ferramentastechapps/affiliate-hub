@@ -3,6 +3,7 @@ import { ProductGrid } from "@/components/ProductGrid";
 import { HeroSection } from "@/components/HeroSection";
 import { Footer } from "@/components/Footer";
 import { StoreFilter } from "@/components/StoreFilter";
+import { WeeklyHighlights } from "@/components/WeeklyHighlights";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
@@ -89,10 +90,15 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8">
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-24 pb-8">
       {/* Hero Section */}
       <div className="w-full">
         <HeroSection />
+      </div>
+
+      {/* Destaques da Semana */}
+      <div className="w-full">
+        <WeeklyHighlights />
       </div>
 
       {/* Botão de Notificações Push */}
