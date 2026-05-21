@@ -121,12 +121,12 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                     <img
                       src="/logo 2 preto.png"
                       alt="Economiza ai"
-                      className="h-5 w-auto dark:hidden"
+                      className="h-8 w-auto dark:hidden"
                     />
                     <img
                       src="/logo 2 branco.png"
                       alt="Economiza ai"
-                      className="hidden dark:block h-5 w-auto"
+                      className="hidden dark:block h-8 w-auto"
                     />
                     <h2 className="text-xl font-bold tracking-tight"></h2>
                   </div>
