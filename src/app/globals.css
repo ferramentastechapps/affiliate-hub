@@ -3,13 +3,21 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Background: deep blue/charcoal from mockup (#0b1326) */
-  --background: #0b1326; 
-  --foreground: #fafafa;
+  /* Background: deep dark from mockup (#090a0f) */
+  --background: #090a0f; 
+  --foreground: #ffffff;
   
-  /* Accent Color: Vibrant Orange (#FF6B35) */
-  --accent: #FF6B35;
+  /* Accent Color: Vibrant Red (#ff334b) from mockup */
+  --accent: #ff334b;
   --accent-foreground: #ffffff;
+  
+  /* Mockup Palette */
+  --bg-card: #12141c;
+  --bg-card-hover: #181b26;
+  --text-secondary: #8e92a4;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(18, 20, 28, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
@@ -18,6 +26,22 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   
+  --color-card: var(--bg-card);
+  --color-card-hover: var(--bg-card-hover);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-custom: var(--border-color);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  
+  /* Store Colors */
+  --color-amazon: #ff9900;
+  --color-mercadolivre: #ffe600;
+  --color-shopee: #ff5722;
+  --color-aliexpress: #e62e04;
+  --color-tiktok: #00f2fe;
+  --color-kabum: #0060ff;
+  --color-magalu: #0086ff;
+  
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
@@ -25,7 +49,7 @@
   --shadow-liquid: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 20px 40px -15px rgba(0, 0, 0, 0.3);
   --shadow-diffusion: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
   
-  /* Animation Spring Timing (Approximation for CSS, but we use Framer for real spring) */
+  /* Animation Shimmer */
   --animate-shimmer: shimmer 2s linear infinite;
 
   @keyframes shimmer {
@@ -45,10 +69,24 @@ body {
 
 /* Liquid Glass Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Ambient light overlay decoration */
+.ambient-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255, 51, 75, 0.15) 0%, rgba(9, 10, 15, 0) 70%);
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Hide scrollbar but keep functionality */
@@ -60,4 +98,5 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
 
