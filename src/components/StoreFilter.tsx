@@ -114,17 +114,12 @@ export function StoreFilter() {
             <button
               key={store.key}
               onClick={() => setActiveStore(isActive ? null : store.key)}
-              style={{
-                boxShadow: isActive ? `0 0 25px ${store.glowColor}` : "none"
-              }}
               className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl border transition-all duration-300 whitespace-nowrap shrink-0 min-h-[56px] relative overflow-hidden group snap-start cursor-pointer ${
                 isActive
-                  ? "bg-zinc-900 border-zinc-700/80"
-                  : "bg-zinc-950/60 border-zinc-900/80 hover:border-zinc-800 hover:bg-zinc-900/50"
+                  ? "bg-accent/15 border-accent text-white shadow-lg shadow-accent/20"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-zinc-300 hover:text-white"
               }`}
             >
-              {/* Hover background gradient glow */}
-              <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 bg-gradient-to-r ${store.color}`} />
               
               {/* Circular Store Icon Container */}
               <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 p-1.5 shadow-md transition-transform duration-300 group-hover:scale-105">
@@ -222,7 +217,7 @@ export function StoreFilter() {
                         className="group cursor-pointer bg-zinc-950/60 backdrop-blur-sm border border-zinc-900 hover:border-zinc-700/80 rounded-3xl p-4 flex flex-col relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.6)]"
                       >
                         {/* Tag Desconto */}
-                        <div className="absolute top-3 right-3 z-10 bg-red-600 text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-lg border border-red-500/10">
+                        <div className="absolute top-3 right-3 z-10 bg-accent text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-lg border border-accent/10">
                           -{discount}%
                         </div>
 
@@ -248,7 +243,7 @@ export function StoreFilter() {
 
                           {/* Badge cupom */}
                           {product.coupons && product.coupons.length > 0 && (
-                            <div className="absolute top-2.5 left-2.5 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-lg tracking-wide uppercase">
+                            <div className="absolute top-2.5 left-2.5 bg-accent text-white text-[9px] font-black px-2 py-0.5 rounded-lg tracking-wide uppercase">
                               CUPOM
                             </div>
                           )}
@@ -260,7 +255,7 @@ export function StoreFilter() {
                             {product.category}
                           </span>
                           
-                          <h4 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3 group-hover:text-blue-400 transition-colors">
+                          <h4 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3 group-hover:text-accent transition-colors">
                             {product.name}
                           </h4>
                           
@@ -275,7 +270,7 @@ export function StoreFilter() {
                                 </span>
                               </>
                             ) : (
-                              <span className="text-sm font-bold text-blue-400">Ver detalhes</span>
+                              <span className="text-sm font-bold text-accent">Ver detalhes</span>
                             )}
                           </div>
                         </div>

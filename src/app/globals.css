@@ -3,12 +3,12 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Using a deep charcoal / Zinc-950 as the background */
-  --background: #09090b; 
+  /* Background: deep blue/charcoal from mockup (#0b1326) */
+  --background: #0b1326; 
   --foreground: #fafafa;
   
-  /* Electric Blue Accent */
-  --accent: #2563eb;
+  /* Accent Color: Vibrant Orange (#FF6B35) */
+  --accent: #FF6B35;
   --accent-foreground: #ffffff;
 }
 
@@ -45,10 +45,10 @@ body {
 
 /* Liquid Glass Utilities */
 .glass-panel {
-  background: rgba(24, 24, 27, 0.4);
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: var(--shadow-liquid);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 /* Hide scrollbar but keep functionality */
