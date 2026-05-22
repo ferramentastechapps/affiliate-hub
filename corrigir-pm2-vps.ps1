@@ -1,36 +1,35 @@
 # ------------------------------------------------------------------------
-# DIAGNOSTICO DA VPS
+# SCRIPT PARA CORRIGIR DIRETORIO DO PM2 NA VPS
 # ------------------------------------------------------------------------
 
 Write-Host "------------------------------------------------------------------------" -ForegroundColor Cyan
-Write-Host "DIAGNOSTICO: CONECTANDO A VPS" -ForegroundColor Cyan
+Write-Host "CORRECAO DO PM2: DEFININDO DIRETORIO CORRETO NA VPS" -ForegroundColor Cyan
 Write-Host "------------------------------------------------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
-$ScriptPath = Join-Path $PSScriptRoot "diagnosticar-vps.sh"
+$ScriptPath = Join-Path $PSScriptRoot "corrigir-pm2-vps.sh"
 if (-not (Test-Path $ScriptPath)) {
-    $ScriptPath = ".\diagnosticar-vps.sh"
+    $ScriptPath = ".\corrigir-pm2-vps.sh"
 }
 
-Write-Host "Carregando comandos de diagnostico..." -ForegroundColor Yellow
+Write-Host "Carregando comandos de correcao..." -ForegroundColor Yellow
 $shContent = Get-Content -Raw -Path $ScriptPath
 $cleanCommand = $shContent -replace "`r", ""
 
-Write-Host "Conectando na VPS e executando diagnostico..." -ForegroundColor Yellow
+Write-Host "Conectando na VPS e executando a correcao..." -ForegroundColor Yellow
 Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 Write-Host ""
 
-$OutputPath = Join-Path $PSScriptRoot "diagnostico-vps-output.txt"
+$OutputPath = Join-Path $PSScriptRoot "corrigir-pm2-output.txt"
 if (-not $PSScriptRoot) {
-    $OutputPath = ".\diagnostico-vps-output.txt"
+    $OutputPath = ".\corrigir-pm2-output.txt"
 }
 
 Write-Output $cleanCommand | ssh root@212.85.10.239 "bash" | Tee-Object -FilePath $OutputPath
 
 Write-Host ""
 Write-Host "------------------------------------------------------------------------" -ForegroundColor Cyan
-Write-Host "DIAGNOSTICO SALVO EM: diagnostico-vps-output.txt" -ForegroundColor Green
+Write-Host "PROCESSO CONCLUIDO!" -ForegroundColor Green
+Write-Host "Verifique a saida acima e acesse o site novamente." -ForegroundColor Yellow
 Write-Host "------------------------------------------------------------------------" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Analise o arquivo diagnostico-vps-output.txt para identificar o problema." -ForegroundColor Yellow
 Write-Host ""

@@ -36,13 +36,17 @@ echo ''
 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
 echo '⚙️  CONFIGURAÇÃO DO NGINX'
 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-if [ -f /etc/nginx/sites-enabled/123testando.useiotashop.com.br ]; then
-    cat /etc/nginx/sites-enabled/123testando.useiotashop.com.br
-else
-    echo '❌ Arquivo de configuração não encontrado'
-    echo 'Listando todos os sites habilitados:'
-    ls -la /etc/nginx/sites-enabled/
-fi
+echo 'Listando todos os sites habilitados:'
+ls -la /etc/nginx/sites-enabled/
+echo ''
+echo 'Conteúdo dos arquivos de configuração:'
+for file in /etc/nginx/sites-enabled/*; do
+    if [ -f "$file" ]; then
+        echo "--- Arquivo: $file ---"
+        cat "$file"
+        echo ""
+    fi
+done
 echo ''
 
 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
@@ -54,8 +58,10 @@ echo ''
 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
 echo '🔍 TESTE DE CONECTIVIDADE LOCAL'
 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-echo 'Testando porta 3005 (Affiliate Hub):'
-curl -s -o /dev/null -w 'Status: %{http_code}\n' http://127.0.0.1:3005 || echo '❌ Não responde'
+echo 'Testando porta 3000 (Next.js Padrão):'
+curl -s -o /dev/null -w 'Status: %{http_code}\n' http://127.0.0.1:3000 || echo '❌ Não responde na 3000'
+echo 'Testando porta 3005 (Next.js Affiliate Hub):'
+curl -s -o /dev/null -w 'Status: %{http_code}\n' http://127.0.0.1:3005 || echo '❌ Não responde na 3005'
 echo ''
 
 echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
