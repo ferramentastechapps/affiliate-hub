@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { WhatsappLogo, TelegramLogo, InstagramLogo, Heart } from "@phosphor-icons/react";
+import { WhatsappLogo, TelegramLogo, InstagramLogo, Heart, FacebookLogo, TwitterLogo, YoutubeLogo } from "@phosphor-icons/react";
 
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -46,52 +46,43 @@ export function Footer() {
       name: "WhatsApp",
       icon: WhatsappLogo,
       url: "https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_tTelegram",
-      color: "lg:hover:bg-green-500/20 lg:hover:text-green-400 lg:hover:border-green-500/50",
-      bgColor: "bg-green-500/10",
-      mobileColor: "bg-green-500/20 text-green-400 border-green-500/50",
       description: "Grupo WhatsApp",
     },
     {
       name: "Telegram",
       icon: TelegramLogo,
       url: "https://t.me/+OFDVybtJcc40YmZh",
-      color: "lg:hover:bg-blue-500/20 lg:hover:text-blue-400 lg:hover:border-blue-500/50",
-      bgColor: "bg-blue-500/10",
-      mobileColor: "bg-blue-500/20 text-blue-400 border-blue-500/50",
       description: "Canal Telegram",
     },
     {
       name: "Instagram",
       icon: InstagramLogo,
       url: "https://www.instagram.com/jota123testando?igsh=MTBuY3dueWQ4N3c3Mw%3D%3D&utm_source=qr",
-      color: "lg:hover:bg-pink-500/20 lg:hover:text-pink-400 lg:hover:border-pink-500/50",
-      bgColor: "bg-pink-500/10",
-      mobileColor: "bg-pink-500/20 text-pink-400 border-pink-500/50",
       description: "Siga no Instagram",
     },
   ];
 
   return (
-    <footer className="w-full bg-zinc-950/50 backdrop-blur-xl border-t border-zinc-900 mt-20 pb-20 md:pb-8">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-12">
-        {/* Seção de Comunidade */}
-        <div className="text-center mb-16">
+    <footer className="w-full mt-20">
+      {/* Seção de Comunidade */}
+      <section className="max-w-[1200px] mx-auto px-6 mb-16">
+        <div className="bg-gradient-to-b from-[#ff334b]/[0.08] to-transparent bg-card border border-border-custom rounded-[28px] p-12 text-center relative overflow-hidden">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
+            className="relative z-10"
           >
-            <h3 className="text-2xl md:text-3xl font-black text-white mb-3">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">
               Junte-se à nossa comunidade! 🎉
-            </h3>
+            </h2>
             <p className="text-zinc-400 text-sm md:text-base mb-8 max-w-2xl mx-auto">
               Receba ofertas exclusivas, cupons em primeira mão e participe de discussões sobre as melhores promoções
             </p>
           </motion.div>
 
-          {/* Botões de Redes Sociais - 3 Canais */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto relative z-10">
             {socialLinks.map((social, index) => (
               <motion.a
                 key={social.name}
@@ -102,93 +93,104 @@ export function Footer() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.97 }}
-                className={`group flex items-center gap-3 px-6 py-4.5 rounded-2xl border bg-zinc-900/40 backdrop-blur-sm transition-all duration-300 ${social.mobileColor} ${social.color} cursor-pointer`}
+                className={`group flex flex-col items-center p-6 bg-white/[0.02] border border-border-custom rounded-[20px] transition-all duration-300 ${
+                  social.name === "WhatsApp"
+                    ? "hover:bg-[#25d366]/[0.04] hover:border-[#25d366]/40 hover:shadow-[0_8px_24px_rgba(37,211,102,0.08)]"
+                    : social.name === "Telegram"
+                    ? "hover:bg-[#0088cc]/[0.04] hover:border-[#0088cc]/40 hover:shadow-[0_8px_24px_rgba(0,136,204,0.08)]"
+                    : "hover:bg-[#e1306c]/[0.04] hover:border-[#e1306c]/40 hover:shadow-[0_8px_24px_rgba(225,48,108,0.08)]"
+                }`}
               >
-                <div className={`p-2.5 rounded-xl ${social.bgColor} transition-colors`}>
-                  <social.icon size={22} weight="fill" />
+                <div
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 mb-4 ${
+                    social.name === "WhatsApp"
+                      ? "bg-white/5 text-[#25d366] group-hover:bg-[#25d366] group-hover:text-white"
+                      : social.name === "Telegram"
+                      ? "bg-white/5 text-[#0088cc] group-hover:bg-[#0088cc] group-hover:text-white"
+                      : "bg-white/5 text-[#e1306c] group-hover:bg-gradient-to-tr group-hover:from-[#f09433] group-hover:via-[#dc2743] group-hover:to-[#bc1888] group-hover:text-white"
+                  }`}
+                >
+                  <social.icon size={24} weight="bold" />
                 </div>
-                <div className="text-left flex-1 min-w-0">
-                  <div className="text-sm font-bold text-white">
-                    {social.description}
-                  </div>
-                  <div className="text-[10px] opacity-70 mt-0.5">
-                    Entrar no canal oficial
-                  </div>
-                </div>
-                <div className="opacity-70 transition-opacity group-hover:opacity-100 font-bold">
-                  →
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-sm font-bold text-white">{social.description}</span>
+                  <span className="text-[12px] text-zinc-500 group-hover:text-white/60 transition-colors">Clique para seguir</span>
                 </div>
               </motion.a>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-zinc-900 to-transparent mb-12" />
-
-        {/* 3-Column Navigation Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 text-left">
-          {/* Coluna 1: Links secundários */}
-          <div className="flex flex-col gap-3">
-            <h4 className="text-white font-bold text-xs tracking-widest uppercase mb-2">Links Secundários</h4>
-            <FooterLink href="#inicio">Início</FooterLink>
-            <FooterLink href="#categorias">Categorias</FooterLink>
-            <FooterLink href="#cupons">Cupons</FooterLink>
-            <FooterLink href="#ofertas">Ofertas do Dia</FooterLink>
-          </div>
-
-          {/* Coluna 2: Diversos (Lojas Recomendadas) */}
-          <div className="flex flex-col gap-3">
-            <h4 className="text-white font-bold text-xs tracking-widest uppercase mb-2">Lojas Recomendadas</h4>
-            <a href="https://amazon.com.br" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Amazon</a>
-            <a href="https://mercadolivre.com.br" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Mercado Livre</a>
-            <a href="https://shopee.com.br" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Shopee</a>
-            <a href="https://magazineluiza.com.br" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Magalu</a>
-          </div>
-
-          {/* Coluna 3: Social */}
-          <div className="flex flex-col gap-3">
-            <h4 className="text-white font-bold text-xs tracking-widest uppercase mb-2">Social</h4>
-            <a href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_tTelegram" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">WhatsApp</a>
-            <a href="https://t.me/+OFDVybtJcc40YmZh" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Telegram</a>
-            <a href="https://www.instagram.com/jota123testando?igsh=MTBuY3dueWQ4N3c3Mw%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Instagram</a>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="w-full h-px bg-zinc-900 mb-8" />
-
-        {/* Bottom Section */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Logo e Copyright */}
-          <div className="flex flex-col items-center md:items-start gap-3">
-            <div className="flex items-center gap-2.5">
-              <img
-                src="/icons/icon-192x192.png"
-                alt="Economiza ai Logo Icon"
-                className="h-9 w-9 p-0.5 object-contain"
-              />
-              <img
-                src="/logo 2 branco.png"
-                alt="Economiza ai"
-                className="h-6 w-auto block"
-              />
+      {/* Rodapé Principal */}
+      <div className="bg-[#06070a] border-t border-border-custom py-16">
+        <div className="max-w-[1200px] mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            
+            {/* Coluna 1: Info e Social Icons */}
+            <div className="flex flex-col gap-4">
+              <a href="#" className="flex items-center gap-2 text-decoration-none select-none">
+                <div className="bg-[#ff334b] text-white font-extrabold text-[20px] w-9 h-9 flex items-center justify-center rounded-[8px] shadow-[0_4px_12px_rgba(255,51,75,0.3)]">
+                  E
+                </div>
+                <span className="text-white font-bold text-[20px] tracking-tight">economizai</span>
+              </a>
+              <p className="text-zinc-500 text-xs leading-relaxed max-w-[320px]">
+                Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.
+              </p>
+              <div className="flex gap-3 mt-2">
+                <a href="#" className="w-9 h-9 rounded-[8px] bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <FacebookLogo size={18} weight="fill" />
+                </a>
+                <a href="#" className="w-9 h-9 rounded-[8px] bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <TwitterLogo size={18} weight="fill" />
+                </a>
+                <a href="#" className="w-9 h-9 rounded-[8px] bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <InstagramLogo size={18} weight="bold" />
+                </a>
+                <a href="#" className="w-9 h-9 rounded-[8px] bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <YoutubeLogo size={18} weight="fill" />
+                </a>
+              </div>
             </div>
-            <p className="text-zinc-500 text-xs flex items-center gap-1.5 mt-1">
-              © {currentYear} Economiza ai. Feito com <Heart size={12} weight="fill" className="text-red-500" /> para você economizar
+
+            {/* Coluna 2: Links secundários */}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Links secundários</h4>
+              <FooterLink href="#inicio">Início</FooterLink>
+              <FooterLink href="#categorias">Categorias</FooterLink>
+              <FooterLink href="#cupons">Cupons</FooterLink>
+              <FooterLink href="#ofertas">Ofertas do Dia</FooterLink>
+            </div>
+
+            {/* Coluna 3: Diversos */}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Diversos</h4>
+              <a href="#ofertas" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "Moda" } })); }} className="text-zinc-400 hover:text-white transition-colors text-sm">Moda e Acessórios</a>
+              <a href="#ofertas" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "TV" } })); }} className="text-zinc-400 hover:text-white transition-colors text-sm">Smartphones e TV</a>
+              <a href="#ofertas" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "Casa" } })); }} className="text-zinc-400 hover:text-white transition-colors text-sm">Casa e Eletrodomésticos</a>
+            </div>
+
+            {/* Coluna 4: Social */}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Social</h4>
+              <a href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_tTelegram" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">WhatsApp</a>
+              <a href="https://t.me/+OFDVybtJcc40YmZh" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Telegram</a>
+              <a href="https://www.instagram.com/jota123testando?igsh=MTBuY3dueWQ4N3c3Mw%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors text-sm">Instagram</a>
+            </div>
+
+          </div>
+
+          {/* Copyright e Disclaimer */}
+          <div className="border-t border-white/[0.04] pt-8 mt-8 flex flex-col items-center gap-4 text-center">
+            <p className="text-zinc-500 text-xs flex items-center gap-1.5 justify-center">
+              © {currentYear} economizai. Feito com <Heart size={12} weight="fill" className="text-[#ff334b]" /> para você economizar.
+            </p>
+            <p className="text-[#ffffff]/25 text-[11px] max-w-[800px] leading-relaxed mx-auto">
+              Os preços e a disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja parceira antes de finalizar sua compra. Economizai não se responsabiliza pelas compras realizadas nos links externos.
             </p>
           </div>
-        </div>
 
-        {/* Disclaimer */}
-        <div className="mt-8 pt-6 border-t border-zinc-900">
-          <p className="text-zinc-650 text-[11px] text-center max-w-4xl mx-auto leading-relaxed">
-            Os preços e disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. 
-            Verifique sempre as condições no site da loja antes de finalizar sua compra. 
-            Economiza ai não é responsável por transações realizadas em comercializações e sites de terceiros.
-          </p>
         </div>
       </div>
     </footer>

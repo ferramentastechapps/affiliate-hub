@@ -97,33 +97,55 @@ export function WeeklyHighlights() {
             <motion.div
               key={product.id}
               onClick={() => setSelectedProduct(product)}
-              whileHover={{ y: -4, scale: 1.01 }}
+              whileHover={{ y: -4 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="cursor-pointer bg-zinc-900/30 backdrop-blur-md border border-zinc-800/80 hover:border-zinc-700/80 rounded-[24px] p-5 flex items-center justify-between gap-4 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(37,99,235,0.05)]"
+              className="group cursor-pointer bg-card border border-border-custom rounded-[20px] relative aspect-video flex flex-col justify-end p-6 overflow-hidden select-none"
             >
-              {/* Informações (Esquerda) */}
-              <div className="flex flex-col flex-1 min-w-0">
-                {/* Desconto */}
-                <div className="bg-red-500/10 text-red-500 border border-red-500/20 text-xs font-bold px-2.5 py-1 rounded-xl w-fit mb-3">
-                  -{discount}%
-                </div>
+              {/* Radial gradient background based on index */}
+              <div
+                className="absolute inset-0 z-0 transition-transform duration-500 group-hover:scale-105"
+                style={{
+                  background:
+                    products.indexOf(product) === 0
+                      ? "radial-gradient(circle at 80% 20%, rgba(255, 51, 75, 0.25) 0%, #12141c 100%)"
+                      : products.indexOf(product) === 1
+                      ? "radial-gradient(circle at 80% 20%, rgba(40, 167, 69, 0.25) 0%, #12141c 100%)"
+                      : "radial-gradient(circle at 80% 20%, rgba(0, 96, 255, 0.25) 0%, #12141c 100%)",
+                }}
+              />
 
-                {/* Título do Produto */}
-                <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3">
+              {/* Floating Image */}
+              <img
+                src={product.imageUrl}
+                alt=""
+                className="absolute right-6 top-6 w-24 h-24 z-1 opacity-70 object-contain group-hover:scale-110 group-hover:opacity-90 transition-all duration-500"
+              />
+
+              {/* Card Overlay for readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#090a0f]/95 via-[#090a0f]/40 to-transparent z-2" />
+
+              {/* Card Content */}
+              <div className="relative z-3 flex flex-col pointer-events-none">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                    -{discount}%
+                  </span>
+                </div>
+                
+                <h3 className="text-white font-semibold text-sm md:text-base leading-snug line-clamp-2 mb-2 max-w-[70%]">
                   {product.name}
                 </h3>
 
-                {/* Preços */}
-                <div className="flex flex-col mt-auto">
+                <div className="flex items-baseline gap-2 mt-1">
                   {price > 0 && (
-                    <span className="text-zinc-500 text-xs line-through mb-0.5">
+                    <span className="text-[12px] text-[#8e92a4] line-through">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
                       }).format(originalPrice)}
                     </span>
                   )}
-                  <span className="text-base font-extrabold text-white tracking-tight">
+                  <span className="text-lg font-extrabold text-white">
                     {price > 0
                       ? new Intl.NumberFormat("pt-BR", {
                           style: "currency",
@@ -133,28 +155,19 @@ export function WeeklyHighlights() {
                   </span>
                 </div>
               </div>
-
-              {/* Imagem (Direita) */}
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-zinc-950 shrink-0 relative">
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Dots de navegação simulados */}
-      <div className="flex justify-center gap-1.5 mt-6">
+      {/* Dots de navegação simulados estilo mockup */}
+      <div className="flex justify-center gap-2 mt-6">
         {[0, 1, 2].map((i) => (
           <button
             key={i}
             onClick={() => setCurrentIndex(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === currentIndex ? "w-6 bg-zinc-600" : "w-1.5 bg-zinc-800"
+            className={`h-2 rounded-full transition-all duration-300 ${
+              i === currentIndex ? "w-6 bg-white" : "w-2 bg-white/20"
             }`}
             aria-label={`Página ${i + 1}`}
           />

@@ -6,13 +6,13 @@ import { X, Clock, Calendar } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
 
 const STORES = [
-  { key: "amazon",       label: "Amazon",        domain: "amazon.com.br",        linkKey: "amazon",       color: "from-blue-600 to-cyan-500",       glowColor: "rgba(37,99,235,0.45)" },
-  { key: "mercadolivre", label: "Mercado Livre",  domain: "mercadolivre.com.br",  linkKey: "mercadoLivre",  color: "from-yellow-500 to-amber-400",    glowColor: "rgba(234,179,8,0.45)" },
-  { key: "shopee",       label: "Shopee",         domain: "shopee.com.br",        linkKey: "shopee",       color: "from-orange-500 to-red-500",      glowColor: "rgba(249,115,22,0.45)" },
-  { key: "aliexpress",   label: "AliExpress",     domain: "aliexpress.com",       linkKey: "aliexpress",   color: "from-red-600 to-orange-500",      glowColor: "rgba(220,38,38,0.45)" },
-  { key: "tiktok",       label: "TikTok Shop",    domain: "tiktok.com",           linkKey: "tiktok",       color: "from-zinc-800 to-zinc-950",       glowColor: "rgba(255,255,255,0.2)" },
-  { key: "kabum",        label: "KaBuM",          domain: "kabum.com.br",         linkKey: "kabum",        color: "from-blue-700 to-sky-500",        glowColor: "rgba(0,102,204,0.45)" },
-  { key: "magalu",       label: "Magalu",         domain: "magazineluiza.com.br", linkKey: "magalu",       color: "from-blue-500 to-pink-500",       glowColor: "rgba(0,134,255,0.45)" },
+  { key: "amazon",       label: "Amazon",        domain: "amazon.com.br",        linkKey: "amazon",       color: "#ff9900", bgGlow: "rgba(255, 153, 0, 0.12)" },
+  { key: "mercadolivre", label: "Mercado Livre",  domain: "mercadolivre.com.br",  linkKey: "mercadoLivre",  color: "#ffe600", bgGlow: "rgba(255, 230, 0, 0.12)" },
+  { key: "shopee",       label: "Shopee",         domain: "shopee.com.br",        linkKey: "shopee",       color: "#ff5722", bgGlow: "rgba(255, 87, 34, 0.12)" },
+  { key: "aliexpress",   label: "AliExpress",     domain: "aliexpress.com",       linkKey: "aliexpress",   color: "#e62e04", bgGlow: "rgba(230, 46, 4, 0.12)" },
+  { key: "tiktok",       label: "TikTok Shop",    domain: "tiktok.com",           linkKey: "tiktok",       color: "#00f2fe", bgGlow: "rgba(0, 242, 254, 0.12)" },
+  { key: "kabum",        label: "KaBuM",          domain: "kabum.com.br",         linkKey: "kabum",        color: "#0060ff", bgGlow: "rgba(0, 96, 255, 0.12)" },
+  { key: "magalu",       label: "Magalu",         domain: "magazineluiza.com.br", linkKey: "magalu",       color: "#0086ff", bgGlow: "rgba(0, 134, 255, 0.12)" },
 ];
 
 type Product = {
@@ -34,21 +34,22 @@ function getSimulatedDiscount(id: string): number {
 }
 
 function getTimeAgo(dateString?: string | Date) {
-  if (!dateString) return "há pouco tempo";
+  if (!dateString) return "há pouco";
   const date = new Date(dateString);
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
-  if (diffInMinutes < 1) return `agora mesmo`;
-  if (diffInMinutes < 60) return `há ${diffInMinutes} min`;
+  if (diffInMinutes < 1) return `agora`;
+  if (diffInMinutes < 60) return `${diffInMinutes}m`;
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `há ${diffInHours} h`;
+  if (diffInHours < 24) return `${diffInHours}h`;
   const diffInDays = Math.floor(diffInHours / 24);
-  return `há ${diffInDays} ${diffInDays === 1 ? 'dia' : 'dias'}`;
+  return `${diffInDays}d`;
 }
 
 export function StoreFilter() {
   const [activeStore, setActiveStore] = useState<string | null>(null);
+  const [hoveredStore, setHoveredStore] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -97,32 +98,39 @@ export function StoreFilter() {
   const activeStoreInfo = STORES.find(s => s.key === activeStore);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-8">
+    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
       {/* Título */}
-      <div className="flex flex-col mb-6">
-        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2">
+      <div className="flex flex-col mb-8">
+        <h2 className="text-xl font-bold text-white mb-2">
           Compre nas suas lojas favoritas
         </h2>
-        <p className="text-zinc-400 text-sm">Selecione uma loja para ver as ofertas disponíveis</p>
       </div>
 
-      {/* Grid horizontal de Lojas com visual de cards brilhantes */}
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide pt-2 snap-x snap-mandatory">
+      {/* Grid de Lojas estilo Mockup */}
+      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           return (
             <button
               key={store.key}
               onClick={() => setActiveStore(isActive ? null : store.key)}
-              className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl border transition-all duration-300 whitespace-nowrap shrink-0 min-h-[56px] relative overflow-hidden group snap-start cursor-pointer ${
-                isActive
-                  ? "bg-accent/15 border-accent text-white shadow-lg shadow-accent/20"
-                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-zinc-300 hover:text-white"
-              }`}
+              onMouseEnter={() => setHoveredStore(store.key)}
+              onMouseLeave={() => setHoveredStore(null)}
+              className="flex flex-col items-center justify-center p-5 rounded-[18px] border transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              style={{
+                borderColor: isActive
+                  ? store.color
+                  : hoveredStore === store.key
+                  ? `${store.color}66`
+                  : "rgba(255, 255, 255, 0.08)",
+                boxShadow: isActive || hoveredStore === store.key
+                  ? `0 8px 24px ${store.bgGlow}`
+                  : "none",
+                background: isActive ? "rgba(18, 20, 28, 0.9)" : "var(--bg-card)",
+              }}
             >
-              
-              {/* Circular Store Icon Container */}
-              <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 p-1.5 shadow-md transition-transform duration-300 group-hover:scale-105">
+              {/* Logo Wrapper */}
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center p-2.5 shadow-sm transition-transform duration-300 group-hover:scale-110 shrink-0">
                 <img
                   src={`https://www.google.com/s2/favicons?domain=${store.domain}&sz=64`}
                   alt={store.label}
@@ -130,19 +138,19 @@ export function StoreFilter() {
                 />
               </div>
               
-              <div className="flex flex-col items-start min-w-0">
-                <span className={`text-sm font-bold tracking-tight transition-colors ${
-                  isActive ? "text-white" : "text-zinc-300 group-hover:text-white"
-                }`}>
-                  {store.label}
-                </span>
-                <span className="text-[10px] text-zinc-500 font-medium tracking-wide">
-                  {store.domain}
-                </span>
-              </div>
+              <span 
+                className="text-[13px] font-semibold transition-colors mt-3 text-center"
+                style={{
+                  color: isActive || hoveredStore === store.key ? store.color : "var(--text-secondary)"
+                }}
+              >
+                {store.label}
+              </span>
 
               {isActive && (
-                <X size={14} weight="bold" className="text-zinc-400 hover:text-white transition-colors ml-2 z-10" />
+                <div className="absolute top-2 right-2 text-zinc-400 hover:text-white transition-colors">
+                  <X size={12} weight="bold" />
+                </div>
               )}
             </button>
           );
@@ -159,23 +167,21 @@ export function StoreFilter() {
             transition={{ type: "spring", stiffness: 200, damping: 25 }}
             className="overflow-hidden"
           >
-            <div className="mt-8 pt-6 border-t border-zinc-900">
+            <div className="mt-8 pt-8 border-t border-white/[0.04]">
               {/* Header da seção expandida */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center p-2 shadow-lg shrink-0">
-                    <img
-                      src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=64`}
-                      alt={activeStoreInfo?.label}
-                      className="w-full h-full object-contain mix-blend-multiply"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-xl md:text-2xl font-black text-white">
-                      Ofertas na {activeStoreInfo?.label}
-                    </h3>
-                    <p className="text-zinc-400 text-xs mt-0.5">Veja todas as promoções de afiliados verificadas nesta loja</p>
-                  </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center p-2 shadow-lg shrink-0">
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=64`}
+                    alt={activeStoreInfo?.label}
+                    className="w-full h-full object-contain mix-blend-multiply"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Ofertas na {activeStoreInfo?.label}
+                  </h3>
+                  <p className="text-zinc-500 text-xs mt-0.5">Promoções de afiliados verificadas nesta loja</p>
                 </div>
               </div>
 
@@ -183,14 +189,14 @@ export function StoreFilter() {
               {loading && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-72 bg-zinc-900/50 rounded-3xl animate-pulse" />
+                    <div key={i} className="aspect-[4/5] bg-zinc-900/50 rounded-3xl animate-pulse" />
                   ))}
                 </div>
               )}
 
               {/* Sem produtos */}
               {!loading && products.length === 0 && (
-                <div className="text-center py-12 rounded-3xl bg-zinc-950/40 border border-zinc-900 text-zinc-500">
+                <div className="text-center py-12 rounded-[20px] bg-card border border-border-custom text-zinc-500">
                   <p className="text-sm font-semibold">Nenhuma promoção encontrada nesta loja no momento.</p>
                   <p className="text-xs text-zinc-600 mt-1">Fique ligado! Atualizamos ofertas a todo instante.</p>
                 </div>
@@ -198,7 +204,7 @@ export function StoreFilter() {
 
               {/* Grid de produtos */}
               {!loading && products.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                   {products.map((product, index) => {
                     const discount = getSimulatedDiscount(product.id);
                     const price = product.price || 0;
@@ -214,63 +220,50 @@ export function StoreFilter() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
                         onClick={() => setSelectedProduct(product)}
-                        className="group cursor-pointer bg-zinc-950/60 backdrop-blur-sm border border-zinc-900 hover:border-zinc-700/80 rounded-3xl p-4 flex flex-col relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.6)]"
+                        className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
                       >
-                        {/* Tag Desconto */}
-                        <div className="absolute top-3 right-3 z-10 bg-accent text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-lg border border-accent/10">
-                          -{discount}%
-                        </div>
+                        {/* Imagem Container */}
+                        <div className="w-full aspect-square bg-white/[0.02] flex items-center justify-center relative p-5 border-b border-white/[0.04]">
+                          <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
+                            <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                              -{discount}%
+                            </span>
+                            <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
+                              <Clock size={12} weight="bold" />
+                              {getTimeAgo(product.createdAt)}
+                            </span>
+                          </div>
 
-                        {/* Tempo Atrás */}
-                        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-bold mb-3">
-                          <Clock size={12} className="text-zinc-600" />
-                          {getTimeAgo(product.createdAt)}
-                        </div>
-
-                        {/* Imagem Premium Vertical */}
-                        <div className="w-full aspect-[3/4] bg-zinc-900/80 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center border border-zinc-900">
                           <img
                             src={product.imageUrl}
                             alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                            className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
                           />
-                          
-                          {/* Store Favicon floating badge */}
-                          <div className="absolute bottom-2.5 right-2.5 bg-white/95 backdrop-blur-md rounded-[12px] shadow-[0_4px_12px_rgba(0,0,0,0.2)] px-2.5 py-1 border border-zinc-200/50 flex items-center gap-1.5">
-                            <img src={mainPlatformLogo} alt={mainPlatformText} className="w-3.5 h-3.5 rounded-full object-contain" />
-                            <span className="text-[9px] font-black text-zinc-900 uppercase tracking-wider">{mainPlatformText}</span>
-                          </div>
-
-                          {/* Badge cupom */}
-                          {product.coupons && product.coupons.length > 0 && (
-                            <div className="absolute top-2.5 left-2.5 bg-accent text-white text-[9px] font-black px-2 py-0.5 rounded-lg tracking-wide uppercase">
-                              CUPOM
-                            </div>
-                          )}
                         </div>
 
-                        {/* Detalhes do Produto */}
-                        <div className="flex flex-col flex-grow">
-                          <span className="text-[9px] font-bold tracking-widest text-zinc-500 uppercase mb-1.5 block">
-                            {product.category}
-                          </span>
-                          
-                          <h4 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3 group-hover:text-accent transition-colors">
+                        {/* Deal Body */}
+                        <div className="p-4 flex flex-col flex-1">
+                          <div className="inline-flex items-center gap-1.5 bg-white/5 border border-border-custom rounded-lg px-2 py-1 self-start mb-3 text-[11px] font-semibold text-zinc-400">
+                            <img src={mainPlatformLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-full" />
+                            <span>{mainPlatformText}</span>
+                          </div>
+
+                          <h3 className="text-sm font-semibold text-white mb-3 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
                             {product.name}
-                          </h4>
-                          
-                          <div className="mt-auto pt-2.5 border-t border-zinc-900/80 flex flex-col">
+                          </h3>
+
+                          <div className="mt-auto flex flex-col">
                             {price > 0 ? (
                               <>
-                                <span className="text-zinc-500 text-[10px] line-through font-medium mb-0.5">
+                                <span className="text-[12px] text-[#8e92a4] line-through">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                                 </span>
-                                <span className="text-base font-extrabold text-white tracking-tight">
+                                <span className="text-base font-extrabold text-white">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>
                               </>
                             ) : (
-                              <span className="text-sm font-bold text-accent">Ver detalhes</span>
+                              <span className="text-sm font-bold text-[#ff334b]">Ver detalhes</span>
                             )}
                           </div>
                         </div>

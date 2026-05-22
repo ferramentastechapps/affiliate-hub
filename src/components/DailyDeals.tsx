@@ -197,9 +197,9 @@ export function DailyDeals() {
         )}
       </div>
 
-      {/* Filtro de Categorias em botões circulares elegantes */}
+      {/* Filtro de Categorias em botões horizontais no estilo do mockup */}
       {categories.length > 1 && (
-        <div className="flex gap-6 mb-10 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory">
+        <div className="flex gap-3 mb-10 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory">
           {categories.map((category) => {
             const IconComponent = categoryIconMap[category] || Package;
             const isSelected = selectedCategory === category;
@@ -211,20 +211,14 @@ export function DailyDeals() {
                   setSelectedCategory(category);
                   setShowAll(false);
                 }}
-                className="flex flex-col items-center gap-2 group.5 cursor-pointer shrink-0 snap-start"
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-semibold cursor-pointer transition-all duration-250 whitespace-nowrap shrink-0 snap-start ${
+                  isSelected
+                    ? "bg-[#ff334b] text-white border-[#ff334b] shadow-[0_4px_14px_rgba(255,51,75,0.25)]"
+                    : "bg-card border-border-custom text-zinc-400 hover:bg-card-hover hover:text-white hover:border-zinc-700/80"
+                }`}
               >
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center border transition-all duration-300 ${
-                  isSelected 
-                    ? "bg-accent/20 border-accent text-white shadow-lg shadow-accent/20 scale-105" 
-                    : "bg-zinc-950/60 border-zinc-900/80 text-zinc-400 hover:bg-zinc-900/60 hover:text-white hover:border-zinc-800"
-                }`}>
-                  <IconComponent size={24} weight={isSelected ? "fill" : "regular"} />
-                </div>
-                <span className={`text-[11px] font-bold max-w-[84px] text-center leading-tight transition-colors ${
-                  isSelected ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                }`}>
-                  {category}
-                </span>
+                <IconComponent size={16} weight={isSelected ? "fill" : "bold"} />
+                {category}
               </button>
             );
           })}
@@ -233,7 +227,7 @@ export function DailyDeals() {
 
       {/* Sem resultados de busca/categoria */}
       {filteredProducts.length === 0 && (
-        <div className="text-center py-16 rounded-3xl bg-zinc-950/40 border border-zinc-900 text-zinc-500">
+        <div className="text-center py-16 rounded-[20px] bg-card border border-border-custom text-zinc-500">
           <p className="text-base font-semibold">Nenhuma promoção encontrada para a sua busca.</p>
           <p className="text-xs text-zinc-600 mt-1.5">Tente usar outros termos de busca ou mude de categoria.</p>
         </div>
@@ -241,7 +235,7 @@ export function DailyDeals() {
 
       {/* Grid de promoções */}
       {filteredProducts.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {displayProducts.map((product, index) => {
             const discount = getSimulatedDiscount(product.id);
             const price = product.price || 0;
@@ -291,63 +285,50 @@ export function DailyDeals() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: (index % 4) * 0.05, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedProduct(product)}
-                className="group cursor-pointer bg-zinc-950/60 backdrop-blur-sm border border-zinc-900 hover:border-zinc-700/80 rounded-3xl p-4 flex flex-col relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.6)]"
+                className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
               >
-                {/* Badge Desconto */}
-                <div className="absolute top-3 right-3 z-10 bg-accent text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-lg border border-accent/10">
-                  -{discount}%
-                </div>
+                {/* Imagem Container */}
+                <div className="w-full aspect-square bg-white/[0.02] flex items-center justify-center relative p-5 border-b border-white/[0.04]">
+                  <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
+                    <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                      -{discount}%
+                    </span>
+                    <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
+                      <Clock size={12} weight="bold" />
+                      {getTimeAgo(product.createdAt)}
+                    </span>
+                  </div>
 
-                {/* Tempo Atrás */}
-                <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-bold mb-3">
-                  <Clock size={12} className="text-zinc-650" />
-                  {getTimeAgo(product.createdAt)}
-                </div>
-
-                {/* Imagem Premium Vertical */}
-                <div className="w-full aspect-[3/4] bg-zinc-900/80 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center border border-zinc-900">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                    className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
                   />
-                  
-                  {/* Store Favicon floating badge */}
-                  <div className="absolute bottom-2.5 right-2.5 bg-white/95 backdrop-blur-md rounded-[12px] shadow-[0_4px_12px_rgba(0,0,0,0.2)] px-2.5 py-1 border border-zinc-200/50 flex items-center gap-1.5">
-                    <img src={mainPlatformLogo} alt={mainPlatformText} className="w-3.5 h-3.5 rounded-full object-contain" />
-                    <span className="text-[9px] font-black text-zinc-900 uppercase tracking-wider">{mainPlatformText}</span>
-                  </div>
-
-                  {/* Badge cupom */}
-                  {product.coupons && product.coupons.length > 0 && (
-                    <div className="absolute top-2.5 left-2.5 bg-accent text-white text-[9px] font-black px-2 py-0.5 rounded-lg tracking-wide uppercase">
-                      CUPOM
-                    </div>
-                  )}
                 </div>
 
-                {/* Detalhes do Produto */}
-                <div className="flex flex-col flex-grow">
-                  <span className="text-[9px] font-bold tracking-widest text-zinc-500 uppercase mb-1.5 block">
-                    {product.category}
-                  </span>
-                  
-                  <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3 group-hover:text-accent transition-colors">
+                {/* Deal Body */}
+                <div className="p-4 flex flex-col flex-1">
+                  <div className="inline-flex items-center gap-1.5 bg-white/5 border border-border-custom rounded-lg px-2 py-1 self-start mb-3 text-[11px] font-semibold text-zinc-400">
+                    <img src={mainPlatformLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-full" />
+                    <span>{mainPlatformText}</span>
+                  </div>
+
+                  <h3 className="text-sm font-semibold text-white mb-3 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
                     {product.name}
                   </h3>
-                  
-                  <div className="mt-auto pt-2.5 border-t border-zinc-900/80 flex flex-col">
+
+                  <div className="mt-auto flex flex-col">
                     {price > 0 ? (
                       <>
-                        <span className="text-zinc-500 text-[10px] line-through font-medium mb-0.5">
+                        <span className="text-[12px] text-[#8e92a4] line-through">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                         </span>
-                        <span className="text-base font-extrabold text-white tracking-tight">
+                        <span className="text-base font-extrabold text-white">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm font-bold text-accent">Ver detalhes</span>
+                      <span className="text-sm font-bold text-[#ff334b]">Ver detalhes</span>
                     )}
                   </div>
                 </div>

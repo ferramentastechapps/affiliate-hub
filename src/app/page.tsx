@@ -5,6 +5,8 @@ import { CouponsSection } from "@/components/CouponsSection";
 import { Footer } from "@/components/Footer";
 import { StoreFilter } from "@/components/StoreFilter";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
+import { HeroSection } from "@/components/HeroSection";
+import { WeeklyHighlights } from "@/components/WeeklyHighlights";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
 
@@ -144,7 +146,20 @@ export default async function Home() {
   const couponsByPlatform = await getCouponsByPlatform();
 
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8">
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8 relative">
+      {/* Brilho decorativo de fundo */}
+      <div className="ambient-glow" />
+
+      {/* Hero Section */}
+      <div className="w-full">
+        <HeroSection />
+      </div>
+
+      {/* Destaques da Semana */}
+      <div className="w-full">
+        <WeeklyHighlights />
+      </div>
+
       {/* Banners Carousel */}
       <div id="categorias" className="w-full">
         <BannersCarousel />
@@ -170,3 +185,4 @@ export default async function Home() {
     </main>
   );
 }
+
