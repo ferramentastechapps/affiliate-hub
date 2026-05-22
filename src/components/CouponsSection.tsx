@@ -123,7 +123,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
       <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-blue-500/20">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5">
               <Tag size={24} weight="fill" className="text-accent" />
             </div>
             <div>
@@ -191,7 +191,7 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
                 </div>
 
                 {item.count > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-accent w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(40,110,250,0.8)]" />
+                  <div className="absolute -top-1 -right-1 bg-accent w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(255,107,53,0.8)]" />
                 )}
               </motion.button>
             );

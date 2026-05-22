@@ -189,7 +189,7 @@ export function DailyDeals() {
         {filteredProducts.length > 8 && (
           <button 
             onClick={() => setShowAll(!showAll)}
-            className="flex text-sm font-bold text-blue-400 hover:text-white transition-colors items-center gap-1.5 bg-blue-500/10 px-4.5 py-2.5 rounded-full hover:bg-blue-500/20 min-h-[44px] cursor-pointer"
+            className="flex text-sm font-bold text-accent hover:text-white transition-colors items-center gap-1.5 bg-accent/10 px-4.5 py-2.5 rounded-full hover:bg-accent/20 min-h-[44px] cursor-pointer"
           >
             {showAll ? "Ver menos" : "Ver todas"} 
             <ArrowUpRight weight="bold" className={showAll ? "rotate-180 transition-transform" : "transition-transform"} />
@@ -215,7 +215,7 @@ export function DailyDeals() {
               >
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center border transition-all duration-300 ${
                   isSelected 
-                    ? "bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/20 scale-105" 
+                    ? "bg-accent/20 border-accent text-white shadow-lg shadow-accent/20 scale-105" 
                     : "bg-zinc-950/60 border-zinc-900/80 text-zinc-400 hover:bg-zinc-900/60 hover:text-white hover:border-zinc-800"
                 }`}>
                   <IconComponent size={24} weight={isSelected ? "fill" : "regular"} />
@@ -294,7 +294,7 @@ export function DailyDeals() {
                 className="group cursor-pointer bg-zinc-950/60 backdrop-blur-sm border border-zinc-900 hover:border-zinc-700/80 rounded-3xl p-4 flex flex-col relative transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.6)]"
               >
                 {/* Badge Desconto */}
-                <div className="absolute top-3 right-3 z-10 bg-red-650 text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-lg border border-red-500/10">
+                <div className="absolute top-3 right-3 z-10 bg-accent text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-lg border border-accent/10">
                   -{discount}%
                 </div>
 
@@ -320,7 +320,7 @@ export function DailyDeals() {
 
                   {/* Badge cupom */}
                   {product.coupons && product.coupons.length > 0 && (
-                    <div className="absolute top-2.5 left-2.5 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-lg tracking-wide uppercase">
+                    <div className="absolute top-2.5 left-2.5 bg-accent text-white text-[9px] font-black px-2 py-0.5 rounded-lg tracking-wide uppercase">
                       CUPOM
                     </div>
                   )}
@@ -332,7 +332,7 @@ export function DailyDeals() {
                     {product.category}
                   </span>
                   
-                  <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3 group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 mb-3 group-hover:text-accent transition-colors">
                     {product.name}
                   </h3>
                   
@@ -347,7 +347,7 @@ export function DailyDeals() {
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm font-bold text-blue-400">Ver detalhes</span>
+                      <span className="text-sm font-bold text-accent">Ver detalhes</span>
                     )}
                   </div>
                 </div>

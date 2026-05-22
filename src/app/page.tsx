@@ -1,9 +1,9 @@
 import { DailyDeals } from "@/components/DailyDeals";
 import { ProductGrid } from "@/components/ProductGrid";
-import { HeroSection } from "@/components/HeroSection";
+import { BannersCarousel } from "@/components/BannersCarousel";
+import { CouponsSection } from "@/components/CouponsSection";
 import { Footer } from "@/components/Footer";
 import { StoreFilter } from "@/components/StoreFilter";
-import { WeeklyHighlights } from "@/components/WeeklyHighlights";
 import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
@@ -88,21 +88,72 @@ export const metadata: Metadata = {
   },
 };
 
+async function getCouponsByPlatform() {
+  const coupons = await prisma.coupon.findMany({
+    where: { 
+      isActive: true,
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gte: new Date() } }
+      ]
+    },
+    select: { platform: true },
+  });
+
+  const platformCounts = coupons.reduce((acc, coupon) => {
+    let platform = coupon.platform.toLowerCase().trim();
+    
+    // Normalizações mais abrangentes
+    if (platform.includes('mercado') || platform === 'mercadolivre' || platform === 'meli') {
+      platform = 'mercadolivre';
+    } else if (platform.includes('magalu') || platform.includes('magazine')) {
+      platform = 'magazineluiza';
+    } else if (platform.includes('boticario')) {
+      platform = 'oboticario';
+    } else if (platform.includes('shopee')) {
+      platform = 'shopee';
+    } else if (platform.includes('amazon')) {
+      platform = 'amazon';
+    } else if (platform.includes('aliexpress') || platform === 'ali') {
+      platform = 'aliexpress';
+    } else if (platform.includes('tiktok')) {
+      platform = 'tiktok';
+    } else if (platform.includes('kabum')) {
+      platform = 'kabum';
+    }
+
+    acc[platform] = (acc[platform] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Garante que as lojas principais sempre apareçam, mesmo com 0 cupons
+  const basePlatforms = ["amazon", "mercadolivre", "shopee", "aliexpress", "tiktok", "kabum", "magazineluiza"];
+  basePlatforms.forEach(bp => {
+    if (typeof platformCounts[bp] === "undefined") {
+      platformCounts[bp] = 0;
+    }
+  });
+
+  return Object.entries(platformCounts).map(([platform, count]) => ({
+    platform,
+    count,
+  }));
+}
+
 export default async function Home() {
+  const couponsByPlatform = await getCouponsByPlatform();
+
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-24 pb-8">
-      {/* Hero Section */}
-      <div className="w-full">
-        <HeroSection />
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8">
+      {/* Banners Carousel */}
+      <div id="categorias" className="w-full">
+        <BannersCarousel />
       </div>
 
-      {/* Destaques da Semana */}
-      <div className="w-full">
-        <WeeklyHighlights />
+      {/* Cupons */}
+      <div id="cupons" className="w-full">
+        <CouponsSection couponsByPlatform={couponsByPlatform} />
       </div>
-
-      {/* Botão de Notificações Push */}
-      {/* removido */}
 
       {/* Filtro por Loja */}
       <div className="w-full">
