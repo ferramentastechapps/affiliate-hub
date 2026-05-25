@@ -182,9 +182,9 @@ export function DailyDeals() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2 flex items-center gap-3">
-            Promoções do dia 📍
+            Promoções do dia 🔴
           </h2>
-          <p className="text-zinc-400 text-sm">As ofertas de afiliados verificadas mais quentes da internet</p>
+          <p className="text-zinc-400 text-sm">As melhores ofertas atualizadas em tempo real</p>
         </div>
         {filteredProducts.length > 8 && (
           <button 
@@ -241,42 +241,65 @@ export function DailyDeals() {
             const price = product.price || 0;
             const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
 
+            // Mapeamento de cor e label do badge de plataforma
+            const storeBadgeConfig: Record<string, { bg: string, text: string, label: string }> = {
+              amazon: { bg: "#ff9900", text: "#ffffff", label: "Amazon" },
+              mercadoLivre: { bg: "#ffe600", text: "#000000", label: "Mercado Livre" },
+              shopee: { bg: "#ff5722", text: "#ffffff", label: "Shopee" },
+              aliexpress: { bg: "#e62e04", text: "#ffffff", label: "AliExpress" },
+              tiktok: { bg: "#000000", text: "#ffffff", label: "TikTok Shop" },
+              magalu: { bg: "#0086ff", text: "#ffffff", label: "Magalu" },
+              kabum: { bg: "#0060ff", text: "#ffffff", label: "KaBuM" },
+              netshoes: { bg: "#5c2a9d", text: "#ffffff", label: "Netshoes" }
+            };
+
             // Extrair a plataforma principal
             let mainPlatformText = "Link";
-            let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=64";
+            let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=128";
+            let platformKey = "amazon";
             
             if (product.links?.amazon) { 
               mainPlatformText = "Amazon"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com.br&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com.br&sz=128"; 
+              platformKey = "amazon";
             }
             else if (product.links?.mercadoLivre) { 
               mainPlatformText = "Mercado Livre"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=128"; 
+              platformKey = "mercadoLivre";
             }
             else if (product.links?.shopee) { 
               mainPlatformText = "Shopee"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=128"; 
+              platformKey = "shopee";
             }
             else if (product.links?.aliexpress) { 
               mainPlatformText = "AliExpress"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=128"; 
+              platformKey = "aliexpress";
             }
             else if (product.links?.tiktok) { 
               mainPlatformText = "TikTok Shop"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=tiktok.com&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=tiktok.com&sz=128"; 
+              platformKey = "tiktok";
             }
             else if (product.links?.netshoes) { 
               mainPlatformText = "Netshoes"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=netshoes.com.br&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=netshoes.com.br&sz=128"; 
+              platformKey = "netshoes";
             }
             else if (product.links?.magalu) { 
               mainPlatformText = "Magalu"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=magazineluiza.com.br&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=magazineluiza.com.br&sz=128"; 
+              platformKey = "magalu";
             }
             else if (product.links?.kabum) { 
               mainPlatformText = "KaBuM"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=kabum.com.br&sz=64"; 
+              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=kabum.com.br&sz=128"; 
+              platformKey = "kabum";
             }
+
+            const badgeStyle = storeBadgeConfig[platformKey] || { bg: "#ff334b", text: "#ffffff", label: mainPlatformText };
 
             return (
               <motion.div
@@ -288,13 +311,13 @@ export function DailyDeals() {
                 className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
               >
                 {/* Imagem Container */}
-                <div className="w-full aspect-square bg-white/[0.02] flex items-center justify-center relative p-5 border-b border-white/[0.04]">
+                <div className="w-full aspect-square bg-white flex items-center justify-center relative p-5 border-b border-white/[0.04]">
                   <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                     <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
                       -{discount}%
                     </span>
-                    <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
-                      <Clock size={12} weight="bold" />
+                    <span className="bg-black/30 backdrop-blur-md text-[#8e92a4] text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/5">
+                      <Clock size={11} weight="bold" />
                       {getTimeAgo(product.createdAt)}
                     </span>
                   </div>
@@ -304,26 +327,38 @@ export function DailyDeals() {
                     alt={product.name}
                     className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
                   />
+
+                  {/* Overlapping Brand Badge */}
+                  <div 
+                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-10"
+                    style={{
+                      backgroundColor: badgeStyle.bg,
+                      borderColor: "rgba(255,255,255,0.1)",
+                      color: badgeStyle.text
+                    }}
+                  >
+                    <img src={mainPlatformLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-full" />
+                    <span>{badgeStyle.label}</span>
+                  </div>
                 </div>
 
                 {/* Deal Body */}
-                <div className="p-4 flex flex-col flex-1">
-                  <div className="inline-flex items-center gap-1.5 bg-white/5 border border-border-custom rounded-lg px-2 py-1 self-start mb-3 text-[11px] font-semibold text-zinc-400">
-                    <img src={mainPlatformLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-full" />
-                    <span>{mainPlatformText}</span>
-                  </div>
+                <div className="p-4 pt-5 flex flex-col flex-1">
+                  <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
+                    {product.category || "Oferta"}
+                  </span>
 
-                  <h3 className="text-sm font-semibold text-white mb-3 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
+                  <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
                     {product.name}
                   </h3>
 
                   <div className="mt-auto flex flex-col">
                     {price > 0 ? (
                       <>
-                        <span className="text-[12px] text-[#8e92a4] line-through">
+                        <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                         </span>
-                        <span className="text-base font-extrabold text-white">
+                        <span className="text-base font-black text-[#ff334b]">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                         </span>
                       </>

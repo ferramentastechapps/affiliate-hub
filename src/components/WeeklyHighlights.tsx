@@ -81,13 +81,22 @@ export function WeeklyHighlights() {
     <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
       {/* Cabeçalho Seção */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
           Destaques da Semana
         </h2>
+        <a 
+          href="#ofertas" 
+          className="flex text-[11px] font-bold text-zinc-400 hover:text-white transition-all duration-200 items-center gap-1 bg-white/5 border border-white/5 hover:border-white/10 px-3.5 py-1.5 rounded-full hover:bg-white/10"
+        >
+          Ver todos
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
+            <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
       </div>
 
-      {/* Grid de Destaques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Grid de Destaques (Scrollable on mobile) */}
+      <div className="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 gap-6 scrollbar-hide snap-x snap-mandatory">
         {products.map((product) => {
           const discount = getSimulatedDiscount(product.id);
           const price = product.price || 0;
@@ -99,61 +108,63 @@ export function WeeklyHighlights() {
               onClick={() => setSelectedProduct(product)}
               whileHover={{ y: -4 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="group cursor-pointer bg-card border border-border-custom rounded-[20px] relative aspect-video flex flex-col justify-end p-6 overflow-hidden select-none"
+              className="group cursor-pointer bg-card hover:bg-[#161722] border border-white/5 hover:border-white/10 rounded-3xl p-5 relative flex items-center justify-between overflow-hidden select-none transition-all duration-300 h-44 shadow-lg hover:shadow-black/40 w-[290px] shrink-0 md:w-auto snap-start"
             >
               {/* Radial gradient background based on index */}
               <div
-                className="absolute inset-0 z-0 transition-transform duration-500 group-hover:scale-105"
+                className="absolute inset-0 z-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
                 style={{
                   background:
                     products.indexOf(product) === 0
-                      ? "radial-gradient(circle at 80% 20%, rgba(255, 51, 75, 0.25) 0%, #12141c 100%)"
+                      ? "radial-gradient(circle at 75% 30%, #501015 0%, #12141c 100%)"
                       : products.indexOf(product) === 1
-                      ? "radial-gradient(circle at 80% 20%, rgba(40, 167, 69, 0.25) 0%, #12141c 100%)"
-                      : "radial-gradient(circle at 80% 20%, rgba(0, 96, 255, 0.25) 0%, #12141c 100%)",
+                      ? "radial-gradient(circle at 75% 30%, #1b3a24 0%, #12141c 100%)"
+                      : "radial-gradient(circle at 75% 30%, #102e50 0%, #12141c 100%)",
                 }}
               />
 
-              {/* Floating Image */}
-              <img
-                src={product.imageUrl}
-                alt=""
-                className="absolute right-6 top-6 w-24 h-24 z-1 opacity-70 object-contain group-hover:scale-110 group-hover:opacity-90 transition-all duration-500"
-              />
-
-              {/* Card Overlay for readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#090a0f]/95 via-[#090a0f]/40 to-transparent z-2" />
-
-              {/* Card Content */}
-              <div className="relative z-3 flex flex-col pointer-events-none">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+              {/* Left Column (Text & Price info) */}
+              <div className="relative z-10 flex flex-col justify-between h-full flex-1 pr-4">
+                {/* Discount Badge */}
+                <div className="flex items-center gap-1.5 self-start">
+                  <span className="bg-[#ff334b] text-white text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
                     -{discount}%
                   </span>
                 </div>
                 
-                <h3 className="text-white font-semibold text-sm md:text-base leading-snug line-clamp-2 mb-2 max-w-[70%]">
+                {/* Product Title */}
+                <h3 className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2 mt-2 mb-2 group-hover:text-[#ff334b] transition-colors">
                   {product.name}
                 </h3>
 
-                <div className="flex items-baseline gap-2 mt-1">
+                {/* Price Tag */}
+                <div className="flex flex-col mt-auto">
                   {price > 0 && (
-                    <span className="text-[12px] text-[#8e92a4] line-through">
+                    <span className="text-[11px] text-[#8e92a4] line-through leading-none mb-1">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
                       }).format(originalPrice)}
                     </span>
                   )}
-                  <span className="text-lg font-extrabold text-white">
+                  <span className="text-base sm:text-lg font-black text-[#ff334b] transition-colors">
                     {price > 0
                       ? new Intl.NumberFormat("pt-BR", {
                           style: "currency",
                           currency: "BRL",
-                        }).format(price)
+                      }).format(price)
                       : "Ver oferta"}
                   </span>
                 </div>
+              </div>
+
+              {/* Right Column (Image Container) */}
+              <div className="relative z-10 w-24 h-24 shrink-0 overflow-hidden flex items-center justify-center bg-white rounded-2xl p-2.5 transition-all duration-300 group-hover:scale-102 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-110"
+                />
               </div>
             </motion.div>
           );

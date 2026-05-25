@@ -4,6 +4,15 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Clock, Calendar } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
+import {
+  AmazonLogo,
+  MercadoLivreLogo,
+  ShopeeLogo,
+  AliExpressLogo,
+  TikTokShopLogo,
+  KaBuMLogo,
+  MagaluLogo,
+} from "./StoreLogos";
 
 const STORES = [
   { key: "amazon",       label: "Amazon",        domain: "amazon.com.br",        linkKey: "amazon",       color: "#ff9900", bgGlow: "rgba(255, 153, 0, 0.12)" },
@@ -100,56 +109,67 @@ export function StoreFilter() {
   return (
     <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
       {/* Título */}
-      <div className="flex flex-col mb-8">
-        <h2 className="text-xl font-bold text-white mb-2">
-          Compre nas suas lojas favoritas
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          Featured Stores
         </h2>
+        {activeStore && (
+          <button
+            onClick={() => setActiveStore(null)}
+            className="flex text-xs font-semibold text-zinc-400 hover:text-white transition-colors items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"
+          >
+            Limpar Filtro
+            <X size={12} weight="bold" />
+          </button>
+        )}
       </div>
 
       {/* Grid de Lojas estilo Mockup */}
       <div className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
+          const LogoComponent = {
+            amazon: AmazonLogo,
+            mercadolivre: MercadoLivreLogo,
+            shopee: ShopeeLogo,
+            aliexpress: AliExpressLogo,
+            tiktok: TikTokShopLogo,
+            kabum: KaBuMLogo,
+            magalu: MagaluLogo,
+          }[store.key] || (() => null);
+
           return (
             <button
               key={store.key}
               onClick={() => setActiveStore(isActive ? null : store.key)}
               onMouseEnter={() => setHoveredStore(store.key)}
               onMouseLeave={() => setHoveredStore(null)}
-              className="flex flex-col items-center justify-center p-5 rounded-[18px] border transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              className="flex flex-col items-stretch p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group cursor-pointer min-h-[150px] justify-between"
               style={{
-                borderColor: isActive
+                border: "1.5px solid",
+                borderColor: isActive || hoveredStore === store.key
                   ? store.color
-                  : hoveredStore === store.key
-                  ? `${store.color}66`
-                  : "rgba(255, 255, 255, 0.08)",
+                  : `${store.color}55`, // Borda colorida constante (33% opacidade)
                 boxShadow: isActive || hoveredStore === store.key
-                  ? `0 8px 24px ${store.bgGlow}`
-                  : "none",
-                background: isActive ? "rgba(18, 20, 28, 0.9)" : "var(--bg-card)",
+                  ? `0 0 25px ${store.color}50, inset 0 0 12px ${store.color}25`
+                  : `0 0 15px ${store.color}18`, // Glow constante visível
+                background: isActive ? "rgba(18, 20, 28, 0.9)" : "rgba(14, 15, 20, 0.5)",
               }}
             >
-              {/* Logo Wrapper */}
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center p-2.5 shadow-sm transition-transform duration-300 group-hover:scale-110 shrink-0">
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${store.domain}&sz=64`}
-                  alt={store.label}
-                  className="w-full h-full object-contain mix-blend-multiply"
-                />
+              {/* Logo Wrapper (Aspect 4:3 Branco Arredondado) */}
+              <div className="w-full aspect-[4/3] bg-white rounded-2xl flex items-center justify-center p-3.5 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0 overflow-hidden">
+                <LogoComponent className="w-full h-full max-h-full max-w-full object-contain" />
               </div>
               
               <span 
-                className="text-[13px] font-semibold transition-colors mt-3 text-center"
-                style={{
-                  color: isActive || hoveredStore === store.key ? store.color : "var(--text-secondary)"
-                }}
+                className="text-sm font-bold tracking-wide transition-colors mt-3 text-center block w-full truncate text-white"
               >
                 {store.label}
               </span>
 
               {isActive && (
-                <div className="absolute top-2 right-2 text-zinc-400 hover:text-white transition-colors">
-                  <X size={12} weight="bold" />
+                <div className="absolute top-2 right-2 text-zinc-400 hover:text-white transition-colors bg-black/40 p-1 rounded-full">
+                  <X size={10} weight="bold" />
                 </div>
               )}
             </button>
@@ -172,7 +192,7 @@ export function StoreFilter() {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center p-2 shadow-lg shrink-0">
                   <img
-                    src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=64`}
+                    src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=128`}
                     alt={activeStoreInfo?.label}
                     className="w-full h-full object-contain mix-blend-multiply"
                   />
@@ -211,7 +231,7 @@ export function StoreFilter() {
                     const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
 
                     let mainPlatformText = activeStoreInfo?.label || "Oferta";
-                    let mainPlatformLogo = `https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=64`;
+                    let mainPlatformLogo = `https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=128`;
 
                     return (
                       <motion.div
@@ -223,7 +243,7 @@ export function StoreFilter() {
                         className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
                       >
                         {/* Imagem Container */}
-                        <div className="w-full aspect-square bg-white/[0.02] flex items-center justify-center relative p-5 border-b border-white/[0.04]">
+                        <div className="w-full aspect-square bg-white flex items-center justify-center relative p-5 border-b border-white/[0.04]">
                           <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                             <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
                               -{discount}%
@@ -239,26 +259,38 @@ export function StoreFilter() {
                             alt={product.name}
                             className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
                           />
+
+                          {/* Overlapping Brand Badge */}
+                          <div 
+                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-10"
+                            style={{
+                              backgroundColor: activeStoreInfo?.color || "#ff334b",
+                              borderColor: "rgba(255,255,255,0.1)",
+                              color: activeStoreInfo?.key === "mercadolivre" ? "#000000" : "#ffffff"
+                            }}
+                          >
+                            <img src={mainPlatformLogo} alt="" className="w-3 h-3 object-contain rounded-full" />
+                            <span>{mainPlatformText}</span>
+                          </div>
                         </div>
 
                         {/* Deal Body */}
-                        <div className="p-4 flex flex-col flex-1">
-                          <div className="inline-flex items-center gap-1.5 bg-white/5 border border-border-custom rounded-lg px-2 py-1 self-start mb-3 text-[11px] font-semibold text-zinc-400">
-                            <img src={mainPlatformLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-full" />
-                            <span>{mainPlatformText}</span>
-                          </div>
+                        <div className="p-4 pt-5 flex flex-col flex-1">
+                          <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
+                            {product.category || "Oferta"}
+                          </span>
 
-                          <h3 className="text-sm font-semibold text-white mb-3 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
+                          <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
                             {product.name}
                           </h3>
 
                           <div className="mt-auto flex flex-col">
                             {price > 0 ? (
                               <>
-                                <span className="text-[12px] text-[#8e92a4] line-through">
+                                <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                                 </span>
-                                <span className="text-base font-extrabold text-white">
+                                <span className="text-base font-black text-[#ff334b]">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>
                               </>
