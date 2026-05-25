@@ -43,3 +43,8 @@ next-env.d.ts
 # prisma
 /prisma/*.db
 /prisma/*.db-journal
+
+# debug outputs
+*-output.txt
+*.log
+
