@@ -144,32 +144,41 @@ export function StoreFilter() {
               onClick={() => setActiveStore(isActive ? null : store.key)}
               onMouseEnter={() => setHoveredStore(store.key)}
               onMouseLeave={() => setHoveredStore(null)}
-              className="flex flex-col items-stretch p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group cursor-pointer min-h-[150px] justify-between"
+              className="flex flex-col items-center justify-between p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[155px]"
               style={{
-                border: "1.5px solid",
+                border: "2px solid",
                 borderColor: isActive || hoveredStore === store.key
                   ? store.color
-                  : `${store.color}55`, // Borda colorida constante (33% opacidade)
+                  : `${store.color}45`, // Borda colorida constante (aprox. 27% opacidade)
                 boxShadow: isActive || hoveredStore === store.key
-                  ? `0 0 25px ${store.color}50, inset 0 0 12px ${store.color}25`
-                  : `0 0 15px ${store.color}18`, // Glow constante visível
-                background: isActive ? "rgba(18, 20, 28, 0.9)" : "rgba(14, 15, 20, 0.5)",
+                  ? `0 0 25px ${store.color}60, inset 0 0 12px ${store.color}30`
+                  : `0 0 15px ${store.color}15`, // Glow constante visível
+                background: "linear-gradient(180deg, #FFFFFF 0%, #ECECEC 100%)", // Fundo gradiente cinza-claro do mockup
               }}
             >
-              {/* Logo Wrapper (Aspect 4:3 Branco Arredondado) */}
-              <div className="w-full aspect-[4/3] bg-white rounded-2xl flex items-center justify-center p-3.5 shadow-md transition-transform duration-300 group-hover:scale-105 shrink-0 overflow-hidden">
-                <LogoComponent className="w-full h-full max-h-full max-w-full object-contain" />
+              {/* Logo Area */}
+              <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0">
+                <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
               </div>
               
+              {/* Label Area */}
               <span 
-                className="text-sm font-bold tracking-wide transition-colors mt-3 text-center block w-full truncate text-white"
+                className="text-xs font-extrabold tracking-tight transition-colors text-center block w-full truncate text-zinc-800 group-hover:text-black mt-2 select-none"
               >
-                {store.label}
+                {store.key === "mercadolivre" ? (
+                  <span className="leading-tight block font-bold text-[11px] text-[#2D3277]">
+                    mercado<br />livre
+                  </span>
+                ) : store.key === "kabum" ? (
+                  "KaBuMI"
+                ) : (
+                  store.label
+                )}
               </span>
 
               {isActive && (
-                <div className="absolute top-2 right-2 text-zinc-400 hover:text-white transition-colors bg-black/40 p-1 rounded-full">
-                  <X size={10} weight="bold" />
+                <div className="absolute top-2 right-2 text-zinc-500 hover:text-zinc-800 transition-colors bg-white/60 p-0.5 rounded-full border border-zinc-200">
+                  <X size={8} weight="bold" />
                 </div>
               )}
             </button>

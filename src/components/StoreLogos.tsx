@@ -45,9 +45,9 @@ export function MercadoLivreLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <circle cx="40" cy="26" r="18" fill="#FFE600" />
+      <circle cx="40" cy="40" r="22" fill="#FFE600" stroke="#2D3277" strokeWidth="2.5" />
       {/* Shaking Hands */}
-      <g transform="translate(25, 12) scale(0.6)">
+      <g transform="translate(24, 24) scale(0.65)">
         <path
           d="M14 27C17 24 21 21 26 25C28.5 27 32 27.5 35 25"
           stroke="#2D3277"
@@ -61,31 +61,6 @@ export function MercadoLivreLogo(props: React.SVGProps<SVGSVGElement>) {
           strokeLinecap="round"
         />
       </g>
-      {/* Texto mercado livre */}
-      <text
-        x="40"
-        y="56"
-        textAnchor="middle"
-        fill="#2D3277"
-        fontSize="9"
-        fontWeight="900"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        letterSpacing="-0.2px"
-      >
-        mercado
-      </text>
-      <text
-        x="40"
-        y="65"
-        textAnchor="middle"
-        fill="#2D3277"
-        fontSize="9"
-        fontWeight="500"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        letterSpacing="-0.2px"
-      >
-        livre
-      </text>
     </svg>
   );
 }
