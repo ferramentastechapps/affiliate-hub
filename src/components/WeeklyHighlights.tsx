@@ -64,11 +64,11 @@ export function WeeklyHighlights() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
-        <div className="h-6 w-48 bg-zinc-900 rounded-lg animate-pulse mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-3 mb-4">
+        <div className="h-5 w-40 bg-zinc-900 rounded-lg animate-pulse mb-4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-44 bg-zinc-900/50 rounded-[24px] animate-pulse" />
+            <div key={i} className="h-32 bg-zinc-900/50 rounded-[20px] animate-pulse" />
           ))}
         </div>
       </div>
@@ -78,10 +78,10 @@ export function WeeklyHighlights() {
   if (products.length === 0) return null;
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
+    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-3 mb-4">
       {/* Cabeçalho Seção */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base md:text-lg font-black tracking-tight text-white flex items-center gap-2">
           Destaques da Semana
         </h2>
         <a 
@@ -96,7 +96,7 @@ export function WeeklyHighlights() {
       </div>
 
       {/* Grid de Destaques (Scrollable on mobile) */}
-      <div className="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 gap-6 scrollbar-hide snap-x snap-mandatory">
+      <div className="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-4 scrollbar-hide snap-x snap-mandatory">
         {products.map((product) => {
           const discount = getSimulatedDiscount(product.id);
           const price = product.price || 0;
@@ -106,9 +106,9 @@ export function WeeklyHighlights() {
             <motion.div
               key={product.id}
               onClick={() => setSelectedProduct(product)}
-              whileHover={{ y: -4 }}
+              whileHover={{ y: -3 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="group cursor-pointer bg-card hover:bg-[#161722] border border-white/5 hover:border-white/10 rounded-3xl p-5 relative flex items-center justify-between overflow-hidden select-none transition-all duration-300 h-44 shadow-lg hover:shadow-black/40 w-[290px] shrink-0 md:w-auto snap-start"
+              className="group cursor-pointer bg-card hover:bg-[#161722] border border-white/5 hover:border-white/10 rounded-2xl p-4 relative flex items-center justify-between overflow-hidden select-none transition-all duration-300 h-32 shadow-lg hover:shadow-black/40 w-[260px] shrink-0 md:w-auto snap-start"
             >
               {/* Radial gradient background based on index */}
               <div
@@ -172,7 +172,7 @@ export function WeeklyHighlights() {
       </div>
 
       {/* Dots de navegação simulados estilo mockup */}
-      <div className="flex justify-center gap-2 mt-6">
+      <div className="flex justify-center gap-2 mt-3">
         {[0, 1, 2].map((i) => (
           <button
             key={i}

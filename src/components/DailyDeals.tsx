@@ -159,11 +159,11 @@ export function DailyDeals() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-12">
-        <div className="h-8 w-48 bg-zinc-900 rounded-lg animate-pulse mb-8" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-4">
+        <div className="h-6 w-40 bg-zinc-900 rounded-lg animate-pulse mb-5" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-80 bg-zinc-900/50 rounded-3xl animate-pulse" />
+            <div key={i} className="h-64 bg-zinc-900/50 rounded-2xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -177,14 +177,14 @@ export function DailyDeals() {
   const displayProducts = showAll ? filteredProducts : filteredProducts.slice(0, 8);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-16 relative">
+    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-10 relative">
       {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2 flex items-center gap-3">
+          <h2 className="text-lg md:text-xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
             Promoções do dia 🔴
           </h2>
-          <p className="text-zinc-400 text-sm">As melhores ofertas atualizadas em tempo real</p>
+          <p className="text-zinc-400 text-xs">As melhores ofertas atualizadas em tempo real</p>
         </div>
         {filteredProducts.length > 8 && (
           <button 
@@ -199,7 +199,7 @@ export function DailyDeals() {
 
       {/* Filtro de Categorias em botões horizontais no estilo do mockup */}
       {categories.length > 1 && (
-        <div className="flex gap-3 mb-10 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory">
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x snap-mandatory">
           {categories.map((category) => {
             const IconComponent = categoryIconMap[category] || Package;
             const isSelected = selectedCategory === category;

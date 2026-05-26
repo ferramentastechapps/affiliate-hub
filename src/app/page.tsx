@@ -96,14 +96,14 @@ export default async function Home() {
         <HeroSection />
       </div>
 
-      {/* Destaques da Semana */}
-      <div className="w-full">
-        <WeeklyHighlights />
-      </div>
-
       {/* Filtro por Loja (Featured Stores) */}
       <div id="categorias" className="w-full">
         <StoreFilter />
+      </div>
+
+      {/* Destaques da Semana */}
+      <div className="w-full">
+        <WeeklyHighlights />
       </div>
 
       {/* Promocoes do Dia */}
