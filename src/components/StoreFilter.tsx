@@ -107,10 +107,10 @@ export function StoreFilter() {
   const activeStoreInfo = STORES.find(s => s.key === activeStore);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-2 mb-3">
+    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 py-2 mb-3">
       {/* Título */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2 md:mb-3">
+        <h2 className="text-sm md:text-base font-bold tracking-tight text-white">
           Featured Stores
         </h2>
         {activeStore && (
@@ -124,8 +124,48 @@ export function StoreFilter() {
         )}
       </div>
 
-      {/* Grid de Lojas estilo Mockup */}
-      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+      {/* ── MOBILE: Scroll horizontal de chips ── */}
+      <div className="flex md:hidden gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+        {STORES.map((store) => {
+          const isActive = activeStore === store.key;
+          const LogoComponent = {
+            amazon: AmazonLogo,
+            mercadolivre: MercadoLivreLogo,
+            shopee: ShopeeLogo,
+            aliexpress: AliExpressLogo,
+            tiktok: TikTokShopLogo,
+            kabum: KaBuMLogo,
+            magalu: MagaluLogo,
+          }[store.key] || (() => null);
+
+          return (
+            <button
+              key={store.key}
+              onClick={() => setActiveStore(isActive ? null : store.key)}
+              className="flex items-center gap-2 px-3 py-2 rounded-2xl shrink-0 snap-start transition-all duration-200 active:scale-95"
+              style={{
+                border: "1.5px solid",
+                borderColor: isActive ? store.color : `${store.color}50`,
+                background: isActive ? `${store.color}18` : "linear-gradient(180deg, #FFFFFF 0%, #ECECEC 100%)",
+                boxShadow: isActive ? `0 0 12px ${store.color}40` : `0 0 8px ${store.color}15`,
+              }}
+            >
+              <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                <LogoComponent className="w-5 h-5 object-contain" />
+              </div>
+              <span
+                className="text-[11px] font-bold whitespace-nowrap"
+                style={{ color: isActive ? store.color : "#333" }}
+              >
+                {store.key === "mercadolivre" ? "Mercado Livre" : store.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── DESKTOP: Grid de cards ── */}
+      <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           const LogoComponent = {

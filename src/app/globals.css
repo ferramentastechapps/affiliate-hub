@@ -99,4 +99,19 @@ body {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Mobile touch improvements */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
 
+/* Smooth momentum scroll for horizontal scrolling containers */
+.scrollbar-hide {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area for bottom nav on iOS */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+}

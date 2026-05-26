@@ -1,13 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AuthButton } from "./AuthButton";
 import { AuthPanel } from "./AuthPanel";
 import { useState } from "react";
+import { MagnifyingGlass, X } from "@phosphor-icons/react";
 
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleSearchChange = (val: string) => {
     setSearchVal(val);
@@ -16,41 +18,86 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 bg-glass-bg/70 backdrop-blur-xl border-b border-glass-border">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-3.5">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
-            
+      <header className="fixed top-0 left-0 right-0 z-40 bg-glass-bg/80 backdrop-blur-xl border-b border-glass-border">
+        <div className="max-w-[1400px] mx-auto px-3 md:px-8 py-2.5 md:py-3.5">
+
+          {/* ── MOBILE LAYOUT ── */}
+          <div className="flex md:hidden items-center justify-between gap-2">
+
+            {/* Logo */}
+            <a href="/" className="flex items-center gap-2 shrink-0">
+              <svg viewBox="0 0 36 36" className="w-7 h-7 fill-[#ff334b]">
+                <polygon points="18,2 34,11 28,32 8,32 2,11" />
+                <text x="18" y="25" fill="white" fontSize="19" fontWeight="900" textAnchor="middle" fontFamily="system-ui">E</text>
+              </svg>
+              <span className="text-white font-extrabold text-base tracking-tight leading-none">
+                economiza<span className="text-[#ff334b]">ai</span>
+              </span>
+            </a>
+
+            {/* Busca expandida no mobile */}
+            <AnimatePresence>
+              {mobileSearchOpen && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "100%" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex-1 relative"
+                >
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchVal}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full bg-white/8 border border-white/10 focus:border-accent/50 rounded-xl py-2 pl-3 pr-9 text-white text-sm placeholder-text-secondary outline-none"
+                    placeholder="Buscar produto..."
+                  />
+                  <button
+                    onClick={() => { setMobileSearchOpen(false); handleSearchChange(""); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
+                  >
+                    <X size={16} weight="bold" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Ações direitas */}
+            <div className="flex items-center gap-1 shrink-0">
+              {!mobileSearchOpen && (
+                <button
+                  onClick={() => setMobileSearchOpen(true)}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-text-secondary hover:text-white transition-colors"
+                  aria-label="Buscar"
+                >
+                  <MagnifyingGlass size={18} weight="bold" />
+                </button>
+              )}
+              <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
+            </div>
+          </div>
+
+          {/* ── DESKTOP LAYOUT ── */}
+          <div className="hidden md:flex flex-row items-center justify-between gap-6">
+
             {/* Logo */}
             <motion.a
               href="/"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              className="flex items-center gap-2.5 text-decoration-none shrink-0"
+              className="flex items-center gap-2.5 shrink-0"
             >
-              {/* E Logo em formato de pentágono/escudo */}
-              <svg
-                viewBox="0 0 36 36"
-                className="w-9 h-9 fill-[#ff334b] drop-shadow-[0_4px_10px_rgba(255,51,75,0.3)]"
-              >
+              <svg viewBox="0 0 36 36" className="w-9 h-9 fill-[#ff334b] drop-shadow-[0_4px_10px_rgba(255,51,75,0.3)]">
                 <polygon points="18,2 34,11 28,32 8,32 2,11" />
-                <text
-                  x="18"
-                  y="25"
-                  fill="white"
-                  fontSize="19"
-                  fontWeight="900"
-                  textAnchor="middle"
-                  fontFamily="system-ui, -apple-system, sans-serif"
-                >
-                  E
-                </text>
+                <text x="18" y="25" fill="white" fontSize="19" fontWeight="900" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">E</text>
               </svg>
               <span className="text-white font-extrabold text-xl tracking-tight leading-none">
                 economiza<span className="text-[#ff334b]">ai</span>
               </span>
             </motion.a>
 
-            {/* Barra de Busca no meio */}
+            {/* Barra de Busca */}
             <div className="relative w-full max-w-[500px]">
               <input
                 type="text"
@@ -60,23 +107,14 @@ export function Header() {
                 placeholder="Buscar um produto..."
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
               </span>
             </div>
 
-            {/* Navegação + AuthButton no lado direito */}
+            {/* Nav + Auth */}
             <div className="flex items-center gap-6">
               <nav className="flex items-center gap-1">
                 <NavLink href="#inicio" active>Início</NavLink>
@@ -84,17 +122,16 @@ export function Header() {
                 <NavLink href="#cupons">Cupons</NavLink>
                 <NavLink href="#footer">Comunidade</NavLink>
               </nav>
-
               <div className="flex items-center shrink-0">
                 <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
               </div>
             </div>
 
           </div>
+
         </div>
       </header>
 
-      {/* Painel de Autenticação */}
       <AuthPanel isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </>
   );
@@ -103,25 +140,15 @@ export function Header() {
 function NavLink({ href, children, active }: { href: string; children: React.ReactNode; active?: boolean }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    if (href === "#categorias") {
-      window.dispatchEvent(new CustomEvent("open-categories"));
-      return;
-    }
+    if (href === "#categorias") { window.dispatchEvent(new CustomEvent("open-categories")); return; }
     if (href === "#cupons") {
       window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "CUPOM" } }));
       const el = document.getElementById("ofertas");
-      if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 100;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: "smooth" });
       return;
     }
-    const id = href.replace("#", "");
-    const el = document.getElementById(id);
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 100;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
+    const el = document.getElementById(href.replace("#", ""));
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: "smooth" });
   };
 
   return (
@@ -131,8 +158,8 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       className={`px-4 py-2 rounded-xl text-sm font-bold transition-all min-h-[40px] flex items-center cursor-pointer ${
-        active 
-          ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]" 
+        active
+          ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           : "text-text-secondary hover:text-white hover:bg-white/5"
       }`}
     >

@@ -78,10 +78,10 @@ export function WeeklyHighlights() {
   if (products.length === 0) return null;
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-3 mb-4">
+    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 py-2 mb-3">
       {/* Cabeçalho Seção */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base md:text-lg font-black tracking-tight text-white flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm md:text-lg font-black tracking-tight text-white">
           Destaques da Semana
         </h2>
         <a 
