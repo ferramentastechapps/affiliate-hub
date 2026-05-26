@@ -177,14 +177,14 @@ export function DailyDeals() {
   const displayProducts = showAll ? filteredProducts : filteredProducts.slice(0, 8);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-10 relative">
+    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
       {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
         <div>
-          <h2 className="text-lg md:text-xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
+          <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
             Promoções do dia 🔴
           </h2>
-          <p className="text-zinc-400 text-xs">As melhores ofertas atualizadas em tempo real</p>
+          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
         </div>
         {filteredProducts.length > 8 && (
           <button 
@@ -199,7 +199,7 @@ export function DailyDeals() {
 
       {/* Filtro de Categorias em botões horizontais no estilo do mockup */}
       {categories.length > 1 && (
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x snap-mandatory">
+        <div className="flex gap-1.5 md:gap-2 mb-4 md:mb-5 overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x snap-mandatory">
           {categories.map((category) => {
             const IconComponent = categoryIconMap[category] || Package;
             const isSelected = selectedCategory === category;
@@ -211,13 +211,13 @@ export function DailyDeals() {
                   setSelectedCategory(category);
                   setShowAll(false);
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-semibold cursor-pointer transition-all duration-250 whitespace-nowrap shrink-0 snap-start ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] md:text-[13px] font-semibold cursor-pointer transition-all duration-250 whitespace-nowrap shrink-0 snap-start ${
                   isSelected
                     ? "bg-[#ff334b] text-white border-[#ff334b] shadow-[0_4px_14px_rgba(255,51,75,0.25)]"
                     : "bg-card border-border-custom text-zinc-400 hover:bg-card-hover hover:text-white hover:border-zinc-700/80"
                 }`}
               >
-                <IconComponent size={16} weight={isSelected ? "fill" : "bold"} />
+                <IconComponent size={14} weight={isSelected ? "fill" : "bold"} />
                 {category}
               </button>
             );
