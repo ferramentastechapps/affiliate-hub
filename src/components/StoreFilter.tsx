@@ -107,10 +107,10 @@ export function StoreFilter() {
   const activeStoreInfo = STORES.find(s => s.key === activeStore);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
+    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-2 mb-3">
       {/* Título */}
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
           Featured Stores
         </h2>
         {activeStore && (
@@ -125,7 +125,7 @@ export function StoreFilter() {
       </div>
 
       {/* Grid de Lojas estilo Mockup */}
-      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           const LogoComponent = {
@@ -144,7 +144,7 @@ export function StoreFilter() {
               onClick={() => setActiveStore(isActive ? null : store.key)}
               onMouseEnter={() => setHoveredStore(store.key)}
               onMouseLeave={() => setHoveredStore(null)}
-              className="flex flex-col items-center justify-between p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[155px]"
+              className="flex flex-col items-center justify-between p-2 rounded-xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[72px]"
               style={{
                 border: "2px solid",
                 borderColor: isActive || hoveredStore === store.key
@@ -157,13 +157,13 @@ export function StoreFilter() {
               }}
             >
               {/* Logo Area */}
-              <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0">
-                <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
+              <div className="flex-1 w-full flex items-center justify-center p-1 min-h-0">
+                <LogoComponent className="w-full h-full max-h-[36px] max-w-[70%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
               </div>
               
               {/* Label Area */}
               <span 
-                className="text-xs font-extrabold tracking-tight transition-colors text-center block w-full truncate text-zinc-800 group-hover:text-black mt-2 select-none"
+                className="text-[9px] font-extrabold tracking-tight transition-colors text-center block w-full truncate text-zinc-800 group-hover:text-black mt-1 select-none"
               >
                 {store.key === "mercadolivre" ? (
                   <span className="leading-tight block font-bold text-[11px] text-[#2D3277]">
@@ -183,6 +183,7 @@ export function StoreFilter() {
               )}
             </button>
           );
+
         })}
       </div>
 
