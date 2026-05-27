@@ -11,7 +11,7 @@ export function HeroSection() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
-        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white max-w-3xl leading-[1.2] mb-5"
+        className="w-full max-w-3xl text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.2] mb-5"
       >
         Encontre as Melhores Ofertas e Cupons em um Só Lugar!
       </motion.h1>
@@ -21,9 +21,14 @@ export function HeroSection() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
-        className="text-text-secondary text-sm sm:text-base max-w-2xl leading-relaxed mb-6 font-medium"
+        className="w-full max-w-2xl text-text-secondary text-xs sm:text-base leading-relaxed mb-6 font-medium"
       >
-        Receba ofertas exclusivas, cupons e participe da nossa comunidade para não perder nenhuma promoção 😜
+        <span className="hidden sm:inline">
+          Receba ofertas exclusivas, cupons e participe da nossa comunidade para não perder nenhuma promoção 😜
+        </span>
+        <span className="inline sm:hidden whitespace-nowrap">
+          Ofertas exclusivas, cupons e comunidade! 😜
+        </span>
       </motion.p>
 
     </section>
