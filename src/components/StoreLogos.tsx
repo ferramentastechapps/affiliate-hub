@@ -13,25 +13,27 @@ export function AmazonLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      {/* Lowercase 'a' in Amazon style */}
-      <path
-        d="M45.5 45.8c-1.8 1.5-4.4 2.2-7.2 2.2-6.5 0-10.2-4.2-10.2-10.8 0-7.3 4.8-11.2 13-11.2h4v-1.6c0-3.2-1.7-5-5.2-5-3.3 0-6.6 1.4-8.8 2.8l-1.8-4C32.3 16 36.7 15 40.8 15c7.8 0 11.7 4.2 11.7 11.2v14.4c0 3.3.4 5.3 1.2 6.4h-5.4c-.6-1.1-.9-2.6-1-3.6zM45.1 30.6h-3.6c-4.8 0-7.4 1.8-7.4 6.2 0 3.6 1.8 5.6 5.2 5.6 3.6 0 5.8-2 5.8-6.2v-5.6z"
-        fill="#FFFFFF"
-      />
-      {/* Sorriso (Smile) */}
-      <path
-        d="M23 54c12 5.5 30 5.5 38 0"
-        stroke="#FF9900"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M58.5 52c1.2 1 2.5 2 2.5 2L59 56.5"
-        stroke="#FF9900"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <g transform="translate(-4, -5) scale(1.15)">
+        {/* Lowercase 'a' in Amazon style */}
+        <path
+          d="M45.5 45.8c-1.8 1.5-4.4 2.2-7.2 2.2-6.5 0-10.2-4.2-10.2-10.8 0-7.3 4.8-11.2 13-11.2h4v-1.6c0-3.2-1.7-5-5.2-5-3.3 0-6.6 1.4-8.8 2.8l-1.8-4C32.3 16 36.7 15 40.8 15c7.8 0 11.7 4.2 11.7 11.2v14.4c0 3.3.4 5.3 1.2 6.4h-5.4c-.6-1.1-.9-2.6-1-3.6zM45.1 30.6h-3.6c-4.8 0-7.4 1.8-7.4 6.2 0 3.6 1.8 5.6 5.2 5.6 3.6 0 5.8-2 5.8-6.2v-5.6z"
+          fill="#232F3E"
+        />
+        {/* Sorriso (Smile) */}
+        <path
+          d="M23 54c12 5.5 30 5.5 38 0"
+          stroke="#FF9900"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M58.5 52c1.2 1 2.5 2 2.5 2L59 56.5"
+          stroke="#FF9900"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
     </svg>
   );
 }
@@ -45,9 +47,9 @@ export function MercadoLivreLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <circle cx="40" cy="40" r="22" fill="#FFE600" stroke="#2D3277" strokeWidth="2.5" />
+      <circle cx="40" cy="40" r="30" fill="#FFE600" stroke="#2D3277" strokeWidth="2.5" />
       {/* Shaking Hands */}
-      <g transform="translate(24, 24) scale(0.65)">
+      <g transform="translate(19, 18) scale(0.85)">
         <path
           d="M14 27C17 24 21 21 26 25C28.5 27 32 27.5 35 25"
           stroke="#2D3277"
@@ -74,7 +76,7 @@ export function ShopeeLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <g transform="translate(20, 15)">
+      <g transform="translate(14, 8) scale(1.3)">
         {/* Sacola de Compras Shopee */}
         <path
           d="M4 14V38C4 40.2 5.8 42 8 42H32C34.2 42 36 40.2 36 38V14H4Z"
@@ -109,7 +111,7 @@ export function AliExpressLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <g transform="translate(20, 16)">
+      <g transform="translate(10, 6) scale(1.5)">
         <rect width="40" height="40" rx="12" fill="#E62E04" />
         {/* Alça branca da sacola */}
         <path
@@ -139,9 +141,9 @@ export function TikTokShopLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <rect x="16" y="16" width="48" height="48" rx="12" fill="#000000" />
+      <rect x="10" y="10" width="60" height="60" rx="16" fill="#000000" />
       {/* Nota Musical TikTok */}
-      <g transform="translate(20, 20) scale(0.85)">
+      <g transform="translate(18, 18) scale(1.1)">
         <path
           d="M25 10H21V22C21 24.2 19.2 26 17 26C14.8 26 13 24.2 13 22C13 19.8 14.8 18 17 18V14C12.6 14 9 17.6 9 22C9 26.4 12.6 30 17 30C21.4 30 25 26.4 25 22V15C27 16.5 29.5 17 31 17V13C28 13 26 11.5 25 10Z"
           fill="#FFFFFF"
@@ -166,7 +168,7 @@ export function KaBuMLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <g transform="translate(8, 0)">
+      <g transform="translate(4, 0) scale(1.1)">
         <text
           x="0"
           y="28"
@@ -204,13 +206,13 @@ export function MagaluLogo(props: React.SVGProps<SVGSVGElement>) {
       className={props.className}
       {...props}
     >
-      <rect x="8" y="20" width="64" height="40" rx="10" fill="#0086ff" />
+      <rect x="10" y="10" width="60" height="60" rx="16" fill="#0086ff" />
       <text
         x="40"
-        y="48"
+        y="46"
         textAnchor="middle"
         fill="#FFFFFF"
-        fontSize="13.5"
+        fontSize="14"
         fontWeight="900"
         fontFamily="system-ui, -apple-system, sans-serif"
         letterSpacing="-0.5px"
@@ -220,4 +222,3 @@ export function MagaluLogo(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
