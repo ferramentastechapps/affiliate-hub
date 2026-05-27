@@ -26,13 +26,8 @@ export function Header() {
 
             {/* Logo */}
             <a href="/" className="flex items-center gap-2 shrink-0">
-              <svg viewBox="0 0 36 36" className="w-7 h-7 fill-[#ff334b]">
-                <polygon points="18,2 34,11 28,32 8,32 2,11" />
-                <text x="18" y="25" fill="white" fontSize="19" fontWeight="900" textAnchor="middle" fontFamily="system-ui">E</text>
-              </svg>
-              <span className="text-white font-extrabold text-base tracking-tight leading-none">
-                economiza<span className="text-[#ff334b]">ai</span>
-              </span>
+              <img src="/Logo.png" alt="Logo" className="w-7 h-7 object-contain" />
+              <img src="/logo 2 branco.png" alt="Economiza ai" className="h-5 w-auto object-contain" />
             </a>
 
             {/* Busca expandida no mobile */}
@@ -86,15 +81,10 @@ export function Header() {
               href="/"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              className="flex items-center gap-2.5 shrink-0"
+              className="flex items-center gap-3 shrink-0"
             >
-              <svg viewBox="0 0 36 36" className="w-9 h-9 fill-[#ff334b] drop-shadow-[0_4px_10px_rgba(255,51,75,0.3)]">
-                <polygon points="18,2 34,11 28,32 8,32 2,11" />
-                <text x="18" y="25" fill="white" fontSize="19" fontWeight="900" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif">E</text>
-              </svg>
-              <span className="text-white font-extrabold text-xl tracking-tight leading-none">
-                economiza<span className="text-[#ff334b]">ai</span>
-              </span>
+              <img src="/Logo.png" alt="Logo" className="w-9 h-9 object-contain" />
+              <img src="/logo 2 branco.png" alt="Economiza ai" className="h-6 w-auto object-contain" />
             </motion.a>
 
             {/* Barra de Busca */}
