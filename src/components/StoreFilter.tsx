@@ -158,7 +158,15 @@ export function StoreFilter() {
             >
               {/* Logo Area */}
               <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0">
-                <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
+                {store.key === "mercadolivre" ? (
+                  <img
+                    src="/mercado livre.png"
+                    alt={store.label}
+                    className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0"
+                  />
+                ) : (
+                  <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
+                )}
               </div>
               
               {/* Label Area */}
