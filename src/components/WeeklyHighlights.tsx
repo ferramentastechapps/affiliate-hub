@@ -159,7 +159,7 @@ export function WeeklyHighlights() {
               </div>
 
               {/* Right Column (Image Container) */}
-              <div className="relative z-10 w-28 h-28 shrink-0 overflow-hidden flex items-center justify-center bg-white rounded-2xl p-1.5 transition-all duration-300 group-hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+              <div className="relative z-10 w-32 h-32 shrink-0 overflow-hidden flex items-center justify-center bg-white rounded-2xl p-1 transition-all duration-300 group-hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
