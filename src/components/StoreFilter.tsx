@@ -108,24 +108,21 @@ export function StoreFilter() {
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 py-2 mb-3">
-      {/* Título */}
-      <div className="flex items-center justify-between mb-2 md:mb-3">
-        <h2 className="text-sm md:text-base font-bold tracking-tight text-white">
-          Featured Stores
-        </h2>
-        {activeStore && (
+      {/* Título e Filtro */}
+      {activeStore && (
+        <div className="flex justify-end mb-3">
           <button
             onClick={() => setActiveStore(null)}
-            className="flex text-xs font-semibold text-zinc-400 hover:text-white transition-colors items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"
+            className="flex text-xs font-semibold text-zinc-400 hover:text-white transition-colors items-center gap-1 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full hover:bg-white/10"
           >
             Limpar Filtro
             <X size={12} weight="bold" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── MOBILE: Scroll horizontal de chips ── */}
-      <div className="flex md:hidden gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+      <div className="flex md:hidden gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide snap-x snap-mandatory">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           const LogoComponent = {
@@ -142,20 +139,23 @@ export function StoreFilter() {
             <button
               key={store.key}
               onClick={() => setActiveStore(isActive ? null : store.key)}
-              className="flex items-center gap-2 px-3 py-2 rounded-2xl shrink-0 snap-start transition-all duration-200 active:scale-95"
+              className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shrink-0 snap-start transition-all duration-200 active:scale-95 border"
               style={{
-                border: "1.5px solid",
-                borderColor: isActive ? store.color : `${store.color}50`,
-                background: isActive ? `${store.color}18` : "linear-gradient(180deg, #FFFFFF 0%, #ECECEC 100%)",
-                boxShadow: isActive ? `0 0 12px ${store.color}40` : `0 0 8px ${store.color}15`,
+                borderColor: isActive ? store.color : "rgba(255, 255, 255, 0.08)",
+                background: isActive 
+                  ? `linear-gradient(180deg, ${store.color}15 0%, ${store.color}05 100%)` 
+                  : "rgba(255, 255, 255, 0.02)",
+                boxShadow: isActive 
+                  ? `0 0 16px ${store.color}25, inset 0 0 8px ${store.color}10` 
+                  : "none",
               }}
             >
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
                 <LogoComponent className="w-5 h-5 object-contain" />
               </div>
               <span
-                className="text-[11px] font-bold whitespace-nowrap"
-                style={{ color: isActive ? store.color : "#333" }}
+                className="text-[11px] font-bold tracking-wide transition-colors"
+                style={{ color: isActive ? "#ffffff" : "#a1a1aa" }}
               >
                 {store.key === "mercadolivre" ? "Mercado Livre" : store.label}
               </span>
@@ -165,7 +165,7 @@ export function StoreFilter() {
       </div>
 
       {/* ── DESKTOP: Grid de cards ── */}
-      <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+      <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-3">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           const LogoComponent = {
@@ -184,46 +184,41 @@ export function StoreFilter() {
               onClick={() => setActiveStore(isActive ? null : store.key)}
               onMouseEnter={() => setHoveredStore(store.key)}
               onMouseLeave={() => setHoveredStore(null)}
-              className="flex flex-col items-center justify-between p-2 rounded-xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[72px]"
+              className="flex flex-col items-center justify-between p-3 rounded-2xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[80px] border"
               style={{
-                border: "2px solid",
                 borderColor: isActive || hoveredStore === store.key
                   ? store.color
-                  : `${store.color}45`, // Borda colorida constante (aprox. 27% opacidade)
+                  : "rgba(255, 255, 255, 0.06)",
+                background: isActive || hoveredStore === store.key
+                  ? `linear-gradient(180deg, ${store.color}15 0%, ${store.color}04 100%)`
+                  : "rgba(255, 255, 255, 0.02)",
                 boxShadow: isActive || hoveredStore === store.key
-                  ? `0 0 25px ${store.color}60, inset 0 0 12px ${store.color}30`
-                  : `0 0 15px ${store.color}15`, // Glow constante visível
-                background: "linear-gradient(180deg, #FFFFFF 0%, #ECECEC 100%)", // Fundo gradiente cinza-claro do mockup
+                  ? `0 0 20px ${store.color}25, inset 0 0 10px ${store.color}10`
+                  : "none",
               }}
             >
               {/* Logo Area */}
-              <div className="flex-1 w-full flex items-center justify-center p-1 min-h-0">
-                <LogoComponent className="w-full h-full max-h-[36px] max-w-[70%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
+              <div className="flex-1 w-full flex items-center justify-center p-0.5 min-h-0">
+                <LogoComponent className="w-full h-full max-h-[32px] max-w-[75%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
               </div>
               
               {/* Label Area */}
               <span 
-                className="text-[9px] font-extrabold tracking-tight transition-colors text-center block w-full truncate text-zinc-800 group-hover:text-black mt-1 select-none"
+                className="text-[9px] font-extrabold tracking-wider uppercase transition-colors text-center block w-full truncate mt-1 select-none"
+                style={{
+                  color: isActive || hoveredStore === store.key ? "#ffffff" : "#71717a"
+                }}
               >
-                {store.key === "mercadolivre" ? (
-                  <span className="leading-tight block font-bold text-[11px] text-[#2D3277]">
-                    mercado<br />livre
-                  </span>
-                ) : store.key === "kabum" ? (
-                  "KaBuMI"
-                ) : (
-                  store.label
-                )}
+                {store.label}
               </span>
 
               {isActive && (
-                <div className="absolute top-2 right-2 text-zinc-500 hover:text-zinc-800 transition-colors bg-white/60 p-0.5 rounded-full border border-zinc-200">
+                <div className="absolute top-1.5 right-1.5 text-zinc-400 hover:text-white transition-colors bg-white/10 p-0.5 rounded-full border border-white/10">
                   <X size={8} weight="bold" />
                 </div>
               )}
             </button>
           );
-
         })}
       </div>
 
