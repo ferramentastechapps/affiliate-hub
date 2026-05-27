@@ -293,7 +293,7 @@ export function StoreFilter() {
                         className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
                       >
                         {/* Imagem Container */}
-                        <div className="w-full aspect-square bg-white flex items-center justify-center relative p-5 border-b border-white/[0.04]">
+                        <div className="w-full aspect-square bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
                           <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                             <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
                               -{discount}%
@@ -307,7 +307,7 @@ export function StoreFilter() {
                           <img
                             src={product.imageUrl}
                             alt={product.name}
-                            className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
 
                           {/* Overlapping Brand Badge */}
