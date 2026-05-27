@@ -292,27 +292,30 @@ export function StoreFilter() {
                         onClick={() => setSelectedProduct(product)}
                         className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
                       >
-                        {/* Imagem Container */}
-                        <div className="w-full aspect-square bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
-                          <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                            <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                              -{discount}%
-                            </span>
-                            <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
-                              <Clock size={12} weight="bold" />
-                              {getTimeAgo(product.createdAt)}
-                            </span>
-                          </div>
+                        {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
+                        <div className="w-full aspect-square relative">
+                          {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
+                          <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
+                            <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
+                              <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                                -{discount}%
+                              </span>
+                              <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
+                                <Clock size={12} weight="bold" />
+                                {getTimeAgo(product.createdAt)}
+                              </span>
+                            </div>
 
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          </div>
 
                           {/* Overlapping Brand Badge */}
                           <div 
-                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-10"
+                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-20"
                             style={{
                               backgroundColor: activeStoreInfo?.color || "#ff334b",
                               borderColor: "rgba(255,255,255,0.1)",
