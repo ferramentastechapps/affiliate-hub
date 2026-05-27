@@ -159,11 +159,11 @@ export function WeeklyHighlights() {
               </div>
 
               {/* Right Column (Image Container) */}
-              <div className="relative z-10 w-24 h-24 shrink-0 overflow-hidden flex items-center justify-center bg-white rounded-2xl p-2.5 transition-all duration-300 group-hover:scale-102 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+              <div className="relative z-10 w-24 h-24 shrink-0 overflow-hidden flex items-center justify-center bg-zinc-900/40 rounded-2xl transition-all duration-300 group-hover:scale-102 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
-                  className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               </div>
             </motion.div>
