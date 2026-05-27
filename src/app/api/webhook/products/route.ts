@@ -22,6 +22,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verificar se já existe um produto com o mesmo nome criado recentemente (últimas 24 horas)
+    const existingProduct = await prisma.product.findFirst({
+      where: {
+        name: body.name,
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas
+        }
+      },
+      include: {
+        links: true
+      }
+    });
+
+    if (existingProduct) {
+      console.log('ℹ️ Produto duplicado detectado (mesmo nome nas últimas 24h):', body.name);
+      return NextResponse.json({
+        success: true,
+        message: 'Produto já cadastrado recentemente (evitando duplicata)',
+        product: {
+          id: existingProduct.id,
+          name: existingProduct.name,
+          category: existingProduct.category,
+          description: existingProduct.description,
+          imageUrl: existingProduct.imageUrl,
+          price: existingProduct.price,
+          originalPrice: existingProduct.originalPrice,
+          status: existingProduct.status,
+          createdAt: existingProduct.createdAt,
+          updatedAt: existingProduct.updatedAt,
+          links: existingProduct.links
+        }
+      }, { status: 200 });
+    }
+
     // Criar produto
     const product = await prisma.product.create({
       data: {
@@ -109,6 +143,24 @@ export async function PUT(request: Request) {
 
     for (const productData of body.products) {
       try {
+        // Verificar se já existe um produto com o mesmo nome criado recentemente (últimas 24 horas)
+        const existingProduct = await prisma.product.findFirst({
+          where: {
+            name: productData.name,
+            createdAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas
+            }
+          },
+          include: {
+            links: true
+          }
+        });
+
+        if (existingProduct) {
+          results.push(existingProduct);
+          continue;
+        }
+
         const product = await prisma.product.create({
           data: {
             name: productData.name,

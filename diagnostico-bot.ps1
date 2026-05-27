@@ -12,7 +12,7 @@ git pull origin master --quiet
 
 echo ""
 echo "=== LOGS DO BOT (últimas 30 linhas) ==="
-pm2 logs affiliate-bot --lines 30 --nostream 2>/dev/null || pm2 logs promobot --lines 30 --nostream 2>/dev/null
+pm2 logs affiliate-scraper --lines 30 --nostream 2>/dev/null || pm2 logs promobot --lines 30 --nostream 2>/dev/null
 
 echo ""
 echo "=== STATUS PM2 ==="
