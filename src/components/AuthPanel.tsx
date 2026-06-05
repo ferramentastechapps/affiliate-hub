@@ -191,23 +191,18 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
               {/* Header */}
               <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl border-b border-white/10 z-10">
                 <div className="flex items-center justify-between p-6">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <img
-                      src="/icons/icon-192x192.png"
-                      alt="Economiza ai Logo Icon"
-                      className="h-10 w-10 p-1 object-contain"
-                    />
-                    <img
-                      src="/logo 2 preto.png"
-                      alt="Economiza ai"
-                      className="h-7 w-auto dark:hidden"
-                    />
-                    <img
-                      src="/logo 2 branco.png"
-                      alt="Economiza ai"
-                      className="hidden dark:block h-7 w-auto"
-                    />
-                  </div>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <img
+                        src="/Logo.png"
+                        alt="Economiza ai Logo Icon"
+                        className="h-10 w-10 object-contain"
+                      />
+                      <img
+                        src="/logo 2 branco.png"
+                        alt="Economiza ai"
+                        className="h-7 w-auto object-contain"
+                      />
+                    </div>
                   <motion.button
                     onClick={onClose}
                     whileHover={{ scale: 1.1, rotate: 90 }}

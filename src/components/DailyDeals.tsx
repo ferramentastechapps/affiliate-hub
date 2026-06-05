@@ -159,11 +159,11 @@ export function DailyDeals() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-12">
-        <div className="h-8 w-48 bg-zinc-900 rounded-lg animate-pulse mb-8" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-4">
+        <div className="h-6 w-40 bg-zinc-900 rounded-lg animate-pulse mb-5" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-80 bg-zinc-900/50 rounded-3xl animate-pulse" />
+            <div key={i} className="h-64 bg-zinc-900/50 rounded-2xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -177,14 +177,14 @@ export function DailyDeals() {
   const displayProducts = showAll ? filteredProducts : filteredProducts.slice(0, 8);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-16 relative">
+    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
       {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2 flex items-center gap-3">
+          <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
             Promoções do dia 🔴
           </h2>
-          <p className="text-zinc-400 text-sm">As melhores ofertas atualizadas em tempo real</p>
+          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
         </div>
         {filteredProducts.length > 8 && (
           <button 
@@ -199,7 +199,7 @@ export function DailyDeals() {
 
       {/* Filtro de Categorias em botões horizontais no estilo do mockup */}
       {categories.length > 1 && (
-        <div className="flex gap-3 mb-10 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory">
+        <div className="flex gap-1.5 md:gap-2 mb-4 md:mb-5 overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x snap-mandatory">
           {categories.map((category) => {
             const IconComponent = categoryIconMap[category] || Package;
             const isSelected = selectedCategory === category;
@@ -211,13 +211,13 @@ export function DailyDeals() {
                   setSelectedCategory(category);
                   setShowAll(false);
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-semibold cursor-pointer transition-all duration-250 whitespace-nowrap shrink-0 snap-start ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] md:text-[13px] font-semibold cursor-pointer transition-all duration-250 whitespace-nowrap shrink-0 snap-start ${
                   isSelected
                     ? "bg-[#ff334b] text-white border-[#ff334b] shadow-[0_4px_14px_rgba(255,51,75,0.25)]"
                     : "bg-card border-border-custom text-zinc-400 hover:bg-card-hover hover:text-white hover:border-zinc-700/80"
                 }`}
               >
-                <IconComponent size={16} weight={isSelected ? "fill" : "bold"} />
+                <IconComponent size={14} weight={isSelected ? "fill" : "bold"} />
                 {category}
               </button>
             );
@@ -310,27 +310,30 @@ export function DailyDeals() {
                 onClick={() => setSelectedProduct(product)}
                 className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
               >
-                {/* Imagem Container */}
-                <div className="w-full aspect-square bg-white flex items-center justify-center relative p-5 border-b border-white/[0.04]">
-                  <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                    <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                      -{discount}%
-                    </span>
-                    <span className="bg-black/30 backdrop-blur-md text-[#8e92a4] text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/5">
-                      <Clock size={11} weight="bold" />
-                      {getTimeAgo(product.createdAt)}
-                    </span>
-                  </div>
+                {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
+                <div className="w-full aspect-square relative">
+                  {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
+                  <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
+                    <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
+                      <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                        -{discount}%
+                      </span>
+                      <span className="bg-black/30 backdrop-blur-md text-[#8e92a4] text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/5">
+                        <Clock size={11} weight="bold" />
+                        {getTimeAgo(product.createdAt)}
+                      </span>
+                    </div>
 
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
-                  />
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
 
                   {/* Overlapping Brand Badge */}
                   <div 
-                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-10"
+                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-20"
                     style={{
                       backgroundColor: badgeStyle.bg,
                       borderColor: "rgba(255,255,255,0.1)",

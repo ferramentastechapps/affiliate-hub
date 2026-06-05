@@ -1,0 +1,603 @@
+﻿=== LOGS DO NEXT.JS (API) ===
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+Erro ao enviar push notification: TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: Error: getaddrinfo ENOTFOUND 123testando.usejotashop.com.br
+      at ignore-listed frames {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: '123testando.usejotashop.com.br'
+  }
+}
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /root/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /root/affiliate-hub/package-lock.json
+
+ÔÜá metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3005". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc0f80048jkhql0dcryq6',
+  name: 'Lenovo Idea Tab Tablet Android 15 11 90Hz',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc1af004ajkhqs3348pzm',
+  name: 'Port├ítil gigante modo de fone de ouvido bluetooth alto-falante sem fio player fone de ouvido alto-falante m├║sica est├®',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc1mg004cjkhqvdv779p5',
+  name: 'Cal├ºa Jeans Cargo Masculina Streetwear Preta Mescla 34 Ao 44',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc1yv004ejkhq3dg91o9t',
+  name: 'Kit Colcha Bouti Casal 03 Pe├ºas Dupla Face Teka',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc213004gjkhq47v7c9fm',
+  name: 'Port├ítil gigante modo de fone de ouvido bluetooth alto-falante sem fio player fone de ouvido alto-falante m├║sica est├®',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc2b6004ijkhqqxgr3thk',
+  name: 'Liquidificador Turbo Power Mondial 550w - L-99 Fb',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc2ne004kjkhqsf9mo9nr',
+  name: '[Regional] Geladeira Frost Free Duplex 333 Litros Inox Consul - CRM40MK 110v',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc59l004mjkhqkhijvzwy',
+  name: 'Cal├ºa Jeans Cargo Masculina Streetwear Preta Mescla 34 Ao 44',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc5l7004qjkhq02b5sp98',
+  name: 'Kit Colcha Bouti Casal 03 Pe├ºas Dupla Face Teka',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfc5x1004sjkhqrzx9nc7o',
+  name: 'Liquidificador Turbo Power Mondial 550w - L-99 Fb',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+Ô£à Produto criado: {
+  id: 'cmplfcax5004ujkhqngeq0234',
+  name: '[Regional] Geladeira Frost Free Duplex 333 Litros Inox Consul - CRM40MK 110v',
+  hasId: true,
+  allKeys: [
+    'id',            'name',
+    'category',      'description',
+    'imageUrl',      'price',
+    'originalPrice', 'status',
+    'createdAt',     'updatedAt',
+    'links'
+  ]
+}
+
+=== LOGS DO ROBO (SCRAPER) ===
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 525, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 1081, in send_photo
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 703, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 613, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 641, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 200, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 365, in _request_wrapper
+    raise RetryAfter(retry_after)
+telegram.error.RetryAfter: Flood control exceeded. Retry in 41 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/affiliate-hub/bot/telegram_bot.py", line 51, in enviar_produto
+    await self.bot.send_message(
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 525, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 846, in send_message
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 703, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 613, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 641, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 200, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 365, in _request_wrapper
+    raise RetryAfter(retry_after)
+telegram.error.RetryAfter: Flood control exceeded. Retry in 40 seconds
+Traceback (most recent call last):
+  File "/root/affiliate-hub/bot/telegram_bot.py", line 43, in enviar_produto
+    await self.bot.send_photo(
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 525, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 1081, in send_photo
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 703, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 613, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 641, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 200, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 365, in _request_wrapper
+    raise RetryAfter(retry_after)
+telegram.error.RetryAfter: Flood control exceeded. Retry in 40 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/affiliate-hub/bot/telegram_bot.py", line 51, in enviar_produto
+    await self.bot.send_message(
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 525, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 846, in send_message
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 703, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 613, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 641, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 200, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 365, in _request_wrapper
+    raise RetryAfter(retry_after)
+telegram.error.RetryAfter: Flood control exceeded. Retry in 40 seconds
+Traceback (most recent call last):
+  File "/root/affiliate-hub/bot/telegram_bot.py", line 43, in enviar_produto
+    await self.bot.send_photo(
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 525, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 1081, in send_photo
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 703, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 613, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 641, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 200, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 365, in _request_wrapper
+    raise RetryAfter(retry_after)
+telegram.error.RetryAfter: Flood control exceeded. Retry in 39 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/affiliate-hub/bot/telegram_bot.py", line 51, in enviar_produto
+    await self.bot.send_message(
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 525, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 846, in send_message
+    return await self._send_message(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 703, in _send_message
+    result = await self._post(
+             ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 613, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/_bot.py", line 641, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 200, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/telegram/request/_baserequest.py", line 365, in _request_wrapper
+    raise RetryAfter(retry_after)
+telegram.error.RetryAfter: Flood control exceeded. Retry in 39 seconds
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>Aparelho De Jantar Lineare Tr...
+ÔÜá´©Å Erro ao enviar foto (Flood control exceeded. Retry in 40 seconds), enviando s├│ texto...
+ÔØî Erro ao enviar para Telegram: Flood control exceeded. Retry in 40 seconds
+   [API] Status: 201 | Body: {"success":true,"product":{"id":"cmple9cly0046jkhqensws8u4","name":"Conjunto 24 Potes Herm├®ticos Croix Empilhavel Tampa E Trava! Cor Transparente","category":"Diversos","description":"Oferta na loja Mercado Livre no Pechinchou\n­ƒÄƒ´©Å CUPOM: MLPRACASA","imageUrl":"https://assets.pechinchou.com.br/media/
+   [API] ID retornado: cmple9cly0046jkhqensws8u4
+Ô£à Produto adicionado com ID: cmple9cly0046jkhqensws8u4 | Conjunto 24 Potes Herm├®ticos Croix Empilhavel Tamp
+­ƒôØ Mensagem formatada (688 chars): ­ƒöÑ <b>NOVO PRODUTO ENCONTRADO!</b>
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>Conjunto 24 Potes Herm├®ticos ...
+ÔÜá´©Å Erro ao enviar foto (Flood control exceeded. Retry in 39 seconds), enviando s├│ texto...
+ÔØî Erro ao enviar para Telegram: Flood control exceeded. Retry in 39 seconds
+ÔØî Erro ao enviar resumo: Flood control exceeded. Retry in 39 seconds
+
+Ô£à Busca conclu├¡da e estado salvo!
+
+============================================================
+­ƒñû Iniciando busca de promo├º├Áes - 16:31:50
+============================================================
+
+­ƒôí Buscando em m├║ltiplas fontes...
+­ƒöÑ Buscando promo├º├Áes reais no Promobit...
+  Ô£à ├ÜLTIMO DIA: 500 Mega + Globoplay por Apenas R$ 49,...
+  Ô£à Dia do Mercado no Promobit: At├® 60% OFF em Aliment...
+  Ô£à T├¬nis Adidas Mercedes Amg Petronas F1 Team Ultimas...
+  Ô£à ├ë AMANH├â: Super Live Shopee e Promobit com Cupons ...
+  Ô£à 2025 moda jaqueta de l├ú para homens cor s├│lida gro...
+  Ô£à CUPOM LIBERADO: 20% OFF  na Sele├º├úo no Mercado Liv...
+  Ô£à Liquida├º├úo de Produtos com 30% OFF (Limite R$ 10.0...
+  Ô£à Fire Tv Stick 4k Com Alexa E Comandos De Tv Preto ...
+  Ô£à Smartwatch Amazfit GTR 3 PRO 46mm Display Amoled...
+  Ô£à Lenovo Idea Tab Tablet Android 15 11 90Hz...
+  Ô£à Heinz Maionese Tradicional 400G...
+  Ô£à Guarda Roupa Casal 6 Portas 8 Gavetas Portugal Esp...
+  Ô£à Notebook Gamer Alienware Aurora AC16-C7240H-D30 - ...
+  Ô£à Port├ítil gigante modo de fone de ouvido bluetooth ...
+­ƒöÑ Buscando promo├º├Áes no Promobyte...
+   ­ƒôí https://promobyte.site/promocoes-do-dia - Status: 200
+   ­ƒôª Encontrados 5 cards nesta p├ígina
+  Ô£à [Promobyte] Promo├º├Áes do dia...
+   ­ƒôí https://promobyte.site/lojas/amazon - Status: 200
+   ­ƒôª Encontrados 5 cards nesta p├ígina
+   ­ƒôí https://promobyte.site/lojas/mercadolivre - Status: 200
+   ­ƒôª Encontrados 5 cards nesta p├ígina
+   Ô£à Total Promobyte: 1 produtos
+­ƒöÑ Buscando promo├º├Áes no Gatry...
+   ­ƒôí Status: 200
+   ­ƒôª Encontrados 0 cards
+   Ô£à Total Gatry: 0 produtos
+­ƒöÑ Buscando ofertas no Zoom...
+   ­ƒôí Status: 200
+   ­ƒôª Encontrados 0 cards
+   Ô£à Total Zoom: 0 produtos
+­ƒöÑ Buscando ofertas no Buscap├®...
+   ­ƒôí Status: 200
+   ­ƒôª Encontrados 0 cards
+   Ô£à Total Buscap├®: 0 produtos
+­ƒÄÁ Buscando promo├º├Áes no TikTok Shop...
+ÔÜá´©Å  TikTok Shop: Adicione produtos manualmente via admin ou configure API
+   Documenta├º├úo: https://seller.tiktokglobalshop.com/document
+­ƒöÑ Buscando promo├º├Áes no Pechinchou...
+  Ô£à [Pechinchou] Cal├ºa Jeans Cargo Masculina Streetwear Preta ...
+  Ô£à [Pechinchou] Kit 2 Camisetas B├ísica Reserva...
+  Ô£à [Pechinchou] Kit Com 3 Camisetas Masculina 4k6p1cen B├ísica...
+  Ô£à [Pechinchou] Tenis Feminino New Balance 413v3...
+  Ô£à [Pechinchou] Kit Colcha Bouti Casal 03 Pe├ºas Dupla Face Te...
+  Ô£à [Pechinchou] Kit de 60 Canetas Marcador Permanente Ponta D...
+  Ô£à [Pechinchou] Tinta Acr├¡lica Rende Muito Fosco Branco 900ml...
+  Ô£à [Pechinchou] Kit 3 Camisetas Masculina Dry Alpha Lobo Geom...
+  Ô£à [Pechinchou] Liquidificador Turbo Power Mondial 550w - L-9...
+  Ô£à [Pechinchou] Havit Headphone Fone De Ouvido H2002d Red, Ga...
+  Ô£à [Pechinchou] Samsung Galaxy S25 Ultra 5g 256gb Galaxy Ai T...
+  Ô£à [Pechinchou] Jogo De Panelas Smart Plus Vanilla Indu├º├úo Ce...
+  Ô£à [Pechinchou] [Regional] Geladeira Frost Free Duplex 333 Li...
+  Ô£à [Pechinchou] Jogo De Toalhas Banho Lumina 5 Karsten Algod├ú...
+  Ô£à [Pechinchou] Aparelho de Jantar e Ch├í 20 pe├ºas Donna Colb...
+   Ô£à Total Pechinchou: 15 produtos
+­ƒôè Total combinado: 30 produtos ├║nicos
+   ­ƒöÑ Promobit: 14 | Promobyte: 1 | Gatry: 0
+   ­ƒöì Zoom: 0 | Buscap├®: 0 | Pechinchou: 15
+­ƒÄ½ Buscando cupons no Promobit...
+  Ô£à Cupom 20LACOSTE
+  Ô£à Cupom VERTUO10
+  Ô£à Cupom CAFE10OFF
+  Ô£à Cupom EMS30
+  Ô£à Cupom MAIO100
+  Ô£à Cupom 15
+  Ô£à Cupom MOCHILAIPLA
+  Ô£à Cupom MAY26BC
+  Ô£à Cupom SONO50
+  Ô£à Cupom NAMR1
+
+­ƒôè Encontrados: 30 produtos e 10 cupons
+Ô£¿ Novos: 5 produtos e 1 cupons
+
+­ƒôª Adicionando 5 produtos no site...
+­ƒô▒ Enviando produtos para Telegram...
+­ƒöù API URL: http://127.0.0.1:3005
+­ƒöæ API Key: f6c684a41738ecb...
+   [API] Status: 201 | Body: {"success":true,"product":{"id":"cmplfc213004gjkhq47v7c9fm","name":"Port├ítil gigante modo de fone de ouvido bluetooth alto-falante sem fio player fone de ouvido alto-falante m├║sica est├®","category":"Smartphones e TV","description":"Oferta na loja Aliexpress no Promobit\n­ƒÄƒ´©Å CUPOM: NORMAL","imageUrl":
+   [API] ID retornado: cmplfc213004gjkhq47v7c9fm
+Ô£à Produto adicionado com ID: cmplfc213004gjkhq47v7c9fm | Port├ítil gigante modo de fone de ouvido bluetooth 
+­ƒôØ Mensagem formatada (790 chars): ­ƒöÑ <b>NOVO PRODUTO ENCONTRADO!</b>
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>Port├ítil gigante modo de fone...
+Ô£à Produto enviado para Telegram: Port├ítil gigante modo de fone de ouvido bluetooth alto-falante sem fio player fone de ouvido alto-falante m├║sica est├®
+   [API] Status: 201 | Body: {"success":true,"product":{"id":"cmplfc59l004mjkhqkhijvzwy","name":"Cal├ºa Jeans Cargo Masculina Streetwear Preta Mescla 34 Ao 44","category":"Diversos","description":"Oferta na loja Mercado Livre no Pechinchou\n­ƒÄƒ´©Å CUPOM: MODAMELI","imageUrl":"https://assets.pechinchou.com.br/media/img/products/Pedro
+   [API] ID retornado: cmplfc59l004mjkhqkhijvzwy
+Ô£à Produto adicionado com ID: cmplfc59l004mjkhqkhijvzwy | Cal├ºa Jeans Cargo Masculina Streetwear Preta Mescl
+­ƒôØ Mensagem formatada (659 chars): ­ƒöÑ <b>NOVO PRODUTO ENCONTRADO!</b>
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>Cal├ºa Jeans Cargo Masculina S...
+Ô£à Produto enviado para Telegram: Cal├ºa Jeans Cargo Masculina Streetwear Preta Mescla 34 Ao 44
+   [API] Status: 201 | Body: {"success":true,"product":{"id":"cmplfc5l7004qjkhq02b5sp98","name":"Kit Colcha Bouti Casal 03 Pe├ºas Dupla Face Teka","category":"Diversos","description":"Oferta na loja Amazon no Pechinchou","imageUrl":"https://assets.pechinchou.com.br/media/img/products/81p9xrLF3CL._AC_SY300_SX300_QL70_ML2_.jpg","p
+   [API] ID retornado: cmplfc5l7004qjkhq02b5sp98
+Ô£à Produto adicionado com ID: cmplfc5l7004qjkhq02b5sp98 | Kit Colcha Bouti Casal 03 Pe├ºas Dupla Face Teka
+­ƒôØ Mensagem formatada (589 chars): ­ƒöÑ <b>NOVO PRODUTO ENCONTRADO!</b>
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>Kit Colcha Bouti Casal 03 Pe├º...
+Ô£à Produto enviado para Telegram: Kit Colcha Bouti Casal 03 Pe├ºas Dupla Face Teka
+   [API] Status: 201 | Body: {"success":true,"product":{"id":"cmplfc5x1004sjkhqrzx9nc7o","name":"Liquidificador Turbo Power Mondial 550w - L-99 Fb","category":"Diversos","description":"Oferta na loja Mercado Livre no Pechinchou","imageUrl":"https://assets.pechinchou.com.br/media/img/products/D_NQ_NP_744049-MLA99539379058_122025
+   [API] ID retornado: cmplfc5x1004sjkhqrzx9nc7o
+Ô£à Produto adicionado com ID: cmplfc5x1004sjkhqrzx9nc7o | Liquidificador Turbo Power Mondial 550w - L-99 Fb
+­ƒôØ Mensagem formatada (598 chars): ­ƒöÑ <b>NOVO PRODUTO ENCONTRADO!</b>
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>Liquidificador Turbo Power Mo...
+ÔÜá´©Å Erro ao enviar foto (Timed out), enviando s├│ texto...
+Ô£à Produto enviado para Telegram: Liquidificador Turbo Power Mondial 550w - L-99 Fb
+   [API] Status: 201 | Body: {"success":true,"product":{"id":"cmplfcax5004ujkhqngeq0234","name":"[Regional] Geladeira Frost Free Duplex 333 Litros Inox Consul - CRM40MK 110v","category":"Diversos","description":"Oferta na loja Amazon no Pechinchou","imageUrl":"https://assets.pechinchou.com.br/media/img/products/41vSxpFQ-L._AC_S
+   [API] ID retornado: cmplfcax5004ujkhqngeq0234
+Ô£à Produto adicionado com ID: cmplfcax5004ujkhqngeq0234 | [Regional] Geladeira Frost Free Duplex 333 Litros 
+­ƒôØ Mensagem formatada (636 chars): ­ƒöÑ <b>NOVO PRODUTO ENCONTRADO!</b>
+ÔÜá´©Å <b>AGUARDANDO APROVA├ç├âO</b>
+
+­ƒôª <b>[Regional] Geladeira Frost Fr...
+Ô£à Produto enviado para Telegram: [Regional] Geladeira Frost Free Duplex 333 Litros Inox Consul - CRM40MK 110v
+
+­ƒÄ½ Adicionando 1 cupons no site...
+Ô£à 1 cupons adicionados no site
+
+­ƒô▒ Enviando cupons para Telegram...
+Ô£à Cupom enviado para Telegram: 20LACOSTE
+
+Ô£à Busca conclu├¡da e estado salvo!
