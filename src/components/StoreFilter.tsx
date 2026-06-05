@@ -107,16 +107,16 @@ export function StoreFilter() {
   const activeStoreInfo = STORES.find(s => s.key === activeStore);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6 mb-12">
+    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 py-2 mb-3">
       {/* Título */}
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm md:text-base font-bold tracking-tight text-white">
           Featured Stores
         </h2>
         {activeStore && (
           <button
             onClick={() => setActiveStore(null)}
-            className="flex text-xs font-semibold text-zinc-400 hover:text-white transition-colors items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"
+            className="flex text-xs font-semibold text-zinc-400 hover:text-white transition-colors items-center gap-1 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full hover:bg-white/10"
           >
             Limpar Filtro
             <X size={12} weight="bold" />
@@ -124,8 +124,50 @@ export function StoreFilter() {
         )}
       </div>
 
-      {/* Grid de Lojas estilo Mockup */}
-      <div className="grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      {/* ── MOBILE: Scroll horizontal de chips ── */}
+      <div className="flex md:hidden gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide snap-x snap-mandatory">
+        {STORES.map((store) => {
+          const isActive = activeStore === store.key;
+          const LogoComponent = {
+            amazon: AmazonLogo,
+            mercadolivre: MercadoLivreLogo,
+            shopee: ShopeeLogo,
+            aliexpress: AliExpressLogo,
+            tiktok: TikTokShopLogo,
+            kabum: KaBuMLogo,
+            magalu: MagaluLogo,
+          }[store.key] || (() => null);
+
+          return (
+            <button
+              key={store.key}
+              onClick={() => setActiveStore(isActive ? null : store.key)}
+              className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shrink-0 snap-start transition-all duration-200 active:scale-95 border"
+              style={{
+                borderColor: store.color,
+                background: "linear-gradient(180deg, #F3F4F6 0%, #D1D5DB 100%)",
+                boxShadow: isActive 
+                  ? `0 0 14px ${store.color}80, inset 0 0 6px ${store.color}20` 
+                  : `0 0 8px ${store.color}25`,
+                transform: isActive ? "scale(1.02)" : "scale(1)",
+              }}
+            >
+              <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                <LogoComponent className="w-5 h-5 object-contain" />
+              </div>
+              <span
+                className="text-[11px] font-bold tracking-wide transition-colors"
+                style={{ color: store.key === "mercadolivre" ? "#2D3277" : "#111827" }}
+              >
+                {store.key === "mercadolivre" ? "mercado livre" : store.key === "kabum" ? "KaBuMI" : store.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── DESKTOP: Grid de cards ── */}
+      <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 mb-4">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           const LogoComponent = {
@@ -144,19 +186,18 @@ export function StoreFilter() {
               onClick={() => setActiveStore(isActive ? null : store.key)}
               onMouseEnter={() => setHoveredStore(store.key)}
               onMouseLeave={() => setHoveredStore(null)}
-              className="flex flex-col items-center justify-between p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[155px]"
+              className="flex flex-col items-center justify-between p-2.5 rounded-xl transition-all duration-300 relative overflow-hidden group cursor-pointer h-[86px] border-[2px]"
               style={{
-                border: "2px solid",
-                borderColor: isActive || hoveredStore === store.key
-                  ? store.color
-                  : `${store.color}45`, // Borda colorida constante (aprox. 27% opacidade)
+                borderColor: store.color,
+                background: "linear-gradient(180deg, #F9FAFB 0%, #D1D5DB 100%)",
                 boxShadow: isActive || hoveredStore === store.key
-                  ? `0 0 25px ${store.color}60, inset 0 0 12px ${store.color}30`
-                  : `0 0 15px ${store.color}15`, // Glow constante visível
-                background: "linear-gradient(180deg, #FFFFFF 0%, #ECECEC 100%)", // Fundo gradiente cinza-claro do mockup
+                  ? `0 0 18px ${store.color}80, inset 0 0 8px ${store.color}20`
+                  : `0 0 10px ${store.color}35`,
+                transform: isActive ? "scale(1.02)" : "scale(1)",
               }}
             >
               {/* Logo Area */}
+<<<<<<< HEAD
               <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0">
                 {store.key === "mercadolivre" ? (
                   <img
@@ -170,22 +211,24 @@ export function StoreFilter() {
               </div>
               
               {/* Label Area */}
-              <span 
-                className="text-xs font-extrabold tracking-tight transition-colors text-center block w-full truncate text-zinc-800 group-hover:text-black mt-2 select-none"
-              >
+              <div className="w-full flex items-center justify-center min-h-[24px]">
                 {store.key === "mercadolivre" ? (
-                  <span className="leading-tight block font-bold text-[11px] text-[#2D3277]">
+                  <span className="leading-[1.1] block font-bold text-[10.5px] text-[#2D3277] text-center select-none">
                     mercado<br />livre
                   </span>
                 ) : store.key === "kabum" ? (
-                  "KaBuMI"
+                  <span className="text-[10.5px] font-bold text-[#111827] text-center select-none">
+                    KaBuMI
+                  </span>
                 ) : (
-                  store.label
+                  <span className="text-[10.5px] font-bold text-[#111827] text-center select-none">
+                    {store.label}
+                  </span>
                 )}
-              </span>
+              </div>
 
               {isActive && (
-                <div className="absolute top-2 right-2 text-zinc-500 hover:text-zinc-800 transition-colors bg-white/60 p-0.5 rounded-full border border-zinc-200">
+                <div className="absolute top-1.5 right-1.5 text-zinc-500 hover:text-zinc-800 transition-colors bg-white/60 p-0.5 rounded-full border border-zinc-300">
                   <X size={8} weight="bold" />
                 </div>
               )}
@@ -259,27 +302,30 @@ export function StoreFilter() {
                         onClick={() => setSelectedProduct(product)}
                         className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
                       >
-                        {/* Imagem Container */}
-                        <div className="w-full aspect-square bg-white flex items-center justify-center relative p-5 border-b border-white/[0.04]">
-                          <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                            <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                              -{discount}%
-                            </span>
-                            <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
-                              <Clock size={12} weight="bold" />
-                              {getTimeAgo(product.createdAt)}
-                            </span>
-                          </div>
+                        {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
+                        <div className="w-full aspect-square relative">
+                          {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
+                          <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
+                            <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
+                              <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                                -{discount}%
+                              </span>
+                              <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
+                                <Clock size={12} weight="bold" />
+                                {getTimeAgo(product.createdAt)}
+                              </span>
+                            </div>
 
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-105"
-                          />
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          </div>
 
                           {/* Overlapping Brand Badge */}
                           <div 
-                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-10"
+                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-20"
                             style={{
                               backgroundColor: activeStoreInfo?.color || "#ff334b",
                               borderColor: "rgba(255,255,255,0.1)",

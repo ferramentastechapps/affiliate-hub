@@ -87,7 +87,7 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8 relative">
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-16 md:pt-28 pb-28 md:pb-8 relative">
       {/* Brilho decorativo de fundo */}
       <div className="ambient-glow" />
 
@@ -96,14 +96,14 @@ export default async function Home() {
         <HeroSection />
       </div>
 
-      {/* Destaques da Semana */}
-      <div className="w-full">
-        <WeeklyHighlights />
-      </div>
-
       {/* Filtro por Loja (Featured Stores) */}
       <div id="categorias" className="w-full">
         <StoreFilter />
+      </div>
+
+      {/* Destaques da Semana */}
+      <div className="w-full">
+        <WeeklyHighlights />
       </div>
 
       {/* Promocoes do Dia */}

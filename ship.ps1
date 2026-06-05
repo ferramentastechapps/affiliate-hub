@@ -71,6 +71,10 @@ fi
 pkill -f "python3.*main.py" || true
 pkill -f "python3.*telegram_listener.py" || true
 
+# Remover processos antigos/duplicados do PM2 se existirem
+pm2 delete affiliate-bot || true
+pm2 delete promobot || true
+
 # Reiniciar ou criar os bots no PM2
 cd ~/affiliate-hub/bot
 

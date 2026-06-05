@@ -7,9 +7,9 @@ Write-Host "Forneca a senha quando solicitado" -ForegroundColor Yellow
 $sshCommand = @"
 cd ~/affiliate-hub
 git pull origin master
-pm2 restart affiliate-bot 2>/dev/null || pm2 restart promobot 2>/dev/null || echo "Nenhum bot encontrado"
+pm2 restart affiliate-scraper 2>/dev/null || pm2 restart promobot 2>/dev/null || echo "Nenhum bot encontrado"
 pm2 list
-pm2 logs affiliate-bot --lines 40 --nostream 2>/dev/null || pm2 logs promobot --lines 40 --nostream 2>/dev/null
+pm2 logs affiliate-scraper --lines 40 --nostream 2>/dev/null || pm2 logs promobot --lines 40 --nostream 2>/dev/null
 "@
 
 $cleanCommand = $sshCommand -replace "`r", ""

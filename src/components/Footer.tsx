@@ -160,27 +160,9 @@ export function Footer() {
             
             {/* Coluna 1: Info e Social Icons */}
             <div className="flex flex-col gap-4">
-              <a href="#" className="flex items-center gap-2.5 text-decoration-none select-none">
-                <svg
-                  viewBox="0 0 36 36"
-                  className="w-9 h-9 fill-[#ff334b] drop-shadow-[0_4px_10px_rgba(255,51,75,0.3)]"
-                >
-                  <polygon points="18,2 34,11 28,32 8,32 2,11" />
-                  <text
-                    x="18"
-                    y="25"
-                    fill="white"
-                    fontSize="19"
-                    fontWeight="900"
-                    textAnchor="middle"
-                    fontFamily="system-ui, -apple-system, sans-serif"
-                  >
-                    E
-                  </text>
-                </svg>
-                <span className="text-white font-extrabold text-xl tracking-tight leading-none">
-                  economiza<span className="text-[#ff334b]">ai</span>
-                </span>
+              <a href="#" className="flex items-center gap-3 text-decoration-none select-none">
+                <img src="/Logo.png" alt="Logo" className="w-9 h-9 object-contain" />
+                <img src="/logo 2 branco.png" alt="Economiza ai" className="h-6 w-auto object-contain" />
               </a>
               <p className="text-zinc-500 text-xs leading-relaxed max-w-[320px]">
                 Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.
