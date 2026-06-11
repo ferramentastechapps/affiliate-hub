@@ -100,8 +100,33 @@ class PromotionBot:
                             print(f'✅ Produto adicionado com ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
-                        # Envia para Telegram e marca como enviado
-                        self.telegram.enviar_sync('produto', produto)
+                        
+                        # Verifica status para decidir se publica direto ou se envia para moderação
+                        status = produto_retornado.get('status', 'pending')
+                        if status == 'active':
+                            links = produto_retornado.get('links', {}) or {}
+                            platform = None
+                            affiliate_link = None
+                            for p in ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum']:
+                                if links.get(p):
+                                    platform = p
+                                    affiliate_link = links.get(p)
+                                    break
+                            
+                            if platform and affiliate_link:
+                                print(f'⚡ Link de afiliado auto-gerado com sucesso! Publicando direto no grupo...')
+                                self.telegram.enviar_sync('publicar_grupo', {
+                                    'produto': produto_retornado,
+                                    'platform': platform,
+                                    'affiliate_link': affiliate_link
+                                })
+                            else:
+                                print(f'⚠️ Produto ativado mas nenhum link de afiliado correspondente foi encontrado. Enviando para moderação.')
+                                self.telegram.enviar_sync('produto', produto)
+                        else:
+                            # Envia para moderação/aprovação manual no Telegram
+                            self.telegram.enviar_sync('produto', produto)
+                            
                         chave = self.scraper._normalizar(produto['name'])[:60]
                         self.produtos_enviados.add(chave)
                     else:
