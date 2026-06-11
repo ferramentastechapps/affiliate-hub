@@ -129,6 +129,9 @@ class PromotionBot:
                             
                         chave = self.scraper._normalizar(produto['name'])[:60]
                         self.produtos_enviados.add(chave)
+                        
+                        # Pausa para evitar Flood Control do Telegram (máx ~20 msgs/min)
+                        time.sleep(4)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
