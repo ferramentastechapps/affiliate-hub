@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import * as cheerio from 'cheerio';
 
 /**
  * Interface para representar os detalhes extraídos de uma URL de produto
@@ -17,6 +18,35 @@ interface UrlDetails {
  * para obter a URL final real da loja.
  */
 export async function resolveRedirect(url: string): Promise<string> {
+  // Caso especial: página de oferta do Promobit (precisamos extrair o link de saída do HTML)
+  if (url.toLowerCase().includes('promobit.com.br/oferta/')) {
+    try {
+      console.log(`[Affiliate] Raspando página da oferta do Promobit para obter o link real: ${url}`);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const html = await response.text();
+      const $ = cheerio.load(html);
+      
+      const scriptText = $('#__NEXT_DATA__').text();
+      if (scriptText) {
+        const data = JSON.parse(scriptText);
+        const serverOffer = data.props?.pageProps?.serverOffer || data.props?.pageProps?.offer || {};
+        const outboundUrl = serverOffer.offerUrl;
+        
+        if (outboundUrl) {
+          console.log(`[Affiliate] Link real extraído do Promobit: ${outboundUrl}`);
+          // Resolve recursivamente o link real encontrado (que pode ser amzn.to ou redirecionar mais)
+          return resolveRedirect(outboundUrl);
+        }
+      }
+    } catch (err) {
+      console.warn(`[Affiliate] Falha ao extrair link real do Promobit:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   // Se não for link curto conhecido, não precisa gastar tempo fazendo requisição
   const isShortLink = [
     'amzn.to',
@@ -28,7 +58,7 @@ export async function resolveRedirect(url: string): Promise<string> {
     'tidd.ly',
     'bit.ly',
     'tinyurl.com',
-    'promobit.com.br/oferta', // às vezes redireciona
+    's.shopee.com.br', // adicionado Shopee shortener
   ].some(domain => url.toLowerCase().includes(domain));
 
   if (!isShortLink) {
