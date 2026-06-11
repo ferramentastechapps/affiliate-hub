@@ -197,7 +197,6 @@ export function StoreFilter() {
               }}
             >
               {/* Logo Area */}
-<<<<<<< HEAD
               <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0">
                 {store.key === "mercadolivre" ? (
                   <img

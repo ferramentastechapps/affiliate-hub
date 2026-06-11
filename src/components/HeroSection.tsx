@@ -11,7 +11,6 @@ export function HeroSection() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
-<<<<<<< HEAD
         className="w-full max-w-3xl text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.2] mb-5"
       >
         Encontre as Melhores Ofertas e Cupons em um Só Lugar!

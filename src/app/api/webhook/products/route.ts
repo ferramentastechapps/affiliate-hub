@@ -1,6 +1,39 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
+import { generateAffiliateLink } from '@/lib/affiliate';
+
+async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
+  const links = productData.links || {};
+  const generatedLinks: Record<string, string> = {};
+  let hasAffiliate = false;
+
+  const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+  
+  for (const platform of platforms) {
+    const originalUrl = links[platform];
+    if (originalUrl) {
+      try {
+        console.log(`[Webhook] Auto-gerando link de afiliado para ${platform}: ${originalUrl}`);
+        const generated = await generateAffiliateLink(originalUrl);
+        if (generated) {
+          generatedLinks[platform] = generated;
+          hasAffiliate = true;
+        } else {
+          generatedLinks[platform] = originalUrl;
+        }
+      } catch (e) {
+        console.error(`Erro ao gerar link de afiliado para ${platform}:`, e);
+        generatedLinks[platform] = originalUrl;
+      }
+    }
+  }
+
+  return {
+    links: Object.keys(generatedLinks).length > 0 ? generatedLinks : null,
+    status: hasAffiliate ? 'active' : 'pending'
+  };
+}
 
 export async function POST(request: Request) {
   // Validar API Key
@@ -56,6 +89,9 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
+    const { links: processedLinks, status: processedStatus } = await processProductAffiliates(body);
+    const finalStatus = body.status || processedStatus;
+
     // Criar produto
     const product = await prisma.product.create({
       data: {
@@ -65,17 +101,17 @@ export async function POST(request: Request) {
         imageUrl: body.imageUrl,
         price: body.price ? parseFloat(body.price) : null,
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
-        status: body.status || 'pending', // Permite definir status customizado
-        links: body.links ? {
+        status: finalStatus,
+        links: processedLinks ? {
           create: {
-            amazon: body.links.amazon || null,
-            mercadoLivre: body.links.mercadoLivre || null,
-            shopee: body.links.shopee || null,
-            aliexpress: body.links.aliexpress || null,
-            tiktok: body.links.tiktok || null,
-            netshoes: body.links.netshoes || null,
-            magalu: body.links.magalu || null,
-            kabum: body.links.kabum || null,
+            amazon: processedLinks.amazon || null,
+            mercadoLivre: processedLinks.mercadoLivre || null,
+            shopee: processedLinks.shopee || null,
+            aliexpress: processedLinks.aliexpress || null,
+            tiktok: processedLinks.tiktok || null,
+            netshoes: processedLinks.netshoes || null,
+            magalu: processedLinks.magalu || null,
+            kabum: processedLinks.kabum || null,
           }
         } : undefined
       },
@@ -161,6 +197,9 @@ export async function PUT(request: Request) {
           continue;
         }
 
+        const { links: processedLinks, status: processedStatus } = await processProductAffiliates(productData);
+        const finalStatus = productData.status || processedStatus;
+
         const product = await prisma.product.create({
           data: {
             name: productData.name,
@@ -169,17 +208,17 @@ export async function PUT(request: Request) {
             imageUrl: productData.imageUrl,
             price: productData.price ? parseFloat(productData.price) : null,
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
-            status: productData.status || 'pending', // Permite definir status customizado
-            links: productData.links ? {
+            status: finalStatus,
+            links: processedLinks ? {
               create: {
-                amazon: productData.links.amazon || null,
-                mercadoLivre: productData.links.mercadoLivre || null,
-                shopee: productData.links.shopee || null,
-                aliexpress: productData.links.aliexpress || null,
-                tiktok: productData.links.tiktok || null,
-                netshoes: productData.links.netshoes || null,
-                magalu: productData.links.magalu || null,
-                kabum: productData.links.kabum || null,
+                amazon: processedLinks.amazon || null,
+                mercadoLivre: processedLinks.mercadoLivre || null,
+                shopee: processedLinks.shopee || null,
+                aliexpress: processedLinks.aliexpress || null,
+                tiktok: processedLinks.tiktok || null,
+                netshoes: processedLinks.netshoes || null,
+                magalu: processedLinks.magalu || null,
+                kabum: processedLinks.kabum || null,
               }
             } : undefined
           },
@@ -188,7 +227,7 @@ export async function PUT(request: Request) {
           }
         });
         results.push(product);
-      } catch (error) {
+      } catch {
         errors.push({
           product: productData.name,
           error: 'Erro ao criar produto'

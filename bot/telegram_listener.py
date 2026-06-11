@@ -11,12 +11,12 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
 
-# Inicializa o cliente da API para comunicar com o Next.js
+notifier = TelegramNotifier()
 api = AffiliateHubAPI()
 
 def infer_platform_from_url(url: str) -> str:
     """Descobre qual mercado o link pertence baseado na URL."""
-    url_lower = url.lower()
+    url_lower = url.lower() if url else ''
     
     if 'amazon' in url_lower or 'amzn.to' in url_lower:
         return 'amazon'
@@ -37,141 +37,9 @@ def infer_platform_from_url(url: str) -> str:
         
     return 'amazon' # Default fallback
 
-PLATAFORMA_EMOJIS = {
-    'amazon':      '🟠 Amazon',
-    'mercadoLivre':'🟡 Mercado Livre',
-    'shopee':      '🟠 Shopee',
-    'aliexpress':  '🔴 AliExpress',
-    'tiktok':      '⚫ TikTok Shop',
-    'netshoes':    '🟣 Netshoes',
-    'magalu':      '🔵 Magalu',
-    'kabum':       '🔵 Kabum',
-}
-
 async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None, custom_caption: str = None):
     """Publica a promoção aprovada no grupo de promoções."""
-    if not TELEGRAM_PROMO_GROUP_ID:
-        print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação no grupo.')
-        return
-
-    nome = produto.get('name', 'Produto')
-    preco = produto.get('price')
-    imagem = produto.get('imageUrl')
-    categoria = produto.get('category', 'Setup')
-    plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
-
-    legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
-    
-    from pathlib import Path
-    arquivo_legendas = Path(__file__).parent / 'legendas_salvas.txt'
-    
-    if custom_caption:
-        legenda_engracada = custom_caption.strip()
-        # Salva para aprender
-        try:
-            with open(arquivo_legendas, 'a', encoding='utf-8') as f:
-                f.write(legenda_engracada + '\n')
-            # Manter apenas as últimas 50
-            with open(arquivo_legendas, 'r', encoding='utf-8') as f:
-                linhas = f.readlines()
-            if len(linhas) > 50:
-                with open(arquivo_legendas, 'w', encoding='utf-8') as f:
-                    f.writelines(linhas[-50:])
-        except Exception as e:
-            print(f"Erro ao salvar legenda: {e}")
-    else:
-        import google.generativeai as genai
-        import asyncio
-        import random
-        
-        # Lê exemplos salvos
-        exemplos_salvos = ""
-        try:
-            if arquivo_legendas.exists():
-                with open(arquivo_legendas, 'r', encoding='utf-8') as f:
-                    linhas = [l.strip() for l in f.readlines() if l.strip()]
-                if linhas:
-                    amostra = random.sample(linhas, min(5, len(linhas)))
-                    exemplos_salvos = "Exemplos reais de legendas que eu já criei (siga ESSE MESMO ESTILO E VIBE):\n- " + "\n- ".join(amostra)
-        except Exception as e:
-            print(f"Erro ao ler legendas salvas: {e}")
-            
-        if not exemplos_salvos:
-            exemplos_salvos = (
-                "Exemplos do estilo que eu quero:\n"
-                "- 'MEU ÚNICO CARDIO NESSE FERIADO'\n"
-                "- 'PRA NÃO BRIGAR MAIS COM A ESPOSA'\n"
-                "- 'SUA CASA CLAMAVA POR ESSE MIMO'\n"
-                "- 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'"
-            )
-
-        if GEMINI_API_KEY:
-            try:
-                genai.configure(api_key=GEMINI_API_KEY)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                prompt = (
-                    f"Você é dono de um canal de achadinhos e utilidades. "
-                    f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
-                    f"para anunciar a venda deste produto: '{nome}'.\n\n"
-                    f"{exemplos_salvos}\n\n"
-                    f"Seja criativo, NUNCA REPITA OS EXEMPLOS EXATAMENTE. Crie uma frase nova baseada neles, focada no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
-                )
-                response = await asyncio.to_thread(model.generate_content, prompt)
-                if response and response.text:
-                    legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
-                    print(f"✅ Legenda Gemini gerada: {legenda_engracada}")
-                else:
-                    print("⚠️ Gemini retornou resposta vazia, usando legenda padrão")
-            except Exception as e:
-                print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
-        else:
-            print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
-
-    preco_original = produto.get('originalPrice')
-    if preco_original and preco and float(preco_original) > float(preco):
-        preco_txt = f"💰 de <s>R$ {float(preco_original):.2f}</s> por <b>R$ {float(preco):.2f}</b>".replace('.', ',')
-    else:
-        preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>".replace('.', ',') if preco else ""
-    
-    descricao_prod = produto.get('description', '')
-    cupom_msg = ""
-    if '🎟️ CUPOM:' in descricao_prod:
-        cupom_extraido = descricao_prod.split('🎟️ CUPOM:')[1].split('\n')[0].strip()
-        _invalidos = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
-        if cupom_extraido.upper() not in _invalidos:
-            cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
-
-    mensagem = (
-        f"{legenda_engracada}\n\n"
-        f"📦 <b>{nome}</b>\n"
-        f"🏪 {plataforma_label}\n"
-        f"{preco_txt}\n"
-        f"{cupom_msg}\n"
-        f"🔗 <a href='{affiliate_link}'>👉 CLIQUE AQUI PARA COMPRAR</a>"
-    )
-
-    try:
-        # Prioridade: foto enviada pelo admin > imageUrl do produto
-        foto_para_usar = foto_file_id or imagem
-        print(f'📸 foto_file_id (admin): {foto_file_id}')
-        print(f'🖼️ imageUrl (produto): {imagem}')
-        print(f'✅ foto_para_usar: {foto_para_usar}')
-        if foto_para_usar:
-            await context.bot.send_photo(
-                chat_id=TELEGRAM_PROMO_GROUP_ID,
-                photo=foto_para_usar,
-                caption=mensagem,
-                parse_mode='HTML'
-            )
-        else:
-            await context.bot.send_message(
-                chat_id=TELEGRAM_PROMO_GROUP_ID,
-                text=mensagem,
-                parse_mode='HTML'
-            )
-        print(f'📢 Promoção publicada no grupo: {nome[:50]}')
-    except Exception as e:
-        print(f'❌ Erro ao publicar no grupo: {e}')
+    await notifier.publicar_no_grupo(produto, platform, affiliate_link, foto_file_id, custom_caption)
 
 async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Intercepta fotos com legenda e redireciona para /aprovar ou /tiktok se necessário."""
