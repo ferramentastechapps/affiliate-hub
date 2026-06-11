@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
+import { generateAffiliateLink, detectPlatform } from '@/lib/affiliate';
 
 /**
  * POST /api/webhook/products/approve
@@ -27,20 +28,6 @@ export async function POST(request: Request) {
       );
     }
     
-    if (!platform || !affiliateLink) {
-      return NextResponse.json(
-        { error: 'platform e affiliateLink são obrigatórios' },
-        { status: 400 }
-      );
-    }
-    
-    if (!affiliateLink.startsWith('http')) {
-      return NextResponse.json(
-        { error: 'affiliateLink deve ser uma URL válida' },
-        { status: 400 }
-      );
-    }
-    
     // Verificar se o produto existe
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -51,6 +38,60 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Produto não encontrado' },
         { status: 404 }
+      );
+    }
+
+    let targetPlatform = platform;
+    let finalAffiliateLink = affiliateLink;
+
+    // Se o link de afiliado não foi fornecido, tenta gerar automaticamente
+    if (!finalAffiliateLink) {
+      if (!product.links) {
+        return NextResponse.json(
+          { error: 'Nenhum link original encontrado no banco de dados para este produto. Por favor, envie o link manualmente.' },
+          { status: 400 }
+        );
+      }
+
+      // Encontrar qual plataforma tem o link original preenchido
+      const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+      const foundPlatform = platforms.find(p => product.links?.[p]);
+
+      if (!foundPlatform) {
+        return NextResponse.json(
+          { error: 'Nenhum link original preenchido no produto para servir de base. Por favor, envie o link manualmente.' },
+          { status: 400 }
+        );
+      }
+
+      targetPlatform = foundPlatform;
+      const originalScrapedUrl = product.links[foundPlatform] as string;
+
+      console.log(`[Approve] Gerando link de afiliado automaticamente para ${foundPlatform} a partir de: ${originalScrapedUrl}`);
+      const generated = await generateAffiliateLink(originalScrapedUrl);
+
+      if (!generated) {
+        return NextResponse.json(
+          { 
+            error: `Não foi possível gerar o link de afiliado automaticamente para '${foundPlatform}'.`,
+            details: `Certifique-se de configurar a variável ${foundPlatform.toUpperCase()}_TEMPLATE ou a respectiva Tag/Shop no arquivo .env.`
+          },
+          { status: 400 }
+        );
+      }
+
+      finalAffiliateLink = generated;
+    }
+
+    // Garantir que temos plataforma e link válidos neste momento
+    if (!targetPlatform) {
+      targetPlatform = detectPlatform(finalAffiliateLink) || 'amazon';
+    }
+
+    if (!finalAffiliateLink.startsWith('http')) {
+      return NextResponse.json(
+        { error: 'O link de afiliado deve ser uma URL válida (começando com http/https)' },
+        { status: 400 }
       );
     }
     
@@ -71,7 +112,7 @@ export async function POST(request: Request) {
       await prisma.link.update({
         where: { id: product.links.id },
         data: {
-          [platform]: affiliateLink
+          [targetPlatform]: finalAffiliateLink
         }
       });
     } else {
@@ -79,7 +120,7 @@ export async function POST(request: Request) {
       await prisma.link.create({
         data: {
           productId: productId,
-          [platform]: affiliateLink
+          [targetPlatform]: finalAffiliateLink
         }
       });
     }
@@ -114,7 +155,7 @@ export async function POST(request: Request) {
               code: couponCode,
               description: `Cupom de desconto para ${product.name}`,
               discount: 'Desconto aplicado',
-              platform: platformNames[platform] || platform,
+              platform: platformNames[targetPlatform] || targetPlatform,
               productId: productId,
               isActive: true
             }
@@ -128,7 +169,7 @@ export async function POST(request: Request) {
       }
     }
     
-    console.log(`✅ Produto aprovado: ${productId} | Plataforma: ${platform}`);
+    console.log(`✅ Produto aprovado: ${productId} | Plataforma: ${targetPlatform}`);
     
     // Enviar notificação push para todos os inscritos
     try {
@@ -166,7 +207,8 @@ export async function POST(request: Request) {
       success: true,
       message: 'Produto aprovado e link atualizado',
       productId,
-      platform,
+      platform: targetPlatform,
+      affiliateLink: finalAffiliateLink,
       product: {
         name: product.name,
         price: product.price,

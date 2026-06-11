@@ -124,7 +124,7 @@ class AffiliateHubAPI:
             print(f'❌ Erro ao adicionar produto direto: {e}')
             return None
     
-    def aprovar_produto(self, produto_id: str, platform: str, affiliate_link: str, image_url: str = None) -> Optional[Dict]:
+    def aprovar_produto(self, produto_id: str, platform: str = None, affiliate_link: str = None, image_url: str = None) -> Optional[Dict]:
         """Aprova um produto pendente e adiciona o link de afiliado"""
         try:
             print(f'🔄 Enviando requisição de aprovação...')
@@ -135,10 +135,12 @@ class AffiliateHubAPI:
             print(f'   Headers: {self.headers}')
             
             payload = {
-                'productId': produto_id,
-                'platform': platform,
-                'affiliateLink': affiliate_link
+                'productId': produto_id
             }
+            if platform:
+                payload['platform'] = platform
+            if affiliate_link:
+                payload['affiliateLink'] = affiliate_link
             if image_url:
                 payload['imageUrl'] = image_url
                 print(f'   ImageUrl: {image_url}')

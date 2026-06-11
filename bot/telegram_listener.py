@@ -213,15 +213,14 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     print(f'🔍 DEBUG - Comando /aprovar recebido')
     print(f'   Args finais: {args}')
 
-    if len(args) < 2:
+    if not args:
         await update.message.reply_text(
             "❌ Uso incorreto!\n\n"
-            "✅ Formato correto:\n"
-            "<code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
-            "📸 Para enviar foto personalizada:\n"
-            "Envie a foto com a legenda: <code>/aprovar [ID] [LINK]</code>\n\n"
+            "✅ Formatos aceitos:\n"
+            "• Auto-gerar link de afiliado: <code>/aprovar [ID]</code>\n"
+            "• Especificar link manual: <code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
             "Exemplo:\n"
-            "<code>/aprovar clxyz123 https://amzn.to/abc123</code>",
+            "<code>/aprovar clxyz123</code>",
             parse_mode='HTML'
         )
         return
@@ -238,17 +237,6 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     print(f'   ID extraído: {produto_id}')
     print(f'   Link extraído: {affiliate_link}')
     print(f'   Legenda extraída: {custom_caption}')
-
-    if not affiliate_link:
-        await update.message.reply_text(
-            "❌ Nenhum link encontrado!\n\n"
-            "✅ Formato correto:\n"
-            "<code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
-            "Exemplo:\n"
-            "<code>/aprovar clxyz123 https://amzn.to/abc123</code>",
-            parse_mode='HTML'
-        )
-        return
 
     if not produto_id:
         await update.message.reply_text("❌ ID do produto não encontrado no comando.")
@@ -272,10 +260,10 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
             print(f'⚠️ Erro ao obter URL da foto: {e}')
 
     # Detectar plataforma
-    platform = infer_platform_from_url(affiliate_link)
+    platform = infer_platform_from_url(affiliate_link) if affiliate_link else None
     print(f'   Plataforma detectada: {platform}')
 
-    msg_status = await update.message.reply_text("⏳ Aprovando produto e atualizando link...")
+    msg_status = await update.message.reply_text("⏳ Aprovando produto...")
 
     # Chamar API de aprovação
     print(f'🔄 Chamando API de aprovação...')
@@ -285,29 +273,37 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     print(f'   Resultado: {resultado}')
 
     if resultado and resultado.get('success'):
+        # Obter dados resolvidos pelo servidor
+        final_platform = resultado.get('platform')
+        final_affiliate_link = resultado.get('affiliateLink')
+        
         # Publicar no grupo de promoções
         produto_info = resultado.get('product', {})
         print(f'✅ Produto aprovado com sucesso!')
-        print(f'   Publicando no grupo...')
+        print(f'   Publicando no grupo com link: {final_affiliate_link}')
         
-        await publicar_no_grupo(context, produto_info, platform, affiliate_link, foto_file_id, custom_caption)
+        await publicar_no_grupo(context, produto_info, final_platform, final_affiliate_link, foto_file_id, custom_caption)
 
         # Verificar se cupom foi salvo no banco
         cupom_info = resultado.get('coupon')
         cupom_msg = f"\n🎫 Cupom salvo no banco de dados!" if cupom_info else ""
         foto_msg = "\n📸 Foto personalizada usada!" if foto_file_id else ""
+        origem_msg = "\n✨ Link gerado automaticamente!" if not affiliate_link else "\n🔗 Usado link manual fornecido."
 
         await msg_status.edit_text(
             f"✅ <b>Produto Aprovado com Sucesso!</b>\n\n"
             f"🆔 ID: <code>{produto_id}</code>\n"
-            f"🏪 Plataforma: <b>{platform}</b>\n"
-            f"🔗 Link atualizado\n\n"
+            f"🏪 Plataforma: <b>{final_platform}</b>\n"
+            f"🔗 Link: {final_affiliate_link}\n\n"
             f"✅ Promoção publicada no grupo!"
-            + cupom_msg + foto_msg,
+            + origem_msg + cupom_msg + foto_msg,
             parse_mode='HTML'
         )
     else:
         erro_msg = resultado.get('error') if resultado else "Erro na comunicação com a API."
+        # Tenta pegar details do erro do Next.js
+        if resultado and resultado.get('details'):
+            erro_msg += f"\n\n💡 {resultado.get('details')}"
         print(f'❌ Erro ao aprovar: {erro_msg}')
         await msg_status.edit_text(f"❌ Falha ao aprovar: {erro_msg}")
 

@@ -152,6 +152,35 @@ class TelegramNotifier:
             if cupom_extraido.upper() not in _invalidos:
                 cupom_msg = f"\n🎟️ Cupom: <code>{cupom_extraido}</code>"
 
+        # Verificar se existe configuração de afiliados para a plataforma do produto
+        tem_autogeracao = False
+        mapeamento_envs = {
+            'amazon': ['AMAZON_TAG', 'AMAZON_TEMPLATE'],
+            'mercadoLivre': ['MERCADOLIVRE_TEMPLATE', 'MERCADOLIVRE_TAG'],
+            'shopee': ['SHOPEE_TEMPLATE', 'SHOPEE_TAG'],
+            'aliexpress': ['ALIEXPRESS_TEMPLATE', 'ALIEXPRESS_TAG'],
+            'tiktok': ['TIKTOK_TEMPLATE', 'TIKTOK_TAG'],
+            'netshoes': ['NETSHOES_TEMPLATE', 'NETSHOES_TAG'],
+            'magalu': ['MAGALU_SHOP', 'MAGALU_TEMPLATE'],
+            'kabum': ['KABUM_TEMPLATE', 'KABUM_TAG'],
+        }
+        
+        plataforma_slug = None
+        for chave in mapeamento_envs.keys():
+            if links.get(chave):
+                plataforma_slug = chave
+                break
+        
+        import os
+        if plataforma_slug and plataforma_slug in mapeamento_envs:
+            envs = mapeamento_envs[plataforma_slug]
+            tem_autogeracao = any(os.getenv(env) for env in envs)
+            
+        if tem_autogeracao:
+            aprovar_msg = f"<code>/aprovar {produto_id}</code>\n💡 <i>(Link de afiliado será gerado automaticamente!)</i>"
+        else:
+            aprovar_msg = f"<code>/aprovar {produto_id} [SEU_LINK]</code>\n⚠️ <i>(Configurações de afiliado ausentes no .env. Envie o link manualmente ou configure o .env.)</i>"
+
         mensagem = f"""
 🔥 <b>NOVO PRODUTO ENCONTRADO!</b>
 ⚠️ <b>AGUARDANDO APROVAÇÃO</b>
@@ -166,7 +195,7 @@ class TelegramNotifier:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <b>📋 PARA APROVAR, envie:</b>
 
-<code>/aprovar {produto_id} [SEU_LINK]</code>
+{aprovar_msg}
 
 <b>🚫 Para rejeitar:</b>
 <code>/rejeitar {produto_id}</code>
