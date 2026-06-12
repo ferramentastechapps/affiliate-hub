@@ -9,6 +9,8 @@ API Docs: https://developers.mercadolivre.com.br/
 import os
 import requests
 import re
+import json
+from pathlib import Path
 from typing import List, Dict, Optional
 from urllib.parse import urlencode
 
@@ -114,6 +116,87 @@ class MercadoLivreAPIScraper:
         }
         self.min_desconto = float(os.getenv('ML_MIN_DESCONTO_PERCENT', '10'))
         self.max_preco = float(os.getenv('ML_MAX_PRECO', '5000'))
+        
+        self.token_file = Path(os.path.dirname(__file__)) / 'ml_token.json'
+        self.access_token = None
+        self.refresh_token = None
+        self.client_id = None
+        self.client_secret = None
+        self._load_tokens()
+
+    def _load_tokens(self):
+        if self.token_file.exists():
+            try:
+                with open(self.token_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.access_token = data.get('access_token')
+                    self.refresh_token = data.get('refresh_token')
+                    self.client_id = data.get('client_id')
+                    self.client_secret = data.get('client_secret')
+            except Exception as e:
+                print(f'⚠️ Erro ao carregar ml_token.json: {e}')
+
+    def _save_tokens(self):
+        try:
+            data = {
+                'access_token': self.access_token,
+                'refresh_token': self.refresh_token,
+                'client_id': self.client_id,
+                'client_secret': self.client_secret
+            }
+            with open(self.token_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f'⚠️ Erro ao salvar ml_token.json: {e}')
+
+    def _do_refresh(self) -> bool:
+        if not all([self.refresh_token, self.client_id, self.client_secret]):
+            print('⚠️ Impossível renovar token: credenciais incompletas.')
+            return False
+            
+        url = f'{ML_API_BASE}/oauth/token'
+        data = {
+            'grant_type': 'refresh_token',
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'refresh_token': self.refresh_token
+        }
+        try:
+            r = requests.post(url, data=data, timeout=10)
+            if r.status_code == 200:
+                resp_json = r.json()
+                self.access_token = resp_json.get('access_token')
+                self.refresh_token = resp_json.get('refresh_token')
+                self._save_tokens()
+                print('✅ Token do Mercado Livre renovado com sucesso!')
+                return True
+            else:
+                print(f'⚠️ Erro ao renovar token ML: {r.status_code} {r.text}')
+                return False
+        except Exception as e:
+            print(f'⚠️ Exceção ao renovar token ML: {e}')
+            return False
+
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
+        """Faz requisição e trata token expirado (401/403)"""
+        if self.access_token:
+            headers = kwargs.get('headers', self.headers.copy())
+            headers['Authorization'] = f'Bearer {self.access_token}'
+            kwargs['headers'] = headers
+            
+        r = requests.request(method, url, **kwargs)
+        
+        # Se for 401 ou 403 e tivermos os dados de refresh, tenta renovar 1 vez
+        if r.status_code in (401, 403) and self.refresh_token:
+            print('🔄 Token do ML parece expirado ou inválido. Tentando renovar...')
+            if self._do_refresh():
+                # Tenta novamente com o novo token
+                headers = kwargs.get('headers', self.headers.copy())
+                headers['Authorization'] = f'Bearer {self.access_token}'
+                kwargs['headers'] = headers
+                r = requests.request(method, url, **kwargs)
+        
+        return r
 
     def _buscar_destaques_categoria(self, category_id: str, limite: int = 10) -> List[dict]:
         """Busca produtos em destaque/promoção de uma categoria"""
@@ -125,7 +208,7 @@ class MercadoLivreAPIScraper:
                 'limit': limite,
                 'promotions': 'DEAL',  # Apenas produtos com promoção ativa
             }
-            r = requests.get(url, params=params, headers=self.headers, timeout=10)
+            r = self._request('GET', url, params=params, timeout=10)
             if r.status_code == 200:
                 data = r.json()
                 return data.get('results', [])
@@ -142,7 +225,7 @@ class MercadoLivreAPIScraper:
                 'sort': 'relevance',
                 'limit': limite,
             }
-            r = requests.get(url, params=params, headers=self.headers, timeout=10)
+            r = self._request('GET', url, params=params, timeout=10)
             if r.status_code == 200:
                 data = r.json()
                 return data.get('results', [])
@@ -154,7 +237,7 @@ class MercadoLivreAPIScraper:
         """Busca produtos em tendência no ML"""
         try:
             url = f"{ML_API_BASE}/sites/{ML_SITE_ID}/trends"
-            r = requests.get(url, headers=self.headers, timeout=10)
+            r = self._request('GET', url, timeout=10)
             if r.status_code == 200:
                 trends = r.json()
                 keywords = [t.get('keyword', '') for t in trends[:5]]
@@ -165,7 +248,7 @@ class MercadoLivreAPIScraper:
                         continue
                     search_url = f"{ML_API_BASE}/sites/{ML_SITE_ID}/search"
                     params = {'q': kw, 'sort': 'relevance', 'limit': 5}
-                    sr = requests.get(search_url, params=params, headers=self.headers, timeout=10)
+                    sr = self._request('GET', search_url, params=params, timeout=10)
                     if sr.status_code == 200:
                         produtos.extend(sr.json().get('results', []))
                 return produtos
