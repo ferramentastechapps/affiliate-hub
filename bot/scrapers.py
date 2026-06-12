@@ -4,6 +4,13 @@ from typing import List, Dict, Optional
 import re
 from config import CATEGORIES, MIN_DISCOUNT_PERCENT
 
+try:
+    from scraper_ml import MercadoLivreAPIScraper
+    _ml_scraper = MercadoLivreAPIScraper()
+except Exception as _e:
+    print(f'⚠️ Scraper ML não carregado: {_e}')
+    _ml_scraper = None
+
 
 class PromotionScraper:
     """Busca promoções em diferentes sites"""
@@ -843,7 +850,7 @@ class PromotionScraper:
         return produtos
 
     def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé e TikTok"""
+        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé, TikTok e ML API"""
         print('\n📡 Buscando em múltiplas fontes...')
 
         produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
@@ -854,18 +861,27 @@ class PromotionScraper:
         produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
         produtos_pechinchou = self.buscar_promocoes_pechinchou()   # Pechinchou
 
+        # 🆕 Mercado Livre API Oficial (links de afiliado já gerados, sem intermediários!)
+        produtos_ml_api = []
+        if _ml_scraper:
+            try:
+                produtos_ml_api = _ml_scraper.buscar_promocoes_mercadolivre(limite_por_categoria=8)
+            except Exception as e:
+                print(f'⚠️ Erro no scraper ML API: {e}')
+
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        for p in produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
+        # ML API primeiro para garantir que links limpos tenham prioridade
+        for p in produtos_ml_api + produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
                 todos_produtos.append(p)
 
         print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
-        print(f'   🔥 Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)} | Gatry: {len(produtos_gatry)}')
-        print(f'   🔍 Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | Pechinchou: {len(produtos_pechinchou)}')
+        print(f'   🛒 ML API: {len(produtos_ml_api)} | Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)}')
+        print(f'   🔍 Gatry: {len(produtos_gatry)} | Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | Pechinchou: {len(produtos_pechinchou)}')
 
         todos_cupons = self.buscar_cupons_pelando()
 
