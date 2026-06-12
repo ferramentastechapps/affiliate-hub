@@ -4,7 +4,6 @@ sys.path.append('bot')
 from scraper_ml import MercadoLivreAPIScraper
 
 s = MercadoLivreAPIScraper()
-prods = s.buscar_promocoes_mercadolivre(limite_por_categoria=3)
-print(f'Encontrados: {len(prods)}')
-for p in prods[:3]:
-    print(f"- {p['name'][:60]} | R$ {p['price']:.2f} | {p['links']['mercadoLivre'][:60]}...")
+r = s._request('GET', 'https://api.mercadolibre.com/sites/MLB/search?category=MLB1798&limit=1')
+print(r.status_code)
+print(r.text)
