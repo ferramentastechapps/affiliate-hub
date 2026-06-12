@@ -33,6 +33,7 @@ export async function resolveRedirect(url: string): Promise<string> {
       const scriptText = $('#__NEXT_DATA__').text();
       if (scriptText) {
         const data = JSON.parse(scriptText);
+        // O caminho dos dados pode variar, tentando algumas opções comuns no Promobit
         const serverOffer = data.props?.pageProps?.serverOffer || data.props?.pageProps?.offer || {};
         const outboundUrl = serverOffer.offerUrl;
         
@@ -40,6 +41,26 @@ export async function resolveRedirect(url: string): Promise<string> {
           console.log(`[Affiliate] Link real extraído do Promobit: ${outboundUrl}`);
           // Resolve recursivamente o link real encontrado (que pode ser amzn.to ou redirecionar mais)
           return resolveRedirect(outboundUrl);
+        }
+
+        // Se não encontrou o link de saída, tenta extrair pelo endpoint de redirecionamento
+        const offerId = serverOffer.offerId;
+        if (offerId) {
+          const redirectUrl = `https://www.promobit.com.br/Redirect/to/${offerId}/`;
+          const redirectResponse = await fetch(redirectUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+          });
+          const redirectHtml = await redirectResponse.text();
+          // O Promobit redireciona por javascript com a variável l = 'url';
+          const match = redirectHtml.match(/l\s*=\s*['"](https?:\/\/[^'"]+)['"]/);
+          
+          if (match && match[1]) {
+            const resolvedOutboundUrl = match[1];
+            console.log(`[Affiliate] Link real extraído do Promobit via endpoint: ${resolvedOutboundUrl}`);
+            return resolveRedirect(resolvedOutboundUrl);
+          }
         }
       }
     } catch (err) {
