@@ -187,11 +187,14 @@ export async function resolveRedirect(url: string): Promise<string> {
     clearTimeout(timeoutId);
     
     if (response.url && response.url !== url) {
-      console.log(`[Affiliate] URL final resolvida (HEAD): ${response.url}`);
-      return response.url;
+      // Se for uma vitrine social do Mercado Livre, precisamos do GET para ler o HTML
+      if (!response.url.includes('mercadolivre.com.br/social/')) {
+        console.log(`[Affiliate] URL final resolvida (HEAD): ${response.url}`);
+        return response.url;
+      }
     }
     
-    // Se falhar ou não mudar, tenta GET (alguns servidores bloqueiam HEAD)
+    // Se falhar, não mudar, ou for vitrine (precisa ler HTML), tenta GET
     const getController = new AbortController();
     const getTimeoutId = setTimeout(() => getController.abort(), 8000);
     
@@ -207,8 +210,27 @@ export async function resolveRedirect(url: string): Promise<string> {
     clearTimeout(getTimeoutId);
     
     if (getResponse.url) {
-      console.log(`[Affiliate] URL final resolvida (GET): ${getResponse.url}`);
-      return getResponse.url;
+      let finalUrl = getResponse.url;
+      
+      // DESTRUIDOR DE VITRINE PECHINCHOU/ML:
+      // Se caiu em uma página "social" (coleção/vitrine), extrai o primeiro produto real
+      if (finalUrl.includes('mercadolivre.com.br/social/')) {
+        try {
+          const html = await getResponse.text();
+          const mlbMatch = html.match(/MLB-?\d+/);
+          if (mlbMatch && mlbMatch[0]) {
+            const mlbId = mlbMatch[0];
+            finalUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
+            console.log(`[Affiliate] 💥 Vitrine detectada! Produto real extraído: ${finalUrl}`);
+            return finalUrl;
+          }
+        } catch (e) {
+          console.warn(`[Affiliate] Erro ao extrair produto da vitrine:`, e);
+        }
+      }
+      
+      console.log(`[Affiliate] URL final resolvida (GET): ${finalUrl}`);
+      return finalUrl;
     }
   } catch (err) {
     console.warn(`[Affiliate] Falha ao resolver redirecionamento de ${url}:`, err instanceof Error ? err.message : err);
