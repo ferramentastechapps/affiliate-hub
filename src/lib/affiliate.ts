@@ -361,7 +361,7 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
   // --- MERCADO LIVRE ---
   if (platform === 'mercadoLivre') {
     const mlTag = process.env.MERCADOLIVRE_TAG;
-    const mlWord = process.env.MERCADOLIVRE_WORD || mlTag;
+    const mlWord = process.env.MERCADOLIVRE_WORD || mlTag || '';
     
     if (mlTag) {
       // O Mercado Livre usa a tag 'matt_tool' para rastreamento de afiliados e 'matt_word'
