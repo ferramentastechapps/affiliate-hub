@@ -361,18 +361,20 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
   // --- MERCADO LIVRE ---
   if (platform === 'mercadoLivre') {
     const mlTag = process.env.MERCADOLIVRE_TAG;
+    const mlWord = process.env.MERCADOLIVRE_WORD || mlTag;
+    
     if (mlTag) {
       // O Mercado Livre usa a tag 'matt_tool' para rastreamento de afiliados e 'matt_word'
       // Precisamos substituir qualquer 'matt_tool' existente ou adicionar à URL limpa
       try {
         const mlUrl = new URL(details.rawUrl);
         mlUrl.searchParams.set('matt_tool', mlTag);
-        mlUrl.searchParams.set('matt_word', mlTag);
+        mlUrl.searchParams.set('matt_word', mlWord);
         return mlUrl.toString();
       } catch {
         return details.cleanUrl.includes('?') 
-          ? `${details.cleanUrl}&matt_tool=${mlTag}&matt_word=${mlTag}`
-          : `${details.cleanUrl}?matt_tool=${mlTag}&matt_word=${mlTag}`;
+          ? `${details.cleanUrl}&matt_tool=${mlTag}&matt_word=${mlWord}`
+          : `${details.cleanUrl}?matt_tool=${mlTag}&matt_word=${mlWord}`;
       }
     } else if (templateEnv) {
       return applyTemplate(templateEnv, details, mlTag);
