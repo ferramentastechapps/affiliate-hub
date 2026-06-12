@@ -78,7 +78,17 @@ export async function resolveRedirect(url: string): Promise<string> {
       const listUrl = url.endsWith('/lists') ? url : url.replace(/\?.*/, '') + '/lists';
       const response = await fetch(listUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+          'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1'
         }
       });
       const html = await response.text();
@@ -103,9 +113,11 @@ export async function resolveRedirect(url: string): Promise<string> {
         } catch {
           return productUrl;
         }
+      } else {
+        console.warn(`[Affiliate] Falha: Não encontrou o link do produto no HTML do ML Social. O servidor do ML pode estar bloqueando a VPS (status ${response.status}). HTML len: ${html.length}`);
       }
     } catch (err) {
-      console.warn(`[Affiliate] Falha ao resolver link social do Mercado Livre:`, err instanceof Error ? err.message : err);
+      console.warn(`[Affiliate] Erro fatal ao resolver link social do Mercado Livre:`, err instanceof Error ? err.message : err);
     }
   }
 
