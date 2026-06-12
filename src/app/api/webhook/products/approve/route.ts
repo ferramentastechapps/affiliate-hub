@@ -54,33 +54,91 @@ export async function POST(request: Request) {
       }
 
       // Encontrar qual plataforma tem o link original preenchido
+      // IMPORTANTE: Primeiro tentar detectar a plataforma pelo conteúdo da URL (mais confiável)
+      // O scraper às vezes salva o link do Pechinchou na coluna errada (ex: amazon em vez de mercadoLivre)
       const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-      const foundPlatform = platforms.find(p => product.links?.[p]);
+      
+      // Coletar todos os links preenchidos
+      const allFilledLinks = platforms
+        .filter(p => product.links?.[p])
+        .map(p => ({ platform: p, url: product.links![p] as string }));
 
-      if (!foundPlatform) {
+      if (allFilledLinks.length === 0) {
         return NextResponse.json(
           { error: 'Nenhum link original preenchido no produto para servir de base. Por favor, envie o link manualmente.' },
           { status: 400 }
         );
       }
 
-      targetPlatform = foundPlatform;
-      const originalScrapedUrl = product.links[foundPlatform] as string;
+      // Tentar detectar a plataforma real pelo conteúdo da URL (ignora a coluna onde foi salvo)
+      let bestMatch = allFilledLinks[0]; // fallback para o primeiro
+      for (const entry of allFilledLinks) {
+        const detectedPlatform = detectPlatform(entry.url);
+        if (detectedPlatform && detectedPlatform !== 'amazon') {
+          // Se detectou uma plataforma específica (não amazon default), usa ela
+          bestMatch = { platform: detectedPlatform as typeof platforms[number], url: entry.url };
+          break;
+        }
+        if (detectedPlatform === 'amazon' && entry.url.toLowerCase().includes('amazon')) {
+          // Só usa amazon se o link realmente for da Amazon
+          bestMatch = entry;
+          break;
+        }
+      }
 
-      console.log(`[Approve] Gerando link de afiliado automaticamente para ${foundPlatform} a partir de: ${originalScrapedUrl}`);
+      // Se todos os links são de plataformas intermediárias (pechinchou, promobit, etc),
+      // resolve via generateAffiliateLink que já sabe lidar com isso
+      targetPlatform = bestMatch.platform;
+      const originalScrapedUrl = bestMatch.url;
+
+      console.log(`[Approve] Detectando plataforma de: ${originalScrapedUrl}`);
+      const detectedFromUrl = detectPlatform(originalScrapedUrl);
+      if (detectedFromUrl) {
+        targetPlatform = detectedFromUrl as typeof platforms[number];
+        console.log(`[Approve] Plataforma real detectada pela URL: ${targetPlatform}`);
+      } else {
+        // Fallback: tentar inferir plataforma pela descrição do produto
+        // (o scraper geralmente escreve "Oferta na loja Mercado Livre no Pechinchou")
+        const desc = (product.description || '').toLowerCase();
+        if (desc.includes('mercado livre') || desc.includes('mercadolivre')) {
+          targetPlatform = 'mercadoLivre';
+        } else if (desc.includes('shopee')) {
+          targetPlatform = 'shopee';
+        } else if (desc.includes('amazon')) {
+          targetPlatform = 'amazon';
+        } else if (desc.includes('aliexpress')) {
+          targetPlatform = 'aliexpress';
+        } else if (desc.includes('magalu') || desc.includes('magazine')) {
+          targetPlatform = 'magalu';
+        } else if (desc.includes('kabum')) {
+          targetPlatform = 'kabum';
+        } else if (desc.includes('netshoes')) {
+          targetPlatform = 'netshoes';
+        }
+        if (targetPlatform !== bestMatch.platform) {
+          console.log(`[Approve] Plataforma detectada pela descrição do produto: ${targetPlatform}`);
+        }
+      }
+
+      console.log(`[Approve] Gerando link de afiliado para ${targetPlatform} a partir de: ${originalScrapedUrl}`);
       const generated = await generateAffiliateLink(originalScrapedUrl);
 
       if (!generated) {
         return NextResponse.json(
           { 
-            error: `Não foi possível gerar o link de afiliado automaticamente para '${foundPlatform}'.`,
-            details: `Certifique-se de configurar a variável ${foundPlatform.toUpperCase()}_TEMPLATE ou a respectiva Tag/Shop no arquivo .env.`
+            error: `Não foi possível gerar o link de afiliado automaticamente para '${targetPlatform}'.`,
+            details: `Certifique-se de configurar a variável ${targetPlatform.toUpperCase()}_TEMPLATE ou a respectiva Tag/Shop no arquivo .env.`
           },
           { status: 400 }
         );
       }
 
       finalAffiliateLink = generated;
+      // Re-detectar plataforma pelo link gerado (mais preciso)
+      const detectedFromGenerated = detectPlatform(finalAffiliateLink);
+      if (detectedFromGenerated) {
+        targetPlatform = detectedFromGenerated as typeof platforms[number];
+      }
     }
 
     // Garantir que temos plataforma e link válidos neste momento
