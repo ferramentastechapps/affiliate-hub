@@ -68,6 +68,47 @@ export async function resolveRedirect(url: string): Promise<string> {
     }
   }
 
+  // Caso especial: Mercado Livre Social Links (/social/)
+  // Esses links não são redirecionamentos HTTP 301/302 para o produto diretamente,
+  // mas sim páginas HTML (coleções/listas) que contêm o link do produto.
+  if (url.toLowerCase().includes('mercadolivre.com.br/social/')) {
+    try {
+      console.log(`[Affiliate] Resolvendo link social do Mercado Livre: ${url}`);
+      // As vezes o ML precisa do /lists no final para carregar a página HTML corretamente com os itens
+      const listUrl = url.endsWith('/lists') ? url : url.replace(/\?.*/, '') + '/lists';
+      const response = await fetch(listUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const html = await response.text();
+      // Procura pelo primeiro link de produto na página
+      const match = html.match(/href="([^"]*produto\.mercadolivre\.com\.br\/MLB-[^"]+)"/i);
+      
+      if (match && match[1]) {
+        // O link vem com entidades HTML, precisa limpar (ex: &amp; -> &)
+        let productUrl = match[1].replace(/&amp;/g, '&');
+        console.log(`[Affiliate] URL real extraída do ML Social: ${productUrl}`);
+        
+        try {
+          const urlObj = new URL(productUrl);
+          urlObj.searchParams.delete('matt_tracing_id');
+          urlObj.searchParams.delete('matt_event_ts');
+          urlObj.searchParams.delete('matt_d2id');
+          urlObj.searchParams.delete('source');
+          urlObj.searchParams.delete('type');
+          urlObj.searchParams.delete('tracking_id');
+          urlObj.hash = '';
+          return urlObj.toString();
+        } catch {
+          return productUrl;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Affiliate] Falha ao resolver link social do Mercado Livre:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   // Caso especial: página de oferta do Pechinchou (precisamos extrair o link de saída do HTML)
   if (url.toLowerCase().includes('pechinchou.com.br/oferta/')) {
     try {
