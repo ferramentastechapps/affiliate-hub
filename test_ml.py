@@ -1,7 +1,9 @@
-import requests
-import re
+import sys
+sys.path.append('bot')
+from scraper_ml import MercadoLivreAPIScraper
 
-url = 'https://www.mercadolivre.com.br/social/pp20250311151339/lists'
-r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-links = re.findall(r'href="(https://produto\.mercadolivre\.com\.br/[^"]+)"', r.text)
-print("First link:", links[0] if links else 'None')
+s = MercadoLivreAPIScraper()
+prods = s.buscar_promocoes_mercadolivre(limite_por_categoria=3)
+print(f'Encontrados: {len(prods)}')
+for p in prods[:3]:
+    print(f"- {p['name'][:60]} | R$ {p['price']:.2f} | {p['links']['mercadoLivre']}")
