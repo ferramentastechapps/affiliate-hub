@@ -47,6 +47,35 @@ export async function resolveRedirect(url: string): Promise<string> {
     }
   }
 
+  // Caso especial: página de oferta do Pechinchou (precisamos extrair o link de saída do HTML)
+  if (url.toLowerCase().includes('pechinchou.com.br/oferta/')) {
+    try {
+      console.log(`[Affiliate] Raspando página da oferta do Pechinchou para obter o link real: ${url}`);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      const html = await response.text();
+      const $ = cheerio.load(html);
+      
+      const scriptText = $('#__NEXT_DATA__').text();
+      if (scriptText) {
+        const data = JSON.parse(scriptText);
+        const promo = data.props?.pageProps?.promo || {};
+        const outboundUrl = promo.long_url || promo.short_url;
+        
+        if (outboundUrl) {
+          console.log(`[Affiliate] Link real extraído do Pechinchou: ${outboundUrl}`);
+          // Resolve recursivamente o link real encontrado
+          return resolveRedirect(outboundUrl);
+        }
+      }
+    } catch (err) {
+      console.warn(`[Affiliate] Falha ao extrair link real do Pechinchou:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   // Se não for link curto conhecido, não precisa gastar tempo fazendo requisição
   const isShortLink = [
     'amzn.to',
