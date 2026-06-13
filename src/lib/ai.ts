@@ -109,7 +109,7 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash", // Utilizando a mesma flag flash que suporta multimodal
+        model: "google/gemini-2.5-flash-image", // Mudado a pedido do usuário
         messages: [
           {
             role: "user",
