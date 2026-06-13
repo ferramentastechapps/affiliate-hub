@@ -157,6 +157,7 @@ export async function resolveRedirect(url: string): Promise<string> {
     's.click.aliexpress.com',
     'a.aliexpress.com',
     'meli.la',
+    'mercadolivre.com/sec',
     'magalu.at',
     'tidd.ly',
     'bit.ly',
