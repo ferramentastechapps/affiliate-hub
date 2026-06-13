@@ -264,7 +264,18 @@ class TelegramNotifier:
 
         nome = produto.get('name', 'Produto')
         preco = produto.get('price')
+        
+        # Lógica de imagem: foto_file_id > enhancedImageUrl > imageUrl
+        from config import AFFILIATE_HUB_URL
+        base_url = AFFILIATE_HUB_URL.rstrip('/')
+        
         imagem = produto.get('imageUrl')
+        enhanced_image = produto.get('enhancedImageUrl')
+        
+        if enhanced_image:
+            if enhanced_image.startswith('/'):
+                enhanced_image = f"{base_url}{enhanced_image}"
+            imagem = enhanced_image
         
         PLATAFORMA_EMOJIS = {
             'amazon':      '🟠 Amazon',
@@ -280,69 +291,16 @@ class TelegramNotifier:
 
         legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
         
-        from pathlib import Path
-        arquivo_legendas = Path(__file__).parent / 'legendas_salvas.txt'
-        
+        # Prioridade da Legenda:
+        # 1. custom_caption do admin
+        # 2. aiAnalysis gravado no banco de dados
+        # 3. Fallback genérico
         if custom_caption:
             legenda_engracada = custom_caption.strip()
-            # Salva para aprender
-            try:
-                with open(arquivo_legendas, 'a', encoding='utf-8') as f:
-                    f.write(legenda_engracada + '\n')
-                # Manter apenas as últimas 50
-                with open(arquivo_legendas, 'r', encoding='utf-8') as f:
-                    linhas = f.readlines()
-                if len(linhas) > 50:
-                    with open(arquivo_legendas, 'w', encoding='utf-8') as f:
-                        f.writelines(linhas[-50:])
-            except Exception as e:
-                print(f"Erro ao salvar legenda: {e}")
+        elif produto.get('aiAnalysis'):
+            legenda_engracada = produto.get('aiAnalysis').strip()
         else:
-            import google.generativeai as genai
-            import random
-            
-            # Lê exemplos salvos
-            exemplos_salvos = ""
-            try:
-                if arquivo_legendas.exists():
-                    with open(arquivo_legendas, 'r', encoding='utf-8') as f:
-                        linhas = [l.strip() for l in f.readlines() if l.strip()]
-                    if linhas:
-                        amostra = random.sample(linhas, min(5, len(linhas)))
-                        exemplos_salvos = "Exemplos reais de legendas que eu já criei (siga ESSE MESMO ESTILO E VIBE):\n- " + "\n- ".join(amostra)
-            except Exception as e:
-                print(f"Erro ao ler legendas salvas: {e}")
-                
-            if not exemplos_salvos:
-                exemplos_salvos = (
-                    "Exemplos do estilo que eu quero:\n"
-                    "- 'MEU ÚNICO CARDIO NESSE FERIADO'\n"
-                    "- 'PRA NÃO BRIGAR MAIS COM A ESPOSA'\n"
-                    "- 'SUA CASA CLAMAVA POR ESSE MIMO'\n"
-                    "- 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'"
-                )
-
-            if GEMINI_API_KEY:
-                try:
-                    genai.configure(api_key=GEMINI_API_KEY)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
-                    prompt = (
-                        f"Você é dono de um canal de achadinhos e utilidades. "
-                        f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
-                        f"para anunciar a venda deste produto: '{nome}'.\n\n"
-                        f"{exemplos_salvos}\n\n"
-                        f"Seja criativo, NUNCA REPITA OS EXEMPLOS EXATAMENTE. Crie uma frase nova baseada neles, focada no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
-                    )
-                    response = await asyncio.to_thread(model.generate_content, prompt)
-                    if response and response.text:
-                        legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
-                        print(f"✅ Legenda Gemini gerada: {legenda_engracada}")
-                    else:
-                        print("⚠️ Gemini retornou resposta vazia, usando legenda padrão")
-                except Exception as e:
-                    print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
-            else:
-                print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
+            legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
 
         preco_original = produto.get('originalPrice')
         if preco_original and preco and float(preco_original) > float(preco):
