@@ -194,10 +194,22 @@ export function CategoriesSection() {
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
-                          {/* Store badge */}
-                          <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] px-3 py-1.5 border border-zinc-200 flex items-center gap-1.5">
-                            <img src={mainPlatformLogo} alt={mainPlatformText} className="w-4 h-4 rounded-full object-contain" />
-                            <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">{mainPlatformText}</span>
+                          {/* Store badge — logo only */}
+                          <div
+                            className="absolute bottom-3 right-3 z-10 flex items-center justify-center rounded-full"
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              background: product.links?.amazon ? '#ff9900'
+                                : product.links?.mercadoLivre ? '#3483FA'
+                                : product.links?.shopee ? '#ee4d2d'
+                                : product.links?.aliexpress ? '#e43225'
+                                : product.links?.tiktok ? '#010101'
+                                : '#6366f1',
+                              boxShadow: '0 0 0 2px rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)',
+                            }}
+                          >
+                            <img src={mainPlatformLogo} alt={mainPlatformText} title={mainPlatformText} className="w-[18px] h-[18px] rounded-full object-contain" />
                           </div>
                           {/* Badge cupom */}
                           {product.coupons && product.coupons.length > 0 && (

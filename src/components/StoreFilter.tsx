@@ -322,22 +322,27 @@ export function StoreFilter() {
                             />
                           </div>
 
-                          {/* Overlapping Brand Badge */}
-                          <div 
-                            className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-20"
+                          {/* Overlapping Brand Badge — Logo only, premium circular style */}
+                          <div
+                            className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full"
                             style={{
-                              backgroundColor: activeStoreInfo?.color || "#ff334b",
-                              borderColor: "rgba(255,255,255,0.1)",
-                              color: activeStoreInfo?.key === "mercadolivre" ? "#000000" : "#ffffff"
+                              width: '36px',
+                              height: '36px',
+                              background: activeStoreInfo?.color || "#ff334b",
+                              boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${activeStoreInfo?.color || "#ff334b"}88`,
                             }}
                           >
-                            <img src={mainPlatformLogo} alt="" className="w-3 h-3 object-contain rounded-full" />
-                            <span>{mainPlatformText}</span>
+                            <img
+                              src={mainPlatformLogo}
+                              alt={mainPlatformText}
+                              title={mainPlatformText}
+                              className="w-5 h-5 object-contain rounded-full"
+                            />
                           </div>
                         </div>
 
                         {/* Deal Body */}
-                        <div className="p-4 pt-5 flex flex-col flex-1">
+                        <div className="p-4 pt-7 flex flex-col flex-1">
                           <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
                             {product.category || "Oferta"}
                           </span>
