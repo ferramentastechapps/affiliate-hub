@@ -285,11 +285,29 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             await msg_status.edit_text("❌ Não consegui extrair um link válido dessa mensagem.")
             return
             
-        # Pegar a foto original se a mensagem tiver foto
+        # Tentar raspar os dados da página se faltar nome, preço ou imagem (quando não houver foto enviada)
+        scraped_data = {}
+        try:
+            scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link}, timeout=10)
+            if scrape_resp.status_code == 200:
+                scraped_data = scrape_resp.json()
+                print(f"🔍 Scraped fallback: {scraped_data}")
+        except Exception as e:
+            print(f"⚠️ Erro no scraper de fallback: {e}")
+
+        # Pegar a foto original se a mensagem tiver foto, senão usa a do scraper
         foto_url = None
         if update.message.photo:
             foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
             foto_url = foto_file.file_path
+        elif scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
+            foto_url = scraped_data.get('imageUrl')
+
+        # Se o Gemini não achou nome ou preço, usa o do scraper
+        if nome == 'Produto Encontrado' and scraped_data.get('name'):
+            nome = scraped_data.get('name')
+        if not preco and scraped_data.get('price'):
+            preco = scraped_data.get('price')
             
         # Determinar categoria
         from config import CATEGORY_KEYWORDS
