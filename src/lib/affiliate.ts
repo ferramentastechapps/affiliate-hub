@@ -219,7 +219,10 @@ export async function resolveRedirect(url: string): Promise<string> {
           const html = await getResponse.text();
           const mlbMatch = html.match(/MLB-?\d+/);
           if (mlbMatch && mlbMatch[0]) {
-            const mlbId = mlbMatch[0];
+            let mlbId = mlbMatch[0];
+            if (!mlbId.includes('-')) {
+              mlbId = mlbId.replace('MLB', 'MLB-');
+            }
             finalUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
             console.log(`[Affiliate] 💥 Vitrine detectada! Produto real extraído: ${finalUrl}`);
             return finalUrl;
