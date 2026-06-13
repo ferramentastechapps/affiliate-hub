@@ -99,7 +99,7 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
     return null;
   }
 
-  const prompt = `Por favor, remova o fundo da imagem original deste produto ("${productName}", Categoria: ${category}) e substitua por um fundo limpo, moderno e atraente (estilo e-commerce premium) que combine perfeitamente com o produto. Retorne APENAS a URL da imagem gerada.`;
+  const prompt = `melhora a qualidade dessa imagem para 4k hdr e coloque um fundo que combina com este produto ("${productName}", Categoria: ${category}). Retorne APENAS a URL da imagem gerada.`;
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -109,7 +109,7 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview", // Mudado a pedido do usuário
+        model: "sourceful/riverflow-v2.5-fast", // Mudado a pedido do usuário
         modalities: ["image", "text"],
         messages: [
           {

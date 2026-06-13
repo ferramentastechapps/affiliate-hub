@@ -243,15 +243,16 @@ export function DailyDeals() {
 
             // Mapeamento de cor e label do badge de plataforma
             const storeBadgeConfig: Record<string, { bg: string, text: string, label: string }> = {
-              amazon: { bg: "#ff9900", text: "#ffffff", label: "Amazon" },
-              mercadoLivre: { bg: "#ffe600", text: "#000000", label: "Mercado Livre" },
-              shopee: { bg: "#ff5722", text: "#ffffff", label: "Shopee" },
-              aliexpress: { bg: "#e62e04", text: "#ffffff", label: "AliExpress" },
-              tiktok: { bg: "#000000", text: "#ffffff", label: "TikTok Shop" },
-              magalu: { bg: "#0086ff", text: "#ffffff", label: "Magalu" },
-              kabum: { bg: "#0060ff", text: "#ffffff", label: "KaBuM" },
-              netshoes: { bg: "#5c2a9d", text: "#ffffff", label: "Netshoes" }
+              amazon:       { bg: "#ff9900", text: "#ffffff", label: "Amazon" },
+              mercadoLivre: { bg: "#3483FA", text: "#ffffff", label: "Mercado Livre" },
+              shopee:       { bg: "#ee4d2d", text: "#ffffff", label: "Shopee" },
+              aliexpress:   { bg: "#e43225", text: "#ffffff", label: "AliExpress" },
+              tiktok:       { bg: "#010101", text: "#ffffff", label: "TikTok Shop" },
+              magalu:       { bg: "#0086ff", text: "#ffffff", label: "Magalu" },
+              kabum:        { bg: "#0d47a1", text: "#ffffff", label: "KaBuM" },
+              netshoes:     { bg: "#5c2a9d", text: "#ffffff", label: "Netshoes" }
             };
+
 
             // Extrair a plataforma principal
             let mainPlatformText = "Link";
@@ -331,22 +332,28 @@ export function DailyDeals() {
                     />
                   </div>
 
-                  {/* Overlapping Brand Badge */}
+                  {/* Overlapping Brand Badge — Logo only, premium circular style */}
                   <div 
-                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full shadow-md text-[10px] font-bold tracking-wide uppercase border flex items-center gap-1.5 z-20"
+                    className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: badgeStyle.bg,
-                      borderColor: "rgba(255,255,255,0.1)",
-                      color: badgeStyle.text
+                      width: '36px',
+                      height: '36px',
+                      background: badgeStyle.bg,
+                      boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${badgeStyle.bg}88`,
                     }}
                   >
-                    <img src={mainPlatformLogo} alt="" className="w-3.5 h-3.5 object-contain rounded-full" />
-                    <span>{badgeStyle.label}</span>
+                    <img 
+                      src={mainPlatformLogo} 
+                      alt={badgeStyle.label}
+                      title={badgeStyle.label}
+                      className="w-5 h-5 object-contain rounded-full" 
+                    />
                   </div>
                 </div>
 
+
                 {/* Deal Body */}
-                <div className="p-4 pt-5 flex flex-col flex-1">
+                <div className="p-4 pt-7 flex flex-col flex-1">
                   <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
                     {product.category || "Oferta"}
                   </span>

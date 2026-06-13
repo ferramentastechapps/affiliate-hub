@@ -18,6 +18,42 @@ interface UrlDetails {
  * para obter a URL final real da loja.
  */
 export async function resolveRedirect(url: string): Promise<string> {
+  // Caso especial: Mercado Livre Social Links (/social/)
+  // Promobit/Pechinchou usam isso. Vamos extrair o produto principal pra não mostrar a logo do concorrente.
+  if (url.toLowerCase().includes('mercadolivre.com.br/social/')) {
+    try {
+      console.log(`[Affiliate] Resolvendo link social do ML (Destruidor de Vitrine): ${url}`);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html',
+        }
+      });
+      const html = await response.text();
+      
+      // Procura pelo link do produto real (suporta tanto /p/MLB... quanto /MLB-...)
+      const match = html.match(/(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/(?:p\/MLB-?\d+|MLB-?\d+)[^"'\s\\]*)/i);
+      if (match && match[1]) {
+        let productUrl = match[1].replace(/&amp;/g, '&');
+        
+        try {
+          // Limpa todos os parâmetros de rastreamento do link encontrado na vitrine
+          const urlObj = new URL(productUrl);
+          urlObj.searchParams.forEach((_, key) => urlObj.searchParams.delete(key));
+          const finalUrl = urlObj.toString();
+          console.log(`[Affiliate] 💥 Vitrine destruída! Produto real extraído: ${finalUrl}`);
+          return finalUrl;
+        } catch {
+          const finalUrl = productUrl.split('?')[0];
+          console.log(`[Affiliate] 💥 Vitrine destruída! Produto real extraído: ${finalUrl}`);
+          return finalUrl;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Affiliate] Erro ao extrair produto do ML Social:`, err instanceof Error ? err.message : err);
+    }
+  }
+
   // Caso especial: página de oferta do Promobit (precisamos extrair o link de saída do HTML)
   if (url.toLowerCase().includes('promobit.com.br/oferta/')) {
     try {
@@ -65,59 +101,6 @@ export async function resolveRedirect(url: string): Promise<string> {
       }
     } catch (err) {
       console.warn(`[Affiliate] Falha ao extrair link real do Promobit:`, err instanceof Error ? err.message : err);
-    }
-  }
-
-  // Caso especial: Mercado Livre Social Links (/social/)
-  // Esses links não são redirecionamentos HTTP 301/302 para o produto diretamente,
-  // mas sim páginas HTML (coleções/listas) que contêm o link do produto.
-  if (url.toLowerCase().includes('mercadolivre.com.br/social/')) {
-    try {
-      console.log(`[Affiliate] Resolvendo link social do Mercado Livre: ${url}`);
-      // As vezes o ML precisa do /lists no final para carregar a página HTML corretamente com os itens
-      const listUrl = url.endsWith('/lists') ? url : url.replace(/\?.*/, '') + '/lists';
-      const response = await fetch(listUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-          'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-          'sec-ch-ua-mobile': '?0',
-          'sec-ch-ua-platform': '"Windows"',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Upgrade-Insecure-Requests': '1'
-        }
-      });
-      const html = await response.text();
-      // Procura pelo primeiro link de produto na página
-      const match = html.match(/href="([^"]*produto\.mercadolivre\.com\.br\/MLB-[^"]+)"/i);
-      
-      if (match && match[1]) {
-        // O link vem com entidades HTML, precisa limpar (ex: &amp; -> &)
-        let productUrl = match[1].replace(/&amp;/g, '&');
-        console.log(`[Affiliate] URL real extraída do ML Social: ${productUrl}`);
-        
-        try {
-          const urlObj = new URL(productUrl);
-          urlObj.searchParams.delete('matt_tracing_id');
-          urlObj.searchParams.delete('matt_event_ts');
-          urlObj.searchParams.delete('matt_d2id');
-          urlObj.searchParams.delete('source');
-          urlObj.searchParams.delete('type');
-          urlObj.searchParams.delete('tracking_id');
-          urlObj.hash = '';
-          return urlObj.toString();
-        } catch {
-          return productUrl;
-        }
-      } else {
-        console.warn(`[Affiliate] Falha: Não encontrou o link do produto no HTML do ML Social. O servidor do ML pode estar bloqueando a VPS (status ${response.status}). HTML len: ${html.length}`);
-      }
-    } catch (err) {
-      console.warn(`[Affiliate] Erro fatal ao resolver link social do Mercado Livre:`, err instanceof Error ? err.message : err);
     }
   }
 
@@ -188,11 +171,11 @@ export async function resolveRedirect(url: string): Promise<string> {
     clearTimeout(timeoutId);
     
     if (response.url && response.url !== url) {
-      // Se for uma vitrine social do Mercado Livre, precisamos do GET para ler o HTML
-      if (!response.url.includes('mercadolivre.com.br/social/')) {
-        console.log(`[Affiliate] URL final resolvida (HEAD): ${response.url}`);
-        return response.url;
+      console.log(`[Affiliate] URL final resolvida (HEAD): ${response.url}`);
+      if (response.url.toLowerCase().includes('mercadolivre.com.br/social/')) {
+        return resolveRedirect(response.url);
       }
+      return response.url;
     }
     
     // Se falhar, não mudar, ou for vitrine (precisa ler HTML), tenta GET
@@ -213,25 +196,8 @@ export async function resolveRedirect(url: string): Promise<string> {
     if (getResponse.url) {
       let finalUrl = getResponse.url;
       
-      // DESTRUIDOR DE VITRINE PECHINCHOU/ML:
-      // Se caiu em uma página "social" (coleção/vitrine), extrai o primeiro produto real
-      if (finalUrl.includes('mercadolivre.com.br/social/')) {
-        try {
-          const html = await getResponse.text();
-          // Procura por um link real de produto para evitar pegar IDs de rastreamento no HTML
-          const mlbMatch = html.match(/produto\.mercadolivre\.com\.br\/(MLB-?\d+)/);
-          if (mlbMatch && mlbMatch[1]) {
-            let mlbId = mlbMatch[1];
-            if (!mlbId.includes('-')) {
-              mlbId = mlbId.replace('MLB', 'MLB-');
-            }
-            finalUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
-            console.log(`[Affiliate] 💥 Vitrine detectada! Produto real extraído: ${finalUrl}`);
-            return finalUrl;
-          }
-        } catch (e) {
-          console.warn(`[Affiliate] Erro ao extrair produto da vitrine:`, e);
-        }
+      if (finalUrl.toLowerCase().includes('mercadolivre.com.br/social/')) {
+        return resolveRedirect(finalUrl);
       }
       
       console.log(`[Affiliate] URL final resolvida (GET): ${finalUrl}`);
@@ -394,7 +360,7 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
       // O Mercado Livre usa a tag 'matt_tool' para rastreamento de afiliados e 'matt_word'
       // Precisamos substituir qualquer 'matt_tool' existente ou adicionar à URL limpa
       try {
-        const mlUrl = new URL(details.rawUrl);
+        const mlUrl = new URL(details.cleanUrl);
         mlUrl.searchParams.set('matt_tool', mlTag);
         mlUrl.searchParams.set('matt_word', mlWord);
         return mlUrl.toString();

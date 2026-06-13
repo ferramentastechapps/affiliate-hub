@@ -16,7 +16,7 @@ import {
 
 const STORES = [
   { key: "amazon",       label: "Amazon",        domain: "amazon.com.br",        linkKey: "amazon",       color: "#ff9900", bgGlow: "rgba(255, 153, 0, 0.12)" },
-  { key: "mercadolivre", label: "Mercado Livre",  domain: "mercadolivre.com.br",  linkKey: "mercadoLivre",  color: "#ffe600", bgGlow: "rgba(255, 230, 0, 0.12)" },
+  { key: "mercadolivre", label: "Mercado Livre",  domain: "mercadolivre.com.br",  linkKey: "mercadoLivre",  color: "#3483FA", bgGlow: "rgba(52, 131, 250, 0.12)" },
   { key: "shopee",       label: "Shopee",         domain: "shopee.com.br",        linkKey: "shopee",       color: "#ff5722", bgGlow: "rgba(255, 87, 34, 0.12)" },
   { key: "aliexpress",   label: "AliExpress",     domain: "aliexpress.com",       linkKey: "aliexpress",   color: "#e62e04", bgGlow: "rgba(230, 46, 4, 0.12)" },
   { key: "tiktok",       label: "TikTok Shop",    domain: "tiktok.com",           linkKey: "tiktok",       color: "#00f2fe", bgGlow: "rgba(0, 242, 254, 0.12)" },

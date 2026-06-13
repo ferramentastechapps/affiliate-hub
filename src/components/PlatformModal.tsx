@@ -198,7 +198,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
             
             <div className="overflow-y-auto hidden-scrollbar flex-1 pb-4">
               
-              <div className="relative w-full aspect-[3/4] bg-zinc-900 flex items-center justify-center p-4">
+              <div className="relative w-full bg-zinc-900 flex items-center justify-center p-4" style={{ minHeight: '220px', maxHeight: '380px' }}>
                 {price > 0 && (
                   <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
                     <Tag size={20} weight="fill" />
@@ -209,9 +209,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                 <img 
                    src={product.imageUrl} 
                    alt={product.name}
-                   className="w-full h-full object-cover rounded-2xl"
+                   className="w-full h-full object-contain rounded-2xl"
+                   style={{ maxHeight: '360px' }}
                 />
               </div>
+
 
               <div className="p-6 sm:p-8 pb-4">
                 <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
