@@ -217,9 +217,10 @@ export async function resolveRedirect(url: string): Promise<string> {
       if (finalUrl.includes('mercadolivre.com.br/social/')) {
         try {
           const html = await getResponse.text();
-          const mlbMatch = html.match(/MLB-?\d+/);
-          if (mlbMatch && mlbMatch[0]) {
-            let mlbId = mlbMatch[0];
+          // Procura por um link real de produto para evitar pegar IDs de rastreamento no HTML
+          const mlbMatch = html.match(/produto\.mercadolivre\.com\.br\/(MLB-?\d+)/);
+          if (mlbMatch && mlbMatch[1]) {
+            let mlbId = mlbMatch[1];
             if (!mlbId.includes('-')) {
               mlbId = mlbId.replace('MLB', 'MLB-');
             }
