@@ -24,10 +24,32 @@ model Product {
   updatedAt   DateTime @updatedAt
   links       Link?
   coupons     Coupon[]
+  priceHistory PriceHistory[]
+  
+  // Novos campos para IA e Analytics
+  aiScore     Float?   // Nota de 0 a 10 dada pela IA
+  aiAnalysis  String?  // Texto/Copy gerado pela IA
+  clicks      Int      @default(0) // Quantidade de cliques
+  externalId  String?  @unique // Hash ou ID original para deduplicação segura
   
   @@index([category])
   @@index([createdAt])
   @@index([status])
+  @@index([externalId])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📈 HISTÓRICO DE PREÇOS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model PriceHistory {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price       Float
+  originalPrice Float?
+  createdAt   DateTime @default(now())
+  
+  @@index([productId, createdAt])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
