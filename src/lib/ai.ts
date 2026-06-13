@@ -110,6 +110,7 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
       },
       body: JSON.stringify({
         model: "google/gemini-3.1-flash-image-preview", // Mudado a pedido do usuário
+        modalities: ["image", "text"],
         messages: [
           {
             role: "user",
