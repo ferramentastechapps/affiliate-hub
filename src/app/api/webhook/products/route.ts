@@ -55,9 +55,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verificar se já existe um produto com o mesmo nome criado recentemente (últimas 24 horas)
+    // Tenta encontrar por externalId, senão por nome recente
     const existingProduct = await prisma.product.findFirst({
-      where: {
+      where: body.externalId ? { externalId: body.externalId } : {
         name: body.name,
         createdAt: {
           gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas
@@ -69,10 +69,30 @@ export async function POST(request: Request) {
     });
 
     if (existingProduct) {
-      console.log('ℹ️ Produto duplicado detectado (mesmo nome nas últimas 24h):', body.name);
+      // Registrar no histórico de preços
+      if (body.price) {
+        await prisma.priceHistory.create({
+          data: {
+            productId: existingProduct.id,
+            price: parseFloat(body.price),
+            originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
+          }
+        });
+        
+        // Atualizar preço atual no produto
+        await prisma.product.update({
+          where: { id: existingProduct.id },
+          data: { 
+            price: parseFloat(body.price),
+            originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : existingProduct.originalPrice
+          }
+        });
+      }
+
+      console.log('ℹ️ Produto duplicado detectado. Histórico de preço atualizado:', body.name);
       return NextResponse.json({
         success: true,
-        message: 'Produto já cadastrado recentemente (evitando duplicata)',
+        message: 'Produto já cadastrado, preço atualizado no histórico.',
         product: {
           id: existingProduct.id,
           name: existingProduct.name,
@@ -102,6 +122,7 @@ export async function POST(request: Request) {
         price: body.price ? parseFloat(body.price) : null,
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         status: finalStatus,
+        externalId: body.externalId || null,
         links: processedLinks ? {
           create: {
             amazon: processedLinks.amazon || null,
@@ -119,6 +140,17 @@ export async function POST(request: Request) {
         links: true
       }
     });
+
+    // Criar o primeiro registro de histórico de preço
+    if (product.price) {
+      await prisma.priceHistory.create({
+        data: {
+          productId: product.id,
+          price: product.price,
+          originalPrice: product.originalPrice,
+        }
+      });
+    }
 
     // Log para debug
     console.log('✅ Produto criado:', {
@@ -179,9 +211,9 @@ export async function PUT(request: Request) {
 
     for (const productData of body.products) {
       try {
-        // Verificar se já existe um produto com o mesmo nome criado recentemente (últimas 24 horas)
+        // Tenta encontrar por externalId, senão por nome recente
         const existingProduct = await prisma.product.findFirst({
-          where: {
+          where: productData.externalId ? { externalId: productData.externalId } : {
             name: productData.name,
             createdAt: {
               gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas
@@ -193,6 +225,24 @@ export async function PUT(request: Request) {
         });
 
         if (existingProduct) {
+          // Registrar no histórico de preços se houver preço
+          if (productData.price) {
+            await prisma.priceHistory.create({
+              data: {
+                productId: existingProduct.id,
+                price: parseFloat(productData.price),
+                originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+              }
+            });
+            // Atualizar preço atual no produto
+            await prisma.product.update({
+              where: { id: existingProduct.id },
+              data: { 
+                price: parseFloat(productData.price),
+                originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : existingProduct.originalPrice
+              }
+            });
+          }
           results.push(existingProduct);
           continue;
         }
@@ -209,6 +259,7 @@ export async function PUT(request: Request) {
             price: productData.price ? parseFloat(productData.price) : null,
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
             status: finalStatus,
+            externalId: productData.externalId || null,
             links: processedLinks ? {
               create: {
                 amazon: processedLinks.amazon || null,
@@ -226,6 +277,18 @@ export async function PUT(request: Request) {
             links: true
           }
         });
+
+        // Criar o primeiro registro de histórico de preço
+        if (product.price) {
+          await prisma.priceHistory.create({
+            data: {
+              productId: product.id,
+              price: product.price,
+              originalPrice: product.originalPrice,
+            }
+          });
+        }
+
         results.push(product);
       } catch {
         errors.push({
