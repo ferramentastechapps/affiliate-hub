@@ -19,36 +19,78 @@ interface UrlDetails {
  */
 export async function resolveRedirect(url: string): Promise<string> {
   // Caso especial: Mercado Livre Social Links (/social/)
-  // Promobit/Pechinchou usam isso. Vamos extrair o produto principal pra não mostrar a logo do concorrente.
+  // Promobit/Pechinchou usam isso. O conteúdo é renderizado por JS, mas o ML
+  // tem um endpoint interno (/api/social-profile) que retorna os itens em JSON.
   if (url.toLowerCase().includes('mercadolivre.com.br/social/')) {
     try {
-      console.log(`[Affiliate] Resolvendo link social do ML (Destruidor de Vitrine): ${url}`);
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-          'Accept': 'text/html',
-        }
-      });
-      const html = await response.text();
+      console.log(`[Affiliate] Resolvendo link social do ML: ${url}`);
       
-      // Procura pelo link do produto real (suporta tanto /p/MLB... quanto /MLB-...)
-      const match = html.match(/(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/(?:p\/MLB-?\d+|MLB-?\d+)[^"'\s\\]*)/i);
-      if (match && match[1]) {
-        let productUrl = match[1].replace(/&amp;/g, '&');
-        
+      // Extrair o nome do perfil da URL (ex: "promobit" de /social/promobit)
+      const profileMatch = url.match(/mercadolivre\.com\.br\/social\/([^/?&]+)/i);
+      const profileName = profileMatch?.[1];
+
+      // Estratégia 1: API interna do ML para listar itens do perfil social
+      if (profileName) {
         try {
-          // Limpa todos os parâmetros de rastreamento do link encontrado na vitrine
-          const urlObj = new URL(productUrl);
-          urlObj.searchParams.forEach((_, key) => urlObj.searchParams.delete(key));
-          const finalUrl = urlObj.toString();
-          console.log(`[Affiliate] 💥 Vitrine destruída! Produto real extraído: ${finalUrl}`);
-          return finalUrl;
-        } catch {
-          const finalUrl = productUrl.split('?')[0];
-          console.log(`[Affiliate] 💥 Vitrine destruída! Produto real extraído: ${finalUrl}`);
-          return finalUrl;
+          const apiUrl = `https://www.mercadolivre.com.br/social-profile/profile/${profileName}/items?limit=1`;
+          const apiResp = await fetch(apiUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+              'Accept': 'application/json, text/plain, */*',
+              'Referer': `https://www.mercadolivre.com.br/social/${profileName}`,
+              'x-requested-with': 'XMLHttpRequest',
+            }
+          });
+          if (apiResp.ok) {
+            const json = await apiResp.json();
+            // Tenta extrair o permalink do primeiro item
+            const firstItem = json?.items?.[0] || json?.results?.[0] || json?.[0];
+            const permalink = firstItem?.permalink || firstItem?.url || firstItem?.item_url;
+            if (permalink) {
+              const cleanPermalink = permalink.split('?')[0];
+              console.log(`[Affiliate] 💥 Vitrine destruída via API ML! Produto: ${cleanPermalink}`);
+              return cleanPermalink;
+            }
+          }
+        } catch (apiErr) {
+          console.warn(`[Affiliate] API ML social falhou:`, apiErr instanceof Error ? apiErr.message : apiErr);
         }
       }
+
+      // Estratégia 2: Buscar o HTML e tentar extrair do JSON embutido (__PRELOADED_STATE__ ou similar)
+      const htmlResp = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+        }
+      });
+      const html = await htmlResp.text();
+
+      // Tentar extrair permalink de JSON embutido na página
+      const jsonMatches = [
+        html.match(/"permalink"\s*:\s*"(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/[^"]+)"/i),
+        html.match(/"item_url"\s*:\s*"(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/[^"]+)"/i),
+        html.match(/"url"\s*:\s*"(https?:\/\/produto\.mercadolivre\.com\.br\/[^"]+)"/i),
+      ];
+
+      for (const jsonMatch of jsonMatches) {
+        if (jsonMatch?.[1]) {
+          const productUrl = jsonMatch[1].replace(/\\/g, '').split('?')[0];
+          console.log(`[Affiliate] 💥 Vitrine destruída via JSON embutido! Produto: ${productUrl}`);
+          return productUrl;
+        }
+      }
+
+      // Estratégia 3: regex direto no HTML (funciona se o ML não bloquear)
+      const regexMatch = html.match(/(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/(?:p\/MLB-?\d+|MLB-?\d+)[^"'\s\\<>]*)/i);
+      if (regexMatch?.[1]) {
+        const productUrl = regexMatch[1].replace(/&amp;/g, '&').split('?')[0];
+        console.log(`[Affiliate] 💥 Vitrine destruída via regex! Produto: ${productUrl}`);
+        return productUrl;
+      }
+
+      console.warn(`[Affiliate] Todas as estratégias falharam para a vitrine ML. HTML length: ${html.length}. Retornando URL original.`);
     } catch (err) {
       console.warn(`[Affiliate] Erro ao extrair produto do ML Social:`, err instanceof Error ? err.message : err);
     }
