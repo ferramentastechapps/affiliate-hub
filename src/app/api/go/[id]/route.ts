@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const url = new URL(request.url);
     const channel = url.searchParams.get('ch') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
