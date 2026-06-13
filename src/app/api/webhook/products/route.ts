@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
 import { generateAffiliateLink } from '@/lib/affiliate';
+import { processProductWithAI } from '@/lib/ai';
 
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
@@ -110,7 +111,20 @@ export async function POST(request: Request) {
     }
 
     const { links: processedLinks, status: processedStatus } = await processProductAffiliates(body);
-    const finalStatus = body.status || processedStatus;
+    let finalStatus = body.status || processedStatus;
+
+    // Calcular Deal Score e Copywriting via IA
+    const aiResult = await processProductWithAI(
+      body.name, 
+      body.price ? parseFloat(body.price) : 0, 
+      body.originalPrice ? parseFloat(body.originalPrice) : null,
+      body.category
+    );
+
+    // Se o score for menor que 8, deixamos como pending para revisão humana, a não ser que tenha vindo forçado.
+    if (aiResult.score && aiResult.score < 8.0 && !body.status) {
+      finalStatus = 'pending';
+    }
 
     // Criar produto
     const product = await prisma.product.create({
@@ -123,6 +137,8 @@ export async function POST(request: Request) {
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         status: finalStatus,
         externalId: body.externalId || null,
+        aiScore: aiResult.score,
+        aiAnalysis: aiResult.texto,
         links: processedLinks ? {
           create: {
             amazon: processedLinks.amazon || null,
@@ -248,7 +264,19 @@ export async function PUT(request: Request) {
         }
 
         const { links: processedLinks, status: processedStatus } = await processProductAffiliates(productData);
-        const finalStatus = productData.status || processedStatus;
+        let finalStatus = productData.status || processedStatus;
+
+        // Calcular Deal Score e Copywriting via IA
+        const aiResult = await processProductWithAI(
+          productData.name, 
+          productData.price ? parseFloat(productData.price) : 0, 
+          productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+          productData.category
+        );
+
+        if (aiResult.score && aiResult.score < 8.0 && !productData.status) {
+          finalStatus = 'pending';
+        }
 
         const product = await prisma.product.create({
           data: {
@@ -260,6 +288,8 @@ export async function PUT(request: Request) {
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
             status: finalStatus,
             externalId: productData.externalId || null,
+            aiScore: aiResult.score,
+            aiAnalysis: aiResult.texto,
             links: processedLinks ? {
               create: {
                 amazon: processedLinks.amazon || null,
