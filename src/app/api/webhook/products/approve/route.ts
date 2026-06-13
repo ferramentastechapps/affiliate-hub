@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
 import { generateAffiliateLink, detectPlatform } from '@/lib/affiliate';
-
+import { enhanceProductImage } from '@/lib/ai';
+import { saveEnhancedImage } from '@/lib/storage';
 /**
  * POST /api/webhook/products/approve
  * Aprova um produto pendente e atualiza o link de afiliado
@@ -154,9 +155,24 @@ export async function POST(request: Request) {
     }
     
     // Atualizar status do produto para active + imageUrl se fornecida
-    const updateData: { status: string; imageUrl?: string } = { status: 'active' };
+    const updateData: { status: string; imageUrl?: string; enhancedImageUrl?: string } = { status: 'active' };
     if (body.imageUrl) {
       updateData.imageUrl = body.imageUrl;
+    }
+    
+    let finalEnhancedImageUrl = product.enhancedImageUrl;
+    if (!finalEnhancedImageUrl) {
+      console.log(`[Approve] Tentando aprimorar imagem do produto...`);
+      const rawEnhanced = await enhanceProductImage(updateData.imageUrl || product.imageUrl, product.category || 'Diversos', product.name);
+      if (rawEnhanced) {
+        const isBase64 = rawEnhanced.startsWith('data:image');
+        finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+        if (finalEnhancedImageUrl) {
+          updateData.enhancedImageUrl = finalEnhancedImageUrl;
+          product.enhancedImageUrl = finalEnhancedImageUrl;
+          console.log(`[Approve] Imagem aprimorada com sucesso: ${finalEnhancedImageUrl}`);
+        }
+      }
     }
     
     await prisma.product.update({
