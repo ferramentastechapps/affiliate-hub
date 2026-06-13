@@ -42,14 +42,18 @@ class PromotionScraper:
             for offer in offers[:limite]:
                 try:
                     nome = offer.get('offerTitle', 'Sem título')
+                    # Usar o link direto do produto (evita passar pela página do Promobit)
+                    # offerUrl é o link real da loja (ex: mercadolivre.com.br/produto/...)
+                    link_direto = offer.get('offerUrl') or offer.get('offer_url') or offer.get('url')
                     link_oferta = f"https://www.promobit.com.br/oferta/{offer.get('offerSlug', '')}-{offer.get('offerId', '')}"
-                    preco = float(offer.get('offerPrice', 0))
+                    # Se temos o link direto, usamos ele para o campo de link da loja
+                    link_produto = link_direto if link_direto else link_oferta
+                    loja = offer.get('storeName', 'Desconhecido')
+                    links = self._criar_links(link_produto, loja)
 
+                    preco = float(offer.get('offerPrice', 0))
                     foto = offer.get('offerPhoto')
                     imagem_url = f"https://i.promobit.com.br{foto}" if foto else 'https://via.placeholder.com/800x1000'
-
-                    loja = offer.get('storeName', 'Desconhecido')
-                    links = self._criar_links(link_oferta, loja)
 
                     # Tentar pegar categoria do Promobit primeiro
                     categoria_promobit = offer.get('categoryName') or offer.get('category', {}).get('name')
@@ -812,7 +816,12 @@ class PromotionScraper:
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
                     
-                    links = self._criar_links(link_oferta, loja)
+                    # Usar o link direto do produto (long_url/short_url) ao invés do link da página do Pechinchou
+                    # Isso evita que o usuário veja o perfil social do Pechinchou no ML
+                    link_direto = promo.get('long_url') or promo.get('short_url') or promo.get('url') or promo.get('offer_url')
+                    link_pechinchou = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
+                    link_produto = link_direto if link_direto else link_pechinchou
+                    links = self._criar_links(link_produto, loja)
 
                     categoria_str = promo.get('subcategory', {}).get('category', {}).get('name')
                     if categoria_str:
