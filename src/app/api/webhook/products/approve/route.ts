@@ -274,6 +274,8 @@ export async function POST(request: Request) {
         imageUrl: product.imageUrl,
         category: product.category,
         description: product.description,
+        aiAnalysis: product.aiAnalysis,
+        enhancedImageUrl: product.enhancedImageUrl,
       },
       coupon: couponData ? {
         id: couponData.id,
