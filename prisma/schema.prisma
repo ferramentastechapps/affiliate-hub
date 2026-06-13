@@ -25,12 +25,14 @@ model Product {
   links       Link?
   coupons     Coupon[]
   priceHistory PriceHistory[]
+  clickLogs   ClickLog[]
   
   // Novos campos para IA e Analytics
   aiScore     Float?   // Nota de 0 a 10 dada pela IA
   aiAnalysis  String?  // Texto/Copy gerado pela IA
   clicks      Int      @default(0) // Quantidade de cliques
   externalId  String?  @unique // Hash ou ID original para deduplicação segura
+  enhancedImageUrl String? // Imagem processada pela IA (Fundo/4K)
   
   @@index([category])
   @@index([createdAt])
@@ -50,6 +52,23 @@ model PriceHistory {
   createdAt   DateTime @default(now())
   
   @@index([productId, createdAt])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🖱️ RASTREAMENTO DE CLIQUES (ANALYTICS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model ClickLog {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userAgent   String?  // Navegador/Dispositivo do usuário
+  referrer    String?  // De onde veio o clique (Telegram, WhatsApp, Insta)
+  channel     String?  // Canal explícito se passado na URL (ex: ?ch=tg)
+  createdAt   DateTime @default(now())
+  
+  @@index([productId])
+  @@index([channel])
+  @@index([createdAt])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
