@@ -86,3 +86,67 @@ export async function processProductWithAI(productName: string, price: number, o
     return { texto: null, score: null };
   }
 }
+
+export async function enhanceProductImage(imageUrl: string, category: string, productName: string): Promise<string | null> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️ OPENROUTER_API_KEY não configurada. Enhance ignorado.");
+    return null;
+  }
+
+  // Se a imagem for um placeholder, evitamos gastar créditos.
+  if (imageUrl.includes('placeholder')) {
+    return null;
+  }
+
+  const prompt = `Por favor, remova o fundo da imagem original deste produto ("${productName}", Categoria: ${category}) e substitua por um fundo limpo, moderno e atraente (estilo e-commerce premium) que combine perfeitamente com o produto. Retorne APENAS a URL da imagem gerada.`;
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash", // Utilizando a mesma flag flash que suporta multimodal
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: imageUrl } }
+            ]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      console.error(`Erro no Enhance Image (HTTP ${response.status}):`, await response.text());
+      return null;
+    }
+
+    const result = await response.json();
+    const content = result.choices?.[0]?.message?.content || "";
+    
+    // O modelo pode retornar um markdown ![alt](url) ou apenas a URL
+    const urlMatch = content.match(/https?:\/\/[^\s)\]]+/);
+    if (urlMatch && urlMatch[0]) {
+      return urlMatch[0]; // Retorna a URL da imagem melhorada
+    }
+
+    // Se ele retornou Base64 markdown
+    const base64Match = content.match(/data:image\/[a-zA-Z]*;base64,[^\s)\]]+/);
+    if (base64Match && base64Match[0]) {
+       return base64Match[0];
+    }
+
+    console.warn("Nenhuma URL ou Base64 válido encontrado na resposta do Enhance:", content);
+    return null;
+
+  } catch (error) {
+    console.error("Erro fatal ao tentar melhorar imagem via OpenRouter:", error);
+    return null;
+  }
+}

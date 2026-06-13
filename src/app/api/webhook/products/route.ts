@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
 import { generateAffiliateLink } from '@/lib/affiliate';
-import { processProductWithAI } from '@/lib/ai';
+import { processProductWithAI, enhanceProductImage } from '@/lib/ai';
+import { saveEnhancedImage } from '@/lib/storage';
 
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
@@ -126,6 +127,16 @@ export async function POST(request: Request) {
       finalStatus = 'pending';
     }
 
+    // Processamento da imagem se aprovado
+    let finalEnhancedImageUrl: string | null = null;
+    if (finalStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+      const rawEnhanced = await enhanceProductImage(body.imageUrl, body.category || 'Diversos', body.name);
+      if (rawEnhanced) {
+        const isBase64 = rawEnhanced.startsWith('data:image');
+        finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+      }
+    }
+
     // Criar produto
     const product = await prisma.product.create({
       data: {
@@ -139,6 +150,7 @@ export async function POST(request: Request) {
         externalId: body.externalId || null,
         aiScore: aiResult.score,
         aiAnalysis: aiResult.texto,
+        enhancedImageUrl: finalEnhancedImageUrl,
         links: processedLinks ? {
           create: {
             amazon: processedLinks.amazon || null,
@@ -278,6 +290,15 @@ export async function PUT(request: Request) {
           finalStatus = 'pending';
         }
 
+        let finalEnhancedImageUrl: string | null = null;
+        if (finalStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+          const rawEnhanced = await enhanceProductImage(productData.imageUrl, productData.category || 'Diversos', productData.name);
+          if (rawEnhanced) {
+            const isBase64 = rawEnhanced.startsWith('data:image');
+            finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+          }
+        }
+
         const product = await prisma.product.create({
           data: {
             name: productData.name,
@@ -290,6 +311,7 @@ export async function PUT(request: Request) {
             externalId: productData.externalId || null,
             aiScore: aiResult.score,
             aiAnalysis: aiResult.texto,
+            enhancedImageUrl: finalEnhancedImageUrl,
             links: processedLinks ? {
               create: {
                 amazon: processedLinks.amazon || null,
