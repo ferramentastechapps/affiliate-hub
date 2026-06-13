@@ -99,7 +99,7 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
     return null;
   }
 
-  const prompt = `melhora a qualidade dessa imagem para 4k hdr e coloque um fundo que combina com este produto ("${productName}", Categoria: ${category}). Retorne APENAS a URL da imagem gerada.`;
+  const prompt = `melhora a qualidade dessa imagem para 4k hdr e coloque um fundo que combina com este produto ("${productName}", Categoria: ${category}).`;
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -109,14 +109,13 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "sourceful/riverflow-v2.5-fast", // Mudado a pedido do usuário
-        modalities: ["image", "text"],
+        model: "sourceful/riverflow-v2.5-fast",
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: imageUrl } }
+              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "text", text: prompt }
             ]
           }
         ]
@@ -124,26 +123,60 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
     });
 
     if (!response.ok) {
-      console.error(`Erro no Enhance Image (HTTP ${response.status}):`, await response.text());
+      const errText = await response.text();
+      console.error(`Erro no Enhance Image (HTTP ${response.status}):`, errText);
       return null;
     }
 
     const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || "";
-    
-    // O modelo pode retornar um markdown ![alt](url) ou apenas a URL
-    const urlMatch = content.match(/https?:\/\/[^\s)\]]+/);
-    if (urlMatch && urlMatch[0]) {
-      return urlMatch[0]; // Retorna a URL da imagem melhorada
+    console.log("[Enhance] Resposta bruta do modelo:", JSON.stringify(result).substring(0, 500));
+
+    const message = result.choices?.[0]?.message;
+    if (!message) {
+      console.warn("[Enhance] Nenhuma mensagem na resposta.");
+      return null;
     }
 
-    // Se ele retornou Base64 markdown
-    const base64Match = content.match(/data:image\/[a-zA-Z]*;base64,[^\s)\]]+/);
-    if (base64Match && base64Match[0]) {
-       return base64Match[0];
+    // Caso 1: content é um array (multimodal) — procura item do tipo image_url ou base64
+    if (Array.isArray(message.content)) {
+      for (const part of message.content) {
+        if (part.type === "image_url" && part.image_url?.url) {
+          console.log("[Enhance] ✅ Imagem encontrada (array image_url)");
+          return part.image_url.url;
+        }
+        if (part.type === "image" && part.image?.url) {
+          console.log("[Enhance] ✅ Imagem encontrada (array image)");
+          return part.image.url;
+        }
+      }
     }
 
-    console.warn("Nenhuma URL ou Base64 válido encontrado na resposta do Enhance:", content);
+    // Caso 2: content é string com URL ou base64
+    const content = typeof message.content === "string" ? message.content : "";
+
+    const base64Match = content.match(/data:image\/[a-zA-Z+]+;base64,[A-Za-z0-9+/=]+/);
+    if (base64Match) {
+      console.log("[Enhance] ✅ Imagem encontrada (base64 inline)");
+      return base64Match[0];
+    }
+
+    const urlMatch = content.match(/https?:\/\/[^\s)\]"]+/);
+    if (urlMatch) {
+      console.log("[Enhance] ✅ Imagem encontrada (URL no texto)");
+      return urlMatch[0];
+    }
+
+    // Caso 3: alguns modelos retornam direto em result.data[0].url (estilo DALL-E)
+    if (result.data?.[0]?.url) {
+      console.log("[Enhance] ✅ Imagem encontrada (result.data[0].url)");
+      return result.data[0].url;
+    }
+    if (result.data?.[0]?.b64_json) {
+      console.log("[Enhance] ✅ Imagem encontrada (result.data[0].b64_json)");
+      return `data:image/png;base64,${result.data[0].b64_json}`;
+    }
+
+    console.warn("[Enhance] Nenhuma imagem encontrada na resposta. Content:", content?.substring(0, 200));
     return null;
 
   } catch (error) {
@@ -151,3 +184,4 @@ export async function enhanceProductImage(imageUrl: string, category: string, pr
     return null;
   }
 }
+
