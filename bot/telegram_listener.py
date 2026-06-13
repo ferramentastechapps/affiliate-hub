@@ -7,7 +7,7 @@ import re
 import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY, OPENROUTER_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
 
@@ -231,16 +231,14 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         
     msg_status = await update.message.reply_text("⏳ Analisando oferta encaminhada...")
     
-    import google.generativeai as genai
     import json
+    import requests
     
     try:
-        if not GEMINI_API_KEY:
-            await msg_status.edit_text("❌ GEMINI_API_KEY não configurada. Não é possível extrair os dados da promoção.")
+        if not OPENROUTER_API_KEY:
+            await msg_status.edit_text("❌ OPENROUTER_API_KEY não configurada. Não é possível extrair os dados da promoção.")
             return
 
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = (
             f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
             f"{text}\n\n"
@@ -252,9 +250,30 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
         )
         
-        response = await asyncio.to_thread(model.generate_content, prompt)
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        texto_limpo = response.text.replace('```json', '').replace('```', '').strip()
+        payload = {
+            "model": "google/gemini-2.5-flash",
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        
+        # Async request run in executor
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload).json()
+        )
+        
+        if "choices" not in response:
+            raise Exception(f"OpenRouter Error: {response}")
+            
+        texto_limpo = response["choices"][0]["message"]["content"].replace('```json', '').replace('```', '').strip()
         dados = json.loads(texto_limpo)
         
         nome = dados.get('name') or 'Produto Encontrado'
