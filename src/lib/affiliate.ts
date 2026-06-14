@@ -24,15 +24,24 @@ export async function resolveRedirect(url: string): Promise<string> {
   if (url.toLowerCase().includes('mercadolivre.com.br/social/')) {
     try {
       console.log(`[Affiliate] Resolvendo link social do ML: ${url}`);
-      
+
       // Extrair o nome do perfil da URL (ex: "promobit" de /social/promobit)
       const profileMatch = url.match(/mercadolivre\.com\.br\/social\/([^/?&]+)/i);
       const profileName = profileMatch?.[1];
 
-      // Estratégia 1: API interna do ML para listar itens do perfil social
+      // Extrair o ref da URL — identifica o ITEM ESPECÍFICO da vitrine
+      const refMatch = url.match(/[?&]ref=([^&]+)/i);
+      const refId = refMatch?.[1];
+
+      // Estratégia 1: API interna do ML com o ref do item específico
       if (profileName) {
         try {
-          const apiUrl = `https://www.mercadolivre.com.br/social-profile/profile/${profileName}/items?limit=1`;
+          // Se temos o ref, buscamos o item exato; senão, fallback para o mais recente
+          const apiUrl = refId
+            ? `https://www.mercadolivre.com.br/social-profile/profile/${profileName}/items/${encodeURIComponent(refId)}`
+            : `https://www.mercadolivre.com.br/social-profile/profile/${profileName}/items?limit=1`;
+
+          console.log(`[Affiliate] API ML: ${apiUrl}`);
           const apiResp = await fetch(apiUrl, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -43,14 +52,18 @@ export async function resolveRedirect(url: string): Promise<string> {
           });
           if (apiResp.ok) {
             const json = await apiResp.json();
-            // Tenta extrair o permalink do primeiro item
-            const firstItem = json?.items?.[0] || json?.results?.[0] || json?.[0];
-            const permalink = firstItem?.permalink || firstItem?.url || firstItem?.item_url;
+            // Quando chamado com ref, o ML retorna o item direto; senão vem dentro de items[]/results[]
+            const item = refId
+              ? json
+              : (json?.items?.[0] || json?.results?.[0] || json?.[0]);
+            const permalink = item?.permalink || item?.url || item?.item_url;
             if (permalink) {
               const cleanPermalink = permalink.split('?')[0];
-              console.log(`[Affiliate] 💥 Vitrine destruída via API ML! Produto: ${cleanPermalink}`);
+              console.log(`[Affiliate] 💥 Vitrine destruída via API ML (ref=${refId ?? 'n/a'})! Produto: ${cleanPermalink}`);
               return cleanPermalink;
             }
+          } else {
+            console.warn(`[Affiliate] API ML retornou HTTP ${apiResp.status} para ref=${refId}`);
           }
         } catch (apiErr) {
           console.warn(`[Affiliate] API ML social falhou:`, apiErr instanceof Error ? apiErr.message : apiErr);
