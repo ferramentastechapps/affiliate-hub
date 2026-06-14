@@ -74,25 +74,17 @@ pkill -f "python3.*telegram_listener.py" || true
 # Remover processos antigos/duplicados do PM2 se existirem
 pm2 delete affiliate-bot || true
 pm2 delete promobot || true
+pm2 delete affiliate-listener || true
+pm2 delete affiliate-hub-listener || true
+pm2 delete affiliate-hub-scraper || true
+pm2 delete affiliate-scraper || true
 
-# Reiniciar ou criar os bots no PM2
-cd ~/affiliate-hub/bot
-
-# Listener do Telegram
-if pm2 list | grep -q "affiliate-listener"; then
-  pm2 restart affiliate-listener
-else
-  pm2 start telegram_listener.py --name affiliate-listener --interpreter python3
-fi
-
-# Scraper Principal (Robô de Promoções)
-if pm2 list | grep -q "affiliate-scraper"; then
-  pm2 restart affiliate-scraper
-else
-  pm2 start main.py --name affiliate-scraper --interpreter python3
-fi
+# Iniciar ou recarregar os bots usando o arquivo de ecossistema
+cd ~/affiliate-hub
+pm2 start ecosystem.config.js
 
 pm2 save
+
 
 echo "✅ Deploy completo!"
 pm2 status
