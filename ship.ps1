@@ -38,6 +38,21 @@ git reset --hard
 git fetch origin
 git reset --hard origin/$Branch
 
+# Sincronizar GEMINI_API_KEY do bot/.env para o root .env
+GEMINI_KEY=\$(grep 'GEMINI_API_KEY=' ~/affiliate-hub/bot/.env | cut -d'=' -f2-)
+if [ -n "\$GEMINI_KEY" ]; then
+  if grep -q 'GEMINI_API_KEY=' ~/affiliate-hub/.env; then
+    # Escapa caracteres especiais para o sed
+    ESCAPED_KEY=\$(echo "\$GEMINI_KEY" | sed 's/[&/]/\\&/g')
+    sed -i "s|GEMINI_API_KEY=.*|GEMINI_API_KEY=\$ESCAPED_KEY|g" ~/affiliate-hub/.env
+  else
+    echo "GEMINI_API_KEY=\$GEMINI_KEY" >> ~/affiliate-hub/.env
+  fi
+  echo "✅ GEMINI_API_KEY sincronizada para o root .env"
+else
+  echo "⚠️ GEMINI_API_KEY não encontrada no bot/.env"
+fi
+
 echo "📦 Instalando dependências..."
 npm install
 
