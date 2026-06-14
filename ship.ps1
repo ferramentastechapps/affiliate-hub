@@ -75,16 +75,10 @@ pip3 install -r requirements.txt --break-system-packages
 echo "🔄 Reiniciando serviços..."
 cd ~/affiliate-hub
 
-# Reiniciar ou criar o Next.js no PM2
-if pm2 list | grep -q "nextjs"; then
-  pm2 restart nextjs
-else
-  pm2 start npm --name "nextjs" -- start -- -p 3005
-fi
-
-# Matar processos python órfãos rodando main.py e telegram_listener.py (nohup antigo)
+# Matar processos python órfãos rodando main.py e telegram_listener.py (nohup antigo e listeners soltos)
 pkill -f "python3.*main.py" || true
 pkill -f "python3.*telegram_listener.py" || true
+pkill -f telegram_listener.py || true
 
 # Remover processos antigos/duplicados do PM2 se existirem
 pm2 delete affiliate-bot || true
@@ -93,6 +87,8 @@ pm2 delete affiliate-listener || true
 pm2 delete affiliate-hub-listener || true
 pm2 delete affiliate-hub-scraper || true
 pm2 delete affiliate-scraper || true
+pm2 delete affiliate-hub-web || true
+pm2 delete nextjs || true
 
 # Iniciar ou recarregar os bots usando o arquivo de ecossistema
 cd ~/affiliate-hub
