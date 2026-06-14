@@ -232,11 +232,11 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     msg_status = await update.message.reply_text("⏳ Analisando oferta encaminhada...")
     
     import json
-    import requests
+    import google.generativeai as genai
     
     try:
-        if not OPENROUTER_API_KEY:
-            await msg_status.edit_text("❌ OPENROUTER_API_KEY não configurada. Não é possível extrair os dados da promoção.")
+        if not GEMINI_API_KEY:
+            await msg_status.edit_text("❌ GEMINI_API_KEY não configurada. Não é possível extrair os dados da promoção.")
             return
 
         prompt = (
@@ -250,30 +250,22 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
         )
         
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": "google/gemini-2.5-flash",
-            "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
-        }
+        genai.configure(api_key=GEMINI_API_KEY)
         
         # Async request run in executor
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None, 
-            lambda: requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload).json()
-        )
         
-        if "choices" not in response:
-            raise Exception(f"OpenRouter Error: {response}")
-            
-        texto_limpo = response["choices"][0]["message"]["content"].replace('```json', '').replace('```', '').strip()
+        def call_gemini():
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            return response.text
+
+        response_text = await loop.run_in_executor(None, call_gemini)
+        
+        texto_limpo = response_text.replace('```json', '').replace('```', '').strip()
         dados = json.loads(texto_limpo)
         
         nome = dados.get('name') or 'Produto Encontrado'

@@ -122,8 +122,8 @@ export async function POST(request: Request) {
       body.category
     );
 
-    // Se o score for menor que 8, deixamos como pending para revisão humana, a não ser que tenha vindo forçado.
-    if (aiResult.score && aiResult.score < 8.0 && !body.status) {
+    // Se o score for nulo (erro/cota) ou menor que 8, deixamos como pending para revisão humana, a não ser que tenha vindo forçado.
+    if ((aiResult.score === null || aiResult.score < 8.0) && !body.status) {
       finalStatus = 'pending';
     }
 
@@ -286,7 +286,7 @@ export async function PUT(request: Request) {
           productData.category
         );
 
-        if (aiResult.score && aiResult.score < 8.0 && !productData.status) {
+        if ((aiResult.score === null || aiResult.score < 8.0) && !productData.status) {
           finalStatus = 'pending';
         }
 
