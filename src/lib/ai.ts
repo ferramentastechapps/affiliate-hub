@@ -58,6 +58,80 @@ function extractRetryDelay(errorMessage: string): number {
   return 10; // Padrão: 10 segundos
 }
 
+/**
+ * Executa a chamada para o NVIDIA NIM com o modelo minimaxai/minimax-m3 como fallback.
+ */
+export async function processProductWithNvidia(
+  promptText: string
+): Promise<{
+  titulo: string | null;
+  subtitulo: string | null;
+  score: number | null;
+  rawJson: string | null;
+} | null> {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    console.warn('[AI-NVIDIA] NVIDIA_API_KEY não configurada no ambiente.');
+    return null;
+  }
+
+  // Garante que o cabeçalho Authorization tenha o prefixo "Bearer " sem duplicar
+  let authHeader = apiKey.trim();
+  if (!authHeader.startsWith('Bearer ')) {
+    authHeader = `Bearer ${authHeader}`;
+  }
+
+  try {
+    console.log(`[AI-NVIDIA] Acionando fallback do NVIDIA NIM (minimaxai/minimax-m3)...`);
+    
+    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'minimaxai/minimax-m3',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: promptText }
+        ],
+        max_tokens: 512,
+        temperature: 0.7,
+        top_p: 0.9,
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[AI-NVIDIA] NVIDIA NIM falhou com status ${response.status}: ${errorText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const responseText = data.choices?.[0]?.message?.content;
+    if (!responseText) {
+      console.warn('[AI-NVIDIA] Resposta vazia da NVIDIA NIM.');
+      return null;
+    }
+
+    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanedText);
+
+    return {
+      titulo: parsedData.titulo || null,
+      subtitulo: parsedData.subtitulo || null,
+      score: parsedData.score !== undefined ? Number(parsedData.score) : null,
+      rawJson: JSON.stringify(parsedData),
+    };
+  } catch (error: any) {
+    console.error('[AI-NVIDIA] Erro durante o processamento do NVIDIA NIM:', error.message || error);
+    return null;
+  }
+}
+
 export async function processProductWithAI(
   productName: string,
   price: number,
@@ -115,6 +189,12 @@ Categoria: ${category || 'Diversos'}`;
         } else {
           console.error(`[AI] Erro ao processar produto na tentativa ${attempts}/${maxAttempts}:`, errorMsg);
           if (attempts >= maxAttempts) {
+            if (isRateLimit) {
+              const nvidiaResult = await processProductWithNvidia(promptText);
+              if (nvidiaResult) {
+                return nvidiaResult;
+              }
+            }
             return { titulo: null, subtitulo: null, score: null, rawJson: null };
           }
         }
