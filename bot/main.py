@@ -129,15 +129,14 @@ class PromotionBot:
                             
                         chave = self.scraper._normalizar(produto['name'])[:60]
                         self.produtos_enviados.add(chave)
-                        
-                        # Pausa para evitar Flood Control do Telegram (máx ~20 msgs/min)
-                        time.sleep(4)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
                         print('⚠️ Produto não enviado ao Telegram devido a falha na API. O bot tentará novamente na próxima busca.')
                         # Não adicionamos aos produtos_enviados para que o bot tente novamente
-                        time.sleep(1)  # Evitar rate limit em caso de falhas consecutivas
+                    
+                    # Pausa de 5 segundos entre cada produto para evitar estourar cota do Gemini (429) e Telegram Flood
+                    time.sleep(5)
             
             # 5. Adicionar cupons no site
             if cupons_novos:

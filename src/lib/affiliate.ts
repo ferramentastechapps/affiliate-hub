@@ -351,6 +351,85 @@ export function extractUrlDetails(urlStr: string): UrlDetails {
 }
 
 /**
+ * Limpa parâmetros de rastreamento e de afiliados conhecidos de uma URL
+ */
+export function cleanTrackingParams(urlStr: string): string {
+  try {
+    const parsed = new URL(urlStr);
+    const paramsToRemove = [
+      // Amazon
+      'tag',
+      // Mercado Livre
+      'ref',
+      'forceInApp',
+      'matt_tool',
+      'matt_word',
+      'matt_tracing_id',
+      'matt_source',
+      'matt_campaign',
+      'matt_ad_group',
+      'matt_match_type',
+      'matt_network',
+      'matt_device',
+      'matt_creative',
+      'matt_keyword',
+      'matt_ad_position',
+      'matt_ad_type',
+      'matt_merchant_id',
+      'matt_product_id',
+      'matt_product_partition_id',
+      'matt_target_id',
+      // General tracking / UTMs
+      'utm_source',
+      'utm_medium',
+      'utm_campaign',
+      'utm_term',
+      'utm_content',
+      'utm_id',
+      'fbclid',
+      'gclid',
+      'msclkid',
+      'aff_id',
+      'aff_sub',
+      'aff_sub2',
+      'aff_sub3',
+      'aff_sub4',
+      'aff_sub5',
+      'aff_platform',
+      'aff_trace_key',
+      'spm',
+      'scm',
+      'ref_',
+    ];
+
+    // Coleciona parâmetros que devem ser deletados
+    const toDelete = new Set<string>(paramsToRemove);
+
+    // Remove qualquer parâmetro cujo nome ou valor contenha "parceiropechi"
+    parsed.searchParams.forEach((value, key) => {
+      if (
+        key.toLowerCase().includes('parceiropechi') ||
+        value.toLowerCase().includes('parceiropechi')
+      ) {
+        toDelete.add(key);
+      }
+    });
+
+    toDelete.forEach((param) => {
+      parsed.searchParams.delete(param);
+    });
+
+    let cleaned = parsed.toString();
+    if (cleaned.endsWith('?')) {
+      cleaned = cleaned.slice(0, -1);
+    }
+    return cleaned;
+  } catch {
+    return urlStr;
+  }
+}
+
+/**
  * Gera um link de afiliado para uma URL original com base no arquivo .env
  */
 export async function generateAffiliateLink(originalUrl: string): Promise<string | null> {
@@ -359,15 +438,18 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
   // 1. Resolver redirecionamentos de URLs curtas
   const resolvedUrl = await resolveRedirect(originalUrl);
   
+  // Limpar parâmetros de rastreamento antes de processar
+  const cleanedUrl = cleanTrackingParams(resolvedUrl);
+  
   // 2. Detectar plataforma
-  const platform = detectPlatform(resolvedUrl);
+  const platform = detectPlatform(cleanedUrl);
   if (!platform) {
-    console.log(`[Affiliate] Plataforma não suportada para autogeração de links: ${resolvedUrl}`);
+    console.log(`[Affiliate] Plataforma não suportada para autogeração de links: ${cleanedUrl}`);
     return null;
   }
   
   // 3. Extrair detalhes da URL
-  const details = extractUrlDetails(resolvedUrl);
+  const details = extractUrlDetails(cleanedUrl);
   
   // 4. Mapear variáveis de ambiente por plataforma
   const envPrefix = platform === 'mercadoLivre' ? 'MERCADOLIVRE' : platform.toUpperCase();
