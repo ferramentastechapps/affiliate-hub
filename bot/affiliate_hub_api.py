@@ -22,7 +22,7 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/products',
                 headers=self.headers,
                 json=produto,
-                timeout=10,
+                timeout=60,
                 verify=False
             )
             print(f'   [API] Status: {response.status_code} | Body: {response.text[:300]}')
@@ -44,7 +44,7 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/products',
                 headers=self.headers,
                 json={'products': produtos},
-                timeout=30,
+                timeout=60,
                 verify=False
             )
             response.raise_for_status()
@@ -60,7 +60,7 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/coupons',
                 headers=self.headers,
                 json=cupom,
-                timeout=10,
+                timeout=60,
                 verify=False
             )
             response.raise_for_status()
@@ -76,7 +76,7 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/coupons',
                 headers=self.headers,
                 json={'coupons': cupons},
-                timeout=30,
+                timeout=60,
                 verify=False
             )
             response.raise_for_status()
@@ -96,7 +96,7 @@ class AffiliateHubAPI:
                     'platform': platform,
                     'link': link
                 },
-                timeout=15,
+                timeout=60,
                 verify=False
             )
             response.raise_for_status()
@@ -115,7 +115,7 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/products',
                 headers=self.headers,
                 json=produto,
-                timeout=10,
+                timeout=60,
                 verify=False
             )
             response.raise_for_status()
@@ -149,7 +149,7 @@ class AffiliateHubAPI:
                 f'{self.base_url}/api/webhook/products/approve',
                 headers=self.headers,
                 json=payload,
-                timeout=15,
+                timeout=60,
                 verify=False
             )
             
@@ -174,7 +174,7 @@ class AffiliateHubAPI:
                 json={
                     'productId': produto_id
                 },
-                timeout=15,
+                timeout=60,
                 verify=False
             )
             response.raise_for_status()

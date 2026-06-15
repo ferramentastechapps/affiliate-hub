@@ -162,7 +162,7 @@ class MercadoLivreAPIScraper:
             'refresh_token': self.refresh_token
         }
         try:
-            r = requests.post(url, data=data, timeout=10)
+            r = requests.post(url, data=data, timeout=60)
             if r.status_code == 200:
                 resp_json = r.json()
                 self.access_token = resp_json.get('access_token')
