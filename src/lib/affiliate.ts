@@ -542,8 +542,30 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
       return applyTemplate(templateEnv, details, undefined, magaluShop);
     }
     if (magaluShop) {
-      // Converte magazineluiza.com.br/p/123/ para magazinevoce.com.br/shopname/p/123/
-      // Remove barra inicial se houver no path
+      // Se a URL já é magazinevoce.com.br (ex: link de afiliado do Promobit com outro shop),
+      // substituir o primeiro segmento do path pelo nosso shop em vez de prependar.
+      // Exemplo errado: magazinevoce.com.br/shopPromobit/p/123 → não virar /nossoshop/shopPromobit/p/123
+      if (details.hostname.includes('magazinevoce')) {
+        // Path: /shopAntigo/p/produto → /nossoshop/p/produto
+        const pathParts = details.path.split('/').filter(Boolean); // remove segmentos vazios
+        if (pathParts.length > 0) {
+          // Verificar se o primeiro segmento parece ser um nome de loja (não começa com 'p', 'produto', etc.)
+          const firstSeg = pathParts[0].toLowerCase();
+          const isShopSeg = !['p', 'produto', 'busca', 'categoria', 'oferta', 'divulgador'].includes(firstSeg);
+          if (isShopSeg) {
+            // Substituir o shop antigo pelo nosso
+            pathParts[0] = magaluShop;
+            const newPath = '/' + pathParts.join('/');
+            console.log(`[Affiliate] Magalu: shop substituído no path → ${newPath}`);
+            return `https://www.magazinevoce.com.br${newPath}`;
+          }
+        }
+        // Se não conseguiu identificar o shop seg, apenas prependar
+        const pathClean = details.path.startsWith('/') ? details.path : `/${details.path}`;
+        return `https://www.magazinevoce.com.br/${magaluShop}${pathClean}`;
+      }
+
+      // URL é magazineluiza.com.br ou magalu.com.br: construir link de afiliado normalmente
       const pathClean = details.path.startsWith('/') ? details.path : `/${details.path}`;
       return `https://www.magazinevoce.com.br/${magaluShop}${pathClean}`;
     }
