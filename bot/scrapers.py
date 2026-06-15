@@ -43,11 +43,22 @@ class PromotionScraper:
                 try:
                     nome = offer.get('offerTitle', 'Sem título')
                     # Usar o link direto do produto (evita passar pela página do Promobit)
-                    # offerUrl é o link real da loja (ex: mercadolivre.com.br/produto/...)
+                    # offerUrl pode ser: (a) link direto da loja, (b) link social do ML com ref=
                     link_direto = offer.get('offerUrl') or offer.get('offer_url') or offer.get('url')
                     link_oferta = f"https://www.promobit.com.br/oferta/{offer.get('offerSlug', '')}-{offer.get('offerId', '')}"
-                    # Se temos o link direto, usamos ele para o campo de link da loja
-                    link_produto = link_direto if link_direto else link_oferta
+
+                    # Diagnóstico: identificar tipo de link
+                    if link_direto and 'mercadolivre.com.br/social/' in link_direto.lower():
+                        # É um link social do ML — preservar o ref= intacto para resolveRedirect
+                        # O next.js affiliate.ts tentará decodificar o ref= para obter o produto
+                        print(f'  ⚠️  [Promobit] offerUrl é link social ML: {link_direto[:80]}')
+                        link_produto = link_direto  # Preservar com ref= para resolveRedirect
+                    elif link_direto:
+                        link_produto = link_direto  # Link direto da loja
+                    else:
+                        link_produto = link_oferta  # Fallback: página do Promobit
+                        print(f'  ⚠️  [Promobit] offerUrl ausente, usando link da página do Promobit')
+
                     loja = offer.get('storeName', 'Desconhecido')
                     links = self._criar_links(link_produto, loja)
 
@@ -64,7 +75,13 @@ class PromotionScraper:
 
                     # Cupom: tentar vários campos possíveis do JSON do Promobit
                     # Nota: 'coupon' pode retornar "NORMAL" (tipo de desconto), não um código real
-                    _VALORES_INVALIDOS_CUPOM = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
+                    _VALORES_INVALIDOS_CUPOM = {
+                        'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', '',
+                        'ADMIN', 'GRATIS', 'FREE', 'DESCONTO', 'OFERTA',
+                        'PROMO', 'PROMOBIT', 'PECHINCHOU', 'PELANDO',
+                        'DISCOUNT', 'COUPON', 'CODE', 'CUPOM', 'CODIGO',
+                        'SIM', 'NAO', 'YES', 'NO', 'TRUE', 'FALSE',
+                    }
                     def _cupom_valido(v):
                         return v and str(v).strip().upper() not in _VALORES_INVALIDOS_CUPOM
 
