@@ -280,7 +280,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         # Tentar raspar os dados da página se faltar nome, preço ou imagem (quando não houver foto enviada)
         scraped_data = {}
         try:
-            scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link}, timeout=10)
+            scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link}, timeout=60)
             if scrape_resp.status_code == 200:
                 scraped_data = scrape_resp.json()
                 print(f"🔍 Scraped fallback: {scraped_data}")
