@@ -64,6 +64,9 @@ export const metadata: Metadata = {
     description: "Melhores cupons e promoções do Brasil.",
     images: ["/icons/og-image.png?v=2"],
   },
+  other: {
+    lomadee: "2324685",
+  },
 };
 
 export default function RootLayout({
