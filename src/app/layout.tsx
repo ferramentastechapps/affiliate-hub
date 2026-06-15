@@ -64,9 +64,6 @@ export const metadata: Metadata = {
     description: "Melhores cupons e promoções do Brasil.",
     images: ["/icons/og-image.png?v=2"],
   },
-  other: {
-    lomadee: "2324685",
-  },
 };
 
 export default function RootLayout({
@@ -79,6 +76,9 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
     >
+      <head>
+        <meta name="lomadee" content="2324685" />
+      </head>
       <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans">
         <AuthProvider>
           <Header />
