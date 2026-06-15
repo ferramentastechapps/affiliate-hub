@@ -98,7 +98,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
-                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu'}
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress'}
                     produtos.append({
                         'name': nome,
                         'category': categoria,
@@ -840,7 +840,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
-                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu'}
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress'}
                     produtos.append({
                         'name': nome,
                         'category': categoria,
