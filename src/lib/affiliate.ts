@@ -33,6 +33,57 @@ export async function resolveRedirect(url: string): Promise<string> {
       const refMatch = url.match(/[?&]ref=([^&]+)/i);
       const refId = refMatch?.[1];
 
+      // Estratégia 0: Decodificar o ref= como base64/JWT para extrair URL de produto diretamente
+      // O ML codifica o permalink ou MLB no token ref= para identificar o item
+      if (refId) {
+        try {
+          // Tentar decodificar: o ref pode ser base64url (RFC 4648)
+          const decoded = Buffer.from(
+            refId.replace(/-/g, '+').replace(/_/g, '/'),
+            'base64'
+          ).toString('utf8');
+
+          // Verificar se o decode contém uma URL de produto ML ou um ID MLB
+          const mlProductMatch = decoded.match(
+            /(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/[^\s"'<>]+)/i
+          ) || decoded.match(/(MLB-?\d+)/i);
+
+          if (mlProductMatch?.[1]) {
+            const extracted = mlProductMatch[1];
+            if (extracted.startsWith('http')) {
+              const cleanExtracted = extracted.split('?')[0];
+              console.log(`[Affiliate] 🔓 ref= decodificado → URL direta: ${cleanExtracted}`);
+              return cleanExtracted;
+            } else {
+              // É um MLB ID, montar URL canônica
+              const mlbId = extracted.replace('-', '');
+              const productUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
+              console.log(`[Affiliate] 🔓 ref= decodificado → MLB ID: ${productUrl}`);
+              return productUrl;
+            }
+          }
+
+          // Tentar também como JSON (JWT payload)
+          try {
+            // JWT tem 3 partes separadas por '.'; decodificar o payload (parte do meio)
+            const parts = refId.split('.');
+            if (parts.length >= 2) {
+              const payload = Buffer.from(
+                parts[1].replace(/-/g, '+').replace(/_/g, '/'),
+                'base64'
+              ).toString('utf8');
+              const jwtData = JSON.parse(payload);
+              const jwtUrl = jwtData?.permalink || jwtData?.url || jwtData?.item_url || jwtData?.product_url;
+              if (jwtUrl && (jwtUrl.includes('mercadolivre') || jwtUrl.includes('MLB'))) {
+                const cleanJwtUrl = jwtUrl.split('?')[0];
+                console.log(`[Affiliate] 🔓 JWT ref= decodificado → URL: ${cleanJwtUrl}`);
+                return cleanJwtUrl;
+              }
+            }
+          } catch { /* não é JWT, continuar */ }
+        } catch { /* não é base64 válido, continuar */ }
+      }
+
       // Estratégia 1: API interna do ML com o ref do item específico
       if (profileName) {
         try {
@@ -56,11 +107,21 @@ export async function resolveRedirect(url: string): Promise<string> {
             const item = refId
               ? json
               : (json?.items?.[0] || json?.results?.[0] || json?.[0]);
-            const permalink = item?.permalink || item?.url || item?.item_url;
-            if (permalink) {
+            const permalink = item?.permalink || item?.url || item?.item_url || item?.product_url || item?.link;
+            if (permalink && (permalink.includes('mercadolivre') || permalink.includes('MLB'))) {
               const cleanPermalink = permalink.split('?')[0];
               console.log(`[Affiliate] 💥 Vitrine destruída via API ML (ref=${refId ?? 'n/a'})! Produto: ${cleanPermalink}`);
               return cleanPermalink;
+            }
+            // Verificar se a resposta tem uma lista mesmo com ref (alguns endpoints retornam array)
+            if (Array.isArray(json) && json.length > 0) {
+              const firstItem = json[0];
+              const firstPermalink = firstItem?.permalink || firstItem?.url || firstItem?.item_url;
+              if (firstPermalink) {
+                const cleanFirst = firstPermalink.split('?')[0];
+                console.log(`[Affiliate] 💥 Vitrine destruída via API ML (array, ref=${refId ?? 'n/a'})! Produto: ${cleanFirst}`);
+                return cleanFirst;
+              }
             }
           } else {
             console.warn(`[Affiliate] API ML retornou HTTP ${apiResp.status} para ref=${refId}`);
