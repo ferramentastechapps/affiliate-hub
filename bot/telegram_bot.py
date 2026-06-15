@@ -257,13 +257,14 @@ class TelegramNotifier:
 
     async def publicar_no_grupo(self, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None, custom_caption: str = None):
         """Publica a promoção aprovada no grupo de promoções."""
-        from config import TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY
+        from config import TELEGRAM_PROMO_GROUP_ID
         if not TELEGRAM_PROMO_GROUP_ID:
             print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação no grupo.')
             return
 
         nome = produto.get('name', 'Produto')
         preco = produto.get('price')
+        preco_original = produto.get('originalPrice')
         
         # Lógica de imagem: foto_file_id > enhancedImageUrl > imageUrl
         from config import AFFILIATE_HUB_URL
@@ -276,54 +277,92 @@ class TelegramNotifier:
             if enhanced_image.startswith('/'):
                 enhanced_image = f"{base_url}{enhanced_image}"
             imagem = enhanced_image
-        
-        PLATAFORMA_EMOJIS = {
-            'amazon':      '🟠 Amazon',
-            'mercadoLivre':'🟡 Mercado Livre',
-            'shopee':      '🟠 Shopee',
-            'aliexpress':  '🔴 AliExpress',
-            'tiktok':      '⚫ TikTok Shop',
-            'netshoes':    '🟣 Netshoes',
-            'magalu':      '🔵 Magalu',
-            'kabum':       '🔵 Kabum',
+
+        # Emoji por categoria
+        categoria_nome = produto.get('category', 'Diversos')
+        CATEGORY_EMOJIS = {
+            'Smartphones e TV': '📱',
+            'Informática e Games': '💻',
+            'Casa e Eletrodomésticos': '🏠',
+            'Moda e Acessórios': '👟',
+            'Saúde e Beleza': '💆',
+            'Esporte e Suplementos': '💪',
+            'Supermercado e Delivery': '🛒',
+            'Bebês e Crianças': '👶',
+            'Livros, eBooks e eReaders': '📚',
+            'Ferramentas e Jardim': '🔧',
+            'Automotivo': '🚗',
+            'Pet': '🐾',
+            'Viagem': '✈️',
+            'Diversos': '🔖',
         }
-        plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
+        emoji = CATEGORY_EMOJIS.get(categoria_nome, '🔖')
 
-        legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
-        
-        # Prioridade da Legenda:
-        # 1. custom_caption do admin
-        # 2. aiAnalysis gravado no banco de dados
-        # 3. Fallback genérico
-        if custom_caption:
-            legenda_engracada = custom_caption.strip()
-        elif produto.get('aiAnalysis'):
-            legenda_engracada = produto.get('aiAnalysis').strip()
-        else:
-            legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
+        # Formatação de preços
+        def format_br_currency(val):
+            try:
+                return f"{float(val):.2f}".replace('.', ',')
+            except Exception:
+                return str(val)
 
-        preco_original = produto.get('originalPrice')
         if preco_original and preco and float(preco_original) > float(preco):
-            preco_txt = f"💰 de <s>R$ {float(preco_original):.2f}</s> por <b>R$ {float(preco):.2f}</b>".replace('.', ',')
+            preco_txt = f"🔥 DE R$ <s>{format_br_currency(preco_original)}</s> | POR R$ <b>{format_br_currency(preco)}</b>"
         else:
-            preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>".replace('.', ',') if preco else ""
-        
-        descricao_prod = produto.get('description', '')
+            preco_txt = f"🔥 POR R$ <b>{format_br_currency(preco)}</b>" if preco else ""
+
+        # Cupom: Só se existir na descrição do produto
+        descricao_prod = produto.get('description', '') or ''
         cupom_msg = ""
         if '🎟️ CUPOM:' in descricao_prod:
             cupom_extraido = descricao_prod.split('🎟️ CUPOM:')[1].split('\n')[0].strip()
             _invalidos = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
             if cupom_extraido.upper() not in _invalidos:
-                cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
+                cupom_msg = f"🎟️ CUPOM: <code>{cupom_extraido}</code>"
 
-        mensagem = (
-            f"{legenda_engracada}\n\n"
-            f"📦 <b>{nome}</b>\n"
-            f"🏪 {plataforma_label}\n"
-            f"{preco_txt}\n"
-            f"{cupom_msg}\n"
-            f"🔗 <a href='{affiliate_link}'>👉 CLIQUE AQUI PARA COMPRAR</a>"
-        )
+        # Título e Subtítulo da IA
+        legenda_top = ""
+        if custom_caption:
+            legenda_top = custom_caption.strip()
+        else:
+            ai_analysis_raw = produto.get('aiAnalysis')
+            if ai_analysis_raw:
+                import json
+                try:
+                    data = json.loads(ai_analysis_raw)
+                    if isinstance(data, dict):
+                        titulo = data.get('titulo')
+                        subtitulo = data.get('subtitulo')
+                        if titulo:
+                            legenda_top = f"<b>{titulo.upper()}</b>"
+                            if subtitulo:
+                                legenda_top += f"\n<i>{subtitulo.lower()}</i>"
+                        else:
+                            legenda_top = f"<b>{ai_analysis_raw.strip()}</b>"
+                    else:
+                        legenda_top = f"<b>{ai_analysis_raw.strip()}</b>"
+                except Exception:
+                    legenda_top = f"<b>{ai_analysis_raw.strip()}</b>"
+            else:
+                legenda_top = "<b>🔥 ACHADINHO IMPERDÍVEL!</b>"
+
+        # Montar o corpo da mensagem
+        linhas = []
+        if legenda_top:
+            linhas.append(legenda_top)
+            linhas.append("")
+        
+        linhas.append(f"{emoji} {nome}")
+        linhas.append("")
+        
+        if preco_txt:
+            linhas.append(preco_txt)
+        if cupom_msg:
+            linhas.append(cupom_msg)
+            
+        linhas.append("")
+        linhas.append(f"🔗 {affiliate_link}")
+        
+        mensagem = "\n".join(linhas)
 
         try:
             # Prioridade: foto enviada pelo admin > imageUrl do produto
