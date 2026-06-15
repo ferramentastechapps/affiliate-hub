@@ -122,8 +122,10 @@ export async function POST(request: Request) {
       body.category
     );
 
-    // Se o score for nulo (erro/cota) ou menor que 8, deixamos como pending para revisão humana, a não ser que tenha vindo forçado.
-    if ((aiResult.score === null || aiResult.score < 8.0) && !body.status) {
+    if (body.autoApprove === true) {
+      finalStatus = 'active';
+      console.log(`[Webhook] Auto-aprovado por fonte confiável: ${body.name}`);
+    } else if ((aiResult.score === null || aiResult.score < 8.0) && !body.status) {
       finalStatus = 'pending';
     }
 
@@ -149,7 +151,7 @@ export async function POST(request: Request) {
         status: finalStatus,
         externalId: body.externalId || null,
         aiScore: aiResult.score,
-        aiAnalysis: aiResult.texto,
+        aiAnalysis: aiResult.rawJson,
         enhancedImageUrl: finalEnhancedImageUrl,
         links: processedLinks ? {
           create: {
@@ -286,7 +288,10 @@ export async function PUT(request: Request) {
           productData.category
         );
 
-        if ((aiResult.score === null || aiResult.score < 8.0) && !productData.status) {
+        if (productData.autoApprove === true) {
+          finalStatus = 'active';
+          console.log(`[Webhook] Auto-aprovado por fonte confiável: ${productData.name}`);
+        } else if ((aiResult.score === null || aiResult.score < 8.0) && !productData.status) {
           finalStatus = 'pending';
         }
 
@@ -310,7 +315,7 @@ export async function PUT(request: Request) {
             status: finalStatus,
             externalId: productData.externalId || null,
             aiScore: aiResult.score,
-            aiAnalysis: aiResult.texto,
+            aiAnalysis: aiResult.rawJson,
             enhancedImageUrl: finalEnhancedImageUrl,
             links: processedLinks ? {
               create: {

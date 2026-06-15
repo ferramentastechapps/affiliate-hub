@@ -106,7 +106,8 @@ class PromotionScraper:
                         'price': preco,
                         'originalPrice': float(offer.get('offerOriginalPrice', 0)) if offer.get('offerOriginalPrice') else None,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'autoApprove': True
                     })
                     print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
@@ -846,7 +847,8 @@ class PromotionScraper:
                         'price': preco,
                         'originalPrice': float(promo.get('old_price', 0)) if promo.get('old_price') else None,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'autoApprove': True
                     })
                     print(f'  ✅ [Pechinchou] {nome[:45]}...')
                 except Exception as e:
