@@ -42,6 +42,22 @@ FORMATO DE SAÍDA — responda APENAS com JSON válido, sem markdown, sem explic
 
 Nunca mencione que o produto vai ficar numa gaveta ou variações disso. Nunca repita a mesma estrutura de piada duas vezes seguidas — varie a cada mensagem.`;
 
+/**
+ * Extrai o tempo sugerido de retry de uma mensagem de erro do Gemini.
+ * Se não for especificado, retorna um padrão de 10 segundos.
+ */
+function extractRetryDelay(errorMessage: string): number {
+  const match = errorMessage.match(/retry\s+in\s+(\d+)\s*s/i) ||
+                errorMessage.match(/retry\s+in\s+(\d+)\s*seconds/i) ||
+                errorMessage.match(/retry\s+after\s+(\d+)\s*s/i) ||
+                errorMessage.match(/retry\s+after\s+(\d+)\s*seconds/i) ||
+                errorMessage.match(/after\s+(\d+)\s*s/i);
+  if (match && match[1]) {
+    return parseInt(match[1], 10);
+  }
+  return 10; // Padrão: 10 segundos
+}
+
 export async function processProductWithAI(
   productName: string,
   price: number,
@@ -74,10 +90,36 @@ Preço atual: R$ ${price}
 ${originalPrice ? `Preço original: R$ ${originalPrice}` : ''}
 Categoria: ${category || 'Diversos'}`;
 
-    console.log(`[AI] Processando produto com Gemini: "${productName}" (R$ ${price})`);
-    
-    const result = await model.generateContent(promptText);
-    const responseText = result.response.text();
+    let responseText = '';
+    const maxAttempts = 2;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        console.log(`[AI] Chamando Gemini (tentativa ${attempts}/${maxAttempts}) para: "${productName}"`);
+        const result = await model.generateContent(promptText);
+        responseText = result.response.text();
+        break; // Sucesso, sair do loop
+      } catch (error: any) {
+        const errorMsg = error.message || String(error);
+        const isRateLimit = errorMsg.includes('429') || 
+                            errorMsg.includes('ResourceExhausted') || 
+                            error.status === 429 || 
+                            error.statusCode === 429;
+
+        if (isRateLimit && attempts < maxAttempts) {
+          const delaySec = extractRetryDelay(errorMsg);
+          console.warn(`[AI] Limite de cota atingido (429). Aguardando ${delaySec}s sugeridos antes de tentar novamente...`);
+          await new Promise((resolve) => setTimeout(resolve, delaySec * 1000));
+        } else {
+          console.error(`[AI] Erro ao processar produto na tentativa ${attempts}/${maxAttempts}:`, errorMsg);
+          if (attempts >= maxAttempts) {
+            return { titulo: null, subtitulo: null, score: null, rawJson: null };
+          }
+        }
+      }
+    }
     
     if (!responseText) {
       console.warn('[AI] Resposta vazia recebida do Gemini.');
