@@ -114,29 +114,12 @@ export async function POST(request: Request) {
     const { links: processedLinks, status: processedStatus } = await processProductAffiliates(body);
     let finalStatus = body.status || processedStatus;
 
-    // Calcular Deal Score e Copywriting via IA
-    const aiResult = await processProductWithAI(
-      body.name, 
-      body.price ? parseFloat(body.price) : 0, 
-      body.originalPrice ? parseFloat(body.originalPrice) : null,
-      body.category
-    );
-
     if (body.autoApprove === true) {
       finalStatus = 'active';
       console.log(`[Webhook] Auto-aprovado por fonte confiável: ${body.name}`);
-    } else if ((aiResult.score === null || aiResult.score < 8.0) && !body.status) {
+    } else if (!body.status) {
+      // Começa como pending até a IA avaliar, a menos que o status tenha sido explicitamente passado
       finalStatus = 'pending';
-    }
-
-    // Processamento da imagem se aprovado
-    let finalEnhancedImageUrl: string | null = null;
-    if (finalStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
-      const rawEnhanced = await enhanceProductImage(body.imageUrl, body.category || 'Diversos', body.name);
-      if (rawEnhanced) {
-        const isBase64 = rawEnhanced.startsWith('data:image');
-        finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
-      }
     }
 
     // Criar produto
@@ -150,9 +133,6 @@ export async function POST(request: Request) {
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         status: finalStatus,
         externalId: body.externalId || null,
-        aiScore: aiResult.score,
-        aiAnalysis: aiResult.rawJson,
-        enhancedImageUrl: finalEnhancedImageUrl,
         links: processedLinks ? {
           create: {
             amazon: processedLinks.amazon || null,
@@ -190,7 +170,7 @@ export async function POST(request: Request) {
       allKeys: Object.keys(product)
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       product: {
         id: product.id,
@@ -206,6 +186,46 @@ export async function POST(request: Request) {
         links: product.links
       }
     }, { status: 201 });
+
+    // Processar IA em background sem await
+    processProductWithAI(
+      body.name, 
+      body.price ? parseFloat(body.price) : 0, 
+      body.originalPrice ? parseFloat(body.originalPrice) : null,
+      body.category
+    ).then(async (aiResult) => {
+      let newStatus = finalStatus;
+
+      // Se a IA der nota boa, e não tinha status forçado, atualiza para o status dos links
+      if (finalStatus === 'pending' && !body.status && aiResult.score && aiResult.score >= 8.0) {
+        newStatus = processedStatus;
+      }
+
+      // Processamento da imagem se aprovado
+      let finalEnhancedImageUrl: string | null = null;
+      if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+        const rawEnhanced = await enhanceProductImage(body.imageUrl, body.category || 'Diversos', body.name);
+        if (rawEnhanced) {
+          const isBase64 = rawEnhanced.startsWith('data:image');
+          finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+        }
+      }
+
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          aiScore: aiResult.score,
+          aiAnalysis: aiResult.rawJson,
+          enhancedImageUrl: finalEnhancedImageUrl,
+          status: newStatus
+        }
+      });
+      console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+    }).catch(error => {
+      console.error(`Erro no processamento de IA em background para ${product.id}:`, error);
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Erro ao criar produto via webhook:', error);
@@ -280,28 +300,11 @@ export async function PUT(request: Request) {
         const { links: processedLinks, status: processedStatus } = await processProductAffiliates(productData);
         let finalStatus = productData.status || processedStatus;
 
-        // Calcular Deal Score e Copywriting via IA
-        const aiResult = await processProductWithAI(
-          productData.name, 
-          productData.price ? parseFloat(productData.price) : 0, 
-          productData.originalPrice ? parseFloat(productData.originalPrice) : null,
-          productData.category
-        );
-
         if (productData.autoApprove === true) {
           finalStatus = 'active';
           console.log(`[Webhook] Auto-aprovado por fonte confiável: ${productData.name}`);
-        } else if ((aiResult.score === null || aiResult.score < 8.0) && !productData.status) {
+        } else if (!productData.status) {
           finalStatus = 'pending';
-        }
-
-        let finalEnhancedImageUrl: string | null = null;
-        if (finalStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
-          const rawEnhanced = await enhanceProductImage(productData.imageUrl, productData.category || 'Diversos', productData.name);
-          if (rawEnhanced) {
-            const isBase64 = rawEnhanced.startsWith('data:image');
-            finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
-          }
         }
 
         const product = await prisma.product.create({
@@ -314,9 +317,6 @@ export async function PUT(request: Request) {
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
             status: finalStatus,
             externalId: productData.externalId || null,
-            aiScore: aiResult.score,
-            aiAnalysis: aiResult.rawJson,
-            enhancedImageUrl: finalEnhancedImageUrl,
             links: processedLinks ? {
               create: {
                 amazon: processedLinks.amazon || null,
@@ -347,6 +347,42 @@ export async function PUT(request: Request) {
         }
 
         results.push(product);
+
+        // Processar IA em background sem await
+        processProductWithAI(
+          productData.name, 
+          productData.price ? parseFloat(productData.price) : 0, 
+          productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+          productData.category
+        ).then(async (aiResult) => {
+          let newStatus = finalStatus;
+
+          if (finalStatus === 'pending' && !productData.status && aiResult.score && aiResult.score >= 8.0) {
+            newStatus = processedStatus;
+          }
+
+          let finalEnhancedImageUrl: string | null = null;
+          if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+            const rawEnhanced = await enhanceProductImage(productData.imageUrl, productData.category || 'Diversos', productData.name);
+            if (rawEnhanced) {
+              const isBase64 = rawEnhanced.startsWith('data:image');
+              finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+            }
+          }
+
+          await prisma.product.update({
+            where: { id: product.id },
+            data: {
+              aiScore: aiResult.score,
+              aiAnalysis: aiResult.rawJson,
+              enhancedImageUrl: finalEnhancedImageUrl,
+              status: newStatus
+            }
+          });
+          console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+        }).catch(error => {
+          console.error(`Erro no processamento de IA em background para ${product.id}:`, error);
+        });
       } catch {
         errors.push({
           product: productData.name,

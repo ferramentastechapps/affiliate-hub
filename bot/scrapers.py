@@ -879,6 +879,78 @@ class PromotionScraper:
         print(f'   ✅ Total Pechinchou: {len(produtos)} produtos')
         return produtos
 
+    def buscar_promocoes_lomadee(self, limite: int = 15) -> List[Dict]:
+        """Busca promoções na API da Lomadee"""
+        produtos = []
+        try:
+            print('🔥 Buscando promoções na Lomadee...')
+            import os
+            app_token = os.getenv('LOMADEE_APP_TOKEN')
+            source_id = os.getenv('LOMADEE_SOURCE_ID')
+            
+            if not app_token or not source_id:
+                print('⚠️  LOMADEE_APP_TOKEN ou LOMADEE_SOURCE_ID não configurados no .env')
+                return produtos
+
+            url = f'https://api.lomadee.com/v3/{app_token}/offer/_search'
+            params = {
+                'sourceId': source_id,
+                'size': limite,
+                'sort': 'discount'
+            }
+            
+            response = requests.get(url, params=params, headers=self.headers, timeout=15)
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Lomadee: {response.status_code}')
+                return produtos
+                
+            data = response.json()
+            offers = data.get('offers', [])
+            
+            for offer in offers[:limite]:
+                try:
+                    nome = offer.get('name', 'Sem título')
+                    preco = offer.get('price')
+                    preco_original = offer.get('priceFrom')
+                    imagem_url = offer.get('thumbnail') or 'https://via.placeholder.com/800x1000'
+                    link_afiliado = offer.get('link')
+                    
+                    store_info = offer.get('store', {})
+                    loja = store_info.get('name') if isinstance(store_info, dict) else 'Lomadee'
+                    if not loja or loja.lower() == 'lomadee':
+                        loja = self._detectar_loja_promobyte(nome, link_afiliado)
+                    
+                    links = self._criar_links(link_afiliado, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    desconto = offer.get('discount', 0)
+                    descricao = f"Oferta via {loja} na Lomadee"
+                    if desconto and desconto > 0:
+                        descricao += f"\nDesconto de {desconto}%!"
+                    
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM', 'Lomadee', 'Shopee', 'Americanas', 'Netshoes'}
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': float(preco) if preco else None,
+                        'originalPrice': float(preco_original) if preco_original else None,
+                        'links': links,
+                        'storeName': loja,
+                        'autoApprove': True  # Link já é afiliado
+                    })
+                    print(f'  ✅ [Lomadee] {nome[:45]}...')
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Lomadee: {e}')
+                    
+        except Exception as e:
+            print(f'❌ Erro ao buscar na Lomadee: {e}')
+            
+        print(f'   ✅ Total Lomadee: {len(produtos)} produtos')
+        return produtos
+
     def buscar_todas_promocoes(self) -> Dict[str, List]:
         """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé, TikTok e ML API"""
         print('\n📡 Buscando em múltiplas fontes...')
@@ -890,6 +962,7 @@ class PromotionScraper:
         produtos_buscape   = self.buscar_promocoes_buscape()       # Buscapé (novo)
         produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
         produtos_pechinchou = self.buscar_promocoes_pechinchou()   # Pechinchou
+        produtos_lomadee   = self.buscar_promocoes_lomadee()       # Lomadee (novo)
 
         # 🆕 Mercado Livre API Oficial (links de afiliado já gerados, sem intermediários!)
         produtos_ml_api = []
@@ -902,15 +975,15 @@ class PromotionScraper:
         # Combinar e deduplicar por nome normalizado
         todos_produtos = []
         nomes_vistos: set = set()
-        # ML API primeiro para garantir que links limpos tenham prioridade
-        for p in produtos_ml_api + produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
+        # ML API e Lomadee primeiro para garantir que links limpos tenham prioridade
+        for p in produtos_ml_api + produtos_lomadee + produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
             chave = self._normalizar(p['name'])[:60]
             if chave not in nomes_vistos:
                 nomes_vistos.add(chave)
                 todos_produtos.append(p)
 
         print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
-        print(f'   🛒 ML API: {len(produtos_ml_api)} | Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)}')
+        print(f'   🛒 ML API: {len(produtos_ml_api)} | Lomadee: {len(produtos_lomadee)} | Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)}')
         print(f'   🔍 Gatry: {len(produtos_gatry)} | Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | Pechinchou: {len(produtos_pechinchou)}')
 
         todos_cupons = self.buscar_cupons_pelando()
