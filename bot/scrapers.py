@@ -98,6 +98,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu'}
                     produtos.append({
                         'name': nome,
                         'category': categoria,
@@ -107,7 +108,7 @@ class PromotionScraper:
                         'originalPrice': float(offer.get('offerOriginalPrice', 0)) if offer.get('offerOriginalPrice') else None,
                         'links': links,
                         'storeName': loja,
-                        'autoApprove': True
+                        'autoApprove': loja in LOJAS_COM_AFILIADO
                     })
                     print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
@@ -839,6 +840,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu'}
                     produtos.append({
                         'name': nome,
                         'category': categoria,
@@ -848,7 +850,7 @@ class PromotionScraper:
                         'originalPrice': float(promo.get('old_price', 0)) if promo.get('old_price') else None,
                         'links': links,
                         'storeName': loja,
-                        'autoApprove': True
+                        'autoApprove': loja in LOJAS_COM_AFILIADO
                     })
                     print(f'  ✅ [Pechinchou] {nome[:45]}...')
                 except Exception as e:
