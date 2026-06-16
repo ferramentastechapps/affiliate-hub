@@ -29,9 +29,17 @@ export async function resolveRedirect(url: string): Promise<string> {
       const profileMatch = url.match(/mercadolivre\.com\.br\/social\/([^/?&]+)/i);
       const profileName = profileMatch?.[1];
 
-      // Extrair o ref da URL — identifica o ITEM ESPECÍFICO da vitrine
-      const refMatch = url.match(/[?&]ref=([^&]+)/i);
-      const refId = refMatch?.[1];
+      // Extrair o ref da URL usando URLSearchParams para evitar double encoding
+      let refId: string | undefined;
+      try {
+        const parsedUrl = new URL(url);
+        refId = parsedUrl.searchParams.get('ref') || undefined;
+      } catch {
+        const refMatch = url.match(/[?&]ref=([^&]+)/i);
+        if (refMatch?.[1]) {
+            try { refId = decodeURIComponent(refMatch[1]); } catch { refId = refMatch[1]; }
+        }
+      }
 
       // Estratégia 0: Decodificar o ref= como base64/JWT para extrair URL de produto diretamente
       // O ML codifica o permalink ou MLB no token ref= para identificar o item
