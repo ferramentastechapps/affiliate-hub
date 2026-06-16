@@ -804,6 +804,90 @@ class PromotionScraper:
         
         return produtos
 
+    def _resolver_link_meli_la(self, url_curta: str) -> str:
+        """
+        Resolve um link meli.la que aponta para uma vitrine social do ML.
+
+        Fluxo real:
+          1. meli.la/XXXXX  ->  redireciona para  mercadolivre.com.br/social/pp2025.../lists
+          2. Nessa pagina social os produtos sao listados como cards com links diretos
+             (anchor tags com classe 'poly-component__title' apontando para /p/MLB ou /MLB)
+          3. O primeiro link de produto encontrado e o produto anunciado.
+
+        Retorna o link real do produto ou a url_curta original se nao conseguir.
+        """
+        try:
+            import re as _re
+
+            headers = dict(self.headers)
+            headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            resp = requests.get(url_curta, headers=headers, allow_redirects=True, timeout=15)
+            url_social = resp.url
+            print(f'  [meli.la] resolvido para: {url_social[:80]}')
+
+            def _extrair_primeiro_produto(html_content):
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+                # Prioridade 1: botao com texto "Ir para produto" / "Ir ao produto"
+                for a in soup.find_all('a', href=True):
+                    texto = a.get_text(strip=True).lower()
+                    href = a['href']
+                    if 'ir para produto' in texto or 'ir ao produto' in texto:
+                        if href.startswith('/'):
+                            href = 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] link extraido (botao): {href[:80]}')
+                        return href
+
+                # Prioridade 2: card de produto (poly-component__title)
+                for a in soup.find_all('a', class_='poly-component__title', href=True):
+                    href = a['href'].split('#')[0]
+                    if 'MLB' in href:
+                        if href.startswith('/'):
+                            href = 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] link extraido (card ML): {href[:80]}')
+                        return href
+
+                # Prioridade 3: qualquer link /p/MLB ou /MLB
+                for a in soup.find_all('a', href=True):
+                    href = a['href']
+                    if _re.search(r'/(?:p/)?MLB\d+', href):
+                        href = href.split('#')[0]
+                        if href.startswith('/'):
+                            href = 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] link extraido (MLB fallback): {href[:80]}')
+                        return href
+
+                return None
+
+            # Tentar extrair da pagina de redirect direto
+            link = _extrair_primeiro_produto(resp.content)
+            if link:
+                return link
+
+            # Se a pagina tem sublistas (/lists/UUID), buscar a primeira
+            if '/social/' in url_social:
+                soup_social = BeautifulSoup(resp.content, 'html.parser')
+                for a in soup_social.find_all('a', href=True):
+                    href = a['href']
+                    if _re.search(r'/social/.+/lists/[a-f0-9-]{36}', href):
+                        lista_url = href if href.startswith('http') else 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] buscando na sublista: {lista_url[:80]}')
+                        try:
+                            resp2 = requests.get(lista_url, headers=headers, timeout=15)
+                            link = _extrair_primeiro_produto(resp2.content)
+                            if link:
+                                return link
+                        except Exception:
+                            pass
+                        break  # tenta apenas a primeira sublista
+
+            print(f'  [meli.la] nao encontrou link do produto - usando URL social')
+            return url_social
+
+        except Exception as e:
+            print(f'  [meli.la] erro ao resolver {url_curta}: {e}')
+            return url_curta
+
     def buscar_promocoes_pechinchou(self, limite: int = 15) -> List[Dict]:
         """Busca as promoções mais recentes do Pechinchou"""
         produtos = []
@@ -843,10 +927,10 @@ class PromotionScraper:
                     link_direto = promo.get('long_url') or promo.get('short_url') or promo.get('url') or promo.get('offer_url')
                     link_pechinchou = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
                     
-                    # Se o link direto é meli.la, é uma vitrine genérica — usar Pechinchou como destino
+                    # Se o link direto é meli.la, resolver para o link real do produto
                     if link_direto and 'meli.la' in link_direto:
-                        print(f'  ⚠️  [Pechinchou] link meli.la detectado (vitrine genérica ML) → usando página Pechinchou')
-                        link_produto = link_pechinchou
+                        print(f'  🔍 [Pechinchou] meli.la detectado → resolvendo link real do produto...')
+                        link_produto = self._resolver_link_meli_la(link_direto)
                     else:
                         link_produto = link_direto if link_direto else link_pechinchou
                     links = self._criar_links(link_produto, loja)
