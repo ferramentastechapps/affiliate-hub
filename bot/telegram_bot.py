@@ -1,5 +1,6 @@
 import asyncio
 from telegram import Bot
+from telegram.error import RetryAfter
 from telegram.constants import ParseMode
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL
 
@@ -10,6 +11,27 @@ class TelegramNotifier:
     def __init__(self):
         self.bot = Bot(token=TELEGRAM_BOT_TOKEN)
         self.chat_id = TELEGRAM_CHAT_ID
+
+    async def _send_message_with_retry(self, **kwargs):
+        while True:
+            try:
+                res = await self.bot.send_message(**kwargs)
+                await asyncio.sleep(3)
+                return res
+            except RetryAfter as e:
+                print(f"⏳ Flood control. Aguardando {e.retry_after}s...")
+                await asyncio.sleep(e.retry_after + 1)
+
+    async def _send_photo_with_retry(self, **kwargs):
+        while True:
+            try:
+                res = await self.bot.send_photo(**kwargs)
+                await asyncio.sleep(3)
+                return res
+            except RetryAfter as e:
+                print(f"⏳ Flood control. Aguardando {e.retry_after}s...")
+                await asyncio.sleep(e.retry_after + 1)
+
     
     async def enviar_produto(self, produto: dict):
         """Envia notificação de produto para o Telegram"""
@@ -27,20 +49,20 @@ class TelegramNotifier:
                 if len(mensagem) > 1024:
                     # Envia foto sem legenda e depois o texto completo
                     try:
-                        await self.bot.send_photo(
+                        await self._send_photo_with_retry(
                             chat_id=self.chat_id,
                             photo=imagem,
                         )
                     except Exception as foto_err:
                         print(f'⚠️ Erro ao enviar foto, continuando sem ela: {foto_err}')
-                    await self.bot.send_message(
+                    await self._send_message_with_retry(
                         chat_id=self.chat_id,
                         text=mensagem,
                         parse_mode=ParseMode.HTML
                     )
                 else:
                     try:
-                        await self.bot.send_photo(
+                        await self._send_photo_with_retry(
                             chat_id=self.chat_id,
                             photo=imagem,
                             caption=mensagem,
@@ -48,13 +70,13 @@ class TelegramNotifier:
                         )
                     except Exception as foto_err:
                         print(f'⚠️ Erro ao enviar foto ({foto_err}), enviando só texto...')
-                        await self.bot.send_message(
+                        await self._send_message_with_retry(
                             chat_id=self.chat_id,
                             text=mensagem,
                             parse_mode=ParseMode.HTML
                         )
             else:
-                await self.bot.send_message(
+                await self._send_message_with_retry(
                     chat_id=self.chat_id,
                     text=mensagem,
                     parse_mode=ParseMode.HTML
@@ -72,7 +94,7 @@ class TelegramNotifier:
         try:
             mensagem = self._formatar_mensagem_cupom(cupom)
             
-            await self.bot.send_message(
+            await self._send_message_with_retry(
                 chat_id=self.chat_id,
                 text=mensagem,
                 parse_mode=ParseMode.HTML
@@ -95,7 +117,7 @@ class TelegramNotifier:
 🌐 Ver todos: {AFFILIATE_HUB_URL}
 """
             
-            await self.bot.send_message(
+            await self._send_message_with_retry(
                 chat_id=self.chat_id,
                 text=mensagem.strip(),
                 parse_mode=ParseMode.HTML
@@ -373,14 +395,14 @@ class TelegramNotifier:
             print(f'✅ foto_para_usar: {foto_para_usar}')
             
             if usar_foto:
-                await self.bot.send_photo(
+                await self._send_photo_with_retry(
                     chat_id=TELEGRAM_PROMO_GROUP_ID,
                     photo=foto_para_usar,
                     caption=mensagem,
                     parse_mode='HTML'
                 )
             else:
-                await self.bot.send_message(
+                await self._send_message_with_retry(
                     chat_id=TELEGRAM_PROMO_GROUP_ID,
                     text=mensagem,
                     parse_mode='HTML'
