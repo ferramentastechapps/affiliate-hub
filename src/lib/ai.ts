@@ -158,9 +158,9 @@ Categoria: ${category || 'Diversos'}`;
 
     // Lista de modelos em ordem de preferência (fallback automático)
     const MODELS = [
-      'google/gemini-2.0-flash-001',
-      'google/gemini-flash-1.5-8b',
       'meta-llama/llama-3.1-8b-instruct:free',
+      'google/gemini-flash-1.5-8b',
+      'google/gemini-2.0-flash-001',
     ];
 
     for (const model of MODELS) {
