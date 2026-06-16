@@ -881,8 +881,8 @@ class PromotionScraper:
                             pass
                         break  # tenta apenas a primeira sublista
 
-            print(f'  [meli.la] nao encontrou link do produto - usando URL social')
-            return url_social
+            print(f'  [meli.la] nao encontrou link do produto - falha na resolucao')
+            return None
 
         except Exception as e:
             print(f'  [meli.la] erro ao resolver {url_curta}: {e}')
@@ -927,12 +927,21 @@ class PromotionScraper:
                     link_direto = promo.get('long_url') or promo.get('short_url') or promo.get('url') or promo.get('offer_url')
                     link_pechinchou = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
                     
-                    # Se o link direto é meli.la, resolver para o link real do produto
-                    if link_direto and 'meli.la' in link_direto:
-                        print(f'  🔍 [Pechinchou] meli.la detectado → resolvendo link real do produto...')
-                        link_produto = self._resolver_link_meli_la(link_direto)
+                    # Se o link direto é vitrine (meli.la, /sec/ ou /social/), tentar extrair o produto
+                    is_vitrine = link_direto and any(x in link_direto for x in ['meli.la', '/sec/', '/social/'])
+                    if is_vitrine:
+                        print(f'  🔍 [Pechinchou] Link vitrine ML detectado → tentando resolver para produto real...')
+                        link_resolvido = self._resolver_link_meli_la(link_direto)
+                        
+                        # Apenas usa o resolvido se ele for um link direto de produto (não for outra vitrine)
+                        if link_resolvido and not any(x in link_resolvido for x in ['meli.la', '/sec/', '/social/']):
+                            link_produto = link_resolvido
+                        else:
+                            print(f'  [Pechinchou] ⚠️ Produto não extraído da vitrine. Usando link original do Pechinchou.')
+                            link_produto = link_pechinchou
                     else:
                         link_produto = link_direto if link_direto else link_pechinchou
+                        
                     links = self._criar_links(link_produto, loja)
 
                     categoria_str = promo.get('subcategory', {}).get('category', {}).get('name')
