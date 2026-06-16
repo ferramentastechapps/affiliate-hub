@@ -255,13 +255,19 @@ export async function enhanceProductImage(
 
     const finalPrompt = `Professional photorealistic product photography of "${_productName}", ${promptContext}. Focus strictly on the product in the center. Highly detailed, 4k resolution, premium lighting. Avoid any extra text, words, or watermarks.`;
 
-    // 2. Chamar a API do OpenRouter (Text-to-Image)
+    // 2. Chamar a API do OpenRouter (Text-to-Image via chat completions)
     const payload = {
       model: "bytedance-seed/seedream-4.5",
-      prompt: finalPrompt
+      messages: [
+        {
+          role: "user",
+          content: finalPrompt
+        }
+      ],
+      modalities: ["image"]
     };
 
-    const response = await fetch("https://openrouter.ai/api/v1/images/generations", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${openRouterApiKey}`,
@@ -277,23 +283,30 @@ export async function enhanceProductImage(
     }
 
     const data = await response.json();
-    const generatedUrl = data?.data?.[0]?.url;
+    const generatedUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url || data?.choices?.[0]?.message?.images?.[0]?.url;
     
     if (!generatedUrl) {
       console.error(`[AI] OpenRouter não retornou a URL da imagem. Resposta:`, JSON.stringify(data));
       return null;
     }
 
-    // 3. Baixar a imagem gerada
-    const imgResponse = await fetch(generatedUrl);
-    if (!imgResponse.ok) {
-      console.error(`[AI] Falha ao baixar a imagem gerada do OpenRouter: ${imgResponse.status}`);
-      return null;
+    // 3. Baixar ou converter a imagem gerada
+    let imageBuffer: Buffer;
+    if (generatedUrl.startsWith('data:')) {
+      const base64Data = generatedUrl.split(';base64,').pop() || '';
+      imageBuffer = Buffer.from(base64Data, 'base64');
+    } else {
+      const imgResponse = await fetch(generatedUrl);
+      if (!imgResponse.ok) {
+        console.error(`[AI] Falha ao baixar a imagem gerada do OpenRouter: ${imgResponse.status}`);
+        return null;
+      }
+      const arrayBuffer = await imgResponse.arrayBuffer();
+      imageBuffer = Buffer.from(arrayBuffer);
     }
-    const arrayBuffer = await imgResponse.arrayBuffer();
 
     // 4. Pós-processamento com Sharp para garantir o formato 3:4 exato
-    const resizedBuffer = await sharp(Buffer.from(arrayBuffer))
+    const resizedBuffer = await sharp(imageBuffer)
       .resize({ 
         width: 900, 
         height: 1200, 
