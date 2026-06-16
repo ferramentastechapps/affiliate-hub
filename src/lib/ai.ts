@@ -228,82 +228,89 @@ export async function enhanceProductImage(
   _category: string,
   _productName: string
 ): Promise<string | null> {
-  const clipdropApiKey = process.env.CLIPDROP_API_KEY;
-  if (!clipdropApiKey) {
-    console.warn('[AI] CLIPDROP_API_KEY não configurada. Pulando o processamento de imagem.');
+  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+  if (!openRouterApiKey) {
+    console.warn('[AI] OPENROUTER_API_KEY não configurada. Pulando a geração de imagem.');
     return null;
   }
 
   try {
-    console.log(`[AI] Aprimorando imagem com Clipdrop para o produto: "${_productName}"`);
+    console.log(`[AI] Gerando imagem ilustrativa com OpenRouter (Seedream-4.5) para o produto: "${_productName}"`);
     
-    // 1. Baixar a imagem original
-    const imageResponse = await fetch(_imageUrl);
-    if (!imageResponse.ok) {
-      console.error(`[AI] Falha ao baixar a imagem original: ${imageResponse.status}`);
+    // 1. Determinar o cenário baseado na categoria
+    let promptContext = 'a professional studio background with soft lighting, minimalist, high quality';
+    const catLower = _category.toLowerCase();
+    
+    if (catLower.includes('esporte') || catLower.includes('suplemento')) {
+      promptContext = 'placed in a modern luxury home gym with wooden floor and plants, soft natural lighting';
+    } else if (catLower.includes('casa') || catLower.includes('eletrodoméstico')) {
+      promptContext = 'placed on a modern clean kitchen counter or living room table, elegant interior design';
+    } else if (catLower.includes('informática') || catLower.includes('smartphone') || catLower.includes('tv')) {
+      promptContext = 'placed on a clean minimalist wooden desk with modern aesthetics, soft lighting';
+    } else if (catLower.includes('moda') || catLower.includes('acessório')) {
+      promptContext = 'in a minimal fashion studio with soft lighting, premium look';
+    } else if (catLower.includes('beleza') || catLower.includes('saúde')) {
+      promptContext = 'on a clean bathroom marble vanity, luxury cosmetics environment';
+    } else if (catLower.includes('automotivo')) {
+      promptContext = 'on a clean well-lit modern garage floor';
+    }
+
+    const finalPrompt = `Professional photorealistic product photography of "${_productName}", ${promptContext}. Focus strictly on the product in the center. Highly detailed, 4k resolution, premium lighting. Avoid any extra text, words, or watermarks.`;
+
+    // 2. Chamar a API do OpenRouter (Text-to-Image)
+    const payload = {
+      model: "bytedance-seed/seedream-4.5",
+      prompt: finalPrompt
+    };
+
+    const response = await fetch("https://openrouter.ai/api/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openRouterApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[AI] Erro na API do OpenRouter: ${response.status} - ${errorText}`);
       return null;
     }
-    const arrayBuffer = await imageResponse.arrayBuffer();
 
-    // 2. Pré-processamento com Sharp para formato 3:4 com fundo transparente
+    const data = await response.json();
+    const generatedUrl = data?.data?.[0]?.url;
+    
+    if (!generatedUrl) {
+      console.error(`[AI] OpenRouter não retornou a URL da imagem. Resposta:`, JSON.stringify(data));
+      return null;
+    }
+
+    // 3. Baixar a imagem gerada
+    const imgResponse = await fetch(generatedUrl);
+    if (!imgResponse.ok) {
+      console.error(`[AI] Falha ao baixar a imagem gerada do OpenRouter: ${imgResponse.status}`);
+      return null;
+    }
+    const arrayBuffer = await imgResponse.arrayBuffer();
+
+    // 4. Pós-processamento com Sharp para garantir o formato 3:4 exato
     const resizedBuffer = await sharp(Buffer.from(arrayBuffer))
       .resize({ 
         width: 900, 
         height: 1200, 
-        fit: 'contain', 
-        background: { r: 255, g: 255, b: 255, alpha: 0 } 
+        fit: 'cover' // Corta sutilmente as sobras laterais para forçar o aspecto 3x4
       })
-      .png() // Clipdrop suporta bem PNG com transparência
+      .jpeg({ quality: 90 })
       .toBuffer();
 
-    // 3. Determinar o prompt do cenário baseado na categoria
-    let prompt = 'a professional studio background with soft lighting, minimalist, high quality';
-    const catLower = _category.toLowerCase();
+    const base64 = resizedBuffer.toString('base64');
+    console.log(`[AI] Imagem gerada e redimensionada com sucesso via OpenRouter!`);
     
-    if (catLower.includes('esporte') || catLower.includes('suplemento')) {
-      prompt = 'a modern luxury home gym with wooden floor and plants, soft natural lighting';
-    } else if (catLower.includes('casa') || catLower.includes('eletrodoméstico')) {
-      prompt = 'a modern clean kitchen counter or living room table, elegant interior design';
-    } else if (catLower.includes('informática') || catLower.includes('smartphone') || catLower.includes('tv')) {
-      prompt = 'a clean minimalist wooden desk with modern aesthetics, soft lighting';
-    } else if (catLower.includes('moda') || catLower.includes('acessório')) {
-      prompt = 'a minimal fashion studio with soft lighting, premium look';
-    } else if (catLower.includes('beleza') || catLower.includes('saúde')) {
-      prompt = 'a clean bathroom marble vanity, luxury cosmetics environment';
-    } else if (catLower.includes('automotivo')) {
-      prompt = 'a clean well-lit modern garage floor';
-    }
-
-    // 4. Chamar a API do Clipdrop
-    const form = new FormData();
-    form.append('image_file', new Blob([resizedBuffer], { type: 'image/png' }), 'image.png');
-    form.append('prompt', prompt);
-
-    const clipdropResponse = await fetch('https://clipdrop-api.co/replace-background/v1', {
-      method: 'POST',
-      headers: {
-        'x-api-key': clipdropApiKey
-      },
-      body: form
-    });
-
-    if (!clipdropResponse.ok) {
-      const errorText = await clipdropResponse.text();
-      console.error(`[AI] Erro na API do Clipdrop: ${clipdropResponse.status} - ${errorText}`);
-      return null;
-    }
-
-    const resultBuffer = await clipdropResponse.arrayBuffer();
-    
-    // 5. Converter o resultado para base64 para ser salvo pelo backend
-    const base64 = Buffer.from(resultBuffer).toString('base64');
-    const contentType = clipdropResponse.headers.get('content-type') || 'image/jpeg';
-    
-    console.log(`[AI] Imagem aprimorada com sucesso via Clipdrop!`);
-    return `data:${contentType};base64,${base64}`;
+    return `data:image/jpeg;base64,${base64}`;
 
   } catch (error) {
-    console.error('[AI] Erro ao aprimorar imagem com Clipdrop:', error);
+    console.error('[AI] Erro ao gerar imagem com OpenRouter:', error);
     return null;
   }
 }
