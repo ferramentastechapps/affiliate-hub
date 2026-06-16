@@ -164,10 +164,13 @@ export async function resolveRedirect(url: string): Promise<string> {
         return productUrl;
       }
 
-      console.warn(`[Affiliate] Todas as estratégias falharam para a vitrine ML. HTML length: ${html.length}. Retornando URL original.`);
+      console.warn(`[Affiliate] Todas as estratégias falharam para a vitrine ML. HTML length: ${html.length}. Descartando link de vitrine.`);
+      return 'VITRINE_INVALIDA'; // Sinal especial para descartar este link
     } catch (err) {
       console.warn(`[Affiliate] Erro ao extrair produto do ML Social:`, err instanceof Error ? err.message : err);
     }
+    // Se chegou até aqui, todas as tentativas falharam — descartar
+    return 'VITRINE_INVALIDA';
   }
 
   // Caso especial: página de oferta do Promobit (precisamos extrair o link de saída do HTML)
@@ -498,6 +501,12 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
 
   // 1. Resolver redirecionamentos de URLs curtas
   const resolvedUrl = await resolveRedirect(originalUrl);
+  
+  // Se o link levou a uma vitrine de ML que não pôde ser resolvida, descartar
+  if (resolvedUrl === 'VITRINE_INVALIDA') {
+    console.warn(`[Affiliate] Link descartado pois leva a uma vitrine ML sem produto identificável: ${originalUrl}`);
+    return null;
+  }
   
   // Limpar parâmetros de rastreamento antes de processar
   const cleanedUrl = cleanTrackingParams(resolvedUrl);
