@@ -9,6 +9,7 @@ async function processProductAffiliates(productData: { links?: Record<string, st
   const links = productData.links || {};
   const generatedLinks: Record<string, string> = {};
   let hasAffiliate = false;
+  let isAggregatorFailed = false;
 
   const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
   
@@ -22,18 +23,30 @@ async function processProductAffiliates(productData: { links?: Record<string, st
           generatedLinks[platform] = generated;
           hasAffiliate = true;
         } else {
-          generatedLinks[platform] = originalUrl;
+          const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
+          if (isAggregator) {
+            console.log(`[Webhook] Falha ao resolver link do agregador ${originalUrl}. Produto será descartado.`);
+            isAggregatorFailed = true;
+          } else {
+            generatedLinks[platform] = originalUrl;
+          }
         }
       } catch (e) {
         console.error(`Erro ao gerar link de afiliado para ${platform}:`, e);
-        generatedLinks[platform] = originalUrl;
+        const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
+        if (isAggregator) {
+           isAggregatorFailed = true;
+        } else {
+           generatedLinks[platform] = originalUrl;
+        }
       }
     }
   }
 
   return {
     links: Object.keys(generatedLinks).length > 0 ? generatedLinks : null,
-    status: hasAffiliate ? 'active' : 'pending'
+    status: hasAffiliate ? 'active' : 'pending',
+    isAggregatorFailed
   };
 }
 
@@ -111,7 +124,15 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
-    const { links: processedLinks, status: processedStatus } = await processProductAffiliates(body);
+    const { links: processedLinks, status: processedStatus, isAggregatorFailed } = await processProductAffiliates(body);
+    
+    if (isAggregatorFailed) {
+      return NextResponse.json({
+        success: false,
+        error: 'Produto descartado: Link do agregador não pôde ser resolvido para um produto real (ex: vitrine ML bloqueada).'
+      }, { status: 400 });
+    }
+
     let finalStatus = body.status || processedStatus;
 
     if (body.autoApprove === true) {
@@ -297,7 +318,16 @@ export async function PUT(request: Request) {
           continue;
         }
 
-        const { links: processedLinks, status: processedStatus } = await processProductAffiliates(productData);
+        const { links: processedLinks, status: processedStatus, isAggregatorFailed } = await processProductAffiliates(productData);
+        
+        if (isAggregatorFailed) {
+          errors.push({
+            product: productData.name,
+            error: 'Link do agregador não resolvível'
+          });
+          continue;
+        }
+
         let finalStatus = productData.status || processedStatus;
 
         if (productData.autoApprove === true) {

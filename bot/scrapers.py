@@ -937,10 +937,13 @@ class PromotionScraper:
                         if link_resolvido and not any(x in link_resolvido for x in ['meli.la', '/sec/', '/social/']):
                             link_produto = link_resolvido
                         else:
-                            print(f'  [Pechinchou] ⚠️ Produto não extraído da vitrine. Usando link original do Pechinchou.')
-                            link_produto = link_pechinchou
+                            print(f'  [Pechinchou] ⚠️ Produto não extraído da vitrine. Ignorando oferta (sem fallback Pechinchou).')
+                            continue
                     else:
-                        link_produto = link_direto if link_direto else link_pechinchou
+                        if not link_direto:
+                            print(f'  [Pechinchou] ⚠️ Sem link direto. Ignorando oferta (sem fallback Pechinchou).')
+                            continue
+                        link_produto = link_direto
                         
                     links = self._criar_links(link_produto, loja)
 
