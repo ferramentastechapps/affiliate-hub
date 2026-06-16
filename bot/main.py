@@ -15,6 +15,27 @@ from config import SEARCH_INTERVAL_MINUTES
 import json
 from pathlib import Path
 
+
+def wait_for_ai_analysis(api: AffiliateHubAPI, produto_id: str, max_wait: int = 15, intervalo: int = 2) -> dict | None:
+    """
+    Aguarda até max_wait segundos para o campo aiAnalysis ser preenchido.
+    Retorna o produto atualizado ou None se o timeout esgotar.
+    """
+    elapsed = 0
+    while elapsed < max_wait:
+        time.sleep(intervalo)
+        elapsed += intervalo
+        resultado = api.buscar_produto(produto_id)
+        if resultado and resultado.get('success'):
+            produto = resultado.get('product', {})
+            if produto.get('aiAnalysis'):
+                print(f'✅ aiAnalysis recebido após {elapsed}s para produto {produto_id}')
+                return produto
+        print(f'⏳ Aguardando IA... ({elapsed}/{max_wait}s)')
+    print(f'⚠️ Timeout aguardando aiAnalysis para {produto_id}. Publicando sem legenda da IA.')
+    return None
+
+
 class PromotionBot:
     """Robô principal que coordena tudo"""
     
@@ -114,9 +135,13 @@ class PromotionBot:
                                     break
                             
                             if platform and affiliate_link:
-                                print(f'⚡ Link de afiliado auto-gerado com sucesso! Publicando direto no grupo...')
+                                print(f'⚡ Link de afiliado auto-gerado com sucesso! Aguardando IA para legenda...')
+                                # Aguarda a IA processar para ter a legenda (aiAnalysis)
+                                produto_com_ia = wait_for_ai_analysis(self.api, produto_retornado['id'])
+                                produto_para_publicar = produto_com_ia if produto_com_ia else produto_retornado
+                                print(f'⚡ Publicando direto no grupo...')
                                 self.telegram.enviar_sync('publicar_grupo', {
-                                    'produto': produto_retornado,
+                                    'produto': produto_para_publicar,
                                     'platform': platform,
                                     'affiliate_link': affiliate_link
                                 })
