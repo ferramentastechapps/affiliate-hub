@@ -183,3 +183,17 @@ class AffiliateHubAPI:
             print(f'❌ Erro ao rejeitar produto {produto_id}: {e}')
             return None
 
+    def buscar_produto(self, produto_id: str) -> Optional[Dict]:
+        """Busca um produto pelo ID para obter dados atualizados (ex: aiAnalysis após IA processar)"""
+        try:
+            response = requests.get(
+                f'{self.base_url}/api/webhook/products/{produto_id}',
+                headers=self.headers,
+                timeout=30,
+                verify=False
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f'❌ Erro ao buscar produto {produto_id}: {e}')
+            return None

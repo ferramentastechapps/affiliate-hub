@@ -261,7 +261,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
+                    "model": "meta-llama/llama-3.1-8b-instruct:free",
                     "messages": [
                         {"role": "user", "content": prompt}
                     ],
