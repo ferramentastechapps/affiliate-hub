@@ -836,10 +836,19 @@ class PromotionScraper:
                     loja = loja_dict.get('name', 'Desconhecido')
                     
                     # Usar o link direto do produto (long_url/short_url) ao invés do link da página do Pechinchou
-                    # Isso evita que o usuário veja o perfil social do Pechinchou no ML
+                    # Isso evita que o usuário veja o perfil social do Pechinchou no ML.
+                    # EXCEÇÃO: se o link for meli.la, ele redireciona para uma vitrine genérica ML
+                    # (ex: /social/pp2025...) que mostra um produto DIFERENTE do anunciado.
+                    # Nesses casos, usamos a página do Pechinchou que tem o botão correto.
                     link_direto = promo.get('long_url') or promo.get('short_url') or promo.get('url') or promo.get('offer_url')
                     link_pechinchou = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
-                    link_produto = link_direto if link_direto else link_pechinchou
+                    
+                    # Se o link direto é meli.la, é uma vitrine genérica — usar Pechinchou como destino
+                    if link_direto and 'meli.la' in link_direto:
+                        print(f'  ⚠️  [Pechinchou] link meli.la detectado (vitrine genérica ML) → usando página Pechinchou')
+                        link_produto = link_pechinchou
+                    else:
+                        link_produto = link_direto if link_direto else link_pechinchou
                     links = self._criar_links(link_produto, loja)
 
                     categoria_str = promo.get('subcategory', {}).get('category', {}).get('name')
