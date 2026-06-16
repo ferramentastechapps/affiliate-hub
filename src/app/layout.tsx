@@ -30,6 +30,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://economizai.usejotashop.com.br'),
   title: "Economiza ai | Melhores Cupons e Promoções",
   description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
   manifest: "/manifest.json",
