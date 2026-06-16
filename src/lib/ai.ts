@@ -158,6 +158,7 @@ Categoria: ${category || 'Diversos'}`;
 
     // Lista de modelos em ordem de preferência (fallback automático)
     const MODELS = [
+      'deepseek/deepseek-v4-flash',
       'google/gemini-2.5-flash',
       'google/gemini-2.0-flash-001',
       'meta-llama/llama-3.1-8b-instruct:free'
