@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
 import { generateAffiliateLink } from '@/lib/affiliate';
-import { processProductWithAI, enhanceProductImage } from '@/lib/ai';
+import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
+import { getSecondaryLifestyleImage } from '@/lib/scraper';
 
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
@@ -222,13 +223,12 @@ export async function POST(request: Request) {
         newStatus = processedStatus;
       }
 
-      // Processamento da imagem se aprovado
+      // Processamento da imagem se aprovado (obtendo imagem de lifestyle/secundária do varejista)
       let finalEnhancedImageUrl: string | null = null;
       if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
-        const rawEnhanced = await enhanceProductImage(body.imageUrl, body.category || 'Diversos', body.name);
-        if (rawEnhanced) {
-          const isBase64 = rawEnhanced.startsWith('data:image');
-          finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+        const rawEnhancedUrl = await getSecondaryLifestyleImage(body.links || {});
+        if (rawEnhancedUrl) {
+          finalEnhancedImageUrl = await saveEnhancedImage(rawEnhancedUrl, false);
         }
       }
 
@@ -393,10 +393,9 @@ export async function PUT(request: Request) {
 
           let finalEnhancedImageUrl: string | null = null;
           if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
-            const rawEnhanced = await enhanceProductImage(productData.imageUrl, productData.category || 'Diversos', productData.name);
-            if (rawEnhanced) {
-              const isBase64 = rawEnhanced.startsWith('data:image');
-              finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+            const rawEnhancedUrl = await getSecondaryLifestyleImage(productData.links || {});
+            if (rawEnhancedUrl) {
+              finalEnhancedImageUrl = await saveEnhancedImage(rawEnhancedUrl, false);
             }
           }
 

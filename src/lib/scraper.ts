@@ -145,7 +145,40 @@ function extractAmazonName($: cheerio.CheerioAPI): string {
 }
 
 function extractAmazonImage($: cheerio.CheerioAPI): string {
-  // Tentar várias fontes de imagem
+  // 1. Tentar encontrar as imagens alternativas no bloco de script (lifestyle/detalhes)
+  try {
+    const scripts = $('script').map((_, el) => $(el).html() || '').get();
+    for (const script of scripts) {
+      if (script && (script.includes('colorImages') || script.includes('ImageBlockATF'))) {
+        // Regex para capturar o array de imagens inicial
+        const match = script.match(/'colorImages':\s*\{\s*'initial':\s*(\[.*?\])/) ||
+                      script.match(/"colorImages":\s*\{\s*"initial":\s*(\[.*?\])/) ||
+                      script.match(/'initial':\s*(\[.*?\])/) ||
+                      script.match(/"initial":\s*(\[.*?\])/);
+        if (match && match[1]) {
+          const cleanJson = match[1].replace(/'/g, '"').replace(/(\w+):/g, '"$1":'); // Normalizar chaves para JSON
+          try {
+            const images = JSON.parse(cleanJson);
+            // Pegar a segunda imagem (index 1) se existir, senão a primeira
+            if (images.length > 1) {
+              const secImg = images[1].hiRes || images[1].large || images[1].variant || images[1].thumb;
+              if (secImg) return secImg;
+            }
+          } catch (jsonErr) {
+            // Se falhar o parse do JSON, tenta capturar URLs diretamente por regex
+            const urls = match[1].match(/https:\/\/[^"]+\.jpg/g) || match[1].match(/https:\/\/[^']+\.jpg/g);
+            if (urls && urls.length > 1) {
+              return urls[1];
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao extrair imagens secundárias da Amazon:', e);
+  }
+
+  // Fallback para a principal (primeira com fundo branco)
   const imgSrc = $('#landingImage').attr('src') ||
                  $('#imgBlkFront').attr('src') ||
                  $('.a-dynamic-image').first().attr('src') ||
@@ -180,6 +213,22 @@ function extractMercadoLivreName($: cheerio.CheerioAPI): string {
 }
 
 function extractMercadoLivreImage($: cheerio.CheerioAPI): string {
+  try {
+    const images: string[] = [];
+    $('img.ui-pdp-image').each((_, el) => {
+      const src = $(el).attr('data-zoom') || $(el).attr('src');
+      if (src && !src.includes('placeholder')) {
+        images.push(src);
+      }
+    });
+    // Se tiver mais de uma imagem no carrossel, pegamos a segunda (índice 1) para ser uma imagem de lifestyle
+    if (images.length > 1) {
+      return images[1];
+    }
+  } catch (e) {
+    console.error('Erro ao extrair imagens secundárias do Mercado Livre:', e);
+  }
+
   return $('.ui-pdp-image').first().attr('src') ||
          $('img.ui-pdp-image').first().attr('src') ||
          $('figure img').first().attr('src') ||
@@ -329,4 +378,32 @@ function cleanUrl(url: string): string {
   } catch {
     return url;
   }
+}
+
+export async function getSecondaryLifestyleImage(links: Record<string, string | undefined>): Promise<string | null> {
+  const platformsToScrape = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'magalu', 'kabum'];
+  let targetUrl = '';
+  for (const platform of platformsToScrape) {
+    if (links[platform]) {
+      targetUrl = links[platform] as string;
+      break;
+    }
+  }
+
+  if (!targetUrl) {
+    return null;
+  }
+
+  try {
+    console.log(`[Scraper-Imagem] Tentando extrair imagem secundária de: ${targetUrl}`);
+    const scraped = await scrapeProductFromUrl(targetUrl);
+    if (scraped.imageUrl && !scraped.imageUrl.includes('placeholder')) {
+      console.log(`[Scraper-Imagem] Imagem secundária encontrada: ${scraped.imageUrl}`);
+      return scraped.imageUrl;
+    }
+  } catch (e: any) {
+    console.error('[Scraper-Imagem] Falha ao raspar imagem secundária do varejista:', e.message || e);
+  }
+
+  return null;
 }

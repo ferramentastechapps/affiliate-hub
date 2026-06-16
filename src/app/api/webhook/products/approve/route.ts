@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
 import { generateAffiliateLink, detectPlatform } from '@/lib/affiliate';
-import { enhanceProductImage } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
+import { getSecondaryLifestyleImage } from '@/lib/scraper';
 /**
  * POST /api/webhook/products/approve
  * Aprova um produto pendente e atualiza o link de afiliado
@@ -162,15 +162,14 @@ export async function POST(request: Request) {
     
     let finalEnhancedImageUrl = product.enhancedImageUrl;
     if (!finalEnhancedImageUrl) {
-      console.log(`[Approve] Tentando aprimorar imagem do produto...`);
-      const rawEnhanced = await enhanceProductImage(updateData.imageUrl || product.imageUrl, product.category || 'Diversos', product.name);
-      if (rawEnhanced) {
-        const isBase64 = rawEnhanced.startsWith('data:image');
-        finalEnhancedImageUrl = await saveEnhancedImage(rawEnhanced, isBase64);
+      console.log(`[Approve] Tentando obter imagem secundária/lifestyle do produto...`);
+      const rawEnhancedUrl = await getSecondaryLifestyleImage((product.links || {}) as any);
+      if (rawEnhancedUrl) {
+        finalEnhancedImageUrl = await saveEnhancedImage(rawEnhancedUrl, false);
         if (finalEnhancedImageUrl) {
           updateData.enhancedImageUrl = finalEnhancedImageUrl;
           product.enhancedImageUrl = finalEnhancedImageUrl;
-          console.log(`[Approve] Imagem aprimorada com sucesso: ${finalEnhancedImageUrl}`);
+          console.log(`[Approve] Imagem secundária salva com sucesso: ${finalEnhancedImageUrl}`);
         }
       }
     }
