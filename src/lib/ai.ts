@@ -165,7 +165,7 @@ Categoria: ${category || 'Diversos'}`;
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "nvidia/nemotron-3-ultra-550b-a55b:free",
+        model: "google/gemini-2.0-flash-lite-preview-02-05:free",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: promptText }
