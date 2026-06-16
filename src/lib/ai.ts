@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import sharp from 'sharp';
 
 export const SYSTEM_PROMPT = `Você é o redator de um canal de ofertas no Telegram com linguagem casual e bem-humorada, estilo grupo de amigos brasileiros. Seu trabalho é criar duas coisas:
 
@@ -227,8 +228,84 @@ export async function enhanceProductImage(
   _category: string,
   _productName: string
 ): Promise<string | null> {
-  // Desativado por enquanto: retornando null (gemini-2.5-flash quando implementar)
-  return null;
+  const clipdropApiKey = process.env.CLIPDROP_API_KEY;
+  if (!clipdropApiKey) {
+    console.warn('[AI] CLIPDROP_API_KEY não configurada. Pulando o processamento de imagem.');
+    return null;
+  }
+
+  try {
+    console.log(`[AI] Aprimorando imagem com Clipdrop para o produto: "${_productName}"`);
+    
+    // 1. Baixar a imagem original
+    const imageResponse = await fetch(_imageUrl);
+    if (!imageResponse.ok) {
+      console.error(`[AI] Falha ao baixar a imagem original: ${imageResponse.status}`);
+      return null;
+    }
+    const arrayBuffer = await imageResponse.arrayBuffer();
+
+    // 2. Pré-processamento com Sharp para formato 3:4 com fundo transparente
+    const resizedBuffer = await sharp(Buffer.from(arrayBuffer))
+      .resize({ 
+        width: 900, 
+        height: 1200, 
+        fit: 'contain', 
+        background: { r: 255, g: 255, b: 255, alpha: 0 } 
+      })
+      .png() // Clipdrop suporta bem PNG com transparência
+      .toBuffer();
+
+    // 3. Determinar o prompt do cenário baseado na categoria
+    let prompt = 'a professional studio background with soft lighting, minimalist, high quality';
+    const catLower = _category.toLowerCase();
+    
+    if (catLower.includes('esporte') || catLower.includes('suplemento')) {
+      prompt = 'a modern luxury home gym with wooden floor and plants, soft natural lighting';
+    } else if (catLower.includes('casa') || catLower.includes('eletrodoméstico')) {
+      prompt = 'a modern clean kitchen counter or living room table, elegant interior design';
+    } else if (catLower.includes('informática') || catLower.includes('smartphone') || catLower.includes('tv')) {
+      prompt = 'a clean minimalist wooden desk with modern aesthetics, soft lighting';
+    } else if (catLower.includes('moda') || catLower.includes('acessório')) {
+      prompt = 'a minimal fashion studio with soft lighting, premium look';
+    } else if (catLower.includes('beleza') || catLower.includes('saúde')) {
+      prompt = 'a clean bathroom marble vanity, luxury cosmetics environment';
+    } else if (catLower.includes('automotivo')) {
+      prompt = 'a clean well-lit modern garage floor';
+    }
+
+    // 4. Chamar a API do Clipdrop
+    const form = new FormData();
+    form.append('image_file', new Blob([resizedBuffer], { type: 'image/png' }), 'image.png');
+    form.append('prompt', prompt);
+
+    const clipdropResponse = await fetch('https://clipdrop-api.co/replace-background/v1', {
+      method: 'POST',
+      headers: {
+        'x-api-key': clipdropApiKey
+      },
+      body: form
+    });
+
+    if (!clipdropResponse.ok) {
+      const errorText = await clipdropResponse.text();
+      console.error(`[AI] Erro na API do Clipdrop: ${clipdropResponse.status} - ${errorText}`);
+      return null;
+    }
+
+    const resultBuffer = await clipdropResponse.arrayBuffer();
+    
+    // 5. Converter o resultado para base64 para ser salvo pelo backend
+    const base64 = Buffer.from(resultBuffer).toString('base64');
+    const contentType = clipdropResponse.headers.get('content-type') || 'image/jpeg';
+    
+    console.log(`[AI] Imagem aprimorada com sucesso via Clipdrop!`);
+    return `data:${contentType};base64,${base64}`;
+
+  } catch (error) {
+    console.error('[AI] Erro ao aprimorar imagem com Clipdrop:', error);
+    return null;
+  }
 }
 
 
