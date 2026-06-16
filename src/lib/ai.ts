@@ -156,47 +156,64 @@ Preço atual: R$ ${price}
 ${originalPrice ? `Preço original: R$ ${originalPrice}` : ''}
 Categoria: ${category || 'Diversos'}`;
 
-    console.log(`[AI] Chamando OpenRouter (google/gemini-2.0-flash-001) para analisar: "${productName}"`);
-    
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.0-flash-lite-preview-02-05:free",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: promptText }
-        ],
-        response_format: { type: "json_object" }
-      })
-    });
+    // Lista de modelos em ordem de preferência (fallback automático)
+    const MODELS = [
+      'google/gemini-2.0-flash-001',
+      'google/gemini-flash-1.5-8b',
+      'meta-llama/llama-3.1-8b-instruct:free',
+    ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[AI] Erro no OpenRouter para texto: ${response.status} - ${errorText}`);
-      return { titulo: null, subtitulo: null, score: null, rawJson: null };
+    for (const model of MODELS) {
+      console.log(`[AI] Chamando OpenRouter (${model}) para analisar: "${productName}"`);
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: promptText }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`[AI] Modelo ${model} falhou (${response.status}) — tentando próximo. Erro: ${errorText.slice(0, 200)}`);
+          continue; // tenta próximo modelo
+        }
+
+        const data = await response.json();
+        const responseText = data?.choices?.[0]?.message?.content;
+
+        if (!responseText) {
+          console.warn(`[AI] Resposta vazia do modelo ${model} — tentando próximo.`);
+          continue;
+        }
+
+        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsedData = JSON.parse(cleanedText);
+        console.log(`[AI] Sucesso com modelo ${model}.`);
+
+        return {
+          titulo: parsedData.titulo || null,
+          subtitulo: parsedData.subtitulo || null,
+          score: parsedData.score !== undefined ? Number(parsedData.score) : null,
+          rawJson: JSON.stringify(parsedData),
+        };
+      } catch (modelError: any) {
+        console.warn(`[AI] Erro no modelo ${model}: ${modelError.message || modelError}`);
+        continue;
+      }
     }
 
-    const data = await response.json();
-    const responseText = data?.choices?.[0]?.message?.content;
-
-    if (!responseText) {
-      console.warn('[AI] Resposta vazia recebida do OpenRouter.');
-      return { titulo: null, subtitulo: null, score: null, rawJson: null };
-    }
-
-    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsedData = JSON.parse(cleanedText);
-    
-    return {
-      titulo: parsedData.titulo || null,
-      subtitulo: parsedData.subtitulo || null,
-      score: parsedData.score !== undefined ? Number(parsedData.score) : null,
-      rawJson: JSON.stringify(parsedData),
-    };
+    console.error('[AI] Todos os modelos OpenRouter falharam.');
+    return { titulo: null, subtitulo: null, score: null, rawJson: null };
   } catch (error: any) {
     console.error('[AI] Erro ao processar produto com OpenRouter:', error.message || error);
     return { titulo: null, subtitulo: null, score: null, rawJson: null };
