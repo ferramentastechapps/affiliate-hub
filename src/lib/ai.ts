@@ -145,80 +145,60 @@ export async function processProductWithAI(
   rawJson: string | null;
 }> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      console.warn('[AI] GEMINI_API_KEY não configurada no ambiente.');
+      console.warn('[AI] OPENROUTER_API_KEY não configurada no ambiente.');
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: SYSTEM_PROMPT,
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
-    });
 
     const promptText = `Nome do produto: ${productName}
 Preço atual: R$ ${price}
 ${originalPrice ? `Preço original: R$ ${originalPrice}` : ''}
 Categoria: ${category || 'Diversos'}`;
 
-    let responseText = '';
-    const maxAttempts = 2;
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        console.log(`[AI] Chamando Gemini (tentativa ${attempts}/${maxAttempts}) para: "${productName}"`);
-        const result = await model.generateContent(promptText);
-        responseText = result.response.text();
-        break; // Sucesso, sair do loop
-      } catch (error: any) {
-        const errorMsg = error.message || String(error);
-        const isRateLimit = errorMsg.includes('429') || 
-                            errorMsg.includes('ResourceExhausted') || 
-                            error.status === 429 || 
-                            error.statusCode === 429;
-
-        if (isRateLimit && attempts < maxAttempts) {
-          const delaySec = extractRetryDelay(errorMsg);
-          console.warn(`[AI] Limite de cota atingido (429). Aguardando ${delaySec}s sugeridos antes de tentar novamente...`);
-          await new Promise((resolve) => setTimeout(resolve, delaySec * 1000));
-        } else {
-          console.error(`[AI] Erro ao processar produto na tentativa ${attempts}/${maxAttempts}:`, errorMsg);
-          if (attempts >= maxAttempts) {
-            if (isRateLimit) {
-              const nvidiaResult = await processProductWithNvidia(promptText);
-              if (nvidiaResult) {
-                return nvidiaResult;
-              }
-            }
-            return { titulo: null, subtitulo: null, score: null, rawJson: null };
-          }
-        }
-      }
-    }
+    console.log(`[AI] Chamando OpenRouter (google/gemini-2.0-flash-001) para analisar: "${productName}"`);
     
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-001",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: promptText }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[AI] Erro no OpenRouter para texto: ${response.status} - ${errorText}`);
+      return { titulo: null, subtitulo: null, score: null, rawJson: null };
+    }
+
+    const data = await response.json();
+    const responseText = data?.choices?.[0]?.message?.content;
+
     if (!responseText) {
-      console.warn('[AI] Resposta vazia recebida do Gemini.');
+      console.warn('[AI] Resposta vazia recebida do OpenRouter.');
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
 
     const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const data = JSON.parse(cleanedText);
+    const parsedData = JSON.parse(cleanedText);
     
     return {
-      titulo: data.titulo || null,
-      subtitulo: data.subtitulo || null,
-      score: data.score !== undefined ? Number(data.score) : null,
-      rawJson: JSON.stringify(data),
+      titulo: parsedData.titulo || null,
+      subtitulo: parsedData.subtitulo || null,
+      score: parsedData.score !== undefined ? Number(parsedData.score) : null,
+      rawJson: JSON.stringify(parsedData),
     };
   } catch (error: any) {
-    console.error('[AI] Erro ao processar produto com Gemini (pode ser cota 429):', error.message || error);
-    // TRATAMENTO DE COTA E OUTROS ERROS: Retorna nulos sem crashar a execução principal
+    console.error('[AI] Erro ao processar produto com OpenRouter:', error.message || error);
     return { titulo: null, subtitulo: null, score: null, rawJson: null };
   }
 }

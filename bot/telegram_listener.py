@@ -232,11 +232,11 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     msg_status = await update.message.reply_text("⏳ Analisando oferta encaminhada...")
     
     import json
-    import google.generativeai as genai
+    import requests
     
     try:
-        if not GEMINI_API_KEY:
-            await msg_status.edit_text("❌ GEMINI_API_KEY não configurada. Não é possível extrair os dados da promoção.")
+        if not OPENROUTER_API_KEY:
+            await msg_status.edit_text("❌ OPENROUTER_API_KEY não configurada. Não é possível extrair os dados da promoção.")
             return
 
         prompt = (
@@ -250,20 +250,30 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
         )
         
-        genai.configure(api_key=GEMINI_API_KEY)
-        
         # Async request run in executor
         loop = asyncio.get_event_loop()
         
-        def call_gemini():
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            response = model.generate_content(
-                prompt,
-                generation_config={"response_mime_type": "application/json"}
+        def call_openrouter():
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "google/gemini-2.0-flash-001",
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"}
+                },
+                timeout=30
             )
-            return response.text
+            if response.status_code != 200:
+                raise Exception(f"OpenRouter API error: {response.text}")
+            return response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
 
-        response_text = await loop.run_in_executor(None, call_gemini)
+        response_text = await loop.run_in_executor(None, call_openrouter)
         
         texto_limpo = response_text.replace('```json', '').replace('```', '').strip()
         dados = json.loads(texto_limpo)
