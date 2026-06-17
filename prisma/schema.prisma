@@ -33,6 +33,7 @@ model Product {
   clicks      Int      @default(0) // Quantidade de cliques
   externalId  String?  @unique // Hash ou ID original para deduplicação segura
   enhancedImageUrl String? // Imagem processada pela IA (Fundo/4K)
+  isFixed     Boolean  @default(false) // Trava a imagem e os links para não serem sobrescritos pelo robô
   
   @@index([category])
   @@index([createdAt])

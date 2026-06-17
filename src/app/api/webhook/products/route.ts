@@ -5,6 +5,7 @@ import { generateAffiliateLink } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
 import { getSecondaryLifestyleImage } from '@/lib/scraper';
+import { publishToGroup } from '@/lib/telegram';
 
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
           !body.imageUrl.includes('promobit.com.br') && 
           !body.imageUrl.includes('pechinchou.com.br');
 
-        if (isOldImagePlaceholderOrAggregator && isNewImageBetter) {
+        if (isOldImagePlaceholderOrAggregator && isNewImageBetter && !existingProduct.isFixed) {
           imageUpdateData = {
             imageUrl: body.imageUrl,
             enhancedImageUrl: body.imageUrl
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
         }
 
         let linksData = undefined;
-        if (Object.keys(linksUpdate).length > 0) {
+        if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
           if (existingProduct.links) {
             linksData = { update: linksUpdate };
           } else {
@@ -172,6 +173,33 @@ export async function POST(request: Request) {
           }
         });
         existingProduct = updatedProduct;
+        
+        // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
+        if (existingProduct.isFixed && existingProduct.status === 'active') {
+          // Extrair o primeiro link que ele tiver para publicar
+          const existingLinks = existingProduct.links || {};
+          let publishLink = '';
+          const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+          let activePlatform = 'amazon';
+          for (const plat of platforms) {
+            if (existingLinks[plat]) {
+              publishLink = existingLinks[plat];
+              activePlatform = plat;
+              break;
+            }
+          }
+
+          if (publishLink) {
+            // A chamada ao publishToGroup envia o existingProduct com os dados atualizados de preço.
+            publishToGroup(existingProduct, activePlatform, publishLink).then((success) => {
+              if(success) {
+                 console.log(`🚀 [Repost Telegram] Oferta repostada via Webhook (isFixed=true): ${existingProduct.name}`);
+              }
+            }).catch(e => {
+               console.error(`Falha ao repostar no Telegram para o produto ${existingProduct.id}:`, e);
+            });
+          }
+        }
       }
 
       console.log('ℹ️ Produto duplicado detectado. Histórico de preço atualizado:', body.name);
@@ -391,7 +419,7 @@ export async function PUT(request: Request) {
               !productData.imageUrl.includes('promobit.com.br') && 
               !productData.imageUrl.includes('pechinchou.com.br');
 
-            if (isOldImagePlaceholderOrAggregator && isNewImageBetter) {
+            if (isOldImagePlaceholderOrAggregator && isNewImageBetter && !existingProduct.isFixed) {
               imageUpdateData = {
                 imageUrl: productData.imageUrl,
                 enhancedImageUrl: productData.imageUrl
@@ -417,7 +445,7 @@ export async function PUT(request: Request) {
             }
 
             let linksData = undefined;
-            if (Object.keys(linksUpdate).length > 0) {
+            if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
               if (existingProduct.links) {
                 linksData = { update: linksUpdate };
               } else {
@@ -433,8 +461,36 @@ export async function PUT(request: Request) {
                 originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : existingProduct.originalPrice,
                 ...imageUpdateData,
                 links: linksData
+              },
+              include: {
+                links: true
               }
             });
+            
+            // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
+            if (updatedProduct.isFixed && updatedProduct.status === 'active') {
+              const existingLinks = updatedProduct.links || {};
+              let publishLink = '';
+              const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+              let activePlatform = 'amazon';
+              for (const plat of platforms) {
+                if (existingLinks[plat]) {
+                  publishLink = existingLinks[plat];
+                  activePlatform = plat;
+                  break;
+                }
+              }
+
+              if (publishLink) {
+                publishToGroup(updatedProduct, activePlatform, publishLink).then((success) => {
+                  if(success) {
+                     console.log(`🚀 [Repost Telegram Lote] Oferta repostada via Webhook (isFixed=true): ${updatedProduct.name}`);
+                  }
+                }).catch(e => {
+                   console.error(`Falha ao repostar no Telegram para o produto ${updatedProduct.id}:`, e);
+                });
+              }
+            }
           }
           results.push(existingProduct);
           continue;
