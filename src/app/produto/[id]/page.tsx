@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { ProductDetail } from '@/components/ProductDetail';
-import { Navbar } from '@/components/Navbar';
+import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Metadata } from 'next';
 
@@ -62,7 +62,7 @@ export default async function ProductPage({ params }: Props) {
 
     return (
       <>
-        <Navbar />
+        <Header />
         <ProductDetail product={product} />
         <Footer />
       </>
