@@ -8,7 +8,7 @@ export async function PUT(
   try {
     const body = await request.json();
     const { id } = await params;
-    const { name, category, description, imageUrl, price, links } = body;
+    const { name, category, description, imageUrl, price, links, status } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -38,6 +38,7 @@ export async function PUT(
         description,
         imageUrl,
         price: price ? parseFloat(price) : null,
+        status: status || undefined,
         links: links ? {
           upsert: {
             create: links,
