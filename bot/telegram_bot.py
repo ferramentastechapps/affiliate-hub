@@ -429,7 +429,14 @@ class TelegramNotifier:
             linhas.append(cupom_msg)
             
         linhas.append("")
-        linhas.append(f"🔗 {affiliate_link}")
+        
+        # Gerar link curto usando o encurtador interno
+        produto_id = produto.get('id')
+        if produto_id:
+            link_curto = f"{base_url}/api/go/{produto_id}"
+            linhas.append(f"🔗 {link_curto}")
+        else:
+            linhas.append(f"🔗 {affiliate_link}")
         
         mensagem = "\n".join(linhas)
 
