@@ -71,18 +71,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Tenta encontrar por externalId, senão por nome recente
-    const existingProduct = await prisma.product.findFirst({
+    // Tenta encontrar por externalId, senão procura por qualquer produto já ATIVO com o mesmo nome (sem limite de tempo)
+    let existingProduct = await prisma.product.findFirst({
       where: body.externalId ? { externalId: body.externalId } : {
         name: body.name,
-        createdAt: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas
-        }
+        status: { in: ['active', 'approved'] }
       },
       include: {
         links: true
       }
     });
+
+    // Se não achou nenhum produto ativo anterior, procura por um PENDENTE criado nas últimas 24 horas
+    if (!existingProduct && !body.externalId) {
+      existingProduct = await prisma.product.findFirst({
+        where: {
+          name: body.name,
+          status: 'pending',
+          createdAt: {
+            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas para pendentes
+          }
+        },
+        include: {
+          links: true
+        }
+      });
+    }
 
     if (existingProduct) {
       // Registrar no histórico de preços
