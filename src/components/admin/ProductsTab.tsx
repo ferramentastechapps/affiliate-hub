@@ -79,7 +79,7 @@ export function ProductsTab() {
       return product.isFixed === true;
     }
     if (statusFilter === 'notFixed') {
-      return !product.isFixed || product.isFixed === false;
+      return !product.isFixed;
     }
     return true; // 'all'
   });
