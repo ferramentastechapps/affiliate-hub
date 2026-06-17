@@ -197,3 +197,21 @@ class AffiliateHubAPI:
         except Exception as e:
             print(f'❌ Erro ao buscar produto {produto_id}: {e}')
             return None
+
+    def atualizar_produto_imagem(self, produto_id: str, image_url: str) -> Optional[Dict]:
+        """Atualiza a imagem de um produto existente via webhook"""
+        try:
+            response = requests.put(
+                f'{self.base_url}/api/webhook/products/{produto_id}',
+                headers=self.headers,
+                json={
+                    'imageUrl': image_url
+                },
+                timeout=30,
+                verify=False
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f'❌ Erro ao atualizar imagem do produto {produto_id}: {e}')
+            return None

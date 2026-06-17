@@ -51,3 +51,40 @@ export async function GET(
     );
   }
 }
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!validateApiKey(request)) {
+    return NextResponse.json(
+      { error: 'Não autorizado. API key inválida.' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { imageUrl, status, name, category, price } = body;
+
+    const product = await prisma.product.update({
+      where: { id },
+      data: {
+        imageUrl: imageUrl || undefined,
+        status: status || undefined,
+        name: name || undefined,
+        category: category || undefined,
+        price: price !== undefined ? price : undefined,
+      }
+    });
+
+    return NextResponse.json({ success: true, product });
+  } catch (error) {
+    console.error('Erro ao atualizar produto via webhook:', error);
+    return NextResponse.json(
+      { error: 'Erro ao atualizar produto' },
+      { status: 500 }
+    );
+  }
+}
