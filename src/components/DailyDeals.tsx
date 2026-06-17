@@ -35,6 +35,7 @@ type Product = {
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
+  clicks?: number;
 };
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
@@ -80,6 +81,7 @@ export function DailyDeals() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filterType, setFilterType] = useState<'alertas' | 'destaques' | 'recentes' | 'menorPreco' | 'pontuados' | 'baratinho'>('recentes');
 
   useEffect(() => {
     fetchProducts();
@@ -135,7 +137,7 @@ export function DailyDeals() {
   }
 
   // Filtrar produtos por categoria e query de busca
-  const filteredProducts = allProducts.filter(p => {
+  let filteredProducts = allProducts.filter(p => {
     // Category filter
     const matchesCategory = selectedCategory === "Todas" || p.category === selectedCategory;
     
@@ -149,6 +151,52 @@ export function DailyDeals() {
 
     return matchesCategory && matchesSearch;
   });
+
+  // Aplicar ordenação baseada no filtro selecionado
+  filteredProducts = [...filteredProducts].sort((a, b) => {
+    switch (filterType) {
+      case 'alertas':
+        // Produtos com cupons primeiro
+        const aCoupons = (a.coupons?.length || 0);
+        const bCoupons = (b.coupons?.length || 0);
+        if (aCoupons !== bCoupons) return bCoupons - aCoupons;
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      
+      case 'destaques':
+        // Produtos com maior desconto
+        const aDiscount = a.originalPrice && a.price ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
+        const bDiscount = b.originalPrice && b.price ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
+        return bDiscount - aDiscount;
+      
+      case 'recentes':
+        // Mais recentes primeiro
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      
+      case 'menorPreco':
+        // Menor preço primeiro
+        const aPrice = a.price || Infinity;
+        const bPrice = b.price || Infinity;
+        return aPrice - bPrice;
+      
+      case 'pontuados':
+        // Produtos com aiScore maior (simulado por clicks + desconto)
+        const aScore = (a.clicks || 0) * 10 + (a.originalPrice && a.price ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0);
+        const bScore = (b.clicks || 0) * 10 + (b.originalPrice && b.price ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0);
+        return bScore - aScore;
+      
+      case 'baratinho':
+        // Produtos com preço até R$ 50
+        return (a.price || Infinity) - (b.price || Infinity);
+      
+      default:
+        return 0;
+    }
+  });
+
+  // Filtrar "baratinho" para mostrar só produtos até R$ 50
+  if (filterType === 'baratinho') {
+    filteredProducts = filteredProducts.filter(p => p.price && p.price <= 50);
+  }
   
   // Obter categorias únicas
   const categories = ["Todas", ...Array.from(new Set(allProducts.map(p => p.category)))].filter(Boolean);
@@ -180,6 +228,42 @@ export function DailyDeals() {
           <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
             Promoções do dia 🔴
           </h2>
+          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
+        </div>
+        {filteredProducts.length > 8 && (
+          <button 
+            onClick={() => setShowAll(!showAll)}
+            className="text-accent text-xs md:text-sm font-semibold hover:text-accent/90 transition-colors whitespace-nowrap flex items-center gap-1"
+          >
+            {showAll ? "Ver menos" : `Ver todas (${filteredProducts.length})`}
+            <ArrowUpRight size={14} weight="bold" />
+          </button>
+        )}
+      </div>
+
+      {/* Abas de Filtro */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+        {[
+          { key: 'alertas', label: '🔔 Meus Alertas', icon: '🔔' },
+          { key: 'destaques', label: '⭐ Destaques', icon: '⭐' },
+          { key: 'recentes', label: '🆕 Recentes', icon: '🆕' },
+          { key: 'menorPreco', label: '💰 Menor Preço', icon: '💰' },
+          { key: 'pontuados', label: '🏆 Mais Pontuados', icon: '🏆' },
+          { key: 'baratinho', label: '🤑 Baratinho', icon: '🤑' },
+        ].map((filter) => (
+          <button
+            key={filter.key}
+            onClick={() => setFilterType(filter.key as any)}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${
+              filterType === filter.key
+                ? 'bg-accent text-black'
+                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
           <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
         </div>
         {filteredProducts.length > 8 && (

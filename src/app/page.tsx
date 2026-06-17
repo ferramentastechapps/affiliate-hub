@@ -1,6 +1,5 @@
 import { DailyDeals } from "@/components/DailyDeals";
 import { Footer } from "@/components/Footer";
-import { StoreFilter } from "@/components/StoreFilter";
 import { HeroSection } from "@/components/HeroSection";
 import { WeeklyHighlights } from "@/components/WeeklyHighlights";
 import { Metadata } from "next";
@@ -88,17 +87,12 @@ export default async function Home() {
         <HeroSection />
       </div>
 
-      {/* Filtro por Loja (Featured Stores) */}
-      <div id="categorias" className="w-full">
-        <StoreFilter />
-      </div>
-
       {/* Destaques da Semana */}
       <div className="w-full">
         <WeeklyHighlights />
       </div>
 
-      {/* Promocoes do Dia */}
+      {/* Promocoes do Dia com Filtros */}
       <div id="ofertas" className="w-full">
         <DailyDeals />
       </div>
