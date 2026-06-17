@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { ProductDetail } from '@/components/ProductDetail';
+import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 import { Metadata } from 'next';
 
 type Props = {
@@ -58,7 +60,13 @@ export default async function ProductPage({ params }: Props) {
       notFound();
     }
 
-    return <ProductDetail product={product} />;
+    return (
+      <>
+        <Navbar />
+        <ProductDetail product={product} />
+        <Footer />
+      </>
+    );
   } catch (error) {
     console.error('Error fetching product:', error);
     notFound();
