@@ -22,6 +22,7 @@ export async function GET(request: Request) {
 
     const products = await prisma.product.findMany({
       where: whereClause,
+      take: 100, // Limite para não sobrecarregar e travar o navegador
       include: {
         links: true,
         coupons: {
