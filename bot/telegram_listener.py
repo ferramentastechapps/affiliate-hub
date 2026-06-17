@@ -5,8 +5,8 @@ Telegram Listener - Escuta comandos de aprovação/rejeição de produtos
 
 import re
 import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY, OPENROUTER_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
@@ -594,125 +594,6 @@ Envie a foto junto com o comando.
 """
     await update.message.reply_text(help_text, parse_mode='HTML')
 
-async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    data = query.data
-    print(f"🖱️ Callback query recebido: {data}")
-    
-    if data.startswith("setimg:"):
-        _, prod_id, idx_str = data.split(":")
-        idx = int(idx_str)
-        await handle_change_image_callback(query, context, prod_id, idx)
-    elif data.startswith("approve:"):
-        _, prod_id = data.split(":")
-        await handle_approve_callback(query, context, prod_id)
-    elif data.startswith("reject:"):
-        _, prod_id = data.split(":")
-        await handle_reject_callback(query, context, prod_id)
-
-async def handle_change_image_callback(query, context: ContextTypes.DEFAULT_TYPE, prod_id: str, idx: int):
-    res = api.buscar_produto(prod_id)
-    if not res or not res.get('success'):
-        await query.message.reply_text("❌ Produto não encontrado no banco de dados.")
-        return
-        
-    produto = res.get('product', {})
-    nome = produto.get('name')
-    
-    import requests
-    from urllib.parse import quote
-    
-    images_list = []
-    try:
-        resp = requests.get(f"http://127.0.0.1:3005/api/scrape/images?q={quote(nome)}", timeout=5)
-        if resp.status_code == 200:
-            images_list = resp.json()[:5]
-    except Exception as e:
-        print(f"❌ Erro ao buscar imagens no callback: {e}")
-        
-    if not images_list or idx >= len(images_list):
-        await query.message.reply_text("❌ Não foi possível carregar a imagem selecionada.")
-        return
-        
-    new_image_url = images_list[idx]['image']
-    
-    update_res = api.atualizar_produto_imagem(prod_id, new_image_url)
-    if not update_res or not update_res.get('success'):
-        await query.message.reply_text("❌ Erro ao salvar a imagem no banco de dados.")
-        return
-        
-    produto['imageUrl'] = new_image_url
-    
-    # Recalcular legenda
-    nova_mensagem = notifier._formatar_mensagem_produto(produto)
-    
-    keyboard = []
-    img_buttons = []
-    for i, img in enumerate(images_list):
-        label = f"🖼️ {i+1} ✅" if i == idx else f"🖼️ {i+1}"
-        img_buttons.append(InlineKeyboardButton(label, callback_data=f"setimg:{prod_id}:{i}"))
-    keyboard.append(img_buttons)
-    
-    keyboard.append([
-        InlineKeyboardButton("✅ Aprovar", callback_data=f"approve:{prod_id}"),
-        InlineKeyboardButton("❌ Rejeitar", callback_data=f"reject:{prod_id}")
-    ])
-    new_reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    try:
-        await query.edit_message_media(
-            media=InputMediaPhoto(media=new_image_url, caption=nova_mensagem, parse_mode='HTML'),
-            reply_markup=new_reply_markup
-        )
-    except Exception as e:
-        print(f"❌ Erro ao atualizar mídia da mensagem: {e}")
-
-async def handle_approve_callback(query, context: ContextTypes.DEFAULT_TYPE, prod_id: str):
-    res = api.buscar_produto(prod_id)
-    if not res or not res.get('success'):
-        await query.message.reply_text("❌ Produto não encontrado.")
-        return
-        
-    produto = res.get('product', {})
-    if produto.get('status') in ['active', 'approved']:
-        await query.message.reply_text("⚠️ Este produto já está ativo!")
-        return
-        
-    print(f"🔄 Aprovando via callback para ID: {prod_id}")
-    resultado = api.aprovar_produto(prod_id)
-    
-    if resultado and resultado.get('success'):
-        final_platform = resultado.get('platform')
-        final_affiliate_link = resultado.get('affiliateLink')
-        produto_info = resultado.get('product', {})
-        
-        await publicar_no_grupo(context, produto_info, final_platform, final_affiliate_link)
-        
-        await query.edit_message_caption(
-            caption=f"✅ <b>Aprovado e publicado!</b>\n\n"
-                    f"📦 <b>{produto.get('name')}</b>\n"
-                    f"🔗 Link: {final_affiliate_link}",
-            parse_mode='HTML',
-            reply_markup=None
-        )
-    else:
-        erro = resultado.get('error') if resultado else "Erro na API de aprovação."
-        await query.message.reply_text(f"❌ Falha ao aprovar: {erro}")
-
-async def handle_reject_callback(query, context: ContextTypes.DEFAULT_TYPE, prod_id: str):
-    resultado = api.rejeitar_produto(prod_id)
-    if resultado and resultado.get('success'):
-        await query.edit_message_caption(
-            caption=f"❌ <b>Produto Rejeitado</b>\n\nO produto foi arquivado.",
-            parse_mode='HTML',
-            reply_markup=None
-        )
-    else:
-        erro = resultado.get('error') if resultado else "Erro na API."
-        await query.message.reply_text(f"❌ Falha ao rejeitar: {erro}")
-
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'❌ Erro no telegram_listener: {context.error}')
 
@@ -741,9 +622,6 @@ def run_listener():
     # Mensagens de texto gerais (Pode ser encaminhado, texto puro ou reply)
     # Se for uma reply "ID_DO_PRODUTO", o handle_forwarded_or_text_promo repassa pro handle_reply.
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_forwarded_or_text_promo))
-    
-    # Callback inline para troca de imagem e botões de aprovação
-    app.add_handler(CallbackQueryHandler(handle_callback_query))
     
     app.add_error_handler(error_handler)
 

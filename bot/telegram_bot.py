@@ -44,37 +44,6 @@ class TelegramNotifier:
             # Placeholder não funciona como foto — envia só texto
             usar_foto = bool(imagem and 'placeholder' not in imagem)
 
-            # Buscar imagens alternativas para colocar nos botões (apenas se for moderação)
-            reply_markup = None
-            if str(self.chat_id) == str(TELEGRAM_CHAT_ID):
-                import requests
-                from urllib.parse import quote
-                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-                
-                nome = produto.get('name', '')
-                images_list = []
-                try:
-                    resp = requests.get(f"http://127.0.0.1:3005/api/scrape/images?q={quote(nome)}", timeout=5)
-                    if resp.status_code == 200:
-                        images_list = resp.json()[:5]
-                except Exception as e:
-                    print(f"⚠️ Erro ao buscar imagens para inline keyboard: {e}")
-                
-                keyboard = []
-                if images_list:
-                    img_buttons = []
-                    for i, img in enumerate(images_list):
-                        is_current = img['image'] == imagem
-                        label = f"🖼️ {i+1} ✅" if is_current else f"🖼️ {i+1}"
-                        img_buttons.append(InlineKeyboardButton(label, callback_data=f"setimg:{produto.get('id')}:{i}"))
-                    keyboard.append(img_buttons)
-                
-                keyboard.append([
-                    InlineKeyboardButton("✅ Aprovar", callback_data=f"approve:{produto.get('id')}"),
-                    InlineKeyboardButton("❌ Rejeitar", callback_data=f"reject:{produto.get('id')}")
-                ])
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
             if usar_foto:
                 # caption tem limite de 1024 chars no Telegram
                 if len(mensagem) > 1024:
@@ -89,8 +58,7 @@ class TelegramNotifier:
                     await self._send_message_with_retry(
                         chat_id=self.chat_id,
                         text=mensagem,
-                        parse_mode=ParseMode.HTML,
-                        reply_markup=reply_markup
+                        parse_mode=ParseMode.HTML
                     )
                 else:
                     try:
@@ -98,23 +66,20 @@ class TelegramNotifier:
                             chat_id=self.chat_id,
                             photo=imagem,
                             caption=mensagem,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=reply_markup
+                            parse_mode=ParseMode.HTML
                         )
                     except Exception as foto_err:
                         print(f'⚠️ Erro ao enviar foto ({foto_err}), enviando só texto...')
                         await self._send_message_with_retry(
                             chat_id=self.chat_id,
                             text=mensagem,
-                            parse_mode=ParseMode.HTML,
-                            reply_markup=reply_markup
+                            parse_mode=ParseMode.HTML
                         )
             else:
                 await self._send_message_with_retry(
                     chat_id=self.chat_id,
                     text=mensagem,
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=reply_markup
+                    parse_mode=ParseMode.HTML
                 )
             
             print(f'✅ Produto enviado para Telegram: {produto["name"]}')
