@@ -458,7 +458,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                   </label>
                   <input
                     type="url"
-                    value={formData[platform as keyof typeof formData]}
+                    value={(formData[platform as keyof typeof formData] as string) || ""}
                     onChange={(e) => setFormData({ ...formData, [platform]: e.target.value })}
                     placeholder={`https://...`}
                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
