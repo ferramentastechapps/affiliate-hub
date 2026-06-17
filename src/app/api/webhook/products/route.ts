@@ -177,7 +177,7 @@ export async function POST(request: Request) {
         // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
         if (existingProduct.isFixed && existingProduct.status === 'active') {
           // Extrair o primeiro link que ele tiver para publicar
-          const existingLinks = existingProduct.links || {};
+          const existingLinks: any = existingProduct.links || {};
           let publishLink = '';
           const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
           let activePlatform = 'amazon';
@@ -469,7 +469,7 @@ export async function PUT(request: Request) {
             
             // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
             if (updatedProduct.isFixed && updatedProduct.status === 'active') {
-              const existingLinks = updatedProduct.links || {};
+              const existingLinks: any = updatedProduct.links || {};
               let publishLink = '';
               const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
               let activePlatform = 'amazon';
