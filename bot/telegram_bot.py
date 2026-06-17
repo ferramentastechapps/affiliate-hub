@@ -1,8 +1,36 @@
 import asyncio
-from telegram import Bot
+import io
+import requests as _requests
+from telegram import Bot, InputFile
 from telegram.error import RetryAfter
 from telegram.constants import ParseMode
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL
+
+
+def _baixar_imagem_bytes(url: str, timeout: int = 15) -> bytes | None:
+    """
+    Baixa a imagem da URL e retorna os bytes.
+    Usa headers de browser para evitar bloqueio por CDNs de ML, Amazon, Shopee.
+    Retorna None se falhar.
+    """
+    if not url or 'placeholder' in url:
+        return None
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9',
+            'Referer': 'https://www.google.com/',
+        }
+        resp = _requests.get(url, headers=headers, timeout=timeout, stream=True)
+        if resp.status_code == 200:
+            content_type = resp.headers.get('Content-Type', '')
+            # Só aceita imagens
+            if 'image' in content_type or url.lower().split('?')[0].endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif')):
+                return resp.content
+    except Exception as e:
+        print(f'⚠️ Falha ao baixar imagem ({url[:60]}): {e}')
+    return None
 
 
 class TelegramNotifier:
@@ -23,6 +51,26 @@ class TelegramNotifier:
                 await asyncio.sleep(e.retry_after + 1)
 
     async def _send_photo_with_retry(self, **kwargs):
+        """Envia foto via URL ou bytes. Tenta baixar em bytes primeiro para melhor qualidade."""
+        photo = kwargs.get('photo')
+        # Se photo é uma string (URL), tenta baixar os bytes para evitar
+        # a dupla compressão que o Telegram aplica a URLs externas.
+        if isinstance(photo, str):
+            img_bytes = _baixar_imagem_bytes(photo)
+            if img_bytes:
+                # Detectar extensão para nomear o arquivo corretamente
+                ext = 'jpg'
+                url_clean = photo.lower().split('?')[0]
+                for _ext in ('webp', 'png', 'gif', 'jpeg', 'jpg'):
+                    if url_clean.endswith(_ext):
+                        ext = _ext
+                        break
+                kwargs = dict(kwargs)  # copiar para não mutar original
+                kwargs['photo'] = InputFile(io.BytesIO(img_bytes), filename=f'produto.{ext}')
+                print(f'📥 Imagem baixada ({len(img_bytes)//1024}KB) — enviando em alta qualidade')
+            else:
+                print(f'⚠️ Não foi possível baixar imagem, usando URL direta (qualidade reduzida)')
+
         while True:
             try:
                 res = await self.bot.send_photo(**kwargs)
@@ -32,7 +80,6 @@ class TelegramNotifier:
                 print(f"⏳ Flood control. Aguardando {e.retry_after}s...")
                 await asyncio.sleep(e.retry_after + 1)
 
-    
     async def enviar_produto(self, produto: dict):
         """Envia notificação de produto para o Telegram"""
         try:

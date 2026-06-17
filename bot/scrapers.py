@@ -4,6 +4,47 @@ from typing import List, Dict, Optional
 import re
 from config import CATEGORIES, MIN_DISCOUNT_PERCENT
 
+
+def _melhorar_qualidade_imagem(url: str) -> str:
+    """
+    Tenta obter a versão de maior qualidade de uma URL de imagem de produto.
+    Suporta: Mercado Livre, Amazon, Shopee, e CDNs genéricos.
+    """
+    if not url or 'placeholder' in url:
+        return url
+
+    # --- Mercado Livre ---
+    # Padrão: https://http2.mlstatic.com/D_NQ_NP_XXXXX-MLB_XXXXX-I.jpg
+    # Sufixos de tamanho: -I (interme.), -V (variante), -S (small), -F, -O (original/máx)
+    if 'mlstatic.com' in url or 'mla-s' in url or 'mlimg' in url:
+        url = re.sub(r'-[A-Z]\.(jpg|jpeg|png|webp)', r'-O.\1', url, flags=re.IGNORECASE)
+        return url
+
+    # --- Amazon ---
+    # Padrão: https://m.media-amazon.com/images/I/XXXXX._SX300_.jpg
+    # Remover restrições de tamanho (._SX300_, ._AC_SX450_, etc.) para obter imagem original
+    if 'amazon.com' in url or 'media-amazon.com' in url:
+        # Remove qualquer ._XXXX_. (parâmetros de resize da Amazon)
+        url = re.sub(r'\._[A-Z0-9_,]+_\.', '.', url)
+        return url
+
+    # --- Shopee ---
+    # Padrão: https://down-br.img.susercontent.com/file/XXXXX
+    # Shopee usa sufixos como _tn (thumbnail), removendo fica a original
+    if 'susercontent.com' in url or 'shopee' in url.lower():
+        url = re.sub(r'_tn$', '', url)  # Remove sufixo de thumbnail
+        return url
+
+    # --- Promobit CDN (i.promobit.com.br) ---
+    # Promobit redimensiona: ?w=200&h=200 — sem parâmetros = qualidade máxima
+    if 'promobit.com.br' in url:
+        # Remove parâmetros de resize se existirem
+        url = url.split('?')[0]
+        return url
+
+    return url
+
+
 try:
     from scraper_ml import MercadoLivreAPIScraper
     _ml_scraper = MercadoLivreAPIScraper()
@@ -64,7 +105,12 @@ class PromotionScraper:
 
                     preco = float(offer.get('offerPrice', 0))
                     foto = offer.get('offerPhoto')
-                    imagem_url = f"https://i.promobit.com.br{foto}" if foto else 'https://via.placeholder.com/800x1000'
+                    if foto:
+                        # Montar URL completa do CDN do Promobit e garantir máxima qualidade
+                        imagem_raw = f"https://i.promobit.com.br{foto}" if foto.startswith('/') else foto
+                        imagem_url = _melhorar_qualidade_imagem(imagem_raw)
+                    else:
+                        imagem_url = 'https://via.placeholder.com/800x1000'
 
                     # Tentar pegar categoria do Promobit primeiro
                     categoria_promobit = offer.get('categoryName') or offer.get('category', {}).get('name')
@@ -914,7 +960,7 @@ class PromotionScraper:
                     preco = float(promo.get('price', 0))
                     
                     foto = promo.get('image')
-                    imagem_url = foto if foto else 'https://via.placeholder.com/800x1000'
+                    imagem_url = _melhorar_qualidade_imagem(foto) if foto else 'https://via.placeholder.com/800x1000'
 
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
@@ -1017,7 +1063,7 @@ class PromotionScraper:
                     nome = offer.get('name', 'Sem título')
                     preco = offer.get('price')
                     preco_original = offer.get('priceFrom')
-                    imagem_url = offer.get('thumbnail') or 'https://via.placeholder.com/800x1000'
+                    imagem_url = _melhorar_qualidade_imagem(offer.get('thumbnail') or '') or 'https://via.placeholder.com/800x1000'
                     link_afiliado = offer.get('link')
                     
                     store_info = offer.get('store', {})
