@@ -21,6 +21,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     shopee: "",
     aliexpress: "",
     tiktok: "",
+    isFixed: false,
   });
   const [scrapeUrl, setScrapeUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         shopee: product.links?.shopee || "",
         aliexpress: product.links?.aliexpress || "",
         tiktok: product.links?.tiktok || "",
+        isFixed: product.isFixed || false,
       });
       setSearchQuery(product.name || "");
       handleSearchImages(product.name || "");
@@ -59,6 +61,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         shopee: "",
         aliexpress: "",
         tiktok: "",
+        isFixed: false,
       });
       setAlternativeImages([]);
       setSearchQuery("");
@@ -144,6 +147,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         imageUrl: formData.imageUrl,
         price: formData.price ? parseFloat(formData.price) : null,
         status,
+        isFixed: formData.isFixed,
         links: {
           amazon: formData.amazon || null,
           mercadoLivre: formData.mercadoLivre || null,
@@ -191,6 +195,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         imageUrl: formData.imageUrl,
         price: formData.price ? parseFloat(formData.price) : null,
         status: action === 'publish' ? 'active' : undefined,
+        isFixed: formData.isFixed,
         links: {
           amazon: formData.amazon || null,
           mercadoLivre: formData.mercadoLivre || null,
@@ -243,6 +248,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         description: formData.description,
         imageUrl: formData.imageUrl,
         price: formData.price ? parseFloat(formData.price) : null,
+        isFixed: formData.isFixed,
         links: {
           amazon: formData.amazon || null,
           mercadoLivre: formData.mercadoLivre || null,
@@ -459,6 +465,29 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                   />
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-800 pt-6">
+            <div className="flex items-start gap-3 bg-accent/10 border border-accent/20 p-4 rounded-xl">
+              <div className="flex items-center h-5">
+                <input
+                  id="isFixed"
+                  type="checkbox"
+                  checked={formData.isFixed}
+                  onChange={(e) => setFormData({ ...formData, isFixed: e.target.checked })}
+                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-accent focus:ring-accent focus:ring-offset-zinc-900"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="isFixed" className="text-sm font-medium text-white cursor-pointer">
+                  Travar Dados e Habilitar Repostagem
+                </label>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Protege este produto contra atualizações automáticas do robô (imagem e links serão preservados). 
+                  Quando o robô detectar este produto novamente nas ofertas, ele será repostado no Telegram automaticamente com a imagem e os links definidos acima.
+                </p>
+              </div>
             </div>
           </div>
 
