@@ -275,10 +275,26 @@ class MercadoLivreAPIScraper:
                 return None
             link_afiliado = _gerar_link_afiliado(link_ml, self.tag)
 
-            # Imagem
-            thumbnail = item.get('thumbnail', '')
-            # Melhorar resolução da imagem do ML (substituir -I por -O)
-            imagem_url = thumbnail.replace('-I.', '-O.').replace('-V.', '-O.') if thumbnail else ''
+            # Imagem — buscar a maior resolução disponível
+            # Prioridade 1: campo 'pictures' da API do ML (retorna URLs em alta qualidade)
+            pictures = item.get('pictures', [])
+            imagem_url = ''
+            if pictures and isinstance(pictures, list) and len(pictures) > 0:
+                pic = pictures[0]
+                # secure_url já vem em alta resolução (-O.)
+                imagem_url = pic.get('secure_url') or pic.get('url') or ''
+
+            # Prioridade 2: thumbnail com substituição para versão original (-O.)
+            if not imagem_url:
+                thumbnail = item.get('thumbnail', '')
+                if thumbnail:
+                    # Substituir sufixos de baixa/média resolução pelo original (máxima qualidade)
+                    # Padrões conhecidos do ML: -I., -V., -S., -W., -C., -F., -Z., -M., -G., -O.
+                    import re as _re
+                    imagem_url = _re.sub(r'-[A-Z]\.(jpg|jpeg|png|webp)', r'-O.\1', thumbnail, flags=_re.IGNORECASE)
+                    if imagem_url == thumbnail:
+                        # Fallback: substituição simples caso o regex não tenha funcionado
+                        imagem_url = thumbnail.replace('-I.', '-O.').replace('-V.', '-O.')
 
             # Categoria
             category_id = item.get('category_id', '')
