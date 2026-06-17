@@ -264,46 +264,6 @@ export function DailyDeals() {
           </button>
         ))}
       </div>
-          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
-        </div>
-        {filteredProducts.length > 8 && (
-          <button 
-            onClick={() => setShowAll(!showAll)}
-            className="flex text-sm font-bold text-accent hover:text-white transition-colors items-center gap-1.5 bg-accent/10 px-4.5 py-2.5 rounded-full hover:bg-accent/20 min-h-[44px] cursor-pointer"
-          >
-            {showAll ? "Ver menos" : "Ver todas"} 
-            <ArrowUpRight weight="bold" className={showAll ? "rotate-180 transition-transform" : "transition-transform"} />
-          </button>
-        )}
-      </div>
-
-      {/* Filtro de Categorias em botões horizontais no estilo do mockup */}
-      {categories.length > 1 && (
-        <div className="flex gap-1.5 md:gap-2 mb-4 md:mb-5 overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x snap-mandatory">
-          {categories.map((category) => {
-            const IconComponent = categoryIconMap[category] || Package;
-            const isSelected = selectedCategory === category;
-            
-            return (
-              <button
-                key={category}
-                onClick={() => {
-                  setSelectedCategory(category);
-                  setShowAll(false);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] md:text-[13px] font-semibold cursor-pointer transition-all duration-250 whitespace-nowrap shrink-0 snap-start ${
-                  isSelected
-                    ? "bg-[#ff334b] text-white border-[#ff334b] shadow-[0_4px_14px_rgba(255,51,75,0.25)]"
-                    : "bg-card border-border-custom text-zinc-400 hover:bg-card-hover hover:text-white hover:border-zinc-700/80"
-                }`}
-              >
-                <IconComponent size={14} weight={isSelected ? "fill" : "bold"} />
-                {category}
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* Sem resultados de busca/categoria */}
       {filteredProducts.length === 0 && (
