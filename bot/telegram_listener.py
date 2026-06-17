@@ -330,7 +330,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             'name': nome,
             'category': categoria,
             'description': descricao,
-            'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
+            'imageUrl': foto_url or '/placeholder.webp',
             'price': preco,
             'originalPrice': None,
             'links': {
@@ -515,7 +515,7 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
         'name': nome_produto,
         'category': categoria,
         'description': f'Oferta exclusiva no TikTok Shop',
-        'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
+        'imageUrl': foto_url or '/placeholder.webp',
         'price': preco_float,
         'status': 'active',  # Status correto para aparecer no site
         'links': {

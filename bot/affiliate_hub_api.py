@@ -1,7 +1,10 @@
 import requests
 import urllib3
+import json
+import hmac
+import hashlib
 from typing import List, Dict, Optional
-from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY
+from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY, WEBHOOK_SECRET
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -14,14 +17,26 @@ class AffiliateHubAPI:
             'Content-Type': 'application/json',
             'x-api-key': AFFILIATE_HUB_API_KEY
         }
-    
+        
+    def _get_headers_with_signature(self, payload: dict) -> tuple:
+        """Retorna os cabeçalhos com assinatura HMAC e o payload em bytes"""
+        headers = self.headers.copy()
+        payload_bytes = json.dumps(payload, separators=(',', ':'), sort_keys=True, ensure_ascii=False).encode('utf-8')
+        
+        if WEBHOOK_SECRET:
+            sig = hmac.new(WEBHOOK_SECRET.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
+            headers['x-webhook-signature'] = sig
+            
+        return headers, payload_bytes
+
     def adicionar_produto(self, produto: Dict) -> Optional[Dict]:
         """Adiciona um produto único"""
         try:
+            headers, payload_bytes = self._get_headers_with_signature(produto)
             response = requests.post(
                 f'{self.base_url}/api/webhook/products',
-                headers=self.headers,
-                json=produto,
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -40,10 +55,11 @@ class AffiliateHubAPI:
     def adicionar_produtos_lote(self, produtos: List[Dict]) -> Optional[Dict]:
         """Adiciona múltiplos produtos"""
         try:
+            headers, payload_bytes = self._get_headers_with_signature({'products': produtos})
             response = requests.put(
                 f'{self.base_url}/api/webhook/products',
-                headers=self.headers,
-                json={'products': produtos},
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -56,10 +72,11 @@ class AffiliateHubAPI:
     def adicionar_cupom(self, cupom: Dict) -> Optional[Dict]:
         """Adiciona um cupom único"""
         try:
+            headers, payload_bytes = self._get_headers_with_signature(cupom)
             response = requests.post(
                 f'{self.base_url}/api/webhook/coupons',
-                headers=self.headers,
-                json=cupom,
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -72,10 +89,11 @@ class AffiliateHubAPI:
     def adicionar_cupons_lote(self, cupons: List[Dict]) -> Optional[Dict]:
         """Adiciona múltiplos cupons"""
         try:
+            headers, payload_bytes = self._get_headers_with_signature({'coupons': cupons})
             response = requests.put(
                 f'{self.base_url}/api/webhook/coupons',
-                headers=self.headers,
-                json={'coupons': cupons},
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -88,14 +106,16 @@ class AffiliateHubAPI:
     def atualizar_link_produto(self, produto_id: str, platform: str, link: str) -> Optional[Dict]:
         """Atualiza o link de afiliado de um produto existente via Telegram"""
         try:
+            payload = {
+                'productId': produto_id,
+                'platform': platform,
+                'link': link
+            }
+            headers, payload_bytes = self._get_headers_with_signature(payload)
             response = requests.patch(
                 f'{self.base_url}/api/webhook/products',
-                headers=self.headers,
-                json={
-                    'productId': produto_id,
-                    'platform': platform,
-                    'link': link
-                },
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -111,10 +131,11 @@ class AffiliateHubAPI:
         Usado para produtos do TikTok e outros adicionados manualmente
         """
         try:
+            headers, payload_bytes = self._get_headers_with_signature(produto)
             response = requests.post(
                 f'{self.base_url}/api/webhook/products',
-                headers=self.headers,
-                json=produto,
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -132,7 +153,6 @@ class AffiliateHubAPI:
             print(f'   Produto ID: {produto_id}')
             print(f'   Plataforma: {platform}')
             print(f'   Link: {affiliate_link}')
-            print(f'   Headers: {self.headers}')
             
             payload = {
                 'productId': produto_id
@@ -145,10 +165,13 @@ class AffiliateHubAPI:
                 payload['imageUrl'] = image_url
                 print(f'   ImageUrl: {image_url}')
             
+            headers, payload_bytes = self._get_headers_with_signature(payload)
+            print(f'   Headers: {headers}')
+            
             response = requests.post(
                 f'{self.base_url}/api/webhook/products/approve',
-                headers=self.headers,
-                json=payload,
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -168,12 +191,14 @@ class AffiliateHubAPI:
     def rejeitar_produto(self, produto_id: str) -> Optional[Dict]:
         """Rejeita um produto pendente"""
         try:
+            payload = {
+                'productId': produto_id
+            }
+            headers, payload_bytes = self._get_headers_with_signature(payload)
             response = requests.post(
                 f'{self.base_url}/api/webhook/products/reject',
-                headers=self.headers,
-                json={
-                    'productId': produto_id
-                },
+                headers=headers,
+                data=payload_bytes,
                 timeout=60,
                 verify=False
             )
@@ -184,11 +209,14 @@ class AffiliateHubAPI:
             return None
 
     def buscar_produto(self, produto_id: str) -> Optional[Dict]:
-        """Busca um produto pelo ID para obter dados atualizados (ex: aiAnalysis após IA processar)"""
+        """Busca um produto pelo ID para obter dados atualizados"""
         try:
+            headers = self.headers.copy()
+            if WEBHOOK_SECRET:
+                headers['x-webhook-secret'] = WEBHOOK_SECRET
             response = requests.get(
                 f'{self.base_url}/api/webhook/products/{produto_id}',
-                headers=self.headers,
+                headers=headers,
                 timeout=30,
                 verify=False
             )
@@ -201,12 +229,14 @@ class AffiliateHubAPI:
     def atualizar_produto_imagem(self, produto_id: str, image_url: str) -> Optional[Dict]:
         """Atualiza a imagem de um produto existente via webhook"""
         try:
+            payload = {
+                'imageUrl': image_url
+            }
+            headers, payload_bytes = self._get_headers_with_signature(payload)
             response = requests.put(
                 f'{self.base_url}/api/webhook/products/{produto_id}',
-                headers=self.headers,
-                json={
-                    'imageUrl': image_url
-                },
+                headers=headers,
+                data=payload_bytes,
                 timeout=30,
                 verify=False
             )

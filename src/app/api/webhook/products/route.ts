@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateApiKey } from '@/lib/auth';
+import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 import { generateAffiliateLink } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
@@ -52,10 +52,10 @@ async function processProductAffiliates(productData: { links?: Record<string, st
 }
 
 export async function POST(request: Request) {
-  // Validar API Key
-  if (!validateApiKey(request)) {
+  // Validar assinatura do Webhook
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }
@@ -279,10 +279,10 @@ export async function POST(request: Request) {
 
 // Endpoint para criar múltiplos produtos de uma vez
 export async function PUT(request: Request) {
-  // Validar API Key
-  if (!validateApiKey(request)) {
+  // Validar assinatura do Webhook
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }
@@ -459,9 +459,9 @@ export async function PUT(request: Request) {
 
 // Endpoint para atualizar LINKS de um produto específico (Usado pelo Robô Telegram)
 export async function PATCH(request: Request) {
-  if (!validateApiKey(request)) {
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }

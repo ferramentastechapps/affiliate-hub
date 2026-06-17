@@ -11,6 +11,7 @@ type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
@@ -18,11 +19,7 @@ type Product = {
 };
 
 // Deterministic discount based on ID
-function getSimulatedDiscount(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  return 15 + (Math.abs(hash) % 45);
-}
+
 
 export function WeeklyHighlights() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,6 +39,7 @@ export function WeeklyHighlights() {
             category: p.category,
             imageUrl: p.imageUrl,
             price: p.price,
+            originalPrice: p.originalPrice,
             description: p.description,
             coupons: p.coupons || [],
             createdAt: p.createdAt,
@@ -98,9 +96,11 @@ export function WeeklyHighlights() {
       {/* Grid de Destaques (Scrollable on mobile) */}
       <div className="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-4 scrollbar-hide snap-x snap-mandatory">
         {products.map((product) => {
-          const discount = getSimulatedDiscount(product.id);
           const price = product.price || 0;
-          const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
+          const originalPrice = product.originalPrice || 0;
+          const discount = (originalPrice > price && price > 0)
+            ? Math.round(((originalPrice - price) / originalPrice) * 100)
+            : 0;
 
           return (
             <motion.div
@@ -126,11 +126,13 @@ export function WeeklyHighlights() {
               {/* Left Column (Text & Price info) */}
               <div className="relative z-10 flex flex-col justify-between h-full flex-1 pr-4">
                 {/* Discount Badge */}
-                <div className="flex items-center gap-1.5 self-start">
-                  <span className="bg-[#ff334b] text-white text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
-                    -{discount}%
-                  </span>
-                </div>
+                {discount > 0 && (
+                  <div className="flex items-center gap-1.5 self-start">
+                    <span className="bg-[#ff334b] text-white text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
+                      -{discount}%
+                    </span>
+                  </div>
+                )}
                 
                 {/* Product Title */}
                 <h3 className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2 mt-2 mb-2 group-hover:text-[#ff334b] transition-colors">
@@ -139,7 +141,7 @@ export function WeeklyHighlights() {
 
                 {/* Price Tag */}
                 <div className="flex flex-col mt-auto">
-                  {price > 0 && (
+                  {price > 0 && discount > 0 && (
                     <span className="text-[11px] text-[#8e92a4] line-through leading-none mb-1">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
@@ -164,6 +166,9 @@ export function WeeklyHighlights() {
                   src={product.imageUrl}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/placeholder.webp";
+                  }}
                 />
               </div>
             </motion.div>

@@ -38,15 +38,7 @@ function trackAffiliateClick(platform: string, productName: string, url: string)
   }
 }
 
-// Helper to deduce a simulated discount
-function getSimulatedDiscount(id: string): number {
-  if (!id) return 20;
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return 15 + (Math.abs(hash) % 45);
-}
+
 
 export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -139,9 +131,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
     }
   }
 
-  const discount = getSimulatedDiscount(product.id || 'abc');
   const price = product.price || 0;
-  const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
+  const originalPrice = product.originalPrice || 0;
+  const discount = (originalPrice > price && price > 0)
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
 
   // Garantir que a URL abra corretamente como um link absoluto
   const safeTargetUrl = targetUrl && !targetUrl.startsWith("http") 
@@ -199,7 +193,7 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
             <div className="overflow-y-auto hidden-scrollbar flex-1 pb-4">
               
               <div className="relative w-full bg-zinc-900 flex items-center justify-center p-4" style={{ minHeight: '220px', maxHeight: '380px' }}>
-                {price > 0 && (
+                {price > 0 && discount > 0 && (
                   <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
                     <Tag size={20} weight="fill" />
                     -{discount}%
@@ -211,6 +205,9 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                    alt={product.name}
                    className="w-full h-full object-contain rounded-2xl"
                    style={{ maxHeight: '360px' }}
+                   onError={(e) => {
+                     (e.target as HTMLImageElement).src = "/placeholder.webp";
+                   }}
                 />
               </div>
 
@@ -235,9 +232,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                 
                 {price > 0 ? (
                   <div className="flex flex-col mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
-                    <span className="text-sm text-zinc-400 font-medium mb-1 line-through">
-                      De: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                    </span>
+                    {discount > 0 && (
+                      <span className="text-sm text-zinc-400 font-medium mb-1 line-through">
+                        De: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                      </span>
+                    )}
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                       <span className="text-4xl font-black text-white tracking-tighter">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
@@ -313,6 +312,9 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
                               src={relItem.imageUrl} 
                               alt={relItem.name} 
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.webp";
+                              }}
                            />
                          </div>
                          <div className="p-3 bg-zinc-900 border-t border-white/5">

@@ -225,7 +225,14 @@ export function CouponsSection({ couponsByPlatform }: CouponsSectionProps) {
               <div className="flex items-center justify-between p-5 sm:p-6 border-b border-white/5 bg-white/5">
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner shrink-0">
-                    <img src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(selectedPlatform)}&sz=64`} alt="logo" className="w-full h-full object-contain mix-blend-multiply" />
+                    <img 
+                      src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(selectedPlatform)}&sz=64`} 
+                      alt="logo" 
+                      className="w-full h-full object-contain mix-blend-multiply" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.webp";
+                      }}
+                    />
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-lg sm:text-xl font-bold text-white capitalize truncate">{selectedPlatform}</h3>

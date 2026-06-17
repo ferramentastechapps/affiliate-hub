@@ -79,7 +79,7 @@ class PelandoScraper:
             preco = self._extrair_preco(preco_texto)
         
         # Imagem
-        imagem_url = 'https://via.placeholder.com/800x1000'
+        imagem_url = '/placeholder.webp'
         img_elem = oferta.find('img', class_='thread-image')
         if img_elem:
             imagem_url = img_elem.get('src', '') or img_elem.get('data-src', '')

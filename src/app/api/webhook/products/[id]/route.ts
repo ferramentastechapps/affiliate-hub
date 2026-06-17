@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateApiKey } from '@/lib/auth';
+import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!validateApiKey(request)) {
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }
@@ -56,9 +56,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!validateApiKey(request)) {
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }

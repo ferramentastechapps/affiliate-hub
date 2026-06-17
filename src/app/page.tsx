@@ -61,7 +61,6 @@ export const metadata: Metadata = {
     title: "Economiza ai | Melhores Ofertas e Cupons",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos.",
     images: ["https://economizai.usejotashop.com.br/icons/og-image.png?v=2"],
-    creator: "@seu_twitter",
   },
   
   // Robots
@@ -75,13 +74,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
-  },
-  
-  // Verificação
-  verification: {
-    google: "seu-codigo-de-verificacao-google",
-    // yandex: "seu-codigo-yandex",
-    // bing: "seu-codigo-bing",
   },
 };
 

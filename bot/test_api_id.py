@@ -13,7 +13,7 @@ api = AffiliateHubAPI()
 produto_teste = {
     "name": "Produto de Teste - Verificação de ID",
     "category": "Teste",
-    "imageUrl": "https://via.placeholder.com/300",
+    "imageUrl": "/placeholder.webp",
     "price": 99.99,
     "description": "Produto criado apenas para testar se o ID está sendo retornado",
     "links": {

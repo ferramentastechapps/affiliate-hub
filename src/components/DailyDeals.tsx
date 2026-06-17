@@ -30,6 +30,7 @@ type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
@@ -55,13 +56,7 @@ const categoryIconMap: Record<string, React.ComponentType<any>> = {
 };
 
 // Helper for deterministic discount simulation based on string ID
-function getSimulatedDiscount(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return 15 + (Math.abs(hash) % 45); // between 15% and 60%
-}
+
 
 function getTimeAgo(dateString?: string | Date) {
   if (!dateString) return "há pouco tempo";
@@ -115,6 +110,7 @@ export function DailyDeals() {
           category: p.category,
           imageUrl: p.imageUrl,
           price: p.price,
+          originalPrice: p.originalPrice,
           createdAt: p.createdAt,
           description: p.description,
           coupons: p.coupons || [],
@@ -237,9 +233,11 @@ export function DailyDeals() {
       {filteredProducts.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {displayProducts.map((product, index) => {
-            const discount = getSimulatedDiscount(product.id);
             const price = product.price || 0;
-            const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
+            const originalPrice = product.originalPrice || 0;
+            const discount = (originalPrice > price && price > 0)
+              ? Math.round(((originalPrice - price) / originalPrice) * 100)
+              : 0;
 
             // Mapeamento de cor e label do badge de plataforma
             const storeBadgeConfig: Record<string, { bg: string, text: string, label: string }> = {
@@ -316,9 +314,11 @@ export function DailyDeals() {
                   {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
                   <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
                     <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                      <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                        -{discount}%
-                      </span>
+                      {discount > 0 && (
+                        <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                          -{discount}%
+                        </span>
+                      )}
                       <span className="bg-black/30 backdrop-blur-md text-[#8e92a4] text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/5">
                         <Clock size={11} weight="bold" />
                         {getTimeAgo(product.createdAt)}
@@ -329,6 +329,9 @@ export function DailyDeals() {
                       src={product.imageUrl}
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.webp";
+                      }}
                     />
                   </div>
 
@@ -347,6 +350,9 @@ export function DailyDeals() {
                       alt={badgeStyle.label}
                       title={badgeStyle.label}
                       className="w-5 h-5 object-contain rounded-full" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.webp";
+                      }}
                     />
                   </div>
                 </div>
@@ -365,9 +371,11 @@ export function DailyDeals() {
                   <div className="mt-auto flex flex-col">
                     {price > 0 ? (
                       <>
-                        <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                        </span>
+                        {discount > 0 && (
+                          <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                          </span>
+                        )}
                         <span className="text-base font-black text-[#ff334b]">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                         </span>
