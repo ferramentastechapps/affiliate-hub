@@ -109,12 +109,63 @@ export async function POST(request: Request) {
           }
         });
         
+        // Verificar se podemos atualizar a imagem do produto existente
+        // Apenas se a atual for do Promobit/Pechinchou ou placeholder/nula, e a nova for uma imagem de varejista real
+        let imageUpdateData = {};
+        const isOldImagePlaceholderOrAggregator = 
+          !existingProduct.imageUrl || 
+          existingProduct.imageUrl === '/placeholder.webp' || 
+          existingProduct.imageUrl.includes('promobit.com.br') || 
+          existingProduct.imageUrl.includes('pechinchou.com.br');
+        
+        const isNewImageBetter = 
+          body.imageUrl && 
+          body.imageUrl !== '/placeholder.webp' && 
+          !body.imageUrl.includes('promobit.com.br') && 
+          !body.imageUrl.includes('pechinchou.com.br');
+
+        if (isOldImagePlaceholderOrAggregator && isNewImageBetter) {
+          imageUpdateData = {
+            imageUrl: body.imageUrl,
+            enhancedImageUrl: body.imageUrl
+          };
+        }
+
+        // Processar links novos para ver se temos novos links de afiliados
+        const { links: processedLinks } = await processProductAffiliates(body);
+        const linksUpdate: Record<string, string> = {};
+        if (processedLinks) {
+          const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+          for (const platform of platforms) {
+            const newLink = processedLinks[platform];
+            const oldLink = existingProduct.links?.[platform];
+            if (newLink) {
+              const isOldAggregator = !oldLink || oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br');
+              const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
+              if (isOldAggregator && isNewDirect) {
+                linksUpdate[platform] = newLink;
+              }
+            }
+          }
+        }
+
+        let linksData = undefined;
+        if (Object.keys(linksUpdate).length > 0) {
+          if (existingProduct.links) {
+            linksData = { update: linksUpdate };
+          } else {
+            linksData = { create: linksUpdate };
+          }
+        }
+
         // Atualizar preço atual no produto e obter objeto atualizado
         const updatedProduct = await prisma.product.update({
           where: { id: existingProduct.id },
           data: { 
             price: parseFloat(body.price),
-            originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : existingProduct.originalPrice
+            originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : existingProduct.originalPrice,
+            ...imageUpdateData,
+            links: linksData
           },
           include: {
             links: true
@@ -325,12 +376,63 @@ export async function PUT(request: Request) {
                 originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
               }
             });
+            // Verificar se podemos atualizar a imagem do produto existente
+            // Apenas se a atual for do Promobit/Pechinchou ou placeholder/nula, e a nova for uma imagem de varejista real
+            let imageUpdateData = {};
+            const isOldImagePlaceholderOrAggregator = 
+              !existingProduct.imageUrl || 
+              existingProduct.imageUrl === '/placeholder.webp' || 
+              existingProduct.imageUrl.includes('promobit.com.br') || 
+              existingProduct.imageUrl.includes('pechinchou.com.br');
+            
+            const isNewImageBetter = 
+              productData.imageUrl && 
+              productData.imageUrl !== '/placeholder.webp' && 
+              !productData.imageUrl.includes('promobit.com.br') && 
+              !productData.imageUrl.includes('pechinchou.com.br');
+
+            if (isOldImagePlaceholderOrAggregator && isNewImageBetter) {
+              imageUpdateData = {
+                imageUrl: productData.imageUrl,
+                enhancedImageUrl: productData.imageUrl
+              };
+            }
+
+            // Processar links novos para ver se temos novos links de afiliados
+            const { links: processedLinks } = await processProductAffiliates(productData);
+            const linksUpdate: Record<string, string> = {};
+            if (processedLinks) {
+              const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+              for (const platform of platforms) {
+                const newLink = processedLinks[platform];
+                const oldLink = existingProduct.links?.[platform];
+                if (newLink) {
+                  const isOldAggregator = !oldLink || oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br');
+                  const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
+                  if (isOldAggregator && isNewDirect) {
+                    linksUpdate[platform] = newLink;
+                  }
+                }
+              }
+            }
+
+            let linksData = undefined;
+            if (Object.keys(linksUpdate).length > 0) {
+              if (existingProduct.links) {
+                linksData = { update: linksUpdate };
+              } else {
+                linksData = { create: linksUpdate };
+              }
+            }
+
             // Atualizar preço atual no produto
             await prisma.product.update({
               where: { id: existingProduct.id },
               data: { 
                 price: parseFloat(productData.price),
-                originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : existingProduct.originalPrice
+                originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : existingProduct.originalPrice,
+                ...imageUpdateData,
+                links: linksData
               }
             });
           }
