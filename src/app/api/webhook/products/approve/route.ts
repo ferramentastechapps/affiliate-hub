@@ -156,20 +156,39 @@ export async function POST(request: Request) {
     
     // Atualizar status do produto para active + imageUrl se fornecida
     const updateData: { status: string; imageUrl?: string; enhancedImageUrl?: string } = { status: 'active' };
+    let finalEnhancedImageUrl = product.enhancedImageUrl;
+
     if (body.imageUrl) {
-      updateData.imageUrl = body.imageUrl;
+      if (body.imageUrl.startsWith('http')) {
+        try {
+          console.log(`[Approve] Salvando imagem fornecida pelo Telegram localmente: ${body.imageUrl}`);
+          const savedUrl = await saveEnhancedImage(body.imageUrl, false);
+          if (savedUrl) {
+            updateData.imageUrl = savedUrl;
+            updateData.enhancedImageUrl = savedUrl;
+            finalEnhancedImageUrl = savedUrl;
+            console.log(`[Approve] Imagem do Telegram salva com sucesso: ${savedUrl}`);
+          } else {
+            updateData.imageUrl = body.imageUrl;
+          }
+        } catch (err) {
+          console.error('[Approve] Erro ao salvar imagem localmente:', err);
+          updateData.imageUrl = body.imageUrl;
+        }
+      } else {
+        updateData.imageUrl = body.imageUrl;
+      }
     }
     
-    let finalEnhancedImageUrl = product.enhancedImageUrl;
     if (!finalEnhancedImageUrl) {
       console.log(`[Approve] Tentando obter imagem secundária/lifestyle do produto...`);
       const rawEnhancedUrl = await getSecondaryLifestyleImage((product.links || {}) as any);
       if (rawEnhancedUrl) {
-        finalEnhancedImageUrl = await saveEnhancedImage(rawEnhancedUrl, false);
-        if (finalEnhancedImageUrl) {
-          updateData.enhancedImageUrl = finalEnhancedImageUrl;
-          product.enhancedImageUrl = finalEnhancedImageUrl;
-          console.log(`[Approve] Imagem secundária salva com sucesso: ${finalEnhancedImageUrl}`);
+        const savedEnhanced = await saveEnhancedImage(rawEnhancedUrl, false);
+        if (savedEnhanced) {
+          finalEnhancedImageUrl = savedEnhanced;
+          updateData.enhancedImageUrl = savedEnhanced;
+          console.log(`[Approve] Imagem secundária salva com sucesso: ${savedEnhanced}`);
         }
       }
     }

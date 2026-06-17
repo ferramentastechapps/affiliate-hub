@@ -109,14 +109,18 @@ export async function POST(request: Request) {
           }
         });
         
-        // Atualizar preço atual no produto
-        await prisma.product.update({
+        // Atualizar preço atual no produto e obter objeto atualizado
+        const updatedProduct = await prisma.product.update({
           where: { id: existingProduct.id },
           data: { 
             price: parseFloat(body.price),
             originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : existingProduct.originalPrice
+          },
+          include: {
+            links: true
           }
         });
+        existingProduct = updatedProduct;
       }
 
       console.log('ℹ️ Produto duplicado detectado. Histórico de preço atualizado:', body.name);
@@ -129,6 +133,7 @@ export async function POST(request: Request) {
           category: existingProduct.category,
           description: existingProduct.description,
           imageUrl: existingProduct.imageUrl,
+          enhancedImageUrl: existingProduct.enhancedImageUrl,
           price: existingProduct.price,
           originalPrice: existingProduct.originalPrice,
           status: existingProduct.status,
@@ -214,6 +219,7 @@ export async function POST(request: Request) {
         category: product.category,
         description: product.description,
         imageUrl: product.imageUrl,
+        enhancedImageUrl: product.enhancedImageUrl,
         price: product.price,
         originalPrice: product.originalPrice,
         status: product.status,

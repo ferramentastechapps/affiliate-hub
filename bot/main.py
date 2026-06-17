@@ -124,7 +124,7 @@ class PromotionBot:
                         
                         # Verifica status para decidir se publica direto ou se envia para moderação
                         status = produto_retornado.get('status', 'pending')
-                        if status == 'active':
+                        if status in ('active', 'approved'):
                             links = produto_retornado.get('links', {}) or {}
                             platform = None
                             affiliate_link = None
