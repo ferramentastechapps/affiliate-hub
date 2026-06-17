@@ -12,6 +12,7 @@ type Product = {
   imageUrl: string;
   price?: number;
   status?: string;
+  isFixed?: boolean;
   links?: {
     amazon?: string;
     mercadoLivre?: string;
@@ -23,7 +24,7 @@ type Product = {
 
 export function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'fixed' | 'notFixed'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +75,12 @@ export function ProductsTab() {
     if (statusFilter === 'pending') {
       return product.status === 'pending';
     }
+    if (statusFilter === 'fixed') {
+      return product.isFixed === true;
+    }
+    if (statusFilter === 'notFixed') {
+      return !product.isFixed || product.isFixed === false;
+    }
     return true; // 'all'
   });
 
@@ -91,12 +98,12 @@ export function ProductsTab() {
       </div>
 
       {/* Abas de Filtro de Status */}
-      <div className="flex gap-2 mb-6 border-b border-zinc-800 pb-4">
-        {(['all', 'active', 'pending'] as const).map((filter) => (
+      <div className="flex gap-2 mb-6 border-b border-zinc-800 pb-4 overflow-x-auto">
+        {(['all', 'active', 'pending', 'fixed', 'notFixed'] as const).map((filter) => (
           <button
             key={filter}
             onClick={() => setStatusFilter(filter)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap ${
               statusFilter === filter
                 ? "bg-zinc-800 text-accent border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
@@ -105,6 +112,8 @@ export function ProductsTab() {
             {filter === 'all' && 'Todos'}
             {filter === 'active' && 'Ativos'}
             {filter === 'pending' && 'Pendentes'}
+            {filter === 'fixed' && '🔒 Com Trava'}
+            {filter === 'notFixed' && '🔓 Sem Trava'}
           </button>
         ))}
       </div>
@@ -129,7 +138,7 @@ export function ProductsTab() {
                     }}
                   />
                   {/* Etiqueta de Status */}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
                     <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider border shadow-lg backdrop-blur-md ${
                       product.status === 'active' || product.status === 'approved'
                         ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80'
@@ -139,6 +148,11 @@ export function ProductsTab() {
                     }`}>
                       {product.status === 'active' || product.status === 'approved' ? 'Ativo' : 'Pendente'}
                     </span>
+                    {product.isFixed && (
+                      <span className="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider border shadow-lg backdrop-blur-md bg-blue-950/80 text-blue-400 border-blue-800/80">
+                        🔄 Repost
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="p-4">

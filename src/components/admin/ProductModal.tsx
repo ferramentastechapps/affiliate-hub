@@ -330,30 +330,6 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <label className="block text-sm font-medium mb-2">
-              Buscar dados automaticamente
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={scrapeUrl}
-                onChange={(e) => setScrapeUrl(e.target.value)}
-                placeholder="Cole o link do produto (Amazon, Mercado Livre, etc)"
-                className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-              />
-              <button
-                type="button"
-                onClick={handleScrape}
-                disabled={loading || !scrapeUrl}
-                className="flex items-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 disabled:text-zinc-500 text-black px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-              >
-                <MagicWand size={20} />
-                Buscar
-              </button>
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium mb-2">Nome *</label>
             <input
@@ -506,20 +482,31 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
           <div className="border-t border-zinc-800 pt-6">
             <h3 className="text-lg font-semibold mb-4">Links de Afiliados</h3>
             <div className="space-y-3">
-              {["amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok"].map((platform) => (
-                <div key={platform}>
-                  <label className="block text-sm font-medium mb-2 capitalize">
-                    {platform === "mercadoLivre" ? "Mercado Livre" : platform}
-                  </label>
-                  <input
-                    type="url"
-                    value={(formData[platform as keyof typeof formData] as string) || ""}
-                    onChange={(e) => setFormData({ ...formData, [platform]: e.target.value })}
-                    placeholder={`https://...`}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-                  />
-                </div>
-              ))}
+              {["amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok"]
+                .filter((platform) => {
+                  const value = formData[platform as keyof typeof formData] as string;
+                  return value && value.trim() !== "" && value !== "https://...";
+                })
+                .map((platform) => (
+                  <div key={platform}>
+                    <label className="block text-sm font-medium mb-2 capitalize">
+                      {platform === "mercadoLivre" ? "Mercado Livre" : platform}
+                    </label>
+                    <input
+                      type="url"
+                      value={(formData[platform as keyof typeof formData] as string) || ""}
+                      onChange={(e) => setFormData({ ...formData, [platform]: e.target.value })}
+                      placeholder={`https://...`}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
+                    />
+                  </div>
+                ))}
+              {["amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok"].every((platform) => {
+                const value = formData[platform as keyof typeof formData] as string;
+                return !value || value.trim() === "" || value === "https://...";
+              }) && (
+                <p className="text-sm text-zinc-500 italic">Nenhum link de afiliado cadastrado ainda.</p>
+              )}
             </div>
           </div>
 
