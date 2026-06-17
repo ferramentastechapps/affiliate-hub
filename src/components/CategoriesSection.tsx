@@ -199,26 +199,20 @@ export function CategoriesSection() {
                               (e.target as HTMLImageElement).src = "/placeholder.webp";
                             }}
                           />
-                          {/* Store badge — logo only */}
+                          {/* Store badge — logo larger and clean */}
                           <div
-                            className="absolute bottom-3 right-3 z-10 flex items-center justify-center rounded-full"
+                            className="absolute bottom-3 right-3 z-10 flex items-center justify-center rounded-full bg-white shadow-xl"
                             style={{
-                              width: '32px',
-                              height: '32px',
-                              background: product.links?.amazon ? '#ff9900'
-                                : product.links?.mercadoLivre ? '#3483FA'
-                                : product.links?.shopee ? '#ee4d2d'
-                                : product.links?.aliexpress ? '#e43225'
-                                : product.links?.tiktok ? '#010101'
-                                : '#6366f1',
-                              boxShadow: '0 0 0 2px rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)',
+                              width: '48px',
+                              height: '48px',
+                              boxShadow: '0 0 0 2px #18181b, 0 4px 16px rgba(0,0,0,0.4)',
                             }}
                           >
                              <img 
                               src={mainPlatformLogo} 
                               alt={mainPlatformText} 
                               title={mainPlatformText} 
-                              className="w-[18px] h-[18px] rounded-full object-contain" 
+                              className="w-8 h-8 object-contain" 
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = "/placeholder.webp";
                               }}

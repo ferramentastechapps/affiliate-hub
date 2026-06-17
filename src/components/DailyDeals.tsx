@@ -335,21 +335,20 @@ export function DailyDeals() {
                     />
                   </div>
 
-                  {/* Overlapping Brand Badge — Logo only, premium circular style */}
+                  {/* Overlapping Brand Badge — Logo only, larger and clean */}
                   <div 
-                    className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full"
+                    className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full bg-white shadow-xl"
                     style={{
-                      width: '36px',
-                      height: '36px',
-                      background: badgeStyle.bg,
-                      boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${badgeStyle.bg}88`,
+                      width: '56px',
+                      height: '56px',
+                      boxShadow: '0 0 0 3px #18181b, 0 4px 20px rgba(0,0,0,0.4)',
                     }}
                   >
                     <img 
                       src={mainPlatformLogo} 
                       alt={badgeStyle.label}
                       title={badgeStyle.label}
-                      className="w-5 h-5 object-contain rounded-full" 
+                      className="w-10 h-10 object-contain" 
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.webp";
                       }}
@@ -359,7 +358,7 @@ export function DailyDeals() {
 
 
                 {/* Deal Body */}
-                <div className="p-4 pt-7 flex flex-col flex-1">
+                <div className="p-4 pt-9 flex flex-col flex-1">
                   <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
                     {product.category || "Oferta"}
                   </span>
