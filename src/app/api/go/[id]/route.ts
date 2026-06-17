@@ -9,6 +9,7 @@ export async function GET(
     const { id } = await params;
     const url = new URL(request.url);
     const channel = url.searchParams.get('ch') || 'unknown';
+    const platform = url.searchParams.get('platform'); // Plataforma específica
     const userAgent = request.headers.get('user-agent') || 'unknown';
     const referrer = request.headers.get('referer') || 'unknown';
 
@@ -38,17 +39,23 @@ export async function GET(
       data: { clicks: { increment: 1 } }
     });
 
-    // 4. Decidir para qual plataforma redirecionar (pega a primeira disponível ou uma específica se quiser priorizar)
+    // 4. Decidir para qual plataforma redirecionar
     const links = product.links as Record<string, string | null>;
     
-    // Ordem de prioridade
-    const platforms = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'magalu', 'tiktok', 'netshoes', 'kabum'];
-    
     let targetUrl: string | null = null;
-    for (const p of platforms) {
-      if (links[p]) {
-        targetUrl = links[p];
-        break;
+    
+    // Se plataforma específica foi solicitada, usar ela
+    if (platform && links[platform]) {
+      targetUrl = links[platform];
+    } else {
+      // Senão, usar ordem de prioridade
+      const platforms = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'magalu', 'tiktok', 'netshoes', 'kabum'];
+      
+      for (const p of platforms) {
+        if (links[p]) {
+          targetUrl = links[p];
+          break;
+        }
       }
     }
 
