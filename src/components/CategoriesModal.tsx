@@ -45,17 +45,14 @@ type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
 };
 
-function getSimulatedDiscount(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  return 15 + (Math.abs(hash) % 45);
-}
+
 
 export function CategoriesModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -125,6 +122,7 @@ export function CategoriesModal() {
             category: p.category,
             imageUrl: p.imageUrl,
             price: p.price,
+            originalPrice: p.originalPrice,
             description: p.description,
             coupons: p.coupons || [],
             createdAt: p.createdAt,
@@ -294,10 +292,11 @@ export function CategoriesModal() {
                       {!loading && products.length > 0 && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {products.map((product, index) => {
-                            const discount = getSimulatedDiscount(product.id);
                             const price = product.price || 0;
-                            const originalPrice =
-                              price > 0 ? price / (1 - discount / 100) : 0;
+                            const originalPrice = product.originalPrice || 0;
+                            const discount = (originalPrice > price && price > 0)
+                              ? Math.round(((originalPrice - price) / originalPrice) * 100)
+                              : 0;
 
                             let mainPlatformText = "Link";
                             let mainPlatformLogo =
@@ -338,9 +337,11 @@ export function CategoriesModal() {
                                 className="group cursor-pointer bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 hover:border-accent/40 rounded-2xl p-4 flex flex-col relative transition-all duration-300 hover:shadow-[0_4px_20px_rgba(255,107,53,0.05)]"
                               >
                                 {/* Badge Desconto */}
-                                <div className="absolute top-2.5 right-2.5 z-10 bg-red-600 text-white font-bold text-[10px] sm:text-xs px-2 py-1 rounded-lg">
-                                  -{discount}%
-                                </div>
+                                {discount > 0 && (
+                                  <div className="absolute top-2.5 right-2.5 z-10 bg-red-600 text-white font-bold text-[10px] sm:text-xs px-2 py-1 rounded-lg">
+                                    -{discount}%
+                                  </div>
+                                )}
 
                                 {/* Image */}
                                 <div className="w-full aspect-square bg-zinc-950 rounded-xl mb-3 relative overflow-hidden flex items-center justify-center">
@@ -348,6 +349,9 @@ export function CategoriesModal() {
                                     src={product.imageUrl}
                                     alt={product.name}
                                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = "/placeholder.webp";
+                                    }}
                                   />
                                 </div>
 
@@ -359,12 +363,14 @@ export function CategoriesModal() {
                                   <div className="mt-auto pt-2 border-t border-zinc-800/50 flex flex-col">
                                     {price > 0 ? (
                                       <>
-                                        <span className="text-zinc-500 text-[10px] line-through font-normal">
-                                          {new Intl.NumberFormat("pt-BR", {
-                                            style: "currency",
-                                            currency: "BRL",
-                                          }).format(originalPrice)}
-                                        </span>
+                                        {discount > 0 && (
+                                          <span className="text-zinc-500 text-[10px] line-through font-normal">
+                                            {new Intl.NumberFormat("pt-BR", {
+                                              style: "currency",
+                                              currency: "BRL",
+                                            }).format(originalPrice)}
+                                          </span>
+                                        )}
                                         <span className="text-sm sm:text-base font-bold text-white tracking-tight">
                                           {new Intl.NumberFormat("pt-BR", {
                                             style: "currency",

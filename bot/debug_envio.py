@@ -25,7 +25,7 @@ produto_teste = {
     'name': 'Ar Condicionado Split Inverter Philco PAC12QC 12000 BTUs',
     'category': 'Casa e Eletrodomésticos',
     'description': 'Oferta na loja Magalu no Promobit\n🎟️ CUPOM: PAC12QC',
-    'imageUrl': 'https://via.placeholder.com/800x1000',
+    'imageUrl': '/placeholder.webp',
     'price': 1999.00,
     'links': {'magalu': 'https://www.promobit.com.br/oferta/ar-condicionado-split-inverter-philco-pac12qc-12000-btus-qf-220v-1234'},
     'storeName': 'Magalu'

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { validateApiKey } from '@/lib/auth';
+import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 
 export async function POST(request: Request) {
-  // Validar API Key
-  if (!validateApiKey(request)) {
+  // Validar assinatura do Webhook
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }
@@ -51,10 +51,10 @@ export async function POST(request: Request) {
 
 // Endpoint para criar múltiplos cupons de uma vez
 export async function PUT(request: Request) {
-  // Validar API Key
-  if (!validateApiKey(request)) {
+  // Validar assinatura do Webhook
+  if (!await validateWebhookSignature(request)) {
     return NextResponse.json(
-      { error: 'Não autorizado. API key inválida.' },
+      { error: 'Não autorizado. Assinatura do webhook inválida.' },
       { status: 401 }
     );
   }

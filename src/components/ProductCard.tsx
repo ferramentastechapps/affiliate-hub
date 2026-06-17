@@ -24,7 +24,7 @@ type ProductCardProps = {
 
 export function ProductCard({ product, onClick }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
-  const fallbackImage = "https://via.placeholder.com/800x1000/18181b/71717a?text=Imagem+Indisponível";
+  const fallbackImage = "/placeholder.webp";
 
   return (
     <motion.div

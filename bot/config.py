@@ -10,6 +10,7 @@ load_dotenv(override=True)  # fallback: .env no diretório atual (sobrescreve se
 # Affiliate Hub
 AFFILIATE_HUB_URL = os.getenv('AFFILIATE_HUB_URL', 'http://localhost:3000')
 AFFILIATE_HUB_API_KEY = os.getenv('AFFILIATE_HUB_API_KEY')
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
 
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')

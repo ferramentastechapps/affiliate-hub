@@ -20,17 +20,14 @@ type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
 };
 
-function getSimulatedDiscount(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  return 15 + (Math.abs(hash) % 45);
-}
+
 
 export function CategoriesSection() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -59,6 +56,7 @@ export function CategoriesSection() {
           category: p.category,
           imageUrl: p.imageUrl,
           price: p.price,
+          originalPrice: p.originalPrice,
           description: p.description,
           coupons: p.coupons || [],
           createdAt: p.createdAt,
@@ -161,9 +159,11 @@ export function CategoriesSection() {
               {!loading && products.length > 0 && (
                 <div className="flex lg:grid lg:grid-cols-4 gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide lg:overflow-visible">
                   {products.map((product, index) => {
-                    const discount = getSimulatedDiscount(product.id);
                     const price = product.price || 0;
-                    const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
+                    const originalPrice = product.originalPrice || 0;
+                    const discount = (originalPrice > price && price > 0)
+                      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+                      : 0;
 
                     let mainPlatformText = "Link";
                     let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=64";
@@ -183,9 +183,11 @@ export function CategoriesSection() {
                         className="group cursor-pointer bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/80 hover:border-accent/50 rounded-3xl p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_-10px_var(--accent)] min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-start"
                       >
                         {/* Badge Desconto */}
-                        <div className="absolute top-4 right-4 z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white font-black text-sm px-3 py-1.5 rounded-xl border border-white/20 shadow-lg">
-                          -{discount}%
-                        </div>
+                        {discount > 0 && (
+                          <div className="absolute top-4 right-4 z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white font-black text-sm px-3 py-1.5 rounded-xl border border-white/20 shadow-lg">
+                            -{discount}%
+                          </div>
+                        )}
 
                         {/* Imagem */}
                         <div className="w-full aspect-[3/4] bg-zinc-900 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
@@ -193,6 +195,9 @@ export function CategoriesSection() {
                             src={product.imageUrl}
                             alt={product.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/placeholder.webp";
+                            }}
                           />
                           {/* Store badge — logo only */}
                           <div
@@ -209,7 +214,15 @@ export function CategoriesSection() {
                               boxShadow: '0 0 0 2px rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.4)',
                             }}
                           >
-                            <img src={mainPlatformLogo} alt={mainPlatformText} title={mainPlatformText} className="w-[18px] h-[18px] rounded-full object-contain" />
+                             <img 
+                              src={mainPlatformLogo} 
+                              alt={mainPlatformText} 
+                              title={mainPlatformText} 
+                              className="w-[18px] h-[18px] rounded-full object-contain" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.webp";
+                              }}
+                            />
                           </div>
                           {/* Badge cupom */}
                           {product.coupons && product.coupons.length > 0 && (
@@ -230,9 +243,11 @@ export function CategoriesSection() {
                           <div className="mt-auto pt-2 border-t border-zinc-800/50 flex flex-col">
                             {price > 0 ? (
                               <>
-                                <span className="text-zinc-500 text-xs line-through font-normal mb-0.5">
-                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                                </span>
+                                {discount > 0 && (
+                                  <span className="text-zinc-500 text-xs line-through font-normal mb-0.5">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                                  </span>
+                                )}
                                 <span className="text-xl font-bold text-white tracking-tight">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>

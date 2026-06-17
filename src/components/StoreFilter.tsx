@@ -30,17 +30,14 @@ type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
 };
 
-function getSimulatedDiscount(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  return 15 + (Math.abs(hash) % 45);
-}
+
 
 function getTimeAgo(dateString?: string | Date) {
   if (!dateString) return "há pouco";
@@ -86,6 +83,7 @@ export function StoreFilter() {
           category: p.category,
           imageUrl: p.imageUrl,
           price: p.price,
+          originalPrice: p.originalPrice,
           description: p.description,
           coupons: p.coupons || [],
           createdAt: p.createdAt,
@@ -203,6 +201,9 @@ export function StoreFilter() {
                     src="/mercado livre.png"
                     alt={store.label}
                     className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/placeholder.webp";
+                    }}
                   />
                 ) : (
                   <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
@@ -254,6 +255,9 @@ export function StoreFilter() {
                     src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=128`}
                     alt={activeStoreInfo?.label}
                     className="w-full h-full object-contain mix-blend-multiply"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/placeholder.webp";
+                    }}
                   />
                 </div>
                 <div>
@@ -285,9 +289,11 @@ export function StoreFilter() {
               {!loading && products.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                   {products.map((product, index) => {
-                    const discount = getSimulatedDiscount(product.id);
                     const price = product.price || 0;
-                    const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
+                    const originalPrice = product.originalPrice || 0;
+                    const discount = (originalPrice > price && price > 0)
+                      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+                      : 0;
 
                     let mainPlatformText = activeStoreInfo?.label || "Oferta";
                     let mainPlatformLogo = `https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=128`;
@@ -306,9 +312,11 @@ export function StoreFilter() {
                           {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
                           <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
                             <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                              <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                                -{discount}%
-                              </span>
+                              {discount > 0 && (
+                                <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                                  -{discount}%
+                                </span>
+                              )}
                               <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
                                 <Clock size={12} weight="bold" />
                                 {getTimeAgo(product.createdAt)}
@@ -319,6 +327,9 @@ export function StoreFilter() {
                               src={product.imageUrl}
                               alt={product.name}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.webp";
+                              }}
                             />
                           </div>
 
@@ -337,6 +348,9 @@ export function StoreFilter() {
                               alt={mainPlatformText}
                               title={mainPlatformText}
                               className="w-5 h-5 object-contain rounded-full"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.webp";
+                              }}
                             />
                           </div>
                         </div>
@@ -354,9 +368,11 @@ export function StoreFilter() {
                           <div className="mt-auto flex flex-col">
                             {price > 0 ? (
                               <>
-                                <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
-                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                                </span>
+                                {discount > 0 && (
+                                  <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                                  </span>
+                                )}
                                 <span className="text-base font-black text-[#ff334b]">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>

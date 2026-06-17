@@ -121,11 +121,6 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.promobit.com.br',
       },
-      // Placeholder genérico
-      {
-        protocol: 'https',
-        hostname: 'via.placeholder.com',
-      },
       // Permitir qualquer CDN comum
       {
         protocol: 'https',

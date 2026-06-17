@@ -110,7 +110,7 @@ class PromotionScraper:
                         imagem_raw = f"https://i.promobit.com.br{foto}" if foto.startswith('/') else foto
                         imagem_url = _melhorar_qualidade_imagem(imagem_raw)
                     else:
-                        imagem_url = 'https://via.placeholder.com/800x1000'
+                        imagem_url = '/placeholder.webp'
 
                     # Tentar pegar categoria do Promobit primeiro
                     categoria_promobit = offer.get('categoryName') or offer.get('category', {}).get('name')
@@ -325,7 +325,7 @@ class PromotionScraper:
                                 'name': nome[:200],
                                 'category': categoria,
                                 'description': descricao,
-                                'imageUrl': 'https://via.placeholder.com/800x1000',
+                                'imageUrl': '/placeholder.webp',
                                 'price': preco,
                                 'originalPrice': preco_original,
                                 'links': links,
@@ -442,7 +442,7 @@ class PromotionScraper:
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Pelando via {loja}",
-                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'originalPrice': preco_original,
                         'links': links,
@@ -520,7 +520,7 @@ class PromotionScraper:
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Gatry via {loja}",
-                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'links': links,
                         'storeName': loja
@@ -579,7 +579,7 @@ class PromotionScraper:
                     
                     # Imagem
                     img_elem = card.select_one('img')
-                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    imagem_url = '/placeholder.webp'
                     if img_elem:
                         imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
                         if imagem_url.startswith('//'):
@@ -673,7 +673,7 @@ class PromotionScraper:
                     
                     # Imagem
                     img_elem = card.select_one('img')
-                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    imagem_url = '/placeholder.webp'
                     if img_elem:
                         imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
                         if imagem_url.startswith('//'):
@@ -791,7 +791,7 @@ class PromotionScraper:
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Hardmob via {loja}",
-                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'links': links,
                         'storeName': loja
@@ -960,7 +960,7 @@ class PromotionScraper:
                     preco = float(promo.get('price', 0))
                     
                     foto = promo.get('image')
-                    imagem_url = _melhorar_qualidade_imagem(foto) if foto else 'https://via.placeholder.com/800x1000'
+                    imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
 
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
@@ -1063,7 +1063,7 @@ class PromotionScraper:
                     nome = offer.get('name', 'Sem título')
                     preco = offer.get('price')
                     preco_original = offer.get('priceFrom')
-                    imagem_url = _melhorar_qualidade_imagem(offer.get('thumbnail') or '') or 'https://via.placeholder.com/800x1000'
+                    imagem_url = _melhorar_qualidade_imagem(offer.get('thumbnail') or '') or '/placeholder.webp'
                     link_afiliado = offer.get('link')
                     
                     store_info = offer.get('store', {})
@@ -1179,7 +1179,7 @@ class PromotionScraper:
         if preco_elem:
             preco = self._extrair_preco(preco_elem.text.strip())
 
-        imagem_url = 'https://via.placeholder.com/800x1000'
+        imagem_url = '/placeholder.webp'
         img_elem = oferta.find('img', class_='thread-image')
         if img_elem:
             imagem_url = img_elem.get('src', '') or img_elem.get('data-src', '')

@@ -401,6 +401,9 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                       alt={img.title || "Imagem alternativa"}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.webp";
+                      }}
                     />
                   </button>
                 ))}

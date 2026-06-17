@@ -15,7 +15,7 @@ def test_criar_produto():
     produto_teste = {
         "name": "TESTE - Produto para verificar ID",
         "category": "Teste",
-        "imageUrl": "https://via.placeholder.com/300",
+        "imageUrl": "/placeholder.webp",
         "price": 99.99,
         "description": "Produto de teste para verificar se o ID está sendo retornado",
         "links": {

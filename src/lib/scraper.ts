@@ -93,9 +93,9 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
       throw new Error('Nome do produto não encontrado ou inválido');
     }
     
-    if (!imageUrl || !imageUrl.startsWith('http')) {
+    if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp')) {
       console.warn('⚠️ Imagem não encontrada, usando placeholder');
-      imageUrl = 'https://via.placeholder.com/800x1000/18181b/71717a?text=Sem+Imagem';
+      imageUrl = '/placeholder.webp';
     }
     
     return {
