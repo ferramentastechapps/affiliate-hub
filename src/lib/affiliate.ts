@@ -349,7 +349,7 @@ export function detectPlatform(url: string): string | null {
   if (urlLower.includes('mercadolivre') || urlLower.includes('mercadofree') || urlLower.includes('meli.la')) return 'mercadoLivre';
   if (urlLower.includes('tiktok.com')) return 'tiktok';
   if (urlLower.includes('netshoes')) return 'netshoes';
-  if (urlLower.includes('magazineluiza') || urlLower.includes('magalu') || urlLower.includes('magazinevoce')) return 'magalu';
+  if (urlLower.includes('magazineluiza') || urlLower.includes('magalu') || urlLower.includes('magazinevoce') || urlLower.includes('influenciadormagalu')) return 'magalu';
   if (urlLower.includes('kabum')) return 'kabum';
   
   return null;
@@ -559,10 +559,10 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
       return applyTemplate(templateEnv, details, undefined, magaluShop);
     }
     if (magaluShop) {
-      // Se a URL já é magazinevoce.com.br (ex: link de afiliado do Promobit com outro shop),
+      // Se a URL já é magazinevoce.com.br ou influenciadormagalu.com.br (ex: link de afiliado do Promobit com outro shop),
       // substituir o primeiro segmento do path pelo nosso shop em vez de prependar.
       // Exemplo errado: magazinevoce.com.br/shopPromobit/p/123 → não virar /nossoshop/shopPromobit/p/123
-      if (details.hostname.includes('magazinevoce')) {
+      if (details.hostname.includes('magazinevoce') || details.hostname.includes('influenciadormagalu')) {
         // Path: /shopAntigo/p/produto → /nossoshop/p/produto
         const pathParts = details.path.split('/').filter(Boolean); // remove segmentos vazios
         if (pathParts.length > 0) {

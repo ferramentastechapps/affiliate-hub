@@ -30,7 +30,7 @@ def infer_platform_from_url(url: str) -> str:
         return 'tiktok'
     if 'netshoes' in url_lower:
         return 'netshoes'
-    if 'magazineluiza' in url_lower or 'magalu' in url_lower:
+    if 'magazineluiza' in url_lower or 'magalu' in url_lower or 'magazinevoce' in url_lower or 'influenciadormagalu' in url_lower:
         return 'magalu'
     if 'kabum' in url_lower:
         return 'kabum'
