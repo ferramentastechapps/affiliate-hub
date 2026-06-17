@@ -193,10 +193,10 @@ export async function POST(request: Request) {
             // A chamada ao publishToGroup envia o existingProduct com os dados atualizados de preço.
             publishToGroup(existingProduct, activePlatform, publishLink).then((success) => {
               if(success) {
-                 console.log(`🚀 [Repost Telegram] Oferta repostada via Webhook (isFixed=true): ${existingProduct.name}`);
+                 console.log(`🚀 [Repost Telegram] Oferta repostada via Webhook (isFixed=true): ${existingProduct?.name}`);
               }
             }).catch(e => {
-               console.error(`Falha ao repostar no Telegram para o produto ${existingProduct.id}:`, e);
+               console.error(`Falha ao repostar no Telegram para o produto ${existingProduct?.id}:`, e);
             });
           }
         }
@@ -484,10 +484,10 @@ export async function PUT(request: Request) {
               if (publishLink) {
                 publishToGroup(updatedProduct, activePlatform, publishLink).then((success) => {
                   if(success) {
-                     console.log(`🚀 [Repost Telegram Lote] Oferta repostada via Webhook (isFixed=true): ${updatedProduct.name}`);
+                     console.log(`🚀 [Repost Telegram Lote] Oferta repostada via Webhook (isFixed=true): ${updatedProduct?.name}`);
                   }
                 }).catch(e => {
-                   console.error(`Falha ao repostar no Telegram para o produto ${updatedProduct.id}:`, e);
+                   console.error(`Falha ao repostar no Telegram para o produto ${updatedProduct?.id}:`, e);
                 });
               }
             }
