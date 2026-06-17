@@ -430,11 +430,11 @@ class TelegramNotifier:
             
         linhas.append("")
         
-        # Gerar link curto usando o encurtador interno
+        # Link para a página do produto no site (não mais link direto de afiliado)
         produto_id = produto.get('id')
         if produto_id:
-            link_curto = f"{base_url}/api/go/{produto_id}"
-            linhas.append(f"🔗 {link_curto}")
+            link_produto = f"{base_url}/produto/{produto_id}"
+            linhas.append(f"🔗 {link_produto}")
         else:
             linhas.append(f"🔗 {affiliate_link}")
         
