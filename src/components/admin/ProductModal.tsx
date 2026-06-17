@@ -31,6 +31,8 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
   const [searchingImages, setSearchingImages] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [telegramLoading, setTelegramLoading] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showAlternativeImages, setShowAlternativeImages] = useState(true);
 
   useEffect(() => {
     if (product) {
@@ -132,6 +134,34 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       alert("Erro ao buscar dados do produto");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: form
+      });
+      const data = await res.json();
+      if (res.ok && data.imageUrl) {
+        setFormData(prev => ({ ...prev, imageUrl: data.imageUrl }));
+      } else {
+        alert(data.error || "Erro ao fazer upload da imagem");
+      }
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      alert("Erro ao fazer upload da imagem");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
     }
   }
 
@@ -280,8 +310,8 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
   const isPending = product && product.status === "pending";
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center sm:p-4">
+      <div className="bg-zinc-900 sm:border border-zinc-800 sm:rounded-2xl max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 p-6 flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold">
@@ -373,68 +403,93 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
 
           <div>
             <label className="block text-sm font-medium mb-2">URL da Imagem *</label>
-            <input
-              type="url"
-              required
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-            />
+            <div className="flex gap-2">
+              <input
+                type="url"
+                required
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                className="flex-1 w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
+              />
+              <label className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 cursor-pointer px-4 py-2 rounded-lg font-medium transition-colors text-sm shrink-0 whitespace-nowrap">
+                {uploadingImage ? "Enviando..." : "Fazer Upload"}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload} 
+                  disabled={uploadingImage}
+                />
+              </label>
+            </div>
           </div>
 
           {/* Grade de Imagens Alternativas (Opção C) */}
           <div className="bg-zinc-850/50 border border-zinc-800 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-zinc-300">Imagens Alternativas (Opção C)</span>
-              {searchingImages && <span className="text-xs text-accent animate-pulse">Buscando imagens...</span>}
-            </div>
-
-            {alternativeImages.length > 0 ? (
-              <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1.5 bg-zinc-950/70 border border-zinc-800 rounded-lg">
-                {alternativeImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, imageUrl: img.image }))}
-                    className={`aspect-square relative rounded-md overflow-hidden bg-zinc-900 border transition-all hover:scale-[1.03] ${
-                      formData.imageUrl === img.image
-                        ? 'border-accent ring-1 ring-accent'
-                        : 'border-zinc-800 hover:border-zinc-700'
-                    }`}
-                  >
-                    <img
-                      src={img.thumbnail || img.image}
-                      alt={img.title || "Imagem alternativa"}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.webp";
-                      }}
-                    />
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                {searchingImages && <span className="text-xs text-accent animate-pulse">Buscando imagens...</span>}
+                <button
+                  type="button"
+                  onClick={() => setShowAlternativeImages(!showAlternativeImages)}
+                  className="text-xs text-zinc-400 hover:text-white underline decoration-zinc-600 underline-offset-2"
+                >
+                  {showAlternativeImages ? "Ocultar / Apagar" : "Mostrar"}
+                </button>
               </div>
-            ) : (
-              <p className="text-xs text-zinc-500 italic">Nenhuma imagem alternativa encontrada.</p>
-            )}
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Palavra-chave para buscar imagens..."
-                className="flex-1 bg-zinc-900 text-xs border border-zinc-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent"
-              />
-              <button
-                type="button"
-                onClick={() => handleSearchImages(searchQuery)}
-                disabled={searchingImages || !searchQuery}
-                className="bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:text-zinc-600 text-xs text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
-              >
-                Buscar
-              </button>
             </div>
+
+            {showAlternativeImages && (
+              <>
+                {alternativeImages.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1.5 bg-zinc-950/70 border border-zinc-800 rounded-lg">
+                    {alternativeImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageUrl: img.image }))}
+                        className={`aspect-square relative rounded-md overflow-hidden bg-zinc-900 border transition-all hover:scale-[1.03] ${
+                          formData.imageUrl === img.image
+                            ? 'border-accent ring-1 ring-accent'
+                            : 'border-zinc-800 hover:border-zinc-700'
+                        }`}
+                      >
+                        <img
+                          src={img.thumbnail || img.image}
+                          alt={img.title || "Imagem alternativa"}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/placeholder.webp";
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500 italic">Nenhuma imagem alternativa encontrada.</p>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Palavra-chave para buscar imagens..."
+                    className="flex-1 bg-zinc-900 text-xs border border-zinc-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSearchImages(searchQuery)}
+                    disabled={searchingImages || !searchQuery}
+                    className="bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:text-zinc-600 text-xs text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  >
+                    Buscar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           <div>
