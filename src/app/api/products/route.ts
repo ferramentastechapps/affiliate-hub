@@ -1,12 +1,27 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get('status');
+
+    let whereClause: any = {
+      status: { in: ['active', 'approved'] } // Default: apenas aprovados/ativos
+    };
+
+    if (statusParam === 'all') {
+      whereClause = {};
+    } else if (statusParam === 'pending') {
+      whereClause = { status: 'pending' };
+    } else if (statusParam === 'rejected') {
+      whereClause = { status: 'rejected' };
+    } else if (statusParam === 'active') {
+      whereClause = { status: { in: ['active', 'approved'] } };
+    }
+
     const products = await prisma.product.findMany({
-      where: {
-        status: { in: ['active', 'approved'] } // Produtos aprovados
-      },
+      where: whereClause,
       include: {
         links: true,
         coupons: {
