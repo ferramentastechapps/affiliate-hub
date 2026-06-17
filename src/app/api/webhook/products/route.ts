@@ -454,7 +454,7 @@ export async function PUT(request: Request) {
             }
 
             // Atualizar preço atual no produto
-            await prisma.product.update({
+            const updatedProduct = await prisma.product.update({
               where: { id: existingProduct.id },
               data: { 
                 price: parseFloat(productData.price),
