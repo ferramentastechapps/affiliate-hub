@@ -13,6 +13,7 @@ datasource db {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Product {
   id          String   @id @default(cuid())
+  shortId     Int      @unique @default(autoincrement()) // ID numérico curto para URLs
   name        String
   category    String
   description String?  // URLs e textos longos
@@ -39,6 +40,7 @@ model Product {
   @@index([createdAt])
   @@index([status])
   @@index([externalId])
+  @@index([shortId])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

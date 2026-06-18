@@ -430,13 +430,19 @@ class TelegramNotifier:
             
         linhas.append("")
         
-        # Link para a página do produto no site (não mais link direto de afiliado)
-        produto_id = produto.get('id')
-        if produto_id:
-            link_produto = f"{base_url}/produto/{produto_id}"
+        # Link para a página do produto no site usando shortId (número)
+        short_id = produto.get('shortId')
+        if short_id:
+            link_produto = f"{base_url}/produto/{short_id}"
             linhas.append(f"🔗 {link_produto}")
         else:
-            linhas.append(f"🔗 {affiliate_link}")
+            # Fallback para o ID longo caso shortId não exista
+            produto_id = produto.get('id')
+            if produto_id:
+                link_produto = f"{base_url}/produto/{produto_id}"
+                linhas.append(f"🔗 {link_produto}")
+            else:
+                linhas.append(f"🔗 {affiliate_link}")
         
         mensagem = "\n".join(linhas)
 
