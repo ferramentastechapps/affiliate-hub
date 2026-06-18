@@ -302,6 +302,8 @@ export async function POST(request: Request) {
       platform: targetPlatform,
       affiliateLink: finalAffiliateLink,
       product: {
+        id: product.id,
+        shortId: product.shortId,
         name: product.name,
         price: product.price,
         originalPrice: product.originalPrice,
