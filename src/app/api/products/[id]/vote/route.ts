@@ -3,10 +3,11 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const votes = await prisma.productVote.findMany({
-      where: { productId: params.id }
+      where: { productId: id }
     });
 
     const likes = votes.filter(v => v.type === 'LIKE').length;
@@ -19,8 +20,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { userId, type } = body; // type is 'LIKE' or 'DISLIKE' or 'REMOVE'
 
@@ -30,7 +32,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (type === 'REMOVE') {
       await prisma.productVote.deleteMany({
-        where: { productId: params.id, userId }
+        where: { productId: id, userId }
       });
       return NextResponse.json({ success: true, message: "Voto removido" });
     }
@@ -39,13 +41,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const vote = await prisma.productVote.upsert({
       where: {
         productId_userId: {
-          productId: params.id,
+          productId: id,
           userId: userId
         }
       },
       update: { type },
       create: {
-        productId: params.id,
+        productId: id,
         userId,
         type
       }

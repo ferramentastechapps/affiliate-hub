@@ -3,8 +3,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { userId } = body;
 
@@ -15,13 +16,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const alert = await prisma.productAlert.upsert({
       where: {
         productId_userId: {
-          productId: params.id,
+          productId: id,
           userId: userId
         }
       },
       update: {}, // Already exists, do nothing
       create: {
-        productId: params.id,
+        productId: id,
         userId
       }
     });
