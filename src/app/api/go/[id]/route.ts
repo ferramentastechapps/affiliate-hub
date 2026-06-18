@@ -13,9 +13,10 @@ export async function GET(
     const userAgent = request.headers.get('user-agent') || 'unknown';
     const referrer = request.headers.get('referer') || 'unknown';
 
-    // 1. Buscar o produto e os links
+    // 1. Buscar o produto pelo shortId (número) ou id (string)
+    const isNumeric = /^\d+$/.test(id);
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: isNumeric ? { shortId: parseInt(id) } : { id },
       include: { links: true }
     });
 
@@ -26,7 +27,7 @@ export async function GET(
     // 2. Registrar o log do clique
     await prisma.clickLog.create({
       data: {
-        productId: id,
+        productId: product.id,
         channel,
         userAgent: userAgent.substring(0, 255), // Limita tamanho por segurança
         referrer: referrer.substring(0, 255)
@@ -35,7 +36,7 @@ export async function GET(
 
     // 3. Incrementar o contador de cliques geral
     await prisma.product.update({
-      where: { id },
+      where: { id: product.id },
       data: { clicks: { increment: 1 } }
     });
 
