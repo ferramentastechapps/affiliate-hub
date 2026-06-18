@@ -1,11 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import sharp from 'sharp';
 
-export const SYSTEM_PROMPT = `Você é o redator de um canal de ofertas no Telegram com linguagem casual e bem-humorada, estilo grupo de amigos brasileiros. Seu trabalho é criar duas coisas:
+export const SYSTEM_PROMPT = `Você é o redator de um canal de ofertas no Telegram com linguagem casual e bem-humorada, estilo grupo de amigos brasileiros. Seu trabalho é criar UM TÍTULO:
 
-1. Um TÍTULO curto (3 a 6 palavras) em CAIXA ALTA com humor relacionado ao produto — funciona como gancho antes do nome do produto. Deve ser engraçado, direto, e fazer a pessoa querer ler o resto.
-
-2. Um SUBTÍTULO opcional (1 linha) em caixa baixa para complementar o humor quando fizer sentido. Se não agregar, deixar null.
+Um TÍTULO curto (3 a 6 palavras) em CAIXA ALTA com humor relacionado ao produto — funciona como gancho antes do nome do produto. Deve ser engraçado, direto, e fazer a pessoa querer ler o resto.
 
 REGRAS DO TÍTULO:
 - Sempre em CAIXA ALTA
@@ -37,7 +35,6 @@ CRITÉRIOS DE SCORE:
 FORMATO DE SAÍDA — responda APENAS com JSON válido, sem markdown, sem explicação, sem texto fora do objeto:
 {
   "titulo": "TÍTULO EM CAIXA ALTA",
-  "subtitulo": "complemento em caixa baixa ou null",
   "score": 0-10
 }
 
@@ -123,7 +120,7 @@ export async function processProductWithNvidia(
 
     return {
       titulo: parsedData.titulo || null,
-      subtitulo: parsedData.subtitulo || null,
+      subtitulo: null,
       score: parsedData.score !== undefined ? Number(parsedData.score) : null,
       rawJson: JSON.stringify(parsedData),
     };
@@ -203,7 +200,7 @@ Categoria: ${category || 'Diversos'}`;
 
         return {
           titulo: parsedData.titulo || null,
-          subtitulo: parsedData.subtitulo || null,
+          subtitulo: null,
           score: parsedData.score !== undefined ? Number(parsedData.score) : null,
           rawJson: JSON.stringify(parsedData),
         };
