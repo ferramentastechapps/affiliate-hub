@@ -198,9 +198,6 @@ export function ProductDetail({ product }: { product: Product }) {
                   <span className="text-4xl font-black text-white tracking-tighter">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                   </span>
-                  <span className="text-green-400 font-bold text-xs sm:text-sm px-3 py-1.5 bg-green-400/10 rounded-lg self-start sm:self-auto sm:mb-1.5">
-                    em até 10x sem juros
-                  </span>
                 </div>
               </div>
             ) : (
