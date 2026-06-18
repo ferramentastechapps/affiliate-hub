@@ -7,8 +7,6 @@ const withPWA = withPWAInit({
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
-  register: true,
-  skipWaiting: true,
   workboxOptions: {
     disableDevLogs: true,
     cleanupOutdatedCaches: true,
