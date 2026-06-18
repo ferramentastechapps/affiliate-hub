@@ -43,7 +43,7 @@ export function AuthButton({ onOpenAuth }: AuthButtonProps) {
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent flex items-center justify-center text-white font-bold text-xs sm:text-sm">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full btn-3d flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md">
               {getInitials(user.name)}
             </div>
           )}

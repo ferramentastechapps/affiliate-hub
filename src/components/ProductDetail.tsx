@@ -208,7 +208,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
             <button
               onClick={handlePlatformClick}
-              className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)] min-h-[56px]"
+              className="w-full flex items-center justify-center gap-2 group btn-3d text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-[20px] min-h-[56px]"
             >
               {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" ? "Ver Cupom e Ir para Loja" : `Ir para ${platformName}`}
               <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />

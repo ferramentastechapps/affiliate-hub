@@ -252,7 +252,7 @@ export function DailyDeals() {
             onClick={() => setFilterType(filter.key as any)}
             className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${
               filterType === filter.key
-                ? 'bg-accent text-black'
+                ? 'btn-3d text-white'
                 : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
             }`}
           >
@@ -435,7 +435,7 @@ export function DailyDeals() {
         <div className="mt-8 flex justify-center">
           <button
             onClick={() => setVisibleCount(prev => prev + 10)}
-            className="group flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm md:text-base py-3 px-8 rounded-xl transition-all shadow-lg min-h-[48px]"
+            className="btn-3d group flex items-center justify-center gap-2 font-semibold text-sm md:text-base py-3 px-8 rounded-[20px] shadow-lg min-h-[48px]"
           >
             Ver mais {Math.min(10, filteredProducts.length - visibleCount)} produtos
           </button>
