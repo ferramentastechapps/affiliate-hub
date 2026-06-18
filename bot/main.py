@@ -48,6 +48,8 @@ class PromotionBot:
         self._load_state()
         
     def _load_state(self):
+        self.produtos_enviados = set()
+        self.cupons_enviados = set()
         self.fila_grupo = []
         self.ultimo_envio_grupo = 0
         try:
