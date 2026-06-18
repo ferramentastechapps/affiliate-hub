@@ -3,10 +3,11 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const comments = await prisma.comment.findMany({
-      where: { productId: params.id },
+      where: { productId: id },
       orderBy: { createdAt: 'desc' },
       include: {
         user: { select: { name: true, image: true } }
@@ -20,8 +21,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { text, userId, guestName } = body;
 
@@ -32,7 +34,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const comment = await prisma.comment.create({
       data: {
         text,
-        productId: params.id,
+        productId: id,
         userId: userId || null,
         guestName: guestName || null
       },
