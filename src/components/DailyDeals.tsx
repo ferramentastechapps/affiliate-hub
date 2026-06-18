@@ -343,11 +343,11 @@ export function DailyDeals() {
             return (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 20, rotateX: 5 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: (index % 4) * 0.05, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedProduct(product)}
-                className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
+                className="group cursor-pointer glass-3d-card rounded-[20px] overflow-hidden flex flex-col relative z-0"
               >
                 {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
                 <div className="w-full aspect-square relative">
@@ -375,13 +375,14 @@ export function DailyDeals() {
                     />
                   </div>
 
-                  {/* Overlapping Brand Badge — Logo only, larger and clean */}
+                  {/* Overlapping Brand Badge — Premium 3D Pin */}
                   <div 
-                    className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full bg-white shadow-xl"
+                    className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full bg-white transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-110"
                     style={{
                       width: '56px',
                       height: '56px',
-                      boxShadow: '0 0 0 3px #18181b, 0 4px 20px rgba(0,0,0,0.4)',
+                      boxShadow: 'inset 0 4px 8px rgba(255,255,255,0.8), inset 0 -4px 8px rgba(0,0,0,0.1), 0 10px 20px -5px rgba(0,0,0,0.9), 0 0 0 2px rgba(255,255,255,0.1)',
+                      transformStyle: 'preserve-3d',
                     }}
                   >
                     <img 
