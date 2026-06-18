@@ -51,6 +51,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [visibleRelatedCount, setVisibleRelatedCount] = useState(10);
   const [showCouponModal, setShowCouponModal] = useState(false);
 
   // Carrega produtos relacionados e dados de interação ao abrir a modal
@@ -62,8 +63,8 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
         .then(res => res.json())
         .then(data => {
             if (Array.isArray(data)) {
-                // Remove o produto atual e seleciona até 4
-                const filtered = data.filter((p: any) => p.id !== product.id).slice(0, 4);
+                // Remove o produto atual
+                const filtered = data.filter((p: any) => p.id !== product.id);
                 setRelatedProducts(filtered);
             }
         })
@@ -91,6 +92,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
 
       // Reset alert state if a new product is opened
       setHasAlert(false);
+      setVisibleRelatedCount(10);
 
     } else {
       document.body.style.overflow = "unset";
@@ -490,7 +492,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
                 <div className="border-t border-white/5 mt-4 pt-6 sm:pt-8 px-4 sm:px-8 bg-black/20">
                   <h4 className="text-base sm:text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    {relatedProducts.map((relItem) => (
+                    {relatedProducts.slice(0, visibleRelatedCount).map((relItem) => (
                        <button 
                          key={relItem.id}
                          onClick={() => handleOpenRelated(relItem)}
@@ -517,6 +519,17 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
                        </button>
                     ))}
                   </div>
+                  
+                  {visibleRelatedCount < relatedProducts.length && (
+                    <div className="flex justify-center mt-2 mb-2">
+                      <button
+                        onClick={() => setVisibleRelatedCount(prev => prev + 10)}
+                        className="text-white border border-white/10 hover:bg-white/5 font-semibold text-xs py-2.5 px-6 rounded-lg transition-all"
+                      >
+                        Ver mais ofertas ({relatedProducts.length - visibleRelatedCount})
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
