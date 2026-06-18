@@ -434,10 +434,22 @@ export function DailyDeals() {
         </div>
       )}
 
+      {visibleCount < filteredProducts.length && (
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={() => setVisibleCount(prev => prev + 10)}
+            className="group flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm md:text-base py-3 px-8 rounded-xl transition-all shadow-lg min-h-[48px]"
+          >
+            Ver mais {Math.min(10, filteredProducts.length - visibleCount)} produtos
+          </button>
+        </div>
+      )}
+
       <PlatformModal 
         isOpen={!!selectedProduct} 
-        onClose={() => setSelectedProduct(null)}
-        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)} 
+        product={selectedProduct} 
+        onSelectRelated={setSelectedProduct}
       />
     </section>
   );

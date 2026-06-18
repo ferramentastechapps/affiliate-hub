@@ -21,7 +21,8 @@ export type ProductLinks = {
 type PlatformModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  product: any; // Receives the full product object from DailyDeals or ProductGrid
+  product: any;
+  onSelectRelated?: (product: any) => void;
 };
 
 // Tracking fake function
@@ -40,7 +41,7 @@ function trackAffiliateClick(platform: string, productName: string, url: string)
   }
 }
 
-export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) {
+export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: PlatformModalProps) {
   const { user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -214,6 +215,11 @@ export function PlatformModal({ isOpen, onClose, product }: PlatformModalProps) 
   }
 
   function handleOpenRelated(relatedItem: any) {
+    if (onSelectRelated) {
+      onSelectRelated(relatedItem);
+      return;
+    }
+    
     if(!relatedItem?.links) return;
     
     let target = "";

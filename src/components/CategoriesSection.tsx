@@ -265,6 +265,7 @@ export function CategoriesSection() {
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
+        onSelectRelated={setSelectedProduct}
       />
     </section>
   );

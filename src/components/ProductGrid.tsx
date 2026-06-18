@@ -228,8 +228,9 @@ export function ProductGrid() {
 
       <PlatformModal 
         isOpen={!!selectedProduct} 
-        onClose={() => setSelectedProduct(null)}
-        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)} 
+        product={selectedProduct} 
+        onSelectRelated={setSelectedProduct}
       />
     </section>
   );
