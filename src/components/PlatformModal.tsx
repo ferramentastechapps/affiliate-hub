@@ -323,7 +323,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
               </div>
 
 
-              <div className="p-6 sm:p-8 pb-4">
+              <div className="p-4 sm:p-8 pb-4">
                 <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
                 <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-4 leading-snug">
                   {product.name}
@@ -361,37 +361,37 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
                 )}
 
                 {/* Action Bar (Alert, Likes, Share) */}
-                <div className="flex items-center gap-2 mb-6 w-full overflow-x-auto pb-2 hidden-scrollbar">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-6 w-full overflow-x-auto pb-2 hidden-scrollbar">
                   <button 
                     onClick={handleAlert}
-                    className={`flex-1 min-w-[70px] py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${hasAlert ? 'bg-accent/20 text-accent border border-accent/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
+                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${hasAlert ? 'bg-accent/20 text-accent border border-accent/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
                   >
                     <Bell size={18} weight={hasAlert ? "fill" : "regular"} />
-                    <span className="text-[10px] font-semibold">{hasAlert ? 'Alerta Ativo' : 'Alerta'}</span>
+                    <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">{hasAlert ? 'Alerta Ativo' : 'Alerta'}</span>
                   </button>
 
                   <button 
                     onClick={() => handleVote('LIKE')}
-                    className={`flex-1 min-w-[70px] py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${votes.userVote === 'LIKE' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
+                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${votes.userVote === 'LIKE' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
                   >
                     <ThumbsUp size={18} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
-                    <span className="text-[10px] font-semibold">{votes.likes > 0 ? votes.likes : 'Curtir'}</span>
+                    <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">{votes.likes > 0 ? votes.likes : 'Curtir'}</span>
                   </button>
 
                   <button 
                     onClick={() => handleVote('DISLIKE')}
-                    className={`flex-1 min-w-[70px] py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${votes.userVote === 'DISLIKE' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
+                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${votes.userVote === 'DISLIKE' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
                   >
                     <ThumbsDown size={18} weight={votes.userVote === 'DISLIKE' ? "fill" : "regular"} />
-                    <span className="text-[10px] font-semibold">{votes.dislikes > 0 ? votes.dislikes : 'Não Curtir'}</span>
+                    <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">{votes.dislikes > 0 ? votes.dislikes : 'Não Curtir'}</span>
                   </button>
 
                   <button 
                     onClick={handleShare}
-                    className="flex-1 min-w-[70px] py-2 px-2 rounded-xl flex flex-col items-center justify-center gap-1 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] transition-colors border border-[#25D366]/20"
+                    className="flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] transition-colors border border-[#25D366]/20"
                   >
                     <WhatsappLogo size={18} />
-                    <span className="text-[10px] font-semibold">Mandar</span>
+                    <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">Mandar</span>
                   </button>
                 </div>
 
