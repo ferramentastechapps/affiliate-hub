@@ -47,8 +47,7 @@ async function processProductAffiliates(productData: { links?: Record<string, st
 
   return {
     links: Object.keys(generatedLinks).length > 0 ? generatedLinks : null,
-    status: hasAffiliate ? 'active' : 'pending',
-    isAggregatorFailed
+    status: hasAffiliate ? 'active' : 'pending'
   };
 }
 
@@ -208,6 +207,7 @@ export async function POST(request: Request) {
         message: 'Produto já cadastrado, preço atualizado no histórico.',
         product: {
           id: existingProduct.id,
+          shortId: existingProduct.shortId,  // ✅ ADICIONAR shortId
           name: existingProduct.name,
           category: existingProduct.category,
           description: existingProduct.description,
@@ -223,14 +223,9 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
-    const { links: processedLinks, status: processedStatus, isAggregatorFailed } = await processProductAffiliates(body);
+    const { links: processedLinks, status: processedStatus } = await processProductAffiliates(body);
     
-    if (isAggregatorFailed) {
-      return NextResponse.json({
-        success: false,
-        error: 'Produto descartado: Link do agregador não pôde ser resolvido para um produto real (ex: vitrine ML bloqueada).'
-      }, { status: 400 });
-    }
+    // isAggregatorFailed removido - agora mantemos o link original para aprovação manual
 
     let finalStatus = body.status || processedStatus;
 
@@ -294,6 +289,7 @@ export async function POST(request: Request) {
       success: true,
       product: {
         id: product.id,
+        shortId: product.shortId,  // ✅ ADICIONAR shortId
         name: product.name,
         category: product.category,
         description: product.description,
@@ -496,15 +492,9 @@ export async function PUT(request: Request) {
           continue;
         }
 
-        const { links: processedLinks, status: processedStatus, isAggregatorFailed } = await processProductAffiliates(productData);
+        const { links: processedLinks, status: processedStatus } = await processProductAffiliates(productData);
         
-        if (isAggregatorFailed) {
-          errors.push({
-            product: productData.name,
-            error: 'Link do agregador não resolvível'
-          });
-          continue;
-        }
+        // isAggregatorFailed removido - mantemos links originais
 
         let finalStatus = productData.status || processedStatus;
 

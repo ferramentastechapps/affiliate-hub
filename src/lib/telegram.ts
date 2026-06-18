@@ -236,7 +236,17 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   }
   
   lines.push("");
-  lines.push(`🔗 ${affiliateLink}`);
+  
+  const shortId = product.shortId;
+  if (shortId) {
+    const linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${shortId}`;
+    lines.push(`🔗 ${linkProduto}`);
+  } else if (product.id) {
+    const linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${product.id}`;
+    lines.push(`🔗 ${linkProduto}`);
+  } else {
+    lines.push(`🔗 ${affiliateLink}`);
+  }
 
   const text = lines.join('\n');
   const imageUrl = product.enhancedImageUrl || product.imageUrl;

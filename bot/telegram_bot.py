@@ -423,6 +423,29 @@ class TelegramNotifier:
         linhas.append(f"{emoji} {nome}")
         linhas.append("")
         
+        # Adicionar nome da loja/plataforma
+        PLATAFORMA_EMOJIS = {
+            'amazon':      '🟠 Amazon',
+            'mercadoLivre':'🟡 Mercado Livre',
+            'shopee':      '🟠 Shopee',
+            'aliexpress':  '🔴 AliExpress',
+            'tiktok':      '⚫ TikTok Shop',
+            'netshoes':    '🟣 Netshoes',
+            'magalu':      '🔵 Magalu',
+            'kabum':       '🔵 Kabum',
+        }
+        
+        # Detectar a loja com base nos links do produto
+        loja_detectada = "🏪 Loja"
+        produto_links = produto.get('links', {}) or {}
+        for chave, label in PLATAFORMA_EMOJIS.items():
+            if produto_links.get(chave):
+                loja_detectada = label
+                break
+        
+        linhas.append(f"🏪 Loja: <b>{loja_detectada}</b>")
+        linhas.append("")
+        
         if preco_txt:
             linhas.append(preco_txt)
         if cupom_msg:
@@ -432,16 +455,21 @@ class TelegramNotifier:
         
         # Link para a página do produto no site usando shortId (número)
         short_id = produto.get('shortId')
+        print(f'🔍 [DEBUG] shortId do produto: {short_id}')
+        print(f'🔍 [DEBUG] ID do produto: {produto.get("id")}')
         if short_id:
             link_produto = f"{base_url}/produto/{short_id}"
+            print(f'✅ [DEBUG] Link CURTO gerado: {link_produto}')
             linhas.append(f"🔗 {link_produto}")
         else:
             # Fallback para o ID longo caso shortId não exista
             produto_id = produto.get('id')
             if produto_id:
                 link_produto = f"{base_url}/produto/{produto_id}"
+                print(f'⚠️ [DEBUG] Link LONGO gerado (shortId ausente): {link_produto}')
                 linhas.append(f"🔗 {link_produto}")
             else:
+                print(f'❌ [DEBUG] Sem ID, usando affiliate_link')
                 linhas.append(f"🔗 {affiliate_link}")
         
         mensagem = "\n".join(linhas)
