@@ -76,7 +76,7 @@ function getTimeAgo(dateString?: string | Date) {
 
 export function DailyDeals() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
@@ -86,6 +86,11 @@ export function DailyDeals() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [searchQuery, selectedCategory, filterType]);
 
   // Listen to search change custom event from Header
   useEffect(() => {
@@ -218,7 +223,7 @@ export function DailyDeals() {
     return null;
   }
 
-  const displayProducts = showAll ? filteredProducts : filteredProducts.slice(0, 8);
+  const displayProducts = filteredProducts.slice(0, visibleCount);
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
@@ -230,15 +235,6 @@ export function DailyDeals() {
           </h2>
           <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
         </div>
-        {filteredProducts.length > 8 && (
-          <button 
-            onClick={() => setShowAll(!showAll)}
-            className="text-accent text-xs md:text-sm font-semibold hover:text-accent/90 transition-colors whitespace-nowrap flex items-center gap-1"
-          >
-            {showAll ? "Ver menos" : `Ver todas (${filteredProducts.length})`}
-            <ArrowUpRight size={14} weight="bold" />
-          </button>
-        )}
       </div>
 
       {/* Abas de Filtro */}
