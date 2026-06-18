@@ -36,6 +36,10 @@ model Product {
   enhancedImageUrl String? // Imagem processada pela IA (Fundo/4K)
   isFixed     Boolean  @default(false) // Trava a imagem e os links para não serem sobrescritos pelo robô
   
+  comments    Comment[]
+  votes       ProductVote[]
+  alerts      ProductAlert[]
+
   @@index([category])
   @@index([createdAt])
   @@index([status])
@@ -157,7 +161,52 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  comments  Comment[]
+  votes     ProductVote[]
+  alerts    ProductAlert[]
+
   @@index([email])
   @@index([googleId])
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💬 COMENTÁRIOS E AVALIAÇÕES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model Comment {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, createdAt])
+}
+
+model ProductVote {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "LIKE" ou "DISLIKE"
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId])
+  @@index([productId])
+}
+
+model ProductAlert {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId])
+  @@index([productId])
+}
