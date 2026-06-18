@@ -226,7 +226,7 @@ export function DailyDeals() {
       <div className="flex items-center justify-between mb-3 md:mb-4">
         <div>
           <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
-            Promoções do dia 🔴
+            Promoções do dia
           </h2>
           <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
         </div>
@@ -244,12 +244,12 @@ export function DailyDeals() {
       {/* Abas de Filtro */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {[
-          { key: 'alertas', label: '🔔 Meus Alertas', icon: '🔔' },
-          { key: 'destaques', label: '⭐ Destaques', icon: '⭐' },
-          { key: 'recentes', label: '🆕 Recentes', icon: '🆕' },
-          { key: 'menorPreco', label: '💰 Menor Preço', icon: '💰' },
-          { key: 'pontuados', label: '🏆 Mais Pontuados', icon: '🏆' },
-          { key: 'baratinho', label: '🤑 Baratinho', icon: '🤑' },
+          { key: 'alertas', label: 'Meus Alertas' },
+          { key: 'destaques', label: 'Destaques' },
+          { key: 'recentes', label: 'Recentes' },
+          { key: 'menorPreco', label: 'Menor Preço' },
+          { key: 'pontuados', label: 'Mais Pontuados' },
+          { key: 'baratinho', label: 'Baratinho' },
         ].map((filter) => (
           <button
             key={filter.key}
