@@ -19,6 +19,9 @@ const withPWA = withPWAInit({
             maxEntries: 200,
             maxAgeSeconds: 86400, // 24 horas
           },
+          cacheableResponse: {
+            statuses: [0, 200]
+          }
         },
       },
       {
