@@ -416,6 +416,7 @@ export function CategoriesModal() {
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
+        onSelectRelated={setSelectedProduct}
       />
     </>
   );

@@ -194,6 +194,7 @@ export function WeeklyHighlights() {
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
+        onSelectRelated={setSelectedProduct}
       />
     </section>
   );

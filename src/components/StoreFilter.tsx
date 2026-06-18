@@ -396,6 +396,7 @@ export function StoreFilter() {
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
+        onSelectRelated={setSelectedProduct}
       />
     </section>
   );
