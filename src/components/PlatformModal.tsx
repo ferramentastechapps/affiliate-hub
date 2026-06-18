@@ -217,11 +217,6 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
   }
 
   function handleOpenRelated(relatedItem: any) {
-    if (onSelectRelated) {
-      onSelectRelated(relatedItem);
-      return;
-    }
-    
     if(!relatedItem?.links) return;
     
     let target = "";
