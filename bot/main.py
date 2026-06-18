@@ -48,8 +48,8 @@ class PromotionBot:
         self._load_state()
         
     def _load_state(self):
-        self.produtos_enviados = set()
-        self.cupons_enviados = set()
+        self.fila_grupo = []
+        self.ultimo_envio_grupo = 0
         try:
             if self.state_file.exists():
                 with open(self.state_file, 'r', encoding='utf-8') as f:
@@ -62,6 +62,8 @@ class PromotionBot:
                         self.produtos_enviados.add(chave)
                         
                     self.cupons_enviados = set(state.get('cupons', []))
+                    self.fila_grupo = state.get('fila_grupo', [])
+                    self.ultimo_envio_grupo = state.get('ultimo_envio_grupo', 0)
         except Exception as e:
             print(f'Aviso: Não foi possível carregar o estado anterior: {e}')
             
@@ -70,7 +72,9 @@ class PromotionBot:
             with open(self.state_file, 'w', encoding='utf-8') as f:
                 json.dump({
                     'produtos': list(self.produtos_enviados),
-                    'cupons': list(self.cupons_enviados)
+                    'cupons': list(self.cupons_enviados),
+                    'fila_grupo': self.fila_grupo,
+                    'ultimo_envio_grupo': self.ultimo_envio_grupo
                 }, f, ensure_ascii=False)
         except Exception as e:
             print(f'Aviso: Não foi possível salvar o estado: {e}')
@@ -139,12 +143,13 @@ class PromotionBot:
                                 # Aguarda a IA processar para ter a legenda (aiAnalysis)
                                 produto_com_ia = wait_for_ai_analysis(self.api, produto_retornado['id'])
                                 produto_para_publicar = produto_com_ia if produto_com_ia else produto_retornado
-                                print(f'⚡ Publicando direto no grupo...')
-                                self.telegram.enviar_sync('publicar_grupo', {
+                                print(f'⚡ Adicionando na fila para publicação no grupo...')
+                                self.fila_grupo.append({
                                     'produto': produto_para_publicar,
                                     'platform': platform,
                                     'affiliate_link': affiliate_link
                                 })
+                                self._save_state()
                             else:
                                 print(f'⚠️ Produto ativado mas nenhum link de afiliado correspondente foi encontrado. Enviando para moderação.')
                                 self.telegram.enviar_sync('produto', produto)
@@ -177,6 +182,7 @@ class PromotionBot:
                 print(f'\n📱 Enviando cupons para Telegram...')
                 for cupom in cupons_novos:
                     self.telegram.enviar_sync('cupom', cupom)
+                    self.telegram.enviar_sync('publicar_cupom_grupo', cupom)
                     self.cupons_enviados.add(cupom['code'])
                     time.sleep(3)  # Evitar flood control do Telegram
             
@@ -189,6 +195,10 @@ class PromotionBot:
             
             # 8. Salvar o estado para evitar envios duplicados após reinicialização
             self._save_state()
+            
+            # 9. Processar a fila do grupo
+            self.publicar_fila_grupo()
+            
             print(f'\n✅ Busca concluída e estado salvo!')
             
         except Exception as e:
@@ -205,21 +215,71 @@ class PromotionBot:
         
         # Agendar execuções
         schedule.every(SEARCH_INTERVAL_MINUTES).minutes.do(self.executar_busca)
+        # Agendar verificações da fila do grupo a cada 1 minuto (ele respeitará o intervalo de 5 min internamente)
+        schedule.every(1).minutes.do(self.publicar_fila_grupo)
         
         # Loop principal
         while True:
             schedule.run_pending()
             time.sleep(60)
+            
+    def publicar_fila_grupo(self):
+        """Publica a melhor promoção da fila no grupo respeitando o intervalo de 5 minutos"""
+        agora = time.time()
+        # Permitir envio se já se passaram 5 minutos (300 segundos) desde o último envio
+        if agora - self.ultimo_envio_grupo < 300:
+            return
+
+        if not self.fila_grupo:
+            return
+
+        print(f'\n⏰ Processando fila do grupo ({len(self.fila_grupo)} itens)...')
+        
+        # Função para calcular desconto
+        def get_discount(item):
+            try:
+                p = float(item['produto'].get('price', 0))
+                o = float(item['produto'].get('originalPrice', 0))
+                if o > p and o > 0:
+                    return (o - p) / o
+            except:
+                pass
+            return 0
+            
+        # Ordenar a fila pelas melhores promoções (maior desconto)
+        self.fila_grupo.sort(key=get_discount, reverse=True)
+        
+        # Pegar a melhor e remover da fila
+        melhor_item = self.fila_grupo.pop(0)
+        
+        print(f'⭐ Publicando melhor promoção no grupo: {melhor_item["produto"].get("name")[:50]} (Desconto: {get_discount(melhor_item)*100:.1f}%)')
+        
+        self.telegram.enviar_sync('publicar_grupo', melhor_item)
+        
+        self.ultimo_envio_grupo = agora
+        
+        # Limitar o tamanho da fila para não crescer infinitamente
+        if len(self.fila_grupo) > 50:
+            self.fila_grupo = self.fila_grupo[:50]
+            
+        self._save_state()
     
     def iniciar_modo_continuo(self):
         """Inicia o robô em modo contínuo (para testes)"""
         print('🤖 Robô de Promoções - Modo Contínuo')
         print('='*60)
         
+        ultimo_search = 0
+        
         while True:
-            self.executar_busca()
-            print(f'\n⏳ Aguardando {SEARCH_INTERVAL_MINUTES} minutos...\n')
-            time.sleep(SEARCH_INTERVAL_MINUTES * 60)
+            agora = time.time()
+            if agora - ultimo_search >= SEARCH_INTERVAL_MINUTES * 60:
+                self.executar_busca()
+                ultimo_search = time.time()
+                print(f'\n⏳ Aguardando {SEARCH_INTERVAL_MINUTES} minutos para a próxima busca...\n')
+            
+            self.publicar_fila_grupo()
+            time.sleep(60)
 
 
 def main():

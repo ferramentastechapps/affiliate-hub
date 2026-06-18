@@ -323,6 +323,8 @@ class TelegramNotifier:
                 dados.get('foto_file_id'),
                 dados.get('custom_caption')
             ))
+        elif tipo == 'publicar_cupom_grupo':
+            loop.run_until_complete(self.publicar_cupom_grupo(dados))
 
     async def publicar_no_grupo(self, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None, custom_caption: str = None):
         """Publica a promoção aprovada no grupo de promoções."""
@@ -498,3 +500,39 @@ class TelegramNotifier:
             print(f'📢 Promoção publicada no grupo: {nome[:50]}')
         except Exception as e:
             print(f'❌ Erro ao publicar no grupo: {e}')
+
+    async def publicar_cupom_grupo(self, cupom: dict):
+        """Publica o cupom diretamente no grupo de promoções."""
+        from config import TELEGRAM_PROMO_GROUP_ID, AFFILIATE_HUB_URL
+        if not TELEGRAM_PROMO_GROUP_ID:
+            print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação de cupom no grupo.')
+            return
+            
+        expira = ""
+        if cupom.get('expiresAt'):
+            expira = f"\n⏰ Expira em: {cupom['expiresAt'][:10]}"
+        
+        base_url = AFFILIATE_HUB_URL.rstrip('/')
+        link_cupom = f"{base_url}/cupons"
+            
+        mensagem = f"""
+🎫 <b>CUPOM RELÂMPAGO!</b>
+
+🏪 <b>{cupom.get('platform', 'Loja')}</b>
+📝 {cupom.get('description', '')}
+💰 <b>{cupom.get('discount', '')}</b>
+
+💳 Use o cupom: <code>{cupom.get('code')}</code>{expira}
+
+🔗 <a href="{link_cupom}">Ver todos os cupons no site</a>
+"""
+        try:
+            await self._send_message_with_retry(
+                chat_id=TELEGRAM_PROMO_GROUP_ID,
+                text=mensagem.strip(),
+                parse_mode='HTML'
+            )
+            print(f'📢 Cupom publicado no grupo: {cupom["code"]}')
+        except Exception as e:
+            print(f'❌ Erro ao publicar cupom no grupo: {e}')
+
