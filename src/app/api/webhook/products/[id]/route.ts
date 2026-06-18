@@ -28,6 +28,7 @@ export async function GET(
       success: true,
       product: {
         id: product.id,
+        shortId: product.shortId,
         name: product.name,
         category: product.category,
         description: product.description,
