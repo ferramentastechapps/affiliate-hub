@@ -132,7 +132,7 @@ export function CouponModal({
             {/* Botão Ir para Loja */}
             <button
               onClick={handleGoToStore}
-              className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-blue-600 text-white font-bold text-lg py-4 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)]"
+              className="w-full flex items-center justify-center gap-2 btn-3d text-white font-bold text-lg py-4 rounded-[20px]"
             >
               Ir para a Loja
               <ArrowRight size={22} weight="bold" />

@@ -80,17 +80,16 @@ export function MobileBottomNav() {
             
           </div>
 
-          {/* Botão de Conversão (WhatsApp Separado Escuro) */}
           <a 
             href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Entrar no grupo do WhatsApp"
-            className="w-[4.5rem] bg-zinc-900 rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/10 flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-transform min-h-[56px] py-2"
+            className="w-[4.5rem] btn-3d rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-transform min-h-[56px] py-2"
           >
             <div className="relative">
-               <WhatsappLogo size={26} weight="fill" className="text-[#25D366]" />
-               <div className="absolute inset-0 rounded-full animate-ping bg-[#25D366]/30" />
+               <WhatsappLogo size={26} weight="fill" className="text-white" />
+               <div className="absolute inset-0 rounded-full animate-ping bg-white/30" />
             </div>
             <span className="text-[11px] font-bold text-white mt-0.5 leading-tight">Grupo</span>
           </a>

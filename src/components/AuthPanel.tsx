@@ -400,7 +400,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-4 bg-accent hover:bg-accent/90 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden min-h-[52px] text-base"
+                        className="w-full py-4 btn-3d rounded-[20px] font-bold disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden min-h-[52px] text-base"
                       >
                         {isLoading ? (
                           <motion.div
@@ -621,7 +621,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-3 bg-accent hover:bg-accent/90 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                        className="w-full py-3 btn-3d rounded-[20px] font-bold disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
                       >
                         {isLoading ? (
                           <motion.div
