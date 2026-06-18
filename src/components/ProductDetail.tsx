@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, ShoppingCart, Copy, Check } from "@phosphor-icons/react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { CouponModal } from "./CouponModal";
 
 type Product = {
   id: string;
@@ -27,42 +27,118 @@ type Product = {
   }>;
 };
 
-const PLATFORM_NAMES: Record<string, string> = {
-  amazon: "Amazon",
-  mercadoLivre: "Mercado Livre",
-  shopee: "Shopee",
-  aliexpress: "AliExpress",
-  tiktok: "TikTok Shop",
-};
-
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
-  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [showCouponModal, setShowCouponModal] = useState(false);
 
-  const handleCopyCoupon = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCoupon(code);
-    setTimeout(() => setCopiedCoupon(null), 2000);
-  };
+  // Carrega produtos relacionados
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const filtered = data.filter((p: any) => p.id !== product.id).slice(0, 4);
+          setRelatedProducts(filtered);
+        }
+      })
+      .catch(console.error);
+  }, [product.id]);
 
-  const handleBuyClick = (platform: string, url: string) => {
-    // Redireciona para a API /api/go com o parâmetro da plataforma
-    window.open(`/api/go/${product.id}?platform=${platform}`, '_blank');
-  };
+  // Determinar URL e plataforma principal
+  let targetUrl = "";
+  let platformName = "";
+  if (product.links?.amazon) { targetUrl = product.links.amazon; platformName = "Amazon"; }
+  else if (product.links?.mercadoLivre) { targetUrl = product.links.mercadoLivre; platformName = "Mercado Livre"; }
+  else if (product.links?.shopee) { targetUrl = product.links.shopee; platformName = "Shopee"; }
+  else if (product.links?.aliexpress) { targetUrl = product.links.aliexpress; platformName = "AliExpress"; }
+  else if (product.links?.tiktok) { targetUrl = product.links.tiktok; platformName = "TikTok"; }
+  else {
+    const values = Object.entries(product.links || {});
+    const firstValid = values.find(([k, v]) => typeof v === 'string' && v.length > 0);
+    if (firstValid) {
+      platformName = firstValid[0];
+      targetUrl = firstValid[1] as string;
+    }
+  }
 
-  // Filtrar links disponíveis
-  const availableLinks = product.links
-    ? Object.entries(product.links).filter(([_, url]) => url && url.trim() !== "")
-    : [];
+  function trackAffiliateClick(platform: string, productName: string, url: string) {
+    try {
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'affiliate_click', {
+          event_category: 'Affiliate',
+          event_label: platform,
+          product_name: productName,
+          affiliate_url: url,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao rastrear clique:', error);
+    }
+  }
 
-  const hasDiscount = product.originalPrice && product.price && product.originalPrice > product.price;
-  const discountPercent = hasDiscount
-    ? Math.round(((product.originalPrice! - product.price!) / product.originalPrice!) * 100)
+  function handlePlatformClick() {
+    if (!targetUrl) return;
+    
+    if (displayCoupon && displayCoupon.toUpperCase() !== "NORMAL") {
+      setShowCouponModal(true);
+    } else {
+      trackAffiliateClick(platformName, product.name, targetUrl);
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    }
+  }
+  
+  function handleGoToStore() {
+    if (!targetUrl) return;
+    trackAffiliateClick(platformName, product.name, targetUrl);
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  function handleOpenRelated(relatedItem: any) {
+    if(!relatedItem?.links) return;
+    
+    let target = "";
+    if (relatedItem.links.amazon) target = relatedItem.links.amazon;
+    else if (relatedItem.links.mercadoLivre) target = relatedItem.links.mercadoLivre;
+    else if (relatedItem.links.shopee) target = relatedItem.links.shopee;
+    else if (relatedItem.links.aliexpress) target = relatedItem.links.aliexpress;
+    else {
+      const v = Object.values(relatedItem.links).find(l => typeof l === 'string' && l.length > 0);
+      target = v as string;
+    }
+
+    if(target) {
+      window.open(target, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  const price = product.price || 0;
+  const originalPrice = product.originalPrice || 0;
+  const discount = (originalPrice > price && price > 0)
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
 
+  const safeTargetUrl = targetUrl && !targetUrl.startsWith("http") 
+    ? "https://" + targetUrl 
+    : targetUrl;
+
+  // Buscar cupom
+  let displayCoupon = "";
+  if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
+    const firstCoupon = product.coupons[0];
+    if (firstCoupon.code && firstCoupon.code.toUpperCase() !== "NORMAL") {
+      displayCoupon = firstCoupon.code;
+    }
+  } else if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
+    const extracted = product.description.split('🎟️ CUPOM:')[1].trim();
+    if (extracted && extracted.toUpperCase() !== "NORMAL") {
+      displayCoupon = extracted;
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white pt-24 md:pt-32 pb-16">
-      <div className="container mx-auto px-4 max-w-6xl">
+    <main className="min-h-screen bg-black text-white pt-24 md:pt-28 pb-16">
+      <div className="container mx-auto px-4 max-w-2xl">
         {/* Botão Voltar */}
         <button
           onClick={() => router.back()}
@@ -72,127 +148,160 @@ export function ProductDetail({ product }: { product: Product }) {
           Voltar
         </button>
 
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+        <div className="w-full bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(40,110,250,0.15)] rounded-[2rem] overflow-hidden">
           {/* Imagem do Produto */}
-          <div className="relative aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800">
-            <img
-              src={product.imageUrl}
+          <div className="relative w-full bg-zinc-900 flex items-center justify-center p-4" style={{ minHeight: '220px', maxHeight: '380px' }}>
+            {price > 0 && discount > 0 && (
+              <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
+                <Tag size={20} weight="fill" />
+                -{discount}%
+              </div>
+            )}
+            
+            <img 
+              src={product.imageUrl} 
               alt={product.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain rounded-2xl"
+              style={{ maxHeight: '360px' }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "/placeholder.webp";
               }}
             />
-            {hasDiscount && (
-              <div className="absolute top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full font-bold text-sm">
-                -{discountPercent}%
-              </div>
-            )}
           </div>
 
-          {/* Informações do Produto */}
-          <div className="flex flex-col gap-6">
-            <div>
-              <span className="text-sm text-accent font-mono uppercase">{product.category}</span>
-              <h1 className="text-3xl md:text-4xl font-bold mt-2">{product.name}</h1>
-            </div>
+          <div className="p-6 sm:p-8 pb-6">
+            <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
+            <h1 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-4 leading-snug">
+              {product.name}
+            </h1>
 
-            {/* Preço */}
-            {product.price && (
-              <div className="flex flex-col gap-2">
-                {hasDiscount && (
-                  <span className="text-zinc-500 line-through text-lg">
-                    R$ {product.originalPrice?.toFixed(2).replace(".", ",")}
+            {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
+              <div className="flex items-center gap-3 mb-6 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 rounded-2xl">
+                <div className="bg-accent/20 p-2 rounded-xl text-accent">
+                  <Tag size={24} weight="duotone" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">CUPOM DISPONÍVEL</span>
+                  <code className="text-white font-mono font-bold text-base sm:text-lg break-all">{displayCoupon}</code>
+                </div>
+              </div>
+            )}
+            
+            {price > 0 ? (
+              <div className="flex flex-col mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
+                {discount > 0 && (
+                  <span className="text-sm text-zinc-400 font-medium mb-1 line-through">
+                    De: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                   </span>
                 )}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-accent">
-                    R$ {product.price.toFixed(2).replace(".", ",")}
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                  <span className="text-4xl font-black text-white tracking-tighter">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                   </span>
-                  {hasDiscount && (
-                    <span className="text-emerald-400 font-semibold">
-                      Economize R$ {(product.originalPrice! - product.price).toFixed(2).replace(".", ",")}
-                    </span>
-                  )}
+                  <span className="text-green-400 font-bold text-xs sm:text-sm px-3 py-1.5 bg-green-400/10 rounded-lg self-start sm:self-auto sm:mb-1.5">
+                    em até 10x sem juros
+                  </span>
                 </div>
               </div>
-            )}
-
-            {/* Descrição */}
-            {product.description && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <h3 className="font-semibold mb-2">Sobre o produto</h3>
-                <p className="text-zinc-400 text-sm whitespace-pre-wrap">{product.description}</p>
+            ) : (
+              <div className="mb-8 p-4 bg-white/5 rounded-xl border border-white/5">
+                <p className="text-zinc-300">Verifique o preço atualizado diretamente no site da loja.</p>
               </div>
             )}
 
-            {/* Cupons */}
-            {product.coupons && product.coupons.length > 0 && (
-              <div className="bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/20 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  🎟️ Cupons Disponíveis
-                </h3>
-                <div className="space-y-2">
-                  {product.coupons.map((coupon) => (
-                    <div
-                      key={coupon.code}
-                      className="flex items-center justify-between bg-black/40 rounded-lg p-3"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <code className="text-accent font-mono font-bold">{coupon.code}</code>
-                          <span className="text-xs text-zinc-400">{coupon.discount}</span>
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1">{coupon.description}</p>
-                      </div>
-                      <button
-                        onClick={() => handleCopyCoupon(coupon.code)}
-                        className="ml-2 p-2 hover:bg-white/5 rounded-lg transition-colors"
-                      >
-                        {copiedCoupon === coupon.code ? (
-                          <Check size={18} className="text-emerald-400" />
-                        ) : (
-                          <Copy size={18} className="text-zinc-400" />
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+            <button
+              onClick={handlePlatformClick}
+              className="w-full flex items-center justify-center gap-2 group bg-accent hover:bg-accent-light text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(40,110,250,0.5)] min-h-[56px]"
+            >
+              {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" ? "Ver Cupom e Ir para Loja" : `Ir para ${platformName}`}
+              <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            <div className="mt-5 flex items-center justify-center gap-2 text-zinc-400 text-sm font-medium">
+              <ShieldCheck size={18} weight="duotone" className="text-emerald-400" />
+              Loja Segura Verificada
+            </div>
+
+            <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-2xl p-4 sm:p-5 gap-3 flex flex-col items-center text-center shadow-[0_0_40px_rgba(37,211,102,0.1)]">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#25D366]/20 blur-3xl rounded-full" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#25D366]/10 blur-3xl rounded-full" />
+              
+              <div className="relative z-10">
+                <h4 className="text-white font-bold text-sm sm:text-[15px] mb-1">
+                  Já está no nosso grupo de promoções?
+                </h4>
+                <p className="text-emerald-100/70 text-xs mb-4 max-w-[260px] mx-auto leading-relaxed">
+                  <span className="font-bold text-white">É Grátis!</span> Receba no Whatsapp as melhores promoções e economize mais.
+                </p>
+                
+                <a 
+                  href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1DA851] text-zinc-950 font-bold text-sm py-3.5 px-5 rounded-xl transition-all hover:scale-[1.02] min-h-[48px]"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a5.8 5.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372C7.382 7.07 6.61 7.79 6.61 9.253c0 1.463 1.11 2.876 1.26 3.074.148.198 2.094 3.196 5.076 4.482.71.306 1.264.489 1.696.625.714.227 1.365.195 1.876.118.575-.087 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.82 11.82 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413Z"/>
+                  </svg>
+                  Clique aqui para entrar
+                </a>
               </div>
-            )}
-
-            {/* Botões de Compra */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-zinc-400 uppercase tracking-wider">
-                Comprar em:
-              </h3>
-              {availableLinks.length > 0 ? (
-                availableLinks.map(([platform, url]) => (
-                  <button
-                    key={platform}
-                    onClick={() => handleBuyClick(platform, url as string)}
-                    className="w-full flex items-center justify-center gap-3 bg-accent hover:bg-accent/90 text-black px-6 py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <ShoppingCart size={24} weight="bold" />
-                    Comprar na {PLATFORM_NAMES[platform] || platform}
-                  </button>
-                ))
-              ) : (
-                <p className="text-zinc-500 text-sm italic">Nenhum link disponível no momento.</p>
-              )}
             </div>
 
-            {/* Garantia/Informações Adicionais */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-400">
-              <ul className="space-y-2">
-                <li>✓ Links de afiliados - você ajuda o site sem pagar mais por isso</li>
-                <li>✓ Preços e disponibilidade verificados regularmente</li>
-                <li>✓ Compra segura diretamente nas lojas oficiais</li>
-              </ul>
-            </div>
+            <p className="mt-8 text-[11px] text-zinc-600 leading-tight text-center max-w-sm mx-auto">
+              *Preço e disponibilidade sujeito a alteração a qualquer momento dependendo da loja parceira.
+            </p>
           </div>
+
+          {/* Produtos Relacionados */}
+          {relatedProducts.length > 0 && (
+            <div className="border-t border-white/5 pt-6 sm:pt-8 px-4 sm:px-8 pb-6 bg-black/20">
+              <h4 className="text-base sm:text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {relatedProducts.map((relItem) => (
+                  <button 
+                    key={relItem.id}
+                    onClick={() => handleOpenRelated(relItem)}
+                    className="group bg-zinc-900 border border-white/5 hover:border-accent/30 rounded-xl overflow-hidden flex flex-col text-left transition-all hover:scale-[1.02] min-h-[44px]"
+                  >
+                    <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={relItem.imageUrl} 
+                        alt={relItem.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.webp";
+                        }}
+                      />
+                    </div>
+                    <div className="p-3 bg-zinc-900 border-t border-white/5">
+                      <h5 className="font-semibold text-white text-xs line-clamp-2 leading-tight group-hover:text-accent transition-colors">
+                        {relItem.name}
+                      </h5>
+                      <span className="text-accent text-sm font-bold block mt-1">
+                        {relItem.price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(relItem.price) : 'Ver Promoção'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modal de Cupom */}
+      {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
+        <CouponModal
+          isOpen={showCouponModal}
+          onClose={() => setShowCouponModal(false)}
+          couponCode={displayCoupon}
+          productName={product.name}
+          platformName={platformName}
+          affiliateUrl={safeTargetUrl}
+          onGoToStore={handleGoToStore}
+        />
+      )}
     </main>
   );
 }
