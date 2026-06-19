@@ -350,9 +350,9 @@ export function DailyDeals() {
                 className="group cursor-pointer glass-3d-card rounded-[20px] overflow-hidden flex flex-col relative z-0"
               >
                 {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
-                <div className="w-full aspect-square relative">
+                <div className="w-full aspect-square relative shrink-0">
                   {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
-                  <div className="w-full h-full bg-white flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
+                  <div className="absolute inset-0 bg-white flex items-center justify-center overflow-hidden border-b border-white/[0.04] rounded-t-[20px]">
                     <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                       {discount > 0 && (
                         <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
