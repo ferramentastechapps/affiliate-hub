@@ -217,23 +217,10 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
   }
 
   function handleOpenRelated(relatedItem: any) {
-    if(!relatedItem?.links) return;
-    
-    let target = "";
-    if (relatedItem.links.amazon) target = relatedItem.links.amazon;
-    else if (relatedItem.links.mercadoLivre) target = relatedItem.links.mercadoLivre;
-    else if (relatedItem.links.shopee) target = relatedItem.links.shopee;
-    else if (relatedItem.links.aliexpress) target = relatedItem.links.aliexpress;
-    else if (relatedItem.links.netshoes) target = relatedItem.links.netshoes;
-    else if (relatedItem.links.magalu) target = relatedItem.links.magalu;
-    else if (relatedItem.links.kabum) target = relatedItem.links.kabum;
-    else {
-      const v = Object.values(relatedItem.links).find(l => typeof l === 'string' && l.length > 0);
-      target = v as string;
-    }
-
-    if(target) {
-        window.open(target, '_blank', 'noopener,noreferrer');
+    if (onSelectRelated) {
+      onSelectRelated(relatedItem);
+    } else {
+      window.open(`/produto/${relatedItem.id}`, '_self');
     }
   }
 

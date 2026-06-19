@@ -237,24 +237,37 @@ class PromotionBot:
 
         print(f'\n⏰ Processando fila do grupo ({len(self.fila_grupo)} itens)...')
         
-        # Função para calcular desconto
-        def get_discount(item):
+        # Função para calcular pontuação/desconto
+        def get_score(item):
+            score = 0
             try:
-                p = float(item['produto'].get('price', 0))
-                o = float(item['produto'].get('originalPrice', 0))
-                if o > p and o > 0:
-                    return (o - p) / o
+                p = item['produto'].get('price')
+                o = item['produto'].get('originalPrice')
+                if p is not None and o is not None:
+                    p_float = float(p)
+                    o_float = float(o)
+                    if o_float > p_float and o_float > 0:
+                        score += ((o_float - p_float) / o_float) * 100  # 0 a 100
             except:
                 pass
-            return 0
+                
+            # Bônus por nota da IA (0 a 10 vira 0 a 10)
+            ai_score = item['produto'].get('aiScore')
+            if ai_score is not None:
+                try:
+                    score += float(ai_score)
+                except:
+                    pass
+                    
+            return score
             
-        # Ordenar a fila pelas melhores promoções (maior desconto)
-        self.fila_grupo.sort(key=get_discount, reverse=True)
+        # Ordenar a fila pelas melhores promoções (maior score: desconto + IA)
+        self.fila_grupo.sort(key=get_score, reverse=True)
         
         # Pegar a melhor e remover da fila
         melhor_item = self.fila_grupo.pop(0)
         
-        print(f'⭐ Publicando melhor promoção no grupo: {melhor_item["produto"].get("name")[:50]} (Desconto: {get_discount(melhor_item)*100:.1f}%)')
+        print(f'⭐ Publicando melhor promoção no grupo: {melhor_item["produto"].get("name")[:50]} (Score/Desconto: {get_score(melhor_item):.1f})')
         
         self.telegram.enviar_sync('publicar_grupo', melhor_item)
         

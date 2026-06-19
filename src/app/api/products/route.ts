@@ -54,7 +54,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, category, description, imageUrl, price, links } = body;
+    const { name, category, description, imageUrl, price, originalPrice, links } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         description,
         imageUrl,
         price: price ? parseFloat(price) : null,
+        originalPrice: originalPrice ? parseFloat(originalPrice) : null,
         links: links ? {
           create: links
         } : undefined
