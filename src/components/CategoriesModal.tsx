@@ -217,12 +217,12 @@ export function CategoriesModal() {
                           setTimeout(() => {
                             const section = document.getElementById('products-section');
                             if (section) {
-                              section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                              section.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }
-                          }, 150);
+                          }, 50);
                         }
                       }}
-                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all duration-300 text-center border ${
+                      className={`flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl transition-all duration-300 text-center border overflow-hidden ${
                         activeCategory === category.key
                           ? "btn-3d text-white border-transparent"
                           : "bg-black/20 border-white/10 hover:bg-white/10"
@@ -236,7 +236,7 @@ export function CategoriesModal() {
                         <category.icon size={24} weight={activeCategory === category.key ? "fill" : "duotone"} />
                       </div>
                       <span
-                        className={`text-[10px] sm:text-xs font-bold leading-tight transition-colors duration-300 ${
+                        className={`text-[9px] sm:text-xs font-bold leading-tight transition-colors duration-300 break-words w-full ${
                           activeCategory === category.key
                             ? "text-white"
                             : "text-zinc-300"
@@ -249,17 +249,17 @@ export function CategoriesModal() {
                 </div>
 
                 {/* Products section inside Modal */}
-                <AnimatePresence mode="wait">
-                  {activeCategory ? (
-                    <motion.div
-                      id="products-section"
-                      key={activeCategory}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="border-t border-white/5 pt-6 mt-6 scroll-mt-6"
-                    >
+                <div id="products-section" className="scroll-mt-6">
+                  <AnimatePresence mode="wait">
+                    {activeCategory ? (
+                      <motion.div
+                        key={activeCategory}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-t border-white/5 pt-6 mt-6"
+                      >
                       <div className="flex items-center justify-between mb-6">
                         <div>
                           <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 flex items-center gap-3">
@@ -412,7 +412,8 @@ export function CategoriesModal() {
                       </p>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
           </motion.div>
