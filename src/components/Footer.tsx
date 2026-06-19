@@ -45,20 +45,26 @@ export function Footer() {
     {
       name: "WhatsApp",
       icon: WhatsappLogo,
-      url: "https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_tTelegram",
+      url: "https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t",
       description: "Grupo WhatsApp",
+      actionText: "Clique para entrar",
+      btnText: "Entrar no grupo"
     },
     {
       name: "Telegram",
       icon: TelegramLogo,
       url: "https://t.me/+OFDVybtJcc40YmZh",
       description: "Canal Telegram",
+      actionText: "Clique para entrar",
+      btnText: "Entrar no grupo"
     },
     {
       name: "Instagram",
       icon: InstagramLogo,
-      url: "https://www.instagram.com/jota123testando?igsh=MTBuY3dueWQ4N3c3Mw%3D%3D&utm_source=qr",
+      url: "https://www.instagram.com/economizeicomjota",
       description: "Siga no Instagram",
+      actionText: "Clique para seguir",
+      btnText: "Seguir página"
     },
   ];
 
@@ -125,7 +131,7 @@ export function Footer() {
                     {/* Middle Info */}
                     <div className="flex flex-col items-start flex-1 ml-3.5 text-left">
                       <span className="text-sm font-black text-white leading-tight">{social.name}</span>
-                      <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-400 transition-colors mt-0.5">Clique para seguir</span>
+                      <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-400 transition-colors mt-0.5">{social.actionText}</span>
                     </div>
 
                     {/* Right Arrow */}
@@ -144,7 +150,7 @@ export function Footer() {
                     rel="noopener noreferrer"
                     className={`w-full py-2 rounded-xl border text-[11px] font-extrabold tracking-wider uppercase text-center transition-all duration-300 ${outlineBtnClass}`}
                   >
-                    Clique para seguir
+                    {social.btnText}
                   </a>
                 </motion.div>
               );
