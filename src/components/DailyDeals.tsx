@@ -228,7 +228,7 @@ export function DailyDeals() {
   return (
     <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
       {/* Abas de Filtro */}
-      <div className="flex gap-2 md:gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3 md:mx-0 md:px-0">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {[
           { key: 'alertas', label: 'Meus Alertas' },
           { key: 'destaques', label: 'Destaques' },
@@ -240,10 +240,10 @@ export function DailyDeals() {
           <button
             key={filter.key}
             onClick={() => setFilterType(filter.key as any)}
-            className={`px-5 py-2.5 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap border ${
+            className={`px-5 py-2.5 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap ${
               filterType === filter.key
-                ? 'btn-3d border-transparent'
-                : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white hover:bg-zinc-800/80 hover:border-white/10'
+                ? 'btn-3d'
+                : 'bg-[#181b26] text-zinc-400 hover:text-white hover:bg-[#202433] border border-white/5'
             }`}
           >
             {filter.label}
