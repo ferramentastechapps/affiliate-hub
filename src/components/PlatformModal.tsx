@@ -19,21 +19,21 @@ export type ProductLinks = {
 };
 
 const categoryColors: Record<string, string> = {
-  "Todas": "#ff334b",
-  "Smartphones e TV": "#00BFFF",
-  "Informática e Games": "#8A2BE2",
-  "Casa e Eletrodomésticos": "#32CD32",
-  "Moda e Acessórios": "#FF69B4",
-  "Bebês e Crianças": "#FF8C00",
-  "Saúde e Beleza": "#00FA9A",
-  "Esporte e Suplementos": "#FF4500",
-  "Supermercado e Delivery": "#9ACD32",
-  "Livros, eBooks e eReaders": "#9370DB",
-  "Ferramentas e Jardim": "#DAA520",
-  "Automotivo": "#A9A9A9",
-  "Pet": "#20B2AA",
-  "Viagem": "#1E90FF",
-  "Diversos": "#B0C4DE"
+  "Todas": "#f43f5e",
+  "Smartphones e TV": "#3b82f6",
+  "Informática e Games": "#8b5cf6",
+  "Casa e Eletrodomésticos": "#10b981",
+  "Moda e Acessórios": "#ec4899",
+  "Bebês e Crianças": "#f97316",
+  "Saúde e Beleza": "#14b8a6",
+  "Esporte e Suplementos": "#ef4444",
+  "Supermercado e Delivery": "#84cc16",
+  "Livros, eBooks e eReaders": "#a855f7",
+  "Ferramentas e Jardim": "#eab308",
+  "Automotivo": "#64748b",
+  "Pet": "#0ea5e9",
+  "Viagem": "#6366f1",
+  "Diversos": "#a1a1aa"
 };
 
 type PlatformModalProps = {
