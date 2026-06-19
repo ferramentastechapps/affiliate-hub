@@ -58,20 +58,20 @@ const categoryIconMap: Record<string, React.ComponentType<any>> = {
 
 const categoryColors: Record<string, string> = {
   "Todas": "#ff334b",
-  "Smartphones e TV": "#3b82f6",
-  "Informática e Games": "#8b5cf6",
-  "Casa e Eletrodomésticos": "#10b981",
-  "Moda e Acessórios": "#ec4899",
-  "Bebês e Crianças": "#f43f5e",
-  "Saúde e Beleza": "#14b8a6",
-  "Esporte e Suplementos": "#f97316",
-  "Supermercado e Delivery": "#84cc16",
-  "Livros, eBooks e eReaders": "#a855f7",
-  "Ferramentas e Jardim": "#eab308",
-  "Automotivo": "#64748b",
-  "Pet": "#06b6d4",
-  "Viagem": "#0ea5e9",
-  "Diversos": "#94a3b8"
+  "Smartphones e TV": "#00BFFF",
+  "Informática e Games": "#8A2BE2",
+  "Casa e Eletrodomésticos": "#32CD32",
+  "Moda e Acessórios": "#FF69B4",
+  "Bebês e Crianças": "#FF8C00",
+  "Saúde e Beleza": "#00FA9A",
+  "Esporte e Suplementos": "#FF4500",
+  "Supermercado e Delivery": "#9ACD32",
+  "Livros, eBooks e eReaders": "#9370DB",
+  "Ferramentas e Jardim": "#DAA520",
+  "Automotivo": "#A9A9A9",
+  "Pet": "#20B2AA",
+  "Viagem": "#1E90FF",
+  "Diversos": "#B0C4DE"
 };
 
 // Helper for deterministic discount simulation based on string ID
@@ -289,7 +289,7 @@ export function DailyDeals() {
 
       {/* Grid de promoções */}
       {filteredProducts.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {displayProducts.map((product, index) => {
             const price = product.price || 0;
             const originalPrice = product.originalPrice || 0;
