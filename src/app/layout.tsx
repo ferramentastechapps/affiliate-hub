@@ -80,7 +80,8 @@ export default function RootLayout({
       <head>
         <meta name="lomadee" content="2324685" />
       </head>
-      <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans">
+      <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans relative">
+        <div className="premium-bg fixed top-0 left-0 w-full h-full -z-10" />
         <AuthProvider>
           <Header />
           <ToastProvider>
