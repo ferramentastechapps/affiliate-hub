@@ -228,7 +228,7 @@ export function DailyDeals() {
   return (
     <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
       {/* Abas de Filtro */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 md:gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3 md:mx-0 md:px-0">
         {[
           { key: 'alertas', label: 'Meus Alertas' },
           { key: 'destaques', label: 'Destaques' },
@@ -240,10 +240,10 @@ export function DailyDeals() {
           <button
             key={filter.key}
             onClick={() => setFilterType(filter.key as any)}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${
+            className={`px-5 py-2.5 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap border ${
               filterType === filter.key
-                ? 'btn-3d text-white'
-                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                ? 'btn-3d border-transparent'
+                : 'bg-zinc-900/40 text-zinc-400 border-white/5 hover:text-white hover:bg-zinc-800/80 hover:border-white/10'
             }`}
           >
             {filter.label}
@@ -252,12 +252,12 @@ export function DailyDeals() {
       </div>
 
       {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-3 md:mb-4">
+      <div className="flex items-center justify-between mb-5 md:mb-6">
         <div>
-          <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
+          <h2 className="text-lg md:text-2xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
             Promoções do dia
           </h2>
-          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
+          <p className="text-zinc-400 text-xs md:text-sm">As melhores ofertas atualizadas em tempo real</p>
         </div>
       </div>
 
