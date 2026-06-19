@@ -178,17 +178,15 @@ export function ProductDetail({ product }: { product: Product }) {
 
             
             {price > 0 ? (
-              <div className="flex flex-col mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
+              <div className="flex flex-row items-center gap-3 mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
+                <span className="text-3xl font-black text-white tracking-tighter leading-none">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                </span>
                 {discount > 0 && (
-                  <span className="text-sm text-zinc-400 font-medium mb-1 line-through">
-                    De: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                  <span className="text-sm text-zinc-500 font-medium line-through">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                   </span>
                 )}
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-                  <span className="text-4xl font-black text-white tracking-tighter">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
-                  </span>
-                </div>
               </div>
             ) : (
               <div className="mb-8 p-4 bg-white/5 rounded-xl border border-white/5">
@@ -204,11 +202,8 @@ export function ProductDetail({ product }: { product: Product }) {
                 <div className="bg-accent/20 p-2 rounded-xl text-accent">
                   <Tag size={24} weight="duotone" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">
-                    VER CUPOM DE DESCONTO
-                  </span>
-                  <code className="text-white font-mono font-bold text-base sm:text-lg break-all">{displayCoupon}</code>
+                <div className="flex-1 min-w-0 flex items-center">
+                  <code className="text-white font-mono font-bold text-lg sm:text-xl break-all">{displayCoupon}</code>
                 </div>
                 <div className="bg-white/10 p-2 rounded-xl text-white group-hover:bg-white/20 transition-colors">
                   <Copy size={20} weight="duotone" />
