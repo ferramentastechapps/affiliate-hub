@@ -165,7 +165,7 @@ export function WeeklyHighlights() {
                 <img
                   src={product.imageUrl}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-full object-contain p-1 transition-transform duration-500 group-hover:scale-110"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "/placeholder.webp";
                   }}
