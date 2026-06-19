@@ -313,7 +313,7 @@ export function StoreFilter() {
                           <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
                             <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                               {discount > 0 && (
-                                <span className="bg-[#d4af37] text-[#090a0f] font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                                <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
                                   -{discount}%
                                 </span>
                               )}
@@ -339,8 +339,8 @@ export function StoreFilter() {
                             style={{
                               width: '36px',
                               height: '36px',
-                              background: activeStoreInfo?.color || "#d4af37",
-                              boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${activeStoreInfo?.color || "#d4af37"}88`,
+                              background: activeStoreInfo?.color || "#ff334b",
+                              boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${activeStoreInfo?.color || "#ff334b"}88`,
                             }}
                           >
                             <img
@@ -361,7 +361,7 @@ export function StoreFilter() {
                             {product.category || "Oferta"}
                           </span>
 
-                          <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#d4af37] transition-colors">
+                          <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
                             {product.name}
                           </h3>
 
@@ -373,12 +373,12 @@ export function StoreFilter() {
                                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                                   </span>
                                 )}
-                                <span className="text-base font-black text-[#d4af37]">
+                                <span className="text-base font-black text-[#ff334b]">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>
                               </>
                             ) : (
-                              <span className="text-sm font-bold text-[#d4af37]">Ver detalhes</span>
+                              <span className="text-sm font-bold text-[#ff334b]">Ver detalhes</span>
                             )}
                           </div>
                         </div>
