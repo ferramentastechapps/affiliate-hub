@@ -177,7 +177,7 @@ export function CategoriesModal() {
                 transition: { type: "spring", stiffness: 300, damping: 30 },
               }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="relative w-full max-w-4xl bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(255,107,53,0.15)] rounded-[2.5rem] flex flex-col overflow-hidden max-h-[85vh] mx-2 sm:mx-0 z-10"
+              className="relative w-full max-w-4xl glass-3d-card rounded-[2.5rem] flex flex-col overflow-hidden max-h-[85vh] mx-2 sm:mx-0 z-10"
             >
               {/* Close Button */}
               <button
@@ -214,15 +214,15 @@ export function CategoriesModal() {
                           activeCategory === category.key ? null : category.key
                         )
                       }
-                      className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all duration-300 text-left ${
+                      className={`flex items-center gap-4 px-5 py-4 rounded-[20px] transition-all duration-300 text-left border ${
                         activeCategory === category.key
-                          ? "bg-accent/15 border-accent/50 shadow-lg shadow-accent/10"
-                          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                          ? "btn-3d text-white border-transparent"
+                          : "bg-black/20 border-white/10 hover:bg-white/10"
                       }`}
                     >
                       <div className={`p-2 rounded-xl transition-all duration-300 ${
                         activeCategory === category.key
-                          ? "bg-accent/20 text-accent"
+                          ? "text-white"
                           : "bg-white/5 text-zinc-400"
                       }`}>
                         <category.icon size={24} weight={activeCategory === category.key ? "fill" : "duotone"} />
@@ -334,7 +334,7 @@ export function CategoriesModal() {
                                   stiffness: 100,
                                 }}
                                 onClick={() => setSelectedProduct(product)}
-                                className="group cursor-pointer bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 hover:border-accent/40 rounded-2xl p-4 flex flex-col relative transition-all duration-300 hover:shadow-[0_4px_20px_rgba(255,107,53,0.05)]"
+                                className="group cursor-pointer glass-3d-card rounded-[20px] p-4 flex flex-col relative transition-all duration-300"
                               >
                                 {/* Badge Desconto */}
                                 {discount > 0 && (
@@ -343,8 +343,7 @@ export function CategoriesModal() {
                                   </div>
                                 )}
 
-                                {/* Image */}
-                                <div className="w-full aspect-square bg-zinc-950 rounded-xl mb-3 relative overflow-hidden flex items-center justify-center">
+                                <div className="w-full aspect-square bg-black/40 rounded-xl mb-3 relative overflow-hidden flex items-center justify-center">
                                   <img
                                     src={product.imageUrl}
                                     alt={product.name}

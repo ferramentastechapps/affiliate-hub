@@ -78,8 +78,7 @@ export const metadata: Metadata = {
 export default async function Home() {
   return (
     <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-16 md:pt-28 pb-28 md:pb-8 relative">
-      {/* Fundo Premium 3D animado */}
-      <div className="premium-bg" />
+      {/* Fundo Premium 3D animado (agora no layout) */}
 
       {/* Hero Section */}
       <div className="w-full">

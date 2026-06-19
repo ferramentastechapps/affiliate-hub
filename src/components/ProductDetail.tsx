@@ -137,7 +137,7 @@ export function ProductDetail({ product }: { product: Product }) {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white pt-24 md:pt-28 pb-16">
+    <main className="min-h-screen text-white pt-24 md:pt-28 pb-16">
       <div className="container mx-auto px-4 max-w-2xl">
         {/* Botão Voltar */}
         <button
@@ -148,9 +148,9 @@ export function ProductDetail({ product }: { product: Product }) {
           Voltar
         </button>
 
-        <div className="w-full bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(40,110,250,0.15)] rounded-[2rem] overflow-hidden">
+        <div className="w-full glass-3d-card rounded-[2rem] overflow-hidden">
           {/* Imagem do Produto */}
-          <div className="relative w-full bg-zinc-900 flex items-center justify-center p-4" style={{ minHeight: '220px', maxHeight: '380px' }}>
+          <div className="relative w-full bg-black/20 backdrop-blur-sm border-b border-white/5 flex items-center justify-center p-4" style={{ minHeight: '220px', maxHeight: '380px' }}>
             {price > 0 && discount > 0 && (
               <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
                 <Tag size={20} weight="fill" />
@@ -252,16 +252,16 @@ export function ProductDetail({ product }: { product: Product }) {
 
           {/* Produtos Relacionados */}
           {relatedProducts.length > 0 && (
-            <div className="border-t border-white/5 pt-6 sm:pt-8 px-4 sm:px-8 pb-6 bg-black/20">
+            <div className="border-t border-white/5 pt-6 sm:pt-8 px-4 sm:px-8 pb-6 bg-black/30">
               <h4 className="text-base sm:text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
               <div className="grid grid-cols-2 gap-3">
                 {relatedProducts.map((relItem) => (
                   <button 
                     key={relItem.id}
                     onClick={() => handleOpenRelated(relItem)}
-                    className="group bg-zinc-900 border border-white/5 hover:border-accent/30 rounded-xl overflow-hidden flex flex-col text-left transition-all hover:scale-[1.02] min-h-[44px]"
+                    className="group glass-3d-card rounded-xl overflow-hidden flex flex-col text-left transition-all min-h-[44px]"
                   >
-                    <div className="w-full aspect-[3/4] bg-zinc-900 rounded-xl flex items-center justify-center overflow-hidden">
+                    <div className="w-full aspect-[3/4] bg-black/30 flex items-center justify-center overflow-hidden">
                       <img 
                         src={relItem.imageUrl} 
                         alt={relItem.name} 
@@ -271,7 +271,7 @@ export function ProductDetail({ product }: { product: Product }) {
                         }}
                       />
                     </div>
-                    <div className="p-3 bg-zinc-900 border-t border-white/5">
+                    <div className="p-3 bg-black/20 border-t border-white/5">
                       <h5 className="font-semibold text-white text-xs line-clamp-2 leading-tight group-hover:text-accent transition-colors">
                         {relItem.name}
                       </h5>
