@@ -131,10 +131,10 @@ body {
 .btn-3d {
   background: linear-gradient(135deg, #ff334b 0%, #e61932 100%);
   box-shadow: 0 4px 14px 0 rgba(255, 51, 75, 0.39);
-  border: 1px solid rgba(255, 51, 75, 0.5);
   transform: translateY(0);
   transition: all 0.2s ease;
   color: white;
+  border: none;
 }
 
 .btn-3d:hover {
