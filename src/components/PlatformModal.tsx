@@ -18,6 +18,24 @@ export type ProductLinks = {
   kabum?: string;
 };
 
+const categoryColors: Record<string, string> = {
+  "Todas": "#ff334b",
+  "Smartphones e TV": "#00BFFF",
+  "Informática e Games": "#8A2BE2",
+  "Casa e Eletrodomésticos": "#32CD32",
+  "Moda e Acessórios": "#FF69B4",
+  "Bebês e Crianças": "#FF8C00",
+  "Saúde e Beleza": "#00FA9A",
+  "Esporte e Suplementos": "#FF4500",
+  "Supermercado e Delivery": "#9ACD32",
+  "Livros, eBooks e eReaders": "#9370DB",
+  "Ferramentas e Jardim": "#DAA520",
+  "Automotivo": "#A9A9A9",
+  "Pet": "#20B2AA",
+  "Viagem": "#1E90FF",
+  "Diversos": "#B0C4DE"
+};
+
 type PlatformModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -306,8 +324,13 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
 
 
               <div className="p-4 sm:p-8 pb-4">
-                <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
-                <h3 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-4 leading-snug">
+                <span 
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ color: categoryColors[product.category] || "#8e92a4" }}
+                >
+                  {product.category || "OFERTA"}
+                </span>
+                <h3 className="text-lg md:text-xl font-normal text-[#8e92a4] uppercase mt-2 mb-4 leading-snug">
                   {product.name}
                 </h3>
 
