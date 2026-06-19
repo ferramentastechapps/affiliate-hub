@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Tag,
+  CaretLeft,
   DeviceMobile,
   GameController,
   House,
@@ -189,83 +190,71 @@ export function CategoriesModal() {
               </button>
 
               <div className="overflow-y-auto hidden-scrollbar flex-1 p-6 sm:p-8 pb-10">
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-purple-500/20">
-                    <Tag size={24} weight="fill" className="text-accent" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-1">
-                      Categorias
-                    </h2>
-                    <p className="text-zinc-400 text-sm">
-                      Explore produtos por categoria
-                    </p>
-                  </div>
-                </div>
-
-                {/* Categories Grid Selector */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3 mb-8">
-                  {CATEGORIES.map((category) => (
-                    <button
-                      key={category.key}
-                      onClick={() => {
-                        const isActivating = activeCategory !== category.key;
-                        setActiveCategory(isActivating ? category.key : null);
-                        
-                        if (isActivating) {
-                          setTimeout(() => {
-                            const section = document.getElementById('products-section');
-                            if (section) {
-                              section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                          }, 50);
-                        }
-                      }}
-                      className={`flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl transition-all duration-300 text-center border overflow-hidden ${
-                        activeCategory === category.key
-                          ? "btn-3d text-white border-transparent"
-                          : "bg-black/20 border-white/10 hover:bg-white/10"
-                      }`}
+                <AnimatePresence mode="wait">
+                  {!activeCategory ? (
+                    <motion.div
+                      key="categories-view"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col h-full"
                     >
-                      <div className={`p-2 rounded-xl transition-all duration-300 ${
-                        activeCategory === category.key
-                          ? "text-white"
-                          : "bg-white/5 text-zinc-400"
-                      }`}>
-                        <category.icon size={24} weight={activeCategory === category.key ? "fill" : "duotone"} />
-                      </div>
-                      <span
-                        className={`text-[9px] sm:text-xs font-bold leading-tight transition-colors duration-300 break-words w-full ${
-                          activeCategory === category.key
-                            ? "text-white"
-                            : "text-zinc-300"
-                        }`}
-                      >
-                        {category.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Products section inside Modal */}
-                <div id="products-section" className="scroll-mt-6">
-                  <AnimatePresence mode="wait">
-                    {activeCategory ? (
-                      <motion.div
-                        key={activeCategory}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="border-t border-white/5 pt-6 mt-6"
-                      >
-                      <div className="flex items-center justify-between mb-6">
+                      {/* Header */}
+                      <div className="flex items-center gap-3 mb-8">
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-purple-500/20">
+                          <Tag size={24} weight="fill" className="text-accent" />
+                        </div>
                         <div>
-                          <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 flex items-center gap-3">
+                          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-1">
+                            Categorias
+                          </h2>
+                          <p className="text-zinc-400 text-sm">
+                            Explore produtos por categoria
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Categories Grid Selector - 2 cols on mobile */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {CATEGORIES.map((category) => (
+                          <button
+                            key={category.key}
+                            onClick={() => setActiveCategory(category.key)}
+                            className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-[20px] transition-all duration-300 text-center sm:text-left border bg-black/20 border-white/10 hover:bg-white/10 group"
+                          >
+                            <div className="p-2 rounded-xl bg-white/5 text-zinc-400 group-hover:text-accent group-hover:bg-accent/10 transition-colors">
+                              <category.icon size={24} weight="duotone" />
+                            </div>
+                            <span className="text-xs sm:text-sm font-bold leading-tight text-zinc-300 group-hover:text-white transition-colors break-words w-full">
+                              {category.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="products-view"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex flex-col h-full"
+                    >
+                      {/* Back Button & Header */}
+                      <div className="flex items-center gap-4 mb-8">
+                        <button
+                          onClick={() => setActiveCategory(null)}
+                          className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-zinc-300 hover:text-white border border-white/5 flex-shrink-0"
+                        >
+                          <CaretLeft size={20} weight="bold" />
+                        </button>
+                        <div>
+                          <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 flex items-center gap-2">
                             {activeCategoryInfo && (
-                              <div className="p-2 rounded-xl bg-accent/20 text-accent">
-                                <activeCategoryInfo.icon size={26} weight="fill" />
+                              <div className="p-1.5 rounded-lg bg-accent/20 text-accent">
+                                <activeCategoryInfo.icon size={20} weight="fill" />
                               </div>
                             )}
                             {activeCategoryInfo?.label}
@@ -279,7 +268,7 @@ export function CategoriesModal() {
                       {/* Loading */}
                       {loading && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {[1, 2, 3].map((i) => (
+                          {[1, 2, 3, 4].map((i) => (
                             <div
                               key={i}
                               className="h-48 bg-zinc-900/50 rounded-2xl animate-pulse"
@@ -399,21 +388,9 @@ export function CategoriesModal() {
                         </div>
                       )}
                     </motion.div>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="text-center py-20 text-zinc-500 border border-dashed border-white/5 rounded-[2rem] flex flex-col items-center justify-center mt-6"
-                    >
-                      <Tag size={40} className="text-zinc-600 mb-3" />
-                      <p className="text-sm font-medium">
-                        Selecione uma categoria acima para explorar as ofertas
-                      </p>
-                    </motion.div>
                   )}
-                  </AnimatePresence>
-                </div>
+                </AnimatePresence>
+              </div>
               </div>
             </motion.div>
           </motion.div>
