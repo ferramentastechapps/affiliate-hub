@@ -352,7 +352,7 @@ export function DailyDeals() {
                 {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
                 <div className="w-full aspect-square relative">
                   {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
-                  <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
+                  <div className="w-full h-full bg-white flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
                     <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                       {discount > 0 && (
                         <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
@@ -368,7 +368,7 @@ export function DailyDeals() {
                     <img
                       src={product.imageUrl}
                       alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.webp";
                       }}

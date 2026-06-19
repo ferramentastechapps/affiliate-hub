@@ -128,11 +128,11 @@ export function ProductsTab() {
                 key={product.id}
                 className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
               >
-                <div className="aspect-[4/5] relative bg-zinc-950 flex items-center justify-center">
+                <div className="aspect-[4/5] relative bg-white flex items-center justify-center">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain p-4"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "/placeholder.webp";
                     }}
