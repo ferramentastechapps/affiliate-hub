@@ -227,16 +227,6 @@ export function DailyDeals() {
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
-      {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-3 md:mb-4">
-        <div>
-          <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
-            Promoções do dia
-          </h2>
-          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
-        </div>
-      </div>
-
       {/* Abas de Filtro */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {[
@@ -259,6 +249,16 @@ export function DailyDeals() {
             {filter.label}
           </button>
         ))}
+      </div>
+
+      {/* Seção Cabeçalho */}
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div>
+          <h2 className="text-sm md:text-xl font-black tracking-tight text-white mb-0.5 md:mb-1 flex items-center gap-2">
+            Promoções do dia
+          </h2>
+          <p className="text-zinc-400 text-[11px] md:text-xs">As melhores ofertas atualizadas em tempo real</p>
+        </div>
       </div>
 
       {/* Sem resultados de busca/categoria */}
