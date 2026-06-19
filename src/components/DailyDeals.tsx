@@ -20,7 +20,9 @@ import {
   Airplane, 
   Package,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  ThumbsUp,
+  Tag
 } from "@phosphor-icons/react";
 
 // Types
@@ -289,7 +291,7 @@ export function DailyDeals() {
 
       {/* Grid de promoções */}
       {filteredProducts.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {displayProducts.map((product, index) => {
             const price = product.price || 0;
             const originalPrice = product.originalPrice || 0;
@@ -365,49 +367,42 @@ export function DailyDeals() {
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: (index % 4) * 0.05, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedProduct(product)}
-                className="group cursor-pointer glass-3d-card rounded-[20px] overflow-hidden flex flex-col relative z-0"
+                className="group cursor-pointer glass-3d-card rounded-[16px] overflow-hidden flex flex-row relative z-0 h-32 sm:h-36"
               >
-                {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
-                <div className="w-full aspect-square relative shrink-0">
-                  {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
-                  <div className="absolute inset-0 bg-white flex items-center justify-center overflow-hidden border-b border-white/[0.04] rounded-t-[20px]">
-                    <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                      {discount > 0 && (
-                        <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                          -{discount}%
-                        </span>
-                      )}
-                      <span className="bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/20 shadow-lg">
-                        <Clock size={11} weight="bold" />
-                        {getTimeAgo(product.createdAt)}
+                {/* Imagem Container Wrapper */}
+                <div className="w-[120px] sm:w-[140px] shrink-0 relative bg-white flex items-center justify-center border-r border-white/[0.04]">
+                  {/* Desconto */}
+                  <div className="absolute top-2 left-2 z-10">
+                    {discount > 0 && (
+                      <span className="bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm">
+                        -{discount}%
                       </span>
-                    </div>
-
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.webp";
-                      }}
-                    />
+                    )}
                   </div>
 
-                  {/* Overlapping Brand Badge — Premium 3D Pin */}
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/placeholder.webp";
+                    }}
+                  />
+
+                  {/* Overlapping Brand Badge */}
                   <div 
-                    className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full bg-white transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-110"
+                    className="absolute -bottom-2 -right-2 z-20 flex items-center justify-center rounded-full bg-white transition-transform duration-500 group-hover:scale-110 border border-black/5"
                     style={{
-                      width: '44px',
-                      height: '44px',
-                      boxShadow: 'inset 0 4px 8px rgba(255,255,255,0.8), inset 0 -4px 8px rgba(0,0,0,0.1), 0 10px 20px -5px rgba(0,0,0,0.9), 0 0 0 2px rgba(255,255,255,0.1)',
-                      transformStyle: 'preserve-3d',
+                      width: '32px',
+                      height: '32px',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
                     }}
                   >
                     <img 
                       src={mainPlatformLogo} 
                       alt={badgeStyle.label}
                       title={badgeStyle.label}
-                      className="w-7 h-7 object-contain" 
+                      className="w-5 h-5 object-contain" 
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.webp";
                       }}
@@ -415,34 +410,54 @@ export function DailyDeals() {
                   </div>
                 </div>
 
-
                 {/* Deal Body */}
-                <div className="p-4 pt-7 flex flex-col flex-1">
+                <div className="p-3 sm:p-4 flex flex-col flex-1 relative overflow-hidden">
+                  <div className="absolute top-3 right-3">
+                    <span className="text-[#8e92a4] text-[9px] font-medium flex items-center gap-1">
+                      <Clock size={10} weight="bold" />
+                      {getTimeAgo(product.createdAt)}
+                    </span>
+                  </div>
+
                   <span 
-                    className="text-[10px] font-bold uppercase tracking-wider mb-1"
+                    className="text-[9px] font-bold uppercase tracking-wider mb-0.5 pr-16 truncate"
                     style={{ color: categoryColors[product.category] || "#8e92a4" }}
                   >
                     {product.category || "OFERTA"}
                   </span>
 
-                  <h3 className="text-xs sm:text-[13px] font-normal text-[#8e92a4] uppercase mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-white transition-colors">
+                  <h3 className="text-[11px] sm:text-xs font-normal text-[#8e92a4] uppercase mb-1 line-clamp-2 leading-snug group-hover:text-white transition-colors">
                     {product.name}
                   </h3>
 
                   <div className="mt-auto flex flex-col">
                     {price > 0 ? (
-                      <>
+                      <div className="flex items-end gap-2">
+                        <span className="text-base sm:text-lg font-black text-[#ff334b] leading-none">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                        </span>
                         {discount > 0 && (
-                          <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
+                          <span className="text-[10px] sm:text-[11px] text-[#8e92a4] line-through leading-none pb-[2px]">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                           </span>
                         )}
-                        <span className="text-base font-black text-[#ff334b]">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
-                        </span>
-                      </>
+                      </div>
                     ) : (
-                      <span className="text-sm font-bold text-[#ff334b]">Ver detalhes</span>
+                      <span className="text-xs font-bold text-[#ff334b]">Ver detalhes</span>
+                    )}
+                  </div>
+
+                  {/* Interactive Details Row */}
+                  <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/5 text-[#8e92a4] text-[10px] font-medium">
+                    <div className="flex items-center gap-1 hover:text-accent transition-colors">
+                       <ThumbsUp size={12} weight="bold" className="text-emerald-500" />
+                       <span>{Math.max((product.clicks || 0) * 3 + discount, 5)}</span>
+                    </div>
+                    {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" && (
+                       <div className="flex items-center gap-1 text-[#ff9900]">
+                         <Tag size={12} weight="fill" />
+                         <span>Com Cupom</span>
+                       </div>
                     )}
                   </div>
                 </div>
