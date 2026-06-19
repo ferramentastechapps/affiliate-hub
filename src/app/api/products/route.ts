@@ -33,6 +33,14 @@ export async function GET(request: Request) {
               { expiresAt: { gte: new Date() } }
             ]
           }
+        },
+        _count: {
+          select: {
+            votes: {
+              where: { type: 'LIKE' }
+            },
+            comments: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }

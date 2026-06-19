@@ -22,7 +22,12 @@ import {
   Clock,
   ArrowUpRight,
   ThumbsUp,
-  Tag
+  Tag,
+  ShieldCheck,
+  Truck,
+  Heart,
+  ChatCircle,
+  ArrowRight
 } from "@phosphor-icons/react";
 
 // Types
@@ -38,6 +43,10 @@ type Product = {
   links: Record<string, string | undefined>;
   createdAt?: string;
   clicks?: number;
+  _count?: {
+    votes: number;
+    comments: number;
+  };
 };
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
@@ -141,6 +150,7 @@ export function DailyDeals() {
           createdAt: p.createdAt,
           description: p.description,
           coupons: p.coupons || [],
+          _count: p._count,
           links: {
             amazon: p.links?.amazon,
             mercadoLivre: p.links?.mercadoLivre,
@@ -367,100 +377,106 @@ export function DailyDeals() {
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: (index % 4) * 0.05, type: "spring", stiffness: 100 }}
                 onClick={() => setSelectedProduct(product)}
-                className="group cursor-pointer glass-3d-card rounded-[16px] overflow-hidden flex flex-row relative z-0 h-32 sm:h-36"
+                className="group cursor-pointer glass-3d-card rounded-[16px] overflow-hidden flex flex-col relative z-0"
               >
-                {/* Imagem Container Wrapper */}
-                <div className="w-[120px] sm:w-[140px] shrink-0 relative bg-white flex items-center justify-center border-r border-white/[0.04]">
-                  {/* Desconto */}
-                  <div className="absolute top-2 left-2 z-10">
+                {/* Header (Store Info) */}
+                <div className="p-3 pb-2 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-2">
+                    <img src={mainPlatformLogo} className="w-5 h-5 rounded-full object-contain" />
+                    <span className="text-white font-bold text-xs flex items-center gap-1">
+                      {mainPlatformText}
+                      <ShieldCheck size={14} weight="fill" className="text-blue-500" />
+                    </span>
+                  </div>
+                  <span className="text-[#8e92a4] text-[10px] flex items-center gap-1">
+                    <Clock size={10} weight="bold" /> {getTimeAgo(product.createdAt)}
+                  </span>
+                </div>
+
+                {/* Middle (Image + Info) */}
+                <div className="flex flex-row">
+                  <div className="w-[120px] sm:w-[140px] shrink-0 relative bg-white flex items-center justify-center border-r border-white/[0.04] p-2">
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-full aspect-square object-contain transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.webp";
+                      }}
+                    />
                     {discount > 0 && (
-                      <span className="bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm">
+                      <span className="absolute top-2 left-2 bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm">
                         -{discount}%
                       </span>
                     )}
                   </div>
 
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/placeholder.webp";
-                    }}
-                  />
-
-                  {/* Overlapping Brand Badge */}
-                  <div 
-                    className="absolute -bottom-2 -right-2 z-20 flex items-center justify-center rounded-full bg-white transition-transform duration-500 group-hover:scale-110 border border-black/5"
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
-                    }}
-                  >
-                    <img 
-                      src={mainPlatformLogo} 
-                      alt={badgeStyle.label}
-                      title={badgeStyle.label}
-                      className="w-5 h-5 object-contain" 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.webp";
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Deal Body */}
-                <div className="p-3 sm:p-4 flex flex-col flex-1 relative overflow-hidden">
-                  <div className="absolute top-3 right-3">
-                    <span className="text-[#8e92a4] text-[9px] font-medium flex items-center gap-1">
-                      <Clock size={10} weight="bold" />
-                      {getTimeAgo(product.createdAt)}
+                  <div className="p-3 sm:p-4 flex flex-col flex-1 relative overflow-hidden">
+                    <span 
+                      className="text-[9px] font-bold uppercase tracking-wider mb-0.5 truncate"
+                      style={{ color: categoryColors[product.category] || "#8e92a4" }}
+                    >
+                      {product.category || "OFERTA"}
                     </span>
-                  </div>
 
-                  <span 
-                    className="text-[9px] font-bold uppercase tracking-wider mb-0.5 pr-16 truncate"
-                    style={{ color: categoryColors[product.category] || "#8e92a4" }}
-                  >
-                    {product.category || "OFERTA"}
-                  </span>
+                    <h3 className="text-[11px] sm:text-xs font-normal text-[#8e92a4] uppercase mb-1.5 line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                      {product.name}
+                    </h3>
 
-                  <h3 className="text-[11px] sm:text-xs font-normal text-[#8e92a4] uppercase mb-1 line-clamp-2 leading-snug group-hover:text-white transition-colors">
-                    {product.name}
-                  </h3>
-
-                  <div className="mt-auto flex flex-col">
-                    {price > 0 ? (
-                      <div className="flex items-end gap-2">
-                        <span className="text-base sm:text-lg font-black text-[#ff334b] leading-none">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
-                        </span>
-                        {discount > 0 && (
-                          <span className="text-[10px] sm:text-[11px] text-[#8e92a4] line-through leading-none pb-[2px]">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs font-bold text-[#ff334b]">Ver detalhes</span>
-                    )}
-                  </div>
-
-                  {/* Interactive Details Row */}
-                  <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/5 text-[#8e92a4] text-[10px] font-medium">
-                    <div className="flex items-center gap-1 hover:text-accent transition-colors">
-                       <ThumbsUp size={12} weight="bold" className="text-emerald-500" />
-                       <span>{Math.max((product.clicks || 0) * 3 + discount, 5)}</span>
+                    {/* Coupons and Free Shipping Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                      {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" && (
+                         <span className="bg-[#ff9900]/10 text-[#ff9900] border border-[#ff9900]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                           <Tag size={10} weight="fill" /> CUPOM
+                         </span>
+                      )}
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <Truck size={10} weight="fill" /> FRETE GRÁTIS*
+                      </span>
                     </div>
-                    {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" && (
-                       <div className="flex items-center gap-1 text-[#ff9900]">
-                         <Tag size={12} weight="fill" />
-                         <span>Com Cupom</span>
-                       </div>
-                    )}
+
+                    <div className="mt-auto flex items-end gap-2">
+                      {price > 0 ? (
+                        <>
+                          <span className="text-base sm:text-lg font-black text-[#ff334b] leading-none">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                          </span>
+                          {discount > 0 && (
+                            <span className="text-[10px] sm:text-[11px] text-[#8e92a4] line-through leading-none pb-[2px]">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs font-bold text-[#ff334b]">Ver detalhes</span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Footer (Actions) */}
+                <div className="p-2.5 px-4 border-t border-white/5 flex items-center justify-between bg-black/20">
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setSelectedProduct(product); // Abre o modal por enquanto, curtida direta precisaria de autenticação na tela principal
+                      }}
+                      className="flex items-center gap-1.5 text-[#8e92a4] hover:text-emerald-500 transition-colors text-[11px] font-bold"
+                    >
+                      <Heart size={14} weight="bold" /> {product._count?.votes || 0}
+                    </button>
+                    <button 
+                      className="flex items-center gap-1.5 text-[#8e92a4] hover:text-white transition-colors text-[11px] font-bold"
+                    >
+                      <ChatCircle size={14} weight="bold" /> {product._count?.comments || 0}
+                    </button>
+                  </div>
+                  <button className="text-[10px] font-bold uppercase tracking-wider text-[#ff334b] hover:text-white transition-colors flex items-center gap-1">
+                    Ver mais <ArrowRight size={10} weight="bold" />
+                  </button>
+                </div>
+
               </motion.div>
             );
           })}
