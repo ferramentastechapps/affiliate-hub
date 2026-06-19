@@ -95,21 +95,7 @@ export function ProductDetail({ product }: { product: Product }) {
   }
 
   function handleOpenRelated(relatedItem: any) {
-    if(!relatedItem?.links) return;
-    
-    let target = "";
-    if (relatedItem.links.amazon) target = relatedItem.links.amazon;
-    else if (relatedItem.links.mercadoLivre) target = relatedItem.links.mercadoLivre;
-    else if (relatedItem.links.shopee) target = relatedItem.links.shopee;
-    else if (relatedItem.links.aliexpress) target = relatedItem.links.aliexpress;
-    else {
-      const v = Object.values(relatedItem.links).find(l => typeof l === 'string' && l.length > 0);
-      target = v as string;
-    }
-
-    if(target) {
-      window.open(target, '_blank', 'noopener,noreferrer');
-    }
+    router.push(`/produto/${relatedItem.id}`);
   }
 
   const price = product.price || 0;
