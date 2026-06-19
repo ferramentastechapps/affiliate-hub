@@ -193,14 +193,9 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                 <div className="flex items-center justify-between p-6">
                     <div className="flex items-center gap-2 md:gap-3">
                       <img
-                        src="/Logo.png"
-                        alt="Economizei Logo Icon"
-                        className="h-10 w-10 object-contain"
-                      />
-                      <img
-                        src="/logo 2 branco.png"
+                        src="/logo economizei.webp"
                         alt="Economizei"
-                        className="h-7 w-auto object-contain"
+                        className="h-10 w-auto object-contain"
                       />
                     </div>
                   <motion.button
