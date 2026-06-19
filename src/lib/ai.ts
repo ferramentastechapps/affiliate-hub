@@ -33,6 +33,16 @@ CRITÉRIOS DE SCORE (Mantenha a coerência):
 - 5-6: desconto mixuruca.
 - abaixo de 5: preço normal.
 
+REGRAS DE CONTEXTO TEMPORAL (use quando relevante, não force):
+- Se for fim de semana, você PODE fazer uma referência leve ao fim de semana 
+  na frase (sextou, fim de semana, churrasquinho, etc) SE fizer sentido 
+  natural com o produto. Nunca force se não encaixar.
+- Se houver Copa do Mundo acontecendo (junho/julho 2026), você PODE 
+  fazer referência leve a jogo, torcida, copa, se encaixar naturalmente 
+  com o produto.
+- Nunca mencione data, hora ou dia explicitamente na frase.
+- O contexto é só uma inspiração pra piada, não uma obrigação.
+
 FORMATO DE SAÍDA — responda APENAS com JSON válido:
 {
   "titulo": "A FRASE GERADA EM CAIXA ALTA",
@@ -149,10 +159,45 @@ export async function processProductWithAI(
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
 
+    const now = new Date();
+    const timeZone = 'America/Sao_Paulo';
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone,
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    const parts = formatter.formatToParts(now);
+    const partMap: Record<string, string> = {};
+    parts.forEach(p => partMap[p.type] = p.value);
+
+    const weekdayStr = partMap.weekday ? partMap.weekday.charAt(0).toUpperCase() + partMap.weekday.slice(1) : '';
+    const dateStr = `${partMap.day}/${partMap.month}/${partMap.year}`;
+    const timeStr = `${partMap.hour}:${partMap.minute}`;
+
+    const hourNum = parseInt(partMap.hour || '0', 10);
+    const isWeekend = 
+      weekdayStr.toLowerCase().includes('sábado') || 
+      weekdayStr.toLowerCase().includes('domingo') || 
+      (weekdayStr.toLowerCase().includes('sexta') && hourNum >= 17);
+
+    const weekendStr = isWeekend ? 'sim' : 'não';
+
     const promptText = `Nome do produto: ${productName}
 Preço atual: R$ ${price}
 ${originalPrice ? `Preço original: R$ ${originalPrice}` : ''}
-Categoria: ${category || 'Diversos'}`;
+Categoria: ${category || 'Diversos'}
+
+Contexto atual:
+- Dia: ${weekdayStr}
+- Data: ${dateStr}
+- Hora: ${timeStr} (horário de Brasília)
+- Fim de semana: ${weekendStr}`;
 
     // Lista de modelos em ordem de preferência (fallback automático)
     const MODELS = [
