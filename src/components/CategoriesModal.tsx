@@ -391,7 +391,6 @@ export function CategoriesModal() {
                   )}
                 </AnimatePresence>
               </div>
-              </div>
             </motion.div>
           </motion.div>
         )}
