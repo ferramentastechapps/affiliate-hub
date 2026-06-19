@@ -53,16 +53,6 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [visibleRelatedCount, setVisibleRelatedCount] = useState(10);
   const [showCouponModal, setShowCouponModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  function handleCopyAndGo() {
-    if (displayCoupon) {
-      navigator.clipboard.writeText(displayCoupon);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      handleGoToStore();
-    }
-  }
 
   // Carrega produtos relacionados e dados de interação ao abrir a modal
   useEffect(() => {
@@ -392,7 +382,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
 
                 {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
                   <button 
-                    onClick={handleCopyAndGo}
+                    onClick={() => setShowCouponModal(true)}
                     className="w-full flex items-center text-left gap-3 mb-4 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 hover:from-accent/30 hover:to-accent/10 border border-accent/30 rounded-2xl transition-all group"
                   >
                     <div className="bg-accent/20 p-2 rounded-xl text-accent">
@@ -400,12 +390,12 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">
-                        {copied ? "COPIADO!" : "CUPOM (CLIQUE PARA COPIAR)"}
+                        VER CUPOM DE DESCONTO
                       </span>
                       <code className="text-white font-mono font-bold text-base sm:text-lg break-all">{displayCoupon}</code>
                     </div>
                     <div className="bg-white/10 p-2 rounded-xl text-white group-hover:bg-white/20 transition-colors">
-                      {copied ? <Check size={20} weight="bold" className="text-green-400" /> : <Copy size={20} weight="duotone" />}
+                      <Copy size={20} weight="duotone" />
                     </div>
                   </button>
                 )}
@@ -586,6 +576,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
               productName={product.name}
               platformName={platformName}
               affiliateUrl={safeTargetUrl}
+              imageUrl={product.imageUrl}
               onGoToStore={handleGoToStore}
             />
           )}
