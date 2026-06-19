@@ -205,16 +205,24 @@ export function CategoriesModal() {
                 </div>
 
                 {/* Categories Grid Selector */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3 mb-8">
                   {CATEGORIES.map((category) => (
                     <button
                       key={category.key}
-                      onClick={() =>
-                        setActiveCategory(
-                          activeCategory === category.key ? null : category.key
-                        )
-                      }
-                      className={`flex items-center gap-4 px-5 py-4 rounded-[20px] transition-all duration-300 text-left border ${
+                      onClick={() => {
+                        const isActivating = activeCategory !== category.key;
+                        setActiveCategory(isActivating ? category.key : null);
+                        
+                        if (isActivating) {
+                          setTimeout(() => {
+                            const section = document.getElementById('products-section');
+                            if (section) {
+                              section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                          }, 150);
+                        }
+                      }}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all duration-300 text-center border ${
                         activeCategory === category.key
                           ? "btn-3d text-white border-transparent"
                           : "bg-black/20 border-white/10 hover:bg-white/10"
@@ -228,7 +236,7 @@ export function CategoriesModal() {
                         <category.icon size={24} weight={activeCategory === category.key ? "fill" : "duotone"} />
                       </div>
                       <span
-                        className={`text-sm sm:text-base font-bold transition-colors duration-300 ${
+                        className={`text-[10px] sm:text-xs font-bold leading-tight transition-colors duration-300 ${
                           activeCategory === category.key
                             ? "text-white"
                             : "text-zinc-300"
@@ -244,12 +252,13 @@ export function CategoriesModal() {
                 <AnimatePresence mode="wait">
                   {activeCategory ? (
                     <motion.div
+                      id="products-section"
                       key={activeCategory}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
-                      className="border-t border-white/5 pt-6 mt-6"
+                      className="border-t border-white/5 pt-6 mt-6 scroll-mt-6"
                     >
                       <div className="flex items-center justify-between mb-6">
                         <div>
