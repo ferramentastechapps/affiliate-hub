@@ -128,14 +128,14 @@ export function WeeklyHighlights() {
                 {/* Discount Badge */}
                 {discount > 0 && (
                   <div className="flex items-center gap-1.5 self-start">
-                    <span className="bg-[#d4af37] text-[#090a0f] text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
+                    <span className="bg-[#ff334b] text-white text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
                       -{discount}%
                     </span>
                   </div>
                 )}
                 
                 {/* Product Title */}
-                <h3 className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2 mt-2 mb-2 group-hover:text-[#d4af37] transition-colors">
+                <h3 className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2 mt-2 mb-2 group-hover:text-[#ff334b] transition-colors">
                   {product.name}
                 </h3>
 
@@ -149,7 +149,7 @@ export function WeeklyHighlights() {
                       }).format(originalPrice)}
                     </span>
                   )}
-                  <span className="text-base sm:text-lg font-black text-[#d4af37] transition-colors">
+                  <span className="text-base sm:text-lg font-black text-[#ff334b] transition-colors">
                     {price > 0
                       ? new Intl.NumberFormat("pt-BR", {
                           style: "currency",
