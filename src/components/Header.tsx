@@ -26,8 +26,7 @@ export function Header() {
 
             {/* Logo */}
             <a href="/" className="flex items-center gap-2 shrink-0">
-              <img src="/Logo.png" alt="Logo" className="w-7 h-7 object-contain" />
-              <img src="/logo 2 branco.png" alt="Economizei" className="h-5 w-auto object-contain" />
+              <img src="/logo economizei.webp" alt="Economizei" className="h-7 w-auto object-contain" />
             </a>
 
             {/* Busca expandida no mobile */}
@@ -83,8 +82,7 @@ export function Header() {
               whileTap={{ scale: 0.99 }}
               className="flex items-center gap-3 shrink-0"
             >
-              <img src="/Logo.png" alt="Logo" className="w-9 h-9 object-contain" />
-              <img src="/logo 2 branco.png" alt="Economizei" className="h-6 w-auto object-contain" />
+              <img src="/logo economizei.webp" alt="Economizei" className="h-9 w-auto object-contain" />
             </motion.a>
 
             {/* Barra de Busca */}

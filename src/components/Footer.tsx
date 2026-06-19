@@ -161,8 +161,7 @@ export function Footer() {
             {/* Coluna 1: Info e Social Icons */}
             <div className="flex flex-col gap-4">
               <a href="#" className="flex items-center gap-3 text-decoration-none select-none">
-                <img src="/Logo.png" alt="Logo" className="w-9 h-9 object-contain" />
-                <img src="/logo 2 branco.png" alt="Economizei" className="h-6 w-auto object-contain" />
+                <img src="/logo economizei.webp" alt="Economizei" className="h-8 w-auto object-contain" />
               </a>
               <p className="text-zinc-500 text-xs leading-relaxed max-w-[320px]">
                 Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.
