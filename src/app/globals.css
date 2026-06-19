@@ -122,29 +122,31 @@ body {
 }
 
 .text-gradient-premium {
-  background: linear-gradient(135deg, #ff334b 0%, #ff7a8a 100%);
+  background: linear-gradient(135deg, #d4af37 0%, #f9df9f 50%, #aa7c11 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0px 4px 12px rgba(255, 51, 75, 0.3));
+  filter: drop-shadow(0px 4px 12px rgba(212, 175, 55, 0.3));
 }
 
 .btn-3d {
-  background: linear-gradient(135deg, #ff334b 0%, #e61932 100%);
-  box-shadow: 0 4px 14px 0 rgba(255, 51, 75, 0.39);
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+  box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.39);
   transform: translateY(0);
   transition: all 0.2s ease;
-  color: white;
+  color: #090a0f;
+  font-weight: 700;
   border: none;
 }
 
 .btn-3d:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 51, 75, 0.5);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+  background: linear-gradient(135deg, #e6c27a 0%, #c59b27 100%);
 }
 
 .btn-3d:active {
   transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(255, 51, 75, 0.4);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4);
 }
 
 .glass-3d-card {

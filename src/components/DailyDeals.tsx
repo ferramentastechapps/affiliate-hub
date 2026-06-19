@@ -338,7 +338,7 @@ export function DailyDeals() {
               platformKey = "kabum";
             }
 
-            const badgeStyle = storeBadgeConfig[platformKey] || { bg: "#ff334b", text: "#ffffff", label: mainPlatformText };
+            const badgeStyle = storeBadgeConfig[platformKey] || { bg: "#d4af37", text: "#090a0f", label: mainPlatformText };
 
             return (
               <motion.div
@@ -355,7 +355,7 @@ export function DailyDeals() {
                   <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
                     <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
                       {discount > 0 && (
-                        <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                        <span className="bg-[#d4af37] text-[#090a0f] font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
                           -{discount}%
                         </span>
                       )}
@@ -404,7 +404,7 @@ export function DailyDeals() {
                     {product.category || "Oferta"}
                   </span>
 
-                  <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
+                  <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#d4af37] transition-colors">
                     {product.name}
                   </h3>
 
@@ -416,12 +416,12 @@ export function DailyDeals() {
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                           </span>
                         )}
-                        <span className="text-base font-black text-[#ff334b]">
+                        <span className="text-base font-black text-[#d4af37]">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm font-bold text-[#ff334b]">Ver detalhes</span>
+                      <span className="text-sm font-bold text-[#d4af37]">Ver detalhes</span>
                     )}
                   </div>
                 </div>

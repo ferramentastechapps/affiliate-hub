@@ -66,7 +66,7 @@ export function Footer() {
     <footer className="w-full mt-20">
       {/* Seção de Comunidade */}
       <section className="max-w-[1200px] mx-auto px-6 mb-16">
-        <div className="bg-gradient-to-b from-[#ff334b]/[0.08] to-transparent bg-card border border-border-custom rounded-[28px] p-12 text-center relative overflow-hidden">
+        <div className="bg-gradient-to-b from-[#d4af37]/[0.08] to-transparent bg-card border border-border-custom rounded-[28px] p-12 text-center relative overflow-hidden">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -213,7 +213,7 @@ export function Footer() {
           {/* Copyright e Disclaimer */}
           <div className="border-t border-white/[0.04] pt-8 mt-8 flex flex-col items-center gap-4 text-center">
             <p className="text-zinc-500 text-xs flex items-center gap-1.5 justify-center">
-              © {currentYear} Economizei. Feito com <Heart size={12} weight="fill" className="text-[#ff334b]" /> para você economizar.
+              © {currentYear} Economizei. Feito com <Heart size={12} weight="fill" className="text-[#d4af37]" /> para você economizar.
             </p>
             <p className="text-[#ffffff]/25 text-[11px] max-w-[800px] leading-relaxed mx-auto">
               Os preços e a disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja parceira antes de finalizar sua compra. Economizei não se responsabiliza pelas compras realizadas nos links externos.
