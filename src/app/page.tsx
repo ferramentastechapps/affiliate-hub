@@ -13,7 +13,7 @@ export const revalidate = 60;
 // 📊 METADATA PARA SEO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const metadata: Metadata = {
-  title: "Economiza ai | Melhores Ofertas e Cupons de Desconto",
+  title: "Economizei | Melhores Ofertas e Cupons de Desconto",
   description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre Amazon, Mercado Livre, Shopee, AliExpress e TikTok Shop. Economize agora!",
   keywords: [
     "cupons de desconto",
@@ -31,23 +31,23 @@ export const metadata: Metadata = {
     "home office",
     "streaming"
   ],
-  authors: [{ name: "Economiza ai" }],
-  creator: "Economiza ai",
-  publisher: "Economiza ai",  
+  authors: [{ name: "Economizei" }],
+  creator: "Economizei",
+  publisher: "Economizei",  
   // Open Graph (Facebook, LinkedIn, WhatsApp)
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://economizai.usejotashop.com.br",
-    siteName: "Economiza ai",
-    title: "Economiza ai | Melhores Ofertas e Cupons de Desconto",
+    url: "https://economizei.ftech-apps.com.br",
+    siteName: "Economizei",
+    title: "Economizei | Melhores Ofertas e Cupons de Desconto",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre as principais lojas online.",
     images: [
       {
-        url: "https://economizai.usejotashop.com.br/icons/og-image.png?v=2",
+        url: "https://economizei.ftech-apps.com.br/icons/og-image.png?v=2",
         width: 1200,
         height: 630,
-        alt: "Economiza ai - Melhores Ofertas",
+        alt: "Economizei - Melhores Ofertas",
       },
     ],
   },
@@ -55,9 +55,9 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "Economiza ai | Melhores Ofertas e Cupons",
+    title: "Economizei | Melhores Ofertas e Cupons",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos.",
-    images: ["https://economizai.usejotashop.com.br/icons/og-image.png?v=2"],
+    images: ["https://economizei.ftech-apps.com.br/icons/og-image.png?v=2"],
   },
   
   // Robots

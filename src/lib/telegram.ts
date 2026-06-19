@@ -1,7 +1,7 @@
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const TELEGRAM_PROMO_GROUP_ID = process.env.TELEGRAM_PROMO_GROUP_ID;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://economizai.usejotashop.com.br";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://economizei.ftech-apps.com.br";
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'Smartphones e TV': '📱',

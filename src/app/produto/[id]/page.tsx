@@ -20,12 +20,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (!product) {
       return {
-        title: 'Produto não encontrado | Economiza ai',
+        title: 'Produto não encontrado | Economizei',
       };
     }
 
     return {
-      title: `${product.name} | Economiza ai`,
+      title: `${product.name} | Economizei`,
       description: product.description || `Compre ${product.name} com o melhor preço. Aproveite cupons de desconto exclusivos!`,
       openGraph: {
         title: product.name,
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   } catch (error) {
     return {
-      title: 'Produto não encontrado | Economiza ai',
+      title: 'Produto não encontrado | Economizei',
     };
   }
 }

@@ -30,14 +30,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://economizai.usejotashop.com.br'),
-  title: "Economiza ai | Melhores Cupons e Promoções",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br'),
+  title: "Economizei | Melhores Cupons e Promoções",
   description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Economiza ai",
+    title: "Economizei",
   },
   icons: {
     icon: [
@@ -54,14 +54,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    siteName: "Economiza ai",
-    title: "Economiza ai | Melhores Cupons e Promoções",
-    description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
-    images: [{ url: "/icons/og-image.png?v=2", width: 1200, height: 630, alt: "Economiza ai" }],
+    siteName: "Economizei",
+    title: "Economizei | Melhores Cupons e Promoções",
+    description: "Encontre os melhores descontos, cupons e ofertas da internet em um só lugar.",
+    images: [{ url: "/icons/og-image.png?v=2", width: 1200, height: 630, alt: "Economizei" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Economiza ai | Melhores Cupons e Promoções",
+    title: "Economizei | Melhores Cupons e Promoções",
     description: "Melhores cupons e promoções do Brasil.",
     images: ["/icons/og-image.png?v=2"],
   },
