@@ -426,12 +426,13 @@ export function DailyDeals() {
                     {/* Coupons and Free Shipping Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 mb-2">
                       {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" && (
-                         <span className="bg-[#ff9900]/10 text-[#ff9900] border border-[#ff9900]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                           <Tag size={10} weight="fill" /> CUPOM
+                         <span className="bg-[#ff9900]/10 text-[#ff9900] border border-[#ff9900]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[120px] truncate" title={product.coupons[0].code}>
+                           <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">{product.coupons[0].code}</span>
                          </span>
                       )}
-                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                        <Truck size={10} weight="fill" /> FRETE GRÁTIS*
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1" title="Frete Grátis">
+                        <Truck size={10} weight="fill" />
+                        <span className={product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" ? "hidden sm:inline" : ""}>FRETE GRÁTIS*</span>
                       </span>
                     </div>
 
@@ -472,8 +473,8 @@ export function DailyDeals() {
                       <ChatCircle size={14} weight="bold" /> {product._count?.comments || 0}
                     </button>
                   </div>
-                  <button className="text-[10px] font-bold uppercase tracking-wider text-[#ff334b] hover:text-white transition-colors flex items-center gap-1">
-                    Ver mais <ArrowRight size={10} weight="bold" />
+                  <button className="text-[10px] font-bold uppercase tracking-wider text-white hover:text-[#ff334b] transition-colors flex items-center gap-1">
+                    VER MAIS <ArrowRight size={10} weight="bold" className="text-[#ff334b]" />
                   </button>
                 </div>
 
