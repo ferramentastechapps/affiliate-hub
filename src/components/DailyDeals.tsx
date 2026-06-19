@@ -56,6 +56,24 @@ const categoryIconMap: Record<string, React.ComponentType<any>> = {
   "Diversos": Package,
 };
 
+const categoryColors: Record<string, string> = {
+  "Todas": "#ff334b",
+  "Smartphones e TV": "#3b82f6",
+  "Informática e Games": "#8b5cf6",
+  "Casa e Eletrodomésticos": "#10b981",
+  "Moda e Acessórios": "#ec4899",
+  "Bebês e Crianças": "#f43f5e",
+  "Saúde e Beleza": "#14b8a6",
+  "Esporte e Suplementos": "#f97316",
+  "Supermercado e Delivery": "#84cc16",
+  "Livros, eBooks e eReaders": "#a855f7",
+  "Ferramentas e Jardim": "#eab308",
+  "Automotivo": "#64748b",
+  "Pet": "#06b6d4",
+  "Viagem": "#0ea5e9",
+  "Diversos": "#94a3b8"
+};
+
 // Helper for deterministic discount simulation based on string ID
 
 
@@ -359,7 +377,7 @@ export function DailyDeals() {
                           -{discount}%
                         </span>
                       )}
-                      <span className="bg-black/30 backdrop-blur-md text-[#8e92a4] text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/5">
+                      <span className="bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-[6px] flex items-center gap-1 border border-white/20 shadow-lg">
                         <Clock size={11} weight="bold" />
                         {getTimeAgo(product.createdAt)}
                       </span>
@@ -377,10 +395,10 @@ export function DailyDeals() {
 
                   {/* Overlapping Brand Badge — Premium 3D Pin */}
                   <div 
-                    className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full bg-white transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-110"
+                    className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full bg-white transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-110"
                     style={{
-                      width: '56px',
-                      height: '56px',
+                      width: '44px',
+                      height: '44px',
                       boxShadow: 'inset 0 4px 8px rgba(255,255,255,0.8), inset 0 -4px 8px rgba(0,0,0,0.1), 0 10px 20px -5px rgba(0,0,0,0.9), 0 0 0 2px rgba(255,255,255,0.1)',
                       transformStyle: 'preserve-3d',
                     }}
@@ -389,7 +407,7 @@ export function DailyDeals() {
                       src={mainPlatformLogo} 
                       alt={badgeStyle.label}
                       title={badgeStyle.label}
-                      className="w-10 h-10 object-contain" 
+                      className="w-7 h-7 object-contain" 
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.webp";
                       }}
@@ -399,12 +417,15 @@ export function DailyDeals() {
 
 
                 {/* Deal Body */}
-                <div className="p-4 pt-9 flex flex-col flex-1">
-                  <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
-                    {product.category || "Oferta"}
+                <div className="p-4 pt-7 flex flex-col flex-1">
+                  <span 
+                    className="text-[10px] font-bold uppercase tracking-wider mb-1"
+                    style={{ color: categoryColors[product.category] || "#8e92a4" }}
+                  >
+                    {product.category || "OFERTA"}
                   </span>
 
-                  <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
+                  <h3 className="text-xs sm:text-[13px] font-normal text-[#8e92a4] uppercase mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-white transition-colors">
                     {product.name}
                   </h3>
 
