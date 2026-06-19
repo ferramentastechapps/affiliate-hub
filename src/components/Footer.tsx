@@ -162,7 +162,7 @@ export function Footer() {
             <div className="flex flex-col gap-4">
               <a href="#" className="flex items-center gap-3 text-decoration-none select-none">
                 <img src="/Logo.png" alt="Logo" className="w-9 h-9 object-contain" />
-                <img src="/logo 2 branco.png" alt="Economiza ai" className="h-6 w-auto object-contain" />
+                <img src="/logo 2 branco.png" alt="Economizei" className="h-6 w-auto object-contain" />
               </a>
               <p className="text-zinc-500 text-xs leading-relaxed max-w-[320px]">
                 Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.
@@ -214,10 +214,10 @@ export function Footer() {
           {/* Copyright e Disclaimer */}
           <div className="border-t border-white/[0.04] pt-8 mt-8 flex flex-col items-center gap-4 text-center">
             <p className="text-zinc-500 text-xs flex items-center gap-1.5 justify-center">
-              © {currentYear} economizai. Feito com <Heart size={12} weight="fill" className="text-[#ff334b]" /> para você economizar.
+              © {currentYear} Economizei. Feito com <Heart size={12} weight="fill" className="text-[#ff334b]" /> para você economizar.
             </p>
             <p className="text-[#ffffff]/25 text-[11px] max-w-[800px] leading-relaxed mx-auto">
-              Os preços e a disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja parceira antes de finalizar sua compra. Economizai não se responsabiliza pelas compras realizadas nos links externos.
+              Os preços e a disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja parceira antes de finalizar sua compra. Economizei não se responsabiliza pelas compras realizadas nos links externos.
             </p>
           </div>
 

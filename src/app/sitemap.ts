@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // URL base do site (ALTERE PARA SEU DOMÍNIO)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizai.usejotashop.com.br';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br';
 
   // Páginas estáticas
   const staticPages: MetadataRoute.Sitemap = [

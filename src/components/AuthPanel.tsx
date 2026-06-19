@@ -194,12 +194,12 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                     <div className="flex items-center gap-2 md:gap-3">
                       <img
                         src="/Logo.png"
-                        alt="Economiza ai Logo Icon"
+                        alt="Economizei Logo Icon"
                         className="h-10 w-10 object-contain"
                       />
                       <img
                         src="/logo 2 branco.png"
-                        alt="Economiza ai"
+                        alt="Economizei"
                         className="h-7 w-auto object-contain"
                       />
                     </div>
