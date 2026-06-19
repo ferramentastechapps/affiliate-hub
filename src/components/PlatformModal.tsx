@@ -359,7 +359,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-6 w-full overflow-x-auto pb-2 hidden-scrollbar">
                   <button 
                     onClick={handleAlert}
-                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${hasAlert ? 'bg-accent/20 text-accent border border-accent/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
+                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${hasAlert ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20'}`}
                   >
                     <Bell size={18} weight={hasAlert ? "fill" : "regular"} />
                     <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">{hasAlert ? 'Alerta Ativo' : 'Alerta'}</span>
@@ -367,7 +367,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
 
                   <button 
                     onClick={() => handleVote('LIKE')}
-                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${votes.userVote === 'LIKE' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-transparent'}`}
+                    className={`flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors ${votes.userVote === 'LIKE' ? 'bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/30' : 'bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/20'}`}
                   >
                     <ThumbsUp size={18} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
                     <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">{votes.likes > 0 ? votes.likes : 'Curtir'}</span>
@@ -383,10 +383,10 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
 
                   <button 
                     onClick={handleShare}
-                    className="flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] transition-colors border border-[#25D366]/20"
+                    className="flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 bg-[#25D366] hover:bg-[#1DA851] text-white transition-colors shadow-md"
                   >
-                    <WhatsappLogo size={18} />
-                    <span className="text-[10px] sm:text-xs font-semibold whitespace-nowrap">Mandar</span>
+                    <WhatsappLogo size={18} weight="fill" />
+                    <span className="text-[10px] sm:text-xs font-bold whitespace-nowrap">Mandar</span>
                   </button>
                 </div>
 
