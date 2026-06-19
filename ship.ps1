@@ -85,14 +85,14 @@ pkill -f "python3.*telegram_listener.py" || true
 pkill -f telegram_listener.py || true
 
 # Remover processos antigos/duplicados do PM2 se existirem
-pm2 delete affiliate-bot || true
-pm2 delete promobot || true
-pm2 delete affiliate-listener || true
-pm2 delete affiliate-hub-listener || true
-pm2 delete affiliate-hub-scraper || true
-pm2 delete affiliate-scraper || true
-pm2 delete affiliate-hub-web || true
-pm2 delete nextjs || true
+pm2 delete affiliate-bot > /dev/null 2>&1 || true
+pm2 delete promobot > /dev/null 2>&1 || true
+pm2 delete affiliate-listener > /dev/null 2>&1 || true
+pm2 delete affiliate-hub-listener > /dev/null 2>&1 || true
+pm2 delete affiliate-hub-scraper > /dev/null 2>&1 || true
+pm2 delete affiliate-scraper > /dev/null 2>&1 || true
+pm2 delete affiliate-hub-web > /dev/null 2>&1 || true
+pm2 delete nextjs > /dev/null 2>&1 || true
 
 # Iniciar ou recarregar os bots usando o arquivo de ecossistema
 cd ~/affiliate-hub
