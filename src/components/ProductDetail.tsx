@@ -31,6 +31,16 @@ export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [showCouponModal, setShowCouponModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function handleCopyAndGo() {
+    if (displayCoupon) {
+      navigator.clipboard.writeText(displayCoupon);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      handleGoToStore();
+    }
+  }
 
   // Carrega produtos relacionados
   useEffect(() => {
@@ -175,17 +185,7 @@ export function ProductDetail({ product }: { product: Product }) {
               {product.name}
             </h1>
 
-            {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
-              <div className="flex items-center gap-3 mb-6 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 rounded-2xl">
-                <div className="bg-accent/20 p-2 rounded-xl text-accent">
-                  <Tag size={24} weight="duotone" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">CUPOM DISPONÍVEL</span>
-                  <code className="text-white font-mono font-bold text-base sm:text-lg break-all">{displayCoupon}</code>
-                </div>
-              </div>
-            )}
+
             
             {price > 0 ? (
               <div className="flex flex-col mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
@@ -206,11 +206,31 @@ export function ProductDetail({ product }: { product: Product }) {
               </div>
             )}
 
+            {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
+              <button 
+                onClick={handleCopyAndGo}
+                className="w-full flex items-center text-left gap-3 mb-4 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 hover:from-accent/30 hover:to-accent/10 border border-accent/30 rounded-2xl transition-all group"
+              >
+                <div className="bg-accent/20 p-2 rounded-xl text-accent">
+                  <Tag size={24} weight="duotone" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider block mb-0.5">
+                    {copied ? "COPIADO!" : "CUPOM (CLIQUE PARA COPIAR)"}
+                  </span>
+                  <code className="text-white font-mono font-bold text-base sm:text-lg break-all">{displayCoupon}</code>
+                </div>
+                <div className="bg-white/10 p-2 rounded-xl text-white group-hover:bg-white/20 transition-colors">
+                  {copied ? <Check size={20} weight="bold" className="text-green-400" /> : <Copy size={20} weight="duotone" />}
+                </div>
+              </button>
+            )}
+
             <button
               onClick={handlePlatformClick}
               className="w-full flex items-center justify-center gap-2 group btn-3d text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-[20px] min-h-[56px]"
             >
-              {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" ? "Ver Cupom e Ir para Loja" : `Ir para ${platformName}`}
+              Ir para {platformName}
               <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
             </button>
 
