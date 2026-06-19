@@ -88,10 +88,10 @@ export function MobileBottomNav() {
             className="w-[4.5rem] btn-3d rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-transform min-h-[56px] py-2"
           >
             <div className="relative">
-               <WhatsappLogo size={26} weight="fill" className="text-white" />
+               <WhatsappLogo size={26} weight="fill" className="text-[#090a0f]" />
                <div className="absolute inset-0 rounded-full animate-ping bg-white/30" />
             </div>
-            <span className="text-[11px] font-bold text-white mt-0.5 leading-tight">Grupo</span>
+            <span className="text-[11px] font-bold text-[#090a0f] mt-0.5 leading-tight">Grupo</span>
           </a>
 
         </motion.div>
