@@ -79,6 +79,12 @@ grep -q 'LOMADEE_APP_TOKEN' ~/affiliate-hub/bot/.env || echo 'LOMADEE_APP_TOKEN=
 sed -i 's|LOMADEE_APP_TOKEN=.*|LOMADEE_APP_TOKEN=lmd_dev_9GWWVA5hbj_0LovGyptGY0L0QyYxZeR0QWwcnFI6k3u|g' ~/affiliate-hub/bot/.env
 grep -q 'LOMADEE_SOURCE_ID' ~/affiliate-hub/bot/.env || echo 'LOMADEE_SOURCE_ID=2324685' >> ~/affiliate-hub/bot/.env
 sed -i 's|LOMADEE_SOURCE_ID=.*|LOMADEE_SOURCE_ID=2324685|g' ~/affiliate-hub/bot/.env
+
+# WhatsApp Env Vars
+grep -q 'WHATSAPP_GROUP_NAME' ~/affiliate-hub/.env || echo 'WHATSAPP_GROUP_NAME=""' >> ~/affiliate-hub/.env
+grep -q 'WHATSAPP_DELAY_MINUTES' ~/affiliate-hub/.env || echo 'WHATSAPP_DELAY_MINUTES=30' >> ~/affiliate-hub/.env
+grep -q 'WHATSAPP_API_URL' ~/affiliate-hub/.env || echo 'WHATSAPP_API_URL="http://localhost:3005/send"' >> ~/affiliate-hub/.env
+
 pip3 install -r requirements.txt --break-system-packages
 
 echo "🔄 Reiniciando serviços..."
