@@ -243,7 +243,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* ── Fullscreen backdrop with background image ── */}
+          {/* ── Fullscreen backdrop with background image (Mobile) or dark overlay (Desktop) ── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -251,18 +251,22 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             transition={{ duration: 0.3 }}
             className="fixed inset-0 z-[100]"
             style={{
-              backgroundImage: "url('/fundo-login.webp')",
+              backgroundImage: isMobile ? "url('/fundo-login.webp')" : "none",
+              backgroundColor: !isMobile ? "rgba(0,0,0,0.75)" : "transparent",
+              backdropFilter: !isMobile ? "blur(4px)" : "none",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
             }}
             onClick={onClose}
           >
-            {/* Dark overlay sobre a imagem */}
-            <div
-              className="absolute inset-0"
-              style={{ background: "rgba(0,0,0,0.45)" }}
-            />
+            {/* Dark overlay sobre a imagem apenas no mobile */}
+            {isMobile && (
+              <div
+                className="absolute inset-0"
+                style={{ background: "rgba(0,0,0,0.45)" }}
+              />
+            )}
           </motion.div>
 
           {/* ── Card responsivo: bottom sheet no mobile, sidebar no desktop ── */}
@@ -275,7 +279,11 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
             className="fixed z-[100] overflow-hidden bottom-0 left-0 right-0 sm:top-0 sm:bottom-0 sm:left-auto sm:w-[420px]"
             style={{
-              background: "linear-gradient(180deg, #111217 0%, #0d0e14 100%)",
+              background: isMobile 
+                ? "linear-gradient(180deg, #111217 0%, #0d0e14 100%)" 
+                : "linear-gradient(rgba(17,18,23,0.7), rgba(13,14,20,0.85)), url('/fundo-login.webp')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
               borderRadius: isMobile ? "24px 24px 0 0" : "0",
               borderTop: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
               borderLeft: !isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
@@ -540,33 +548,42 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                 </form>
 
                 {/* Toggle login/signup */}
-                <div className="text-center pb-2">
-                  <AnimatePresence mode="wait">
-                    {mode === "login" ? (
-                      <motion.p key="to-signup"
-                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
-                      >
-                        Não tem conta?{" "}
-                        <button onClick={() => switchMode("signup")}
-                          className="text-white font-semibold hover:text-accent transition-colors">
-                          Criar conta grátis →
-                        </button>
-                      </motion.p>
-                    ) : (
-                      <motion.p key="to-login"
-                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
-                      >
-                        Já tem conta?{" "}
-                        <button onClick={() => switchMode("login")}
-                          className="text-white font-semibold hover:text-accent transition-colors">
-                          Entrar →
-                        </button>
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <AnimatePresence>
+                  {isEmailEntered && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }} 
+                      animate={{ opacity: 1, height: "auto" }} 
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-center pb-2 overflow-hidden"
+                    >
+                      <AnimatePresence mode="wait">
+                        {mode === "login" ? (
+                          <motion.p key="to-signup"
+                            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
+                          >
+                            Não tem conta?{" "}
+                            <button onClick={() => switchMode("signup")}
+                              className="text-white font-semibold hover:text-accent transition-colors">
+                              Criar conta grátis →
+                            </button>
+                          </motion.p>
+                        ) : (
+                          <motion.p key="to-login"
+                            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
+                          >
+                            Já tem conta?{" "}
+                            <button onClick={() => switchMode("login")}
+                              className="text-white font-semibold hover:text-accent transition-colors">
+                              Entrar →
+                            </button>
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Divider */}
                 <div className="flex items-center gap-3">
