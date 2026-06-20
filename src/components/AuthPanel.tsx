@@ -1,6 +1,15 @@
 "use client";
 
-import { X, Eye, EyeSlash, GoogleLogo, EnvelopeSimple, LockKey, User } from "@phosphor-icons/react";
+import {
+  X,
+  Eye,
+  EyeSlash,
+  EnvelopeSimple,
+  LockKey,
+  User,
+  ShieldCheck,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
@@ -12,651 +21,668 @@ interface AuthPanelProps {
 
 type AuthTab = "login" | "signup";
 
+// ─── Password strength ───────────────────────────────────────────────────────
+function getPasswordStrength(pw: string) {
+  if (!pw) return null;
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+  const levels = [
+    { label: "Muito fraca",  color: "#ef4444" },
+    { label: "Fraca",        color: "#f97316" },
+    { label: "Razoável",     color: "#eab308" },
+    { label: "Forte",        color: "#22c55e" },
+    { label: "Muito forte",  color: "#10b981" },
+  ];
+  const idx = Math.min(score, 5) - 1;
+  return { score, ...levels[Math.max(idx, 0)] };
+}
+
+// ─── Google SVG logo ─────────────────────────────────────────────────────────
+function GoogleIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    </svg>
+  );
+}
+
+// ─── Reusable Input ───────────────────────────────────────────────────────────
+function FormField({
+  id, label, type = "text", value, onChange, placeholder, error,
+  icon, rightElement, autoComplete,
+}: {
+  id: string; label: string; type?: string; value: string;
+  onChange: (v: string) => void; placeholder: string; error?: string;
+  icon: React.ReactNode; rightElement?: React.ReactNode; autoComplete?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+        {label}
+      </label>
+      <div className="relative group">
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-accent transition-colors pointer-events-none">
+          {icon}
+        </div>
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          className={[
+            "w-full pl-10 py-3 text-sm font-medium rounded-xl transition-all outline-none",
+            "bg-white/[0.04] border placeholder:text-zinc-600",
+            "focus:bg-white/[0.07] focus:ring-2 focus:ring-offset-0",
+            rightElement ? "pr-11" : "pr-4",
+            error
+              ? "border-red-500/40 focus:border-red-500/60 focus:ring-red-500/20 bg-red-500/[0.03]"
+              : "border-white/[0.08] focus:border-accent/40 focus:ring-accent/15",
+          ].join(" ")}
+        />
+        {rightElement && (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2">{rightElement}</div>
+        )}
+      </div>
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-xs text-red-400 flex items-center gap-1"
+          >
+            <span>⚠</span> {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const { login, signup, loginWithGoogle, error, clearError } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<AuthTab>("login");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab]               = useState<AuthTab>("login");
+  const [showPassword, setShowPassword]         = useState(false);
+  const [showConfirm, setShowConfirm]           = useState(false);
+  const [isLoading, setIsLoading]               = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading]   = useState(false);
+  const [infoMessage, setInfoMessage]           = useState<string | null>(null);
+  const [errors, setErrors]                     = useState<Record<string, string>>({});
 
-  // Form states
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  // Login
+  const [loginEmail, setLoginEmail]             = useState("");
+  const [loginPassword, setLoginPassword]       = useState("");
+  const [rememberMe, setRememberMe]             = useState(false);
 
-  const [signupName, setSignupName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  // Signup
+  const [signupName, setSignupName]             = useState("");
+  const [signupEmail, setSignupEmail]           = useState("");
+  const [signupPassword, setSignupPassword]     = useState("");
+  const [signupConfirm, setSignupConfirm]       = useState("");
+  const [acceptTerms, setAcceptTerms]           = useState(false);
 
-  // Validation states
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const pwStrength = getPasswordStrength(signupPassword);
 
-  // Efeito para inicializar o SDK do Google de forma totalmente robusta e integrada
+  // ── Google SDK init ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
-
     clearError();
     setInfoMessage(null);
 
-    const initGoogleSDK = () => {
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      const google = (window as any).google;
-      if (!googleClientId || !google) return false;
-
+    const init = () => {
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      const google   = (window as any).google;
+      if (!clientId || !google) return false;
       try {
-        // Inicializa o cliente do Google
         google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: async (response: any) => {
+          client_id: clientId,
+          auto_select: false,
+          callback: async (resp: any) => {
             setIsGoogleLoading(true);
             clearError();
-            const success = await loginWithGoogle(response.credential);
+            const ok = await loginWithGoogle(resp.credential);
             setIsGoogleLoading(false);
-            if (success) {
-              onClose();
-            }
+            if (ok) onClose();
           },
-          auto_select: false,
         });
 
-        // Tenta renderizar o botão oficial no container adequado
-        const btnId = activeTab === "login" ? "google-signin-btn-login" : "google-signin-btn-signup";
-        const container = document.getElementById(btnId);
-        if (container) {
-          google.accounts.id.renderButton(container, {
+        // Render in invisible overlays (opacity ≈0 but fully interactive)
+        (["google-ol-login", "google-ol-signup"] as const).forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          google.accounts.id.renderButton(el, {
             theme: "filled_black",
             size: "large",
-            width: container.clientWidth || 380,
-            text: activeTab === "login" ? "signin_with" : "signup_with",
-            shape: "pill",
+            width: el.parentElement?.clientWidth ?? 440,
+            shape: "rectangular",
           });
-        }
-
-        // Tenta disparar o One Tap para máxima fluidez na gaveta
-        google.accounts.id.prompt();
+        });
 
         return true;
-      } catch (err) {
-        console.error("Falha ao inicializar botões Google Identity:", err);
+      } catch (e) {
+        console.error("Google SDK error:", e);
         return false;
       }
     };
 
-    // Polling robusto de 300ms caso o script do Google ainda esteja carregando em conexões lentas
-    if (!initGoogleSDK()) {
-      const interval = setInterval(() => {
-        if (initGoogleSDK()) {
-          clearInterval(interval);
-        }
-      }, 300);
-      return () => clearInterval(interval);
+    if (!init()) {
+      const t = setInterval(() => { if (init()) clearInterval(t); }, 300);
+      return () => clearInterval(t);
     }
   }, [isOpen, activeTab]);
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+  // ── Validation helpers ──────────────────────────────────────────────────────
+  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const clearField    = (key: string) => setErrors((p) => ({ ...p, [key]: "" }));
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
-    setInfoMessage(null);
-    const newErrors: Record<string, string> = {};
-
-    if (!loginEmail) newErrors.loginEmail = "E-mail é obrigatório";
-    else if (!validateEmail(loginEmail)) newErrors.loginEmail = "E-mail inválido";
-    
-    if (!loginPassword) newErrors.loginPassword = "Senha é obrigatória";
-    else if (loginPassword.length < 6) newErrors.loginPassword = "Senha deve ter no mínimo 6 caracteres";
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+    clearError(); setInfoMessage(null);
+    const errs: Record<string, string> = {};
+    if (!loginEmail)                    errs.loginEmail    = "E-mail é obrigatório";
+    else if (!validateEmail(loginEmail)) errs.loginEmail   = "E-mail inválido";
+    if (!loginPassword)                 errs.loginPassword = "Senha é obrigatória";
+    else if (loginPassword.length < 6)  errs.loginPassword = "Mínimo 6 caracteres";
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setIsLoading(true);
-    const success = await login(loginEmail, loginPassword);
+    const ok = await login(loginEmail, loginPassword);
     setIsLoading(false);
-    
-    if (success) {
-      onClose();
-    }
+    if (ok) onClose();
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError(); setInfoMessage(null);
+    const errs: Record<string, string> = {};
+    if (!signupName)                     errs.signupName    = "Nome é obrigatório";
+    if (!signupEmail)                    errs.signupEmail   = "E-mail é obrigatório";
+    else if (!validateEmail(signupEmail)) errs.signupEmail  = "E-mail inválido";
+    if (!signupPassword)                 errs.signupPassword = "Senha é obrigatória";
+    else if (signupPassword.length < 6)  errs.signupPassword = "Mínimo 6 caracteres";
+    if (!signupConfirm)                  errs.signupConfirm  = "Confirme sua senha";
+    else if (signupPassword !== signupConfirm) errs.signupConfirm = "Senhas não coincidem";
+    if (!acceptTerms)                    errs.acceptTerms   = "Aceite os termos para continuar";
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setIsLoading(true);
+    const ok = await signup(signupName, signupEmail, signupPassword);
+    setIsLoading(false);
+    if (ok) onClose();
+  };
+
+  const switchTab = (tab: AuthTab) => {
+    setActiveTab(tab);
+    setErrors({});
     clearError();
     setInfoMessage(null);
-    const newErrors: Record<string, string> = {};
-
-    if (!signupName) newErrors.signupName = "Nome é obrigatório";
-    if (!signupEmail) newErrors.signupEmail = "E-mail é obrigatório";
-    else if (!validateEmail(signupEmail)) newErrors.signupEmail = "E-mail inválido";
-    
-    if (!signupPassword) newErrors.signupPassword = "Senha é obrigatória";
-    else if (signupPassword.length < 6) newErrors.signupPassword = "Senha deve ter no mínimo 6 caracteres";
-    
-    if (!signupConfirmPassword) newErrors.signupConfirmPassword = "Confirme sua senha";
-    else if (signupPassword !== signupConfirmPassword) newErrors.signupConfirmPassword = "As senhas não coincidem";
-    
-    if (!acceptTerms) newErrors.acceptTerms = "Você deve aceitar os termos";
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setIsLoading(true);
-    const success = await signup(signupName, signupEmail, signupPassword);
-    setIsLoading(false);
-    
-    if (success) {
-      onClose();
-    }
   };
 
-  const handleForgotPassword = () => {
-    clearError();
-    setInfoMessage("Para redefinir sua senha, por favor entre em contato com nosso suporte oficial ou canais de atendimento.");
-  };
+  // ── Google Button with invisible SDK overlay ─────────────────────────────────
+  const GoogleButton = ({ overlayId, label }: { overlayId: string; label: string }) => (
+    <div className="relative h-[50px] rounded-xl overflow-hidden">
+      {/* Visible styled layer */}
+      <div
+        className="absolute inset-0 flex items-center justify-center gap-3 bg-white rounded-xl text-gray-800 font-semibold text-sm pointer-events-none select-none z-0"
+        aria-hidden
+      >
+        <GoogleIcon size={20} />
+        {isGoogleLoading ? "Aguarde..." : label}
+      </div>
 
+      {/* Loading spinner overlay */}
+      {isGoogleLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl z-20">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            className="w-5 h-5 border-2 border-gray-200 border-t-gray-700 rounded-full"
+          />
+        </div>
+      )}
+
+      {/* Invisible Google SDK button intercepts all clicks */}
+      {!isGoogleLoading && (
+        <div
+          id={overlayId}
+          className="absolute inset-0 z-10 overflow-hidden"
+          style={{ opacity: 0.002, cursor: "pointer" }}
+        />
+      )}
+    </div>
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Overlay */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-50"
+            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
             onClick={onClose}
           />
 
-          {/* Panel */}
-          <motion.div
-            initial={{ x: "100%", opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "100%", opacity: 0 }}
+          {/* Slide panel */}
+          <motion.aside
+            role="dialog"
+            aria-label="Autenticação"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-zinc-900 z-50 overflow-y-auto"
+            className="fixed right-0 top-0 bottom-0 w-full sm:w-[430px] z-50 flex flex-col overflow-hidden"
+            style={{
+              background: "linear-gradient(180deg, #0d0e14 0%, #0a0b10 100%)",
+              borderLeft: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "-20px 0 60px rgba(0,0,0,0.5)",
+            }}
           >
-            <div className="min-h-full flex flex-col">
-              {/* Header */}
-              <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl border-b border-white/10 z-10">
-                <div className="flex items-center justify-between p-6">
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <img
-                        src="/logo economizei.webp?v=2"
-                        alt="Economizei"
-                        className="h-14 w-auto object-contain"
-                      />
-                    </div>
-                  <motion.button
-                    onClick={onClose}
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                  >
-                    <X size={20} weight="bold" />
-                  </motion.button>
-                </div>
+            {/* Top accent gradient bar */}
+            <div
+              className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{ background: "linear-gradient(90deg, #ff334b, #ff7a45, #ff334b)" }}
+            />
 
-                {/* Tabs */}
-                <div className="flex gap-1 px-6 pb-4">
-                  <button
-                    onClick={() => {
-                      setActiveTab("login");
-                      setErrors({});
-                      clearError();
-                      setInfoMessage(null);
-                    }}
-                    className="relative flex-1 py-3 text-sm font-medium transition-colors"
+            {/* Subtle glow behind header */}
+            <div
+              className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
+              style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(255,51,75,0.08) 0%, transparent 70%)" }}
+            />
+
+            <div className="flex flex-col h-full overflow-y-auto scrollbar-hide">
+
+              {/* ── Header ── */}
+              <header className="flex items-center justify-between px-6 pt-7 pb-5 relative">
+                <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-11 w-auto object-contain" />
+                <motion.button
+                  onClick={onClose}
+                  whileHover={{ scale: 1.1, rotate: 90, backgroundColor: "rgba(255,255,255,0.12)" }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  aria-label="Fechar"
+                >
+                  <X size={15} weight="bold" />
+                </motion.button>
+              </header>
+
+              {/* ── Welcome ── */}
+              <div className="px-6 pb-5">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    <span className={activeTab === "login" ? "text-white" : "text-zinc-400"}>
-                      Entrar
-                    </span>
-                    {activeTab === "login" && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab("signup");
-                      setErrors({});
-                      clearError();
-                      setInfoMessage(null);
-                    }}
-                    className="relative flex-1 py-3 text-sm font-medium transition-colors"
-                  >
-                    <span className={activeTab === "signup" ? "text-white" : "text-zinc-400"}>
-                      Criar conta
-                    </span>
-                    {activeTab === "signup" && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                  </button>
+                    <h2 className="text-[22px] font-extrabold text-white leading-tight">
+                      {activeTab === "login" ? "Bem‑vindo de volta! 👋" : "Crie sua conta grátis ✨"}
+                    </h2>
+                    <p className="text-zinc-500 text-sm mt-1">
+                      {activeTab === "login"
+                        ? "Acesse ofertas exclusivas para membros"
+                        : "Junte-se a compradores inteligentes do Brasil"}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* ── Tabs ── */}
+              <div className="px-6 pb-5">
+                <div
+                  className="flex p-1 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+                >
+                  {(["login", "signup"] as AuthTab[]).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => switchTab(tab)}
+                      className="relative flex-1 py-2.5 text-sm font-bold rounded-lg transition-colors"
+                    >
+                      {activeTab === tab && (
+                        <motion.div
+                          layoutId="activeTabBg"
+                          className="absolute inset-0 rounded-lg"
+                          style={{
+                            background: "linear-gradient(135deg, rgba(255,51,75,0.15), rgba(255,51,75,0.05))",
+                            border: "1px solid rgba(255,51,75,0.2)",
+                          }}
+                          transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                        />
+                      )}
+                      <span className={`relative z-10 transition-colors ${activeTab === tab ? "text-white" : "text-zinc-500 hover:text-zinc-400"}`}>
+                        {tab === "login" ? "Entrar" : "Criar conta"}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="flex-1 p-6">
-                
-                {/* Alertas de Erro e Info */}
-                <AnimatePresence mode="wait">
+              {/* ── Content ── */}
+              <div className="flex-1 px-6">
+                {/* Global alerts */}
+                <AnimatePresence>
                   {error && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl mb-6 flex items-start gap-3"
+                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      className="flex items-start gap-3 p-4 mb-5 rounded-xl"
+                      style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
                     >
-                      <div className="flex-1 font-medium">{error}</div>
-                      <button onClick={clearError} className="text-red-400 hover:text-white text-xs font-bold">X</button>
+                      <span className="text-red-400 text-lg leading-none">⚠</span>
+                      <p className="text-red-400 text-sm flex-1">{error}</p>
+                      <button onClick={clearError} className="text-red-400/50 hover:text-red-400 transition-colors text-sm ml-1">✕</button>
                     </motion.div>
                   )}
-
                   {infoMessage && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="p-4 bg-accent/10 border border-accent/20 text-accent text-sm rounded-xl mb-6 flex items-start gap-3"
+                      exit={{ opacity: 0 }}
+                      className="flex items-start gap-3 p-4 mb-5 rounded-xl"
+                      style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}
                     >
-                      <div className="flex-1 font-medium">{infoMessage}</div>
-                      <button onClick={() => setInfoMessage(null)} className="text-accent hover:text-white text-xs font-bold">X</button>
+                      <span className="text-blue-400 text-sm flex-1">{infoMessage}</span>
+                      <button onClick={() => setInfoMessage(null)} className="text-blue-400/50 hover:text-blue-400 text-sm">✕</button>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 <AnimatePresence mode="wait">
+                  {/* ══ LOGIN FORM ══════════════════════════════════════════════ */}
                   {activeTab === "login" ? (
                     <motion.form
                       key="login"
-                      initial={{ opacity: 0, x: -20 }}
+                      initial={{ opacity: 0, x: -18 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2 }}
+                      exit={{ opacity: 0, x: 18 }}
+                      transition={{ duration: 0.16 }}
                       onSubmit={handleLogin}
-                      className="space-y-5"
+                      className="space-y-4"
+                      noValidate
                     >
-                      {/* Email */}
-                      <div className="space-y-2">
-                        <label htmlFor="login-email" className="text-sm font-medium text-zinc-300">
-                          E-mail
-                        </label>
-                        <div className="relative">
-                          <EnvelopeSimple size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            id="login-email"
-                            type="email"
-                            value={loginEmail}
-                            onChange={(e) => {
-                              setLoginEmail(e.target.value);
-                              setErrors(prev => ({ ...prev, loginEmail: "" }));
-                            }}
-                            placeholder="seu@email.com"
-                            autoComplete="email"
-                            inputMode="email"
-                            className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500 text-base"
-                          />
-                        </div>
-                        {errors.loginEmail && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.loginEmail}
-                          </motion.p>
-                        )}
+                      {/* Google */}
+                      <GoogleButton overlayId="google-ol-login" label="Continuar com Google" />
+
+                      {/* Divider */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                        <span className="text-[11px] font-medium text-zinc-600 uppercase tracking-widest">ou</span>
+                        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
                       </div>
 
+                      {/* Email */}
+                      <FormField
+                        id="login-email" label="E-mail" type="email"
+                        value={loginEmail} onChange={(v) => { setLoginEmail(v); clearField("loginEmail"); }}
+                        placeholder="seu@email.com" error={errors.loginEmail}
+                        autoComplete="email"
+                        icon={<EnvelopeSimple size={16} />}
+                      />
+
                       {/* Password */}
-                      <div className="space-y-2">
-                        <label htmlFor="login-password" className="text-sm font-medium text-zinc-300">
-                          Senha
-                        </label>
-                        <div className="relative">
-                          <LockKey size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            id="login-password"
-                            type={showPassword ? "text" : "password"}
-                            value={loginPassword}
-                            onChange={(e) => {
-                              setLoginPassword(e.target.value);
-                              setErrors(prev => ({ ...prev, loginPassword: "" }));
-                            }}
-                            placeholder="••••••••"
-                            autoComplete="current-password"
-                            className="w-full pl-12 pr-14 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500 text-base"
-                          />
+                      <FormField
+                        id="login-password" label="Senha" type={showPassword ? "text" : "password"}
+                        value={loginPassword} onChange={(v) => { setLoginPassword(v); clearField("loginPassword"); }}
+                        placeholder="••••••••" error={errors.loginPassword}
+                        autoComplete="current-password"
+                        icon={<LockKey size={16} />}
+                        rightElement={
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
+                            className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
                             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
                           >
-                            {showPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeSlash size={15} /> : <Eye size={15} />}
                           </button>
-                        </div>
-                        {errors.loginPassword && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.loginPassword}
-                          </motion.p>
-                        )}
-                      </div>
+                        }
+                      />
 
-                      {/* Remember & Forgot */}
-                      <div className="flex items-center justify-between gap-4">
-                        <label className="flex items-center gap-3 cursor-pointer group min-h-[44px]">
+                      {/* Remember + Forgot */}
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer group">
                           <input
-                            type="checkbox"
-                            checked={rememberMe}
+                            type="checkbox" checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="w-5 h-5 rounded border-white/20 bg-white/5 text-accent focus:ring-2 focus:ring-accent focus:ring-offset-0 cursor-pointer"
+                            className="w-4 h-4 rounded"
+                            style={{ accentColor: "#ff334b" }}
                           />
-                          <span className="text-sm text-zinc-400 group-hover:text-white transition-colors">
-                            Lembrar de mim
-                          </span>
+                          <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors">Lembrar de mim</span>
                         </label>
                         <button
                           type="button"
-                          onClick={handleForgotPassword}
-                          className="text-sm text-accent hover:text-accent/80 transition-colors min-h-[44px] px-2"
+                          onClick={() => { clearError(); setInfoMessage("Para redefinir sua senha, entre em contato com nosso suporte."); }}
+                          className="text-xs font-semibold text-accent hover:text-accent/70 transition-colors"
                         >
                           Esqueci minha senha
                         </button>
                       </div>
 
-                      {/* Submit Button */}
+                      {/* Submit */}
                       <motion.button
                         type="submit"
                         disabled={isLoading || isGoogleLoading}
                         whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-4 btn-3d rounded-[20px] font-bold disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden min-h-[52px] text-base"
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full py-3.5 rounded-xl font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{
+                          background: "linear-gradient(135deg, #ff334b 0%, #e61932 100%)",
+                          boxShadow: "0 4px 18px rgba(255,51,75,0.35)",
+                        }}
                       >
                         {isLoading ? (
                           <motion.div
                             animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mx-auto"
+                            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                            className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mx-auto"
                           />
-                        ) : (
-                          "Entrar"
-                        )}
+                        ) : "Entrar na conta"}
                       </motion.button>
-
-                      {/* Divider */}
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-white/10" />
-                        </div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className="px-4 bg-zinc-900 text-zinc-500">ou</span>
-                        </div>
-                      </div>
-
-                      {/* Google Identity Services Official Button Container */}
-                      <div className="w-full flex flex-col items-center justify-center min-h-[48px]">
-                        {isGoogleLoading ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto"
-                          />
-                        ) : (
-                          <div id="google-signin-btn-login" className="w-full flex justify-center" />
-                        )}
-                      </div>
                     </motion.form>
+
                   ) : (
+                  /* ══ SIGNUP FORM ════════════════════════════════════════════ */
                     <motion.form
                       key="signup"
-                      initial={{ opacity: 0, x: 20 }}
+                      initial={{ opacity: 0, x: 18 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.2 }}
+                      exit={{ opacity: 0, x: -18 }}
+                      transition={{ duration: 0.16 }}
                       onSubmit={handleSignup}
-                      className="space-y-5"
+                      className="space-y-4"
+                      noValidate
                     >
-                      {/* Name */}
-                      <div className="space-y-2">
-                        <label htmlFor="signup-name" className="text-sm font-medium text-zinc-300">
-                          Nome completo
-                        </label>
-                        <div className="relative">
-                          <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            id="signup-name"
-                            type="text"
-                            value={signupName}
-                            onChange={(e) => {
-                              setSignupName(e.target.value);
-                              setErrors(prev => ({ ...prev, signupName: "" }));
-                            }}
-                            placeholder="João Silva"
-                            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500"
-                          />
-                        </div>
-                        {errors.signupName && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.signupName}
-                          </motion.p>
-                        )}
+                      {/* Google */}
+                      <GoogleButton overlayId="google-ol-signup" label="Cadastrar com Google" />
+
+                      {/* Divider */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                        <span className="text-[11px] font-medium text-zinc-600 uppercase tracking-widest">ou preencha abaixo</span>
+                        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
                       </div>
+
+                      {/* Name */}
+                      <FormField
+                        id="signup-name" label="Nome completo"
+                        value={signupName} onChange={(v) => { setSignupName(v); clearField("signupName"); }}
+                        placeholder="João Silva" error={errors.signupName}
+                        icon={<User size={16} />}
+                      />
 
                       {/* Email */}
-                      <div className="space-y-2">
-                        <label htmlFor="signup-email" className="text-sm font-medium text-zinc-300">
-                          E-mail
-                        </label>
-                        <div className="relative">
-                          <EnvelopeSimple size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            id="signup-email"
-                            type="email"
-                            value={signupEmail}
-                            onChange={(e) => {
-                              setSignupEmail(e.target.value);
-                              setErrors(prev => ({ ...prev, signupEmail: "" }));
-                            }}
-                            placeholder="seu@email.com"
-                            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500"
-                          />
-                        </div>
-                        {errors.signupEmail && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.signupEmail}
-                          </motion.p>
-                        )}
+                      <FormField
+                        id="signup-email" label="E-mail" type="email"
+                        value={signupEmail} onChange={(v) => { setSignupEmail(v); clearField("signupEmail"); }}
+                        placeholder="seu@email.com" error={errors.signupEmail}
+                        autoComplete="email"
+                        icon={<EnvelopeSimple size={16} />}
+                      />
+
+                      {/* Password + strength */}
+                      <div className="space-y-1.5">
+                        <FormField
+                          id="signup-password" label="Senha" type={showPassword ? "text" : "password"}
+                          value={signupPassword} onChange={(v) => { setSignupPassword(v); clearField("signupPassword"); }}
+                          placeholder="Mínimo 6 caracteres" error={errors.signupPassword}
+                          icon={<LockKey size={16} />}
+                          rightElement={
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                            >
+                              {showPassword ? <EyeSlash size={15} /> : <Eye size={15} />}
+                            </button>
+                          }
+                        />
+                        {/* Strength bars */}
+                        <AnimatePresence>
+                          {signupPassword && pwStrength && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-1 overflow-hidden"
+                            >
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                  <motion.div
+                                    key={i}
+                                    className="flex-1 h-1 rounded-full"
+                                    animate={{ backgroundColor: i <= pwStrength.score ? pwStrength.color : "rgba(255,255,255,0.08)" }}
+                                    transition={{ duration: 0.3 }}
+                                  />
+                                ))}
+                              </div>
+                              <p className="text-[11px] font-semibold" style={{ color: pwStrength.color }}>
+                                {pwStrength.label}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
 
-                      {/* Password */}
-                      <div className="space-y-2">
-                        <label htmlFor="signup-password" className="text-sm font-medium text-zinc-300">
-                          Senha
-                        </label>
-                        <div className="relative">
-                          <LockKey size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            id="signup-password"
-                            type={showPassword ? "text" : "password"}
-                            value={signupPassword}
-                            onChange={(e) => {
-                              setSignupPassword(e.target.value);
-                              setErrors(prev => ({ ...prev, signupPassword: "" }));
-                            }}
-                            placeholder="••••••••"
-                            className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
-                          >
-                            {showPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
-                          </button>
-                        </div>
-                        {errors.signupPassword && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.signupPassword}
-                          </motion.p>
-                        )}
-                      </div>
-
-                      {/* Confirm Password */}
-                      <div className="space-y-2">
-                        <label htmlFor="signup-confirm-password" className="text-sm font-medium text-zinc-300">
-                          Confirmar senha
-                        </label>
-                        <div className="relative">
-                          <LockKey size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                          <input
-                            id="signup-confirm-password"
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={signupConfirmPassword}
-                            onChange={(e) => {
-                              setSignupConfirmPassword(e.target.value);
-                              setErrors(prev => ({ ...prev, signupConfirmPassword: "" }));
-                            }}
-                            placeholder="••••••••"
-                            className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all placeholder:text-zinc-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
-                          >
-                            {showConfirmPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
-                          </button>
-                        </div>
-                        {errors.signupConfirmPassword && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.signupConfirmPassword}
-                          </motion.p>
-                        )}
+                      {/* Confirm password */}
+                      <div className="space-y-1.5">
+                        <FormField
+                          id="signup-confirm" label="Confirmar senha" type={showConfirm ? "text" : "password"}
+                          value={signupConfirm} onChange={(v) => { setSignupConfirm(v); clearField("signupConfirm"); }}
+                          placeholder="Repita a senha" error={errors.signupConfirm}
+                          icon={<LockKey size={16} />}
+                          rightElement={
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirm(!showConfirm)}
+                              className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                              aria-label={showConfirm ? "Ocultar senha" : "Mostrar senha"}
+                            >
+                              {showConfirm ? <EyeSlash size={15} /> : <Eye size={15} />}
+                            </button>
+                          }
+                        />
+                        {/* Match indicator */}
+                        <AnimatePresence>
+                          {signupConfirm && !errors.signupConfirm && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0 }}
+                              className={`text-[11px] font-semibold ${signupPassword === signupConfirm ? "text-green-400" : "text-orange-400"}`}
+                            >
+                              {signupPassword === signupConfirm ? "✓ Senhas coincidem" : "✗ Senhas não coincidem"}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       {/* Terms */}
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <label className="flex items-start gap-3 cursor-pointer group">
                           <input
-                            type="checkbox"
-                            checked={acceptTerms}
-                            onChange={(e) => {
-                              setAcceptTerms(e.target.checked);
-                              setErrors(prev => ({ ...prev, acceptTerms: "" }));
-                            }}
-                            className="w-4 h-4 mt-0.5 rounded border-white/20 bg-white/5 text-accent focus:ring-2 focus:ring-accent focus:ring-offset-0 cursor-pointer flex-shrink-0"
+                            type="checkbox" checked={acceptTerms}
+                            onChange={(e) => { setAcceptTerms(e.target.checked); clearField("acceptTerms"); }}
+                            className="w-4 h-4 mt-0.5 rounded flex-shrink-0"
+                            style={{ accentColor: "#ff334b" }}
                           />
-                          <span className="text-sm text-zinc-400 group-hover:text-white transition-colors">
+                          <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors leading-relaxed">
                             Aceito os{" "}
-                            <button type="button" className="text-accent hover:underline">
-                              termos de uso
-                            </button>{" "}
-                            e{" "}
-                            <button type="button" className="text-accent hover:underline">
-                              política de privacidade
-                            </button>
+                            <button type="button" className="text-accent hover:underline font-semibold">termos de uso</button>
+                            {" "}e{" "}
+                            <button type="button" className="text-accent hover:underline font-semibold">política de privacidade</button>
                           </span>
                         </label>
-                        {errors.acceptTerms && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-xs text-red-400"
-                          >
-                            {errors.acceptTerms}
-                          </motion.p>
-                        )}
+                        <AnimatePresence>
+                          {errors.acceptTerms && (
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              className="text-xs text-red-400 pl-7">
+                              ⚠ {errors.acceptTerms}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
                       </div>
 
-                      {/* Submit Button */}
+                      {/* Submit */}
                       <motion.button
                         type="submit"
                         disabled={isLoading || isGoogleLoading}
                         whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                        className="w-full py-3 btn-3d rounded-[20px] font-bold disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full py-3.5 rounded-xl font-bold text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{
+                          background: "linear-gradient(135deg, #ff334b 0%, #e61932 100%)",
+                          boxShadow: "0 4px 18px rgba(255,51,75,0.35)",
+                        }}
                       >
                         {isLoading ? (
                           <motion.div
                             animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mx-auto"
+                            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                            className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mx-auto"
                           />
-                        ) : (
-                          "Criar conta"
-                        )}
+                        ) : "Criar minha conta"}
                       </motion.button>
-
-                      {/* Divider */}
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-white/10" />
-                        </div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className="px-4 bg-zinc-900 text-zinc-500">ou</span>
-                        </div>
-                      </div>
-
-                      {/* Google Identity Services Official Button Container */}
-                      <div className="w-full flex flex-col items-center justify-center min-h-[48px]">
-                        {isGoogleLoading ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full mx-auto"
-                          />
-                        ) : (
-                          <div id="google-signin-btn-signup" className="w-full flex justify-center" />
-                        )}
-                      </div>
                     </motion.form>
                   )}
                 </AnimatePresence>
               </div>
+
+              {/* ── Security footer ── */}
+              <footer className="px-6 py-5 mt-4">
+                <div
+                  className="flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}
+                >
+                  <ShieldCheck size={14} className="text-zinc-500 flex-shrink-0" />
+                  <span className="text-[11px] text-zinc-600">
+                    Protegido com criptografia SSL 256-bit · Seus dados estão seguros
+                  </span>
+                </div>
+              </footer>
+
             </div>
-          </motion.div>
+          </motion.aside>
         </>
       )}
     </AnimatePresence>
