@@ -206,20 +206,11 @@ class PromotionBot:
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-<<<<<<< HEAD
-                        if not produto.get('id'):
-                            produto['id'] = f'ERRO-API-{produto["name"][:20].replace(" ", "_")}'
-                        print(f'📱 Enviando para Telegram mesmo sem ID válido...')
-                        self.telegram.enviar_sync('produto', produto)
-                        self.produtos_enviados.add(produto['name'])
-                    time.sleep(1)  # Evitar rate limit
-=======
                         print('⚠️ Produto não enviado ao Telegram devido a falha na API. O bot tentará novamente na próxima busca.')
                         # Não adicionamos aos produtos_enviados para que o bot tente novamente
                     
                     # Pausa de 5 segundos entre cada produto para evitar estourar cota do Gemini (429) e Telegram Flood
                     time.sleep(5)
->>>>>>> 86ed893763b702676e2bb06f2956328cfbf172a6
             
             # 5. Adicionar cupons no site
             if cupons_novos:
