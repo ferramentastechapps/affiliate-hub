@@ -1,120 +1,91 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Limpando banco de dados...')
-  await prisma.coupon.deleteMany()
-  await prisma.link.deleteMany()
-  await prisma.product.deleteMany()
-
-  console.log('Populando banco de dados com 5 produtos...')
+  console.log('🌱 Inserindo produtos de teste...');
 
   const products = [
     {
-      name: 'Notebook Dell Inspiron',
-      category: 'Informática',
-      description: 'Notebook de alta performance para trabalho e estudos.',
-      imageUrl: 'https://m.media-amazon.com/images/I/61sGEkgN6CL._AC_SL1500_.jpg',
-      price: 3499.00,
-      originalPrice: 4200.00,
-      links: {
-        create: {
-          amazon: 'https://amazon.com.br/dp/B00123456',
-        }
-      },
-      coupons: {
-        create: [
-          {
-            code: 'DELL100',
-            description: 'R$ 100 de desconto no carrinho',
-            discount: 'R$ 100 OFF',
-            platform: 'Amazon',
-          }
-        ]
-      }
+      name: 'Notebook Lenovo IdeaPad 3 15.6" Intel Core i5',
+      category: 'Informática e Games',
+      imageUrl: 'https://m.media-amazon.com/images/I/61M7MBv3M+L._AC_SL1500_.jpg',
+      price: 2199.90,
+      status: 'active',
+      links: { amazon: 'https://amzn.to/exemplo1' },
     },
     {
-      name: 'Smartphone Samsung Galaxy S23',
-      category: 'Smartphones',
-      description: 'Câmera principal de 50MP, Bateria de longa duração.',
-      imageUrl: 'https://m.media-amazon.com/images/I/61RVNWZA7TL._AC_SL1500_.jpg',
-      price: 4599.00,
-      originalPrice: 5399.00,
-      links: {
-        create: {
-          amazon: 'https://amazon.com.br/dp/B00123457',
-        }
-      }
+      name: 'Smartphone Samsung Galaxy A55 5G 256GB',
+      category: 'Smartphones e TV',
+      imageUrl: 'https://m.media-amazon.com/images/I/71RqHe-GFQL._AC_SL1500_.jpg',
+      price: 1599.00,
+      status: 'active',
+      links: { shopee: 'https://shope.ee/exemplo2', mercadoLivre: 'https://mlk.me/exemplo2' },
     },
     {
-      name: 'Cadeira Gamer XT',
-      category: 'Setup',
-      description: 'Cadeira ergonômica com almofadas.',
-      imageUrl: 'https://m.media-amazon.com/images/I/61G+nZIfTPL._AC_SL1200_.jpg',
-      price: 899.90,
-      originalPrice: 1199.90,
-      links: {
-        create: {
-          amazon: 'https://amazon.com.br/dp/B00123458',
-          shopee: 'https://shopee.com.br/product/123/456'
-        }
-      },
-      coupons: {
-        create: [
-          {
-            code: 'GAMER10',
-            description: '10% de desconto',
-            discount: '10% OFF',
-            platform: 'Shopee',
-          }
-        ]
-      }
-    },
-    {
-      name: 'Monitor LG Ultrawide 29"',
-      category: 'Home Office',
-      description: 'Monitor Ultrawide IPS 75Hz e FreeSync.',
-      imageUrl: 'https://m.media-amazon.com/images/I/71DvwU9728L._AC_SL1500_.jpg',
-      price: 1099.00,
-      originalPrice: 1399.00,
-      links: {
-        create: {
-          amazon: 'https://amazon.com.br/dp/B00123459',
-          mercadoLivre: 'https://produto.mercadolivre.com.br/MLB-1234'
-        }
-      }
-    },
-    {
-      name: 'Fone de Ouvido Bluetooth JBL',
-      category: 'Áudio',
-      description: 'Fone de ouvido on-ear sem fio JBL Tune 510BT Pure Bass.',
-      imageUrl: 'https://m.media-amazon.com/images/I/61kWB+uzR2L._AC_SL1500_.jpg',
+      name: 'Fone de Ouvido JBL Tune 520BT Bluetooth',
+      category: 'Informática e Games',
+      imageUrl: 'https://m.media-amazon.com/images/I/61V+GIDRRLL._AC_SL1500_.jpg',
       price: 249.90,
-      originalPrice: 299.00,
-      links: {
-        create: {
-          amazon: 'https://amazon.com.br/dp/B00123460',
-          tiktok: 'https://tiktok.com/shop/jbl-510'
-        }
-      }
-    }
-  ]
+      status: 'active',
+      links: { amazon: 'https://amzn.to/exemplo3', shopee: 'https://shope.ee/exemplo3' },
+    },
+    {
+      name: 'Aspirador de Pó Robô Xiaomi Robot Vacuum S10',
+      category: 'Casa e Eletrodomésticos',
+      imageUrl: 'https://m.media-amazon.com/images/I/61qPCkNpuKL._AC_SL1500_.jpg',
+      price: 899.99,
+      status: 'active',
+      links: { aliexpress: 'https://s.click.aliexpress.com/exemplo4' },
+    },
+    {
+      name: 'Tênis Nike Air Max 270 Masculino',
+      category: 'Moda e Acessórios',
+      imageUrl: 'https://imgnike-a.akamaihd.net/1920x1920/19177IAF.jpg',
+      price: 599.99,
+      status: 'active',
+      links: { amazon: 'https://amzn.to/exemplo5', magalu: 'https://go.magalu.com/exemplo5' },
+    },
+    {
+      name: 'Smart TV Samsung 50" 4K QLED Crystal',
+      category: 'Smartphones e TV',
+      imageUrl: 'https://m.media-amazon.com/images/I/81DHKDQ+MrL._AC_SL1500_.jpg',
+      price: 2499.00,
+      status: 'active',
+      links: { amazon: 'https://amzn.to/exemplo6', kabum: 'https://www.kabum.com.br/exemplo6' },
+    },
+    {
+      name: 'Cadeira Gamer ThunderX3 TC3 Ergonômica',
+      category: 'Informática e Games',
+      imageUrl: 'https://m.media-amazon.com/images/I/81vPRqMiGDL._AC_SL1500_.jpg',
+      price: 1299.90,
+      status: 'active',
+      links: { amazon: 'https://amzn.to/exemplo7', mercadoLivre: 'https://mlk.me/exemplo7' },
+    },
+    {
+      name: 'Air Fryer Philips Walita Turbo Star 4.1L',
+      category: 'Casa e Eletrodomésticos',
+      imageUrl: 'https://m.media-amazon.com/images/I/71Tr1Moa1CL._AC_SL1500_.jpg',
+      price: 449.90,
+      status: 'active',
+      links: { shopee: 'https://shope.ee/exemplo8', tiktok: 'https://vm.tiktok.com/exemplo8' },
+    },
+  ];
 
-  for (const product of products) {
+  for (const p of products) {
+    const { links, ...productData } = p;
     await prisma.product.create({
-      data: product
-    })
+      data: {
+        ...productData,
+        links: { create: links },
+      },
+    });
+    console.log(`✅ Produto criado: ${p.name}`);
   }
 
-  console.log('Produtos cadastrados com sucesso!')
+  console.log('\n🎉 Seed concluído! Produtos adicionados ao banco.');
 }
 
 main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(() => prisma.$disconnect());

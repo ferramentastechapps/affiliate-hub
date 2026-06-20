@@ -9,7 +9,7 @@ echo "=== STATUS PM2 ==="
 pm2 list
 echo ""
 echo "=== LOGS DO BOT (ultimas 50 linhas) ==="
-pm2 logs affiliate-bot --lines 50 --nostream 2>/dev/null || pm2 logs promobot --lines 50 --nostream 2>/dev/null || echo "Nenhum bot encontrado no PM2"
+pm2 logs affiliate-scraper --lines 50 --nostream 2>/dev/null || pm2 logs promobot --lines 50 --nostream 2>/dev/null || echo "Nenhum bot encontrado no PM2"
 "@
 
 $cleanCommand = $sshCommand -replace "`r", ""

@@ -1,12 +1,5 @@
 import { DailyDeals } from "@/components/DailyDeals";
-import { ProductGrid } from "@/components/ProductGrid";
-import { CouponsSection } from "@/components/CouponsSection";
-import { HeroSection } from "@/components/HeroSection";
 import { Footer } from "@/components/Footer";
-import { StoreFilter } from "@/components/StoreFilter";
-import { CategoriesSection } from "@/components/CategoriesSection";
-import { PushNotificationButton } from "@/components/PushNotificationButton";
-import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -20,7 +13,7 @@ export const revalidate = 60;
 // 📊 METADATA PARA SEO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const metadata: Metadata = {
-  title: "123 Testando | Melhores Ofertas e Cupons de Desconto",
+  title: "Economizei | Melhores Ofertas e Cupons de Desconto",
   description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre Amazon, Mercado Livre, Shopee, AliExpress e TikTok Shop. Economize agora!",
   keywords: [
     "cupons de desconto",
@@ -38,24 +31,23 @@ export const metadata: Metadata = {
     "home office",
     "streaming"
   ],
-  authors: [{ name: "123 Testando" }],
-  creator: "123 Testando",
-  publisher: "123 Testando",
-  
+  authors: [{ name: "Economizei" }],
+  creator: "Economizei",
+  publisher: "Economizei",  
   // Open Graph (Facebook, LinkedIn, WhatsApp)
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://seu-dominio.com",
-    siteName: "123 Testando",
-    title: "123 Testando | Melhores Ofertas e Cupons de Desconto",
+    url: "https://economizei.ftech-apps.com.br",
+    siteName: "Economizei",
+    title: "Economizei | Melhores Ofertas e Cupons de Desconto",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos. Compare preços entre as principais lojas online.",
     images: [
       {
-        url: "https://seu-dominio.com/og-image.jpg",
+        url: "https://economizei.ftech-apps.com.br/icons/og-image.png?v=2",
         width: 1200,
         height: 630,
-        alt: "123 Testando - Melhores Ofertas",
+        alt: "Economizei - Melhores Ofertas",
       },
     ],
   },
@@ -63,10 +55,9 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "123 Testando | Melhores Ofertas e Cupons",
+    title: "Economizei | Melhores Ofertas e Cupons",
     description: "Encontre os melhores produtos com cupons de desconto exclusivos.",
-    images: ["https://seu-dominio.com/og-image.jpg"],
-    creator: "@seu_twitter",
+    images: ["https://economizei.ftech-apps.com.br/icons/og-image.png?v=2"],
   },
   
   // Robots
@@ -81,97 +72,22 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  
-  // Verificação
-  verification: {
-    google: "seu-codigo-de-verificacao-google",
-    // yandex: "seu-codigo-yandex",
-    // bing: "seu-codigo-bing",
-  },
 };
 
-async function getCouponsByPlatform() {
-  const coupons = await prisma.coupon.findMany({
-    where: { 
-      isActive: true,
-      OR: [
-        { expiresAt: null },
-        { expiresAt: { gte: new Date() } }
-      ]
-    },
-    select: { platform: true },
-  });
-
-  const platformCounts = coupons.reduce((acc, coupon) => {
-    let platform = coupon.platform.toLowerCase().trim();
-    
-    // Normalizações mais abrangentes
-    if (platform.includes('mercado') || platform === 'mercadolivre' || platform === 'meli') {
-      platform = 'mercadolivre';
-    } else if (platform.includes('magalu') || platform.includes('magazine')) {
-      platform = 'magazineluiza';
-    } else if (platform.includes('boticario')) {
-      platform = 'oboticario';
-    } else if (platform.includes('shopee')) {
-      platform = 'shopee';
-    } else if (platform.includes('amazon')) {
-      platform = 'amazon';
-    } else if (platform.includes('aliexpress') || platform === 'ali') {
-      platform = 'aliexpress';
-    } else if (platform.includes('tiktok')) {
-      platform = 'tiktok';
-    } else if (platform.includes('kabum')) {
-      platform = 'kabum';
-    }
-
-    acc[platform] = (acc[platform] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Garante que as lojas principais sempre apareçam, mesmo com 0 cupons
-  const basePlatforms = ["amazon", "mercadolivre", "shopee", "aliexpress", "tiktok", "kabum", "magazineluiza"];
-  basePlatforms.forEach(bp => {
-    if (typeof platformCounts[bp] === "undefined") {
-      platformCounts[bp] = 0;
-    }
-  });
-
-  return Object.entries(platformCounts).map(([platform, count]) => ({
-    platform,
-    count,
-  }));
-}
-
 export default async function Home() {
-  const couponsByPlatform = await getCouponsByPlatform();
-
   return (
-    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-28 pb-8">
-      {/* Hero Section */}
-      <div id="categorias" className="w-full">
-        <HeroSection />
-      </div>
+    <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-16 md:pt-28 pb-28 md:pb-8 relative">
+      {/* Fundo Premium 3D animado (agora no layout) */}
 
-      {/* Cupons Section */}
-      <div id="cupons" className="w-full">
-        <CouponsSection couponsByPlatform={couponsByPlatform} />
-      </div>
-
-      {/* Botão de Notificações Push */}
-      {/* removido */}
-
-      {/* Filtro por Loja */}
-      <div className="w-full">
-        <StoreFilter />
-      </div>
-
-      {/* Promocoes do Dia */}
+      {/* Promocoes do Dia com Filtros */}
       <div id="ofertas" className="w-full">
         <DailyDeals />
       </div>
 
-      {/* Footer com Grupos e Redes Sociais */}
+      {/* Footer com Grupos e Rodapé */}
       <Footer />
     </main>
   );
 }
+
+

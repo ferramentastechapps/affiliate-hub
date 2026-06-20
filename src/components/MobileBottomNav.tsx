@@ -27,6 +27,10 @@ export function MobileBottomNav() {
   }, [lastScrollY]);
 
   const scrollTo = (id: string) => {
+    if (id === "categorias") {
+      window.dispatchEvent(new CustomEvent("open-categories"));
+      return;
+    }
     const el = document.getElementById(id);
     if (el) {
       const y = el.getBoundingClientRect().top + window.scrollY - 80; // 80px offset pro header
@@ -66,36 +70,28 @@ export function MobileBottomNav() {
             </button>
 
             <button 
-              onClick={() => scrollTo('cupons')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors min-h-[56px] py-2"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("open-coupons"));
+              }} 
+              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-accent min-h-[56px] py-2"
               aria-label="Ir para cupons"
             >
               <Ticket size={24} weight="duotone" />
               <span className="text-[11px] font-bold leading-tight">Cupons</span>
             </button>
-
-            <button 
-              onClick={() => scrollTo('ofertas')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-accent min-h-[56px] py-2"
-              aria-label="Ir para ofertas"
-            >
-              <Sparkle size={24} weight="duotone" />
-              <span className="text-[11px] font-bold leading-tight">Ofertas</span>
-            </button>
             
           </div>
 
-          {/* Botão de Conversão (WhatsApp Separado Escuro) */}
           <a 
             href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Entrar no grupo do WhatsApp"
-            className="w-[4.5rem] bg-zinc-900 rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/10 flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-transform min-h-[56px] py-2"
+            className="w-[4.5rem] bg-[#25D366] hover:bg-[#20bd5a] rounded-[1.75rem] shadow-[0_8px_30px_rgba(37,211,102,0.4)] flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-all min-h-[56px] py-2 border border-white/10"
           >
             <div className="relative">
-               <WhatsappLogo size={26} weight="fill" className="text-[#25D366]" />
-               <div className="absolute inset-0 rounded-full animate-ping bg-[#25D366]/30" />
+               <WhatsappLogo size={26} weight="regular" className="text-white" />
+               <div className="absolute inset-0 rounded-full animate-ping bg-white/30" />
             </div>
             <span className="text-[11px] font-bold text-white mt-0.5 leading-tight">Grupo</span>
           </a>

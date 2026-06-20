@@ -93,9 +93,9 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
       throw new Error('Nome do produto não encontrado ou inválido');
     }
     
-    if (!imageUrl || !imageUrl.startsWith('http')) {
+    if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp')) {
       console.warn('⚠️ Imagem não encontrada, usando placeholder');
-      imageUrl = 'https://via.placeholder.com/800x1000/18181b/71717a?text=Sem+Imagem';
+      imageUrl = '/placeholder.webp';
     }
     
     return {
@@ -145,7 +145,40 @@ function extractAmazonName($: cheerio.CheerioAPI): string {
 }
 
 function extractAmazonImage($: cheerio.CheerioAPI): string {
-  // Tentar várias fontes de imagem
+  // 1. Tentar encontrar as imagens alternativas no bloco de script (lifestyle/detalhes)
+  try {
+    const scripts = $('script').map((_, el) => $(el).html() || '').get();
+    for (const script of scripts) {
+      if (script && (script.includes('colorImages') || script.includes('ImageBlockATF'))) {
+        // Regex para capturar o array de imagens inicial
+        const match = script.match(/'colorImages':\s*\{\s*'initial':\s*(\[.*?\])/) ||
+                      script.match(/"colorImages":\s*\{\s*"initial":\s*(\[.*?\])/) ||
+                      script.match(/'initial':\s*(\[.*?\])/) ||
+                      script.match(/"initial":\s*(\[.*?\])/);
+        if (match && match[1]) {
+          const cleanJson = match[1].replace(/'/g, '"').replace(/(\w+):/g, '"$1":'); // Normalizar chaves para JSON
+          try {
+            const images = JSON.parse(cleanJson);
+            // Pegar a segunda imagem (index 1) se existir, senão a primeira
+            if (images.length > 1) {
+              const secImg = images[1].hiRes || images[1].large || images[1].variant || images[1].thumb;
+              if (secImg) return secImg;
+            }
+          } catch (jsonErr) {
+            // Se falhar o parse do JSON, tenta capturar URLs diretamente por regex
+            const urls = match[1].match(/https:\/\/[^"]+\.jpg/g) || match[1].match(/https:\/\/[^']+\.jpg/g);
+            if (urls && urls.length > 1) {
+              return urls[1];
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao extrair imagens secundárias da Amazon:', e);
+  }
+
+  // Fallback para a principal (primeira com fundo branco)
   const imgSrc = $('#landingImage').attr('src') ||
                  $('#imgBlkFront').attr('src') ||
                  $('.a-dynamic-image').first().attr('src') ||
@@ -180,6 +213,22 @@ function extractMercadoLivreName($: cheerio.CheerioAPI): string {
 }
 
 function extractMercadoLivreImage($: cheerio.CheerioAPI): string {
+  try {
+    const images: string[] = [];
+    $('img.ui-pdp-image').each((_, el) => {
+      const src = $(el).attr('data-zoom') || $(el).attr('src');
+      if (src && !src.includes('placeholder')) {
+        images.push(src);
+      }
+    });
+    // Se tiver mais de uma imagem no carrossel, pegamos a segunda (índice 1) para ser uma imagem de lifestyle
+    if (images.length > 1) {
+      return images[1];
+    }
+  } catch (e) {
+    console.error('Erro ao extrair imagens secundárias do Mercado Livre:', e);
+  }
+
   return $('.ui-pdp-image').first().attr('src') ||
          $('img.ui-pdp-image').first().attr('src') ||
          $('figure img').first().attr('src') ||
@@ -328,5 +377,78 @@ function cleanUrl(url: string): string {
     return urlObj.href;
   } catch {
     return url;
+  }
+}
+
+export async function getSecondaryLifestyleImage(links: Record<string, string | undefined>): Promise<string | null> {
+  const platformsToScrape = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'magalu', 'kabum'];
+  let targetUrl = '';
+  for (const platform of platformsToScrape) {
+    if (links[platform]) {
+      targetUrl = links[platform] as string;
+      break;
+    }
+  }
+
+  if (!targetUrl) {
+    return null;
+  }
+
+  try {
+    console.log(`[Scraper-Imagem] Tentando extrair imagem secundária de: ${targetUrl}`);
+    const scraped = await scrapeProductFromUrl(targetUrl);
+    if (scraped.imageUrl && !scraped.imageUrl.includes('placeholder')) {
+      console.log(`[Scraper-Imagem] Imagem secundária encontrada: ${scraped.imageUrl}`);
+      return scraped.imageUrl;
+    }
+  } catch (e: any) {
+    console.error('[Scraper-Imagem] Falha ao raspar imagem secundária do varejista:', e.message || e);
+  }
+
+  return null;
+}
+
+export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
+  try {
+    const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&iax=images&ia=images`;
+    const res = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) {
+      console.warn('[DDG-Search] Falha ao acessar página inicial:', res.status);
+      return [];
+    }
+
+    const html = await res.text();
+    const vqdMatch = html.match(/vqd=([^&'"]+)/) || html.match(/vqd\s*=\s*['"]([^'"]+)['"]/);
+    if (!vqdMatch) {
+      console.warn('[DDG-Search] Token vqd não encontrado no HTML.');
+      return [];
+    }
+
+    const vqd = vqdMatch[1];
+    const jsonUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,`;
+    const jsonRes = await fetch(jsonUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://duckduckgo.com/',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!jsonRes.ok) {
+      console.warn('[DDG-Search] Falha ao obter JSON de imagens:', jsonRes.status);
+      return [];
+    }
+
+    const data = await jsonRes.json();
+    return data.results || [];
+  } catch (err: any) {
+    console.error('[DDG-Search] Erro ao buscar imagens no DuckDuckGo:', err.message || err);
+    return [];
   }
 }

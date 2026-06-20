@@ -15,6 +15,27 @@ from config import SEARCH_INTERVAL_MINUTES
 import json
 from pathlib import Path
 
+
+def wait_for_ai_analysis(api: AffiliateHubAPI, produto_id: str, max_wait: int = 15, intervalo: int = 2) -> dict | None:
+    """
+    Aguarda até max_wait segundos para o campo aiAnalysis ser preenchido.
+    Retorna o produto atualizado ou None se o timeout esgotar.
+    """
+    elapsed = 0
+    while elapsed < max_wait:
+        time.sleep(intervalo)
+        elapsed += intervalo
+        resultado = api.buscar_produto(produto_id)
+        if resultado and resultado.get('success'):
+            produto = resultado.get('product', {})
+            if produto.get('aiAnalysis'):
+                print(f'✅ aiAnalysis recebido após {elapsed}s para produto {produto_id}')
+                return produto
+        print(f'⏳ Aguardando IA... ({elapsed}/{max_wait}s)')
+    print(f'⚠️ Timeout aguardando aiAnalysis para {produto_id}. Publicando sem legenda da IA.')
+    return None
+
+
 class PromotionBot:
     """Robô principal que coordena tudo"""
     
@@ -29,12 +50,22 @@ class PromotionBot:
     def _load_state(self):
         self.produtos_enviados = set()
         self.cupons_enviados = set()
+        self.fila_grupo = []
+        self.ultimo_envio_grupo = 0
         try:
             if self.state_file.exists():
                 with open(self.state_file, 'r', encoding='utf-8') as f:
                     state = json.load(f)
-                    self.produtos_enviados = set(state.get('produtos', []))
+                    
+                    # Normalizar os produtos do estado antigo para evitar reenvio
+                    loaded_produtos = state.get('produtos', [])
+                    for p in loaded_produtos:
+                        chave = self.scraper._normalizar(p)[:60] if hasattr(self.scraper, '_normalizar') else p
+                        self.produtos_enviados.add(chave)
+                        
                     self.cupons_enviados = set(state.get('cupons', []))
+                    self.fila_grupo = state.get('fila_grupo', [])
+                    self.ultimo_envio_grupo = state.get('ultimo_envio_grupo', 0)
         except Exception as e:
             print(f'Aviso: Não foi possível carregar o estado anterior: {e}')
             
@@ -43,7 +74,9 @@ class PromotionBot:
             with open(self.state_file, 'w', encoding='utf-8') as f:
                 json.dump({
                     'produtos': list(self.produtos_enviados),
-                    'cupons': list(self.cupons_enviados)
+                    'cupons': list(self.cupons_enviados),
+                    'fila_grupo': self.fila_grupo,
+                    'ultimo_envio_grupo': self.ultimo_envio_grupo
                 }, f, ensure_ascii=False)
         except Exception as e:
             print(f'Aviso: Não foi possível salvar o estado: {e}')
@@ -63,10 +96,11 @@ class PromotionBot:
             print(f'\n📊 Encontrados: {len(produtos)} produtos e {len(cupons)} cupons')
             
             # 2. Filtrar produtos novos
-            produtos_novos = [
-                p for p in produtos 
-                if p['name'] not in self.produtos_enviados
-            ]
+            produtos_novos = []
+            for p in produtos:
+                chave = self.scraper._normalizar(p['name'])[:60]
+                if chave not in self.produtos_enviados:
+                    produtos_novos.append(p)
             
             cupons_novos = [
                 c for c in cupons 
@@ -135,18 +169,57 @@ class PromotionBot:
                             print(f'✅ [Score {score}] ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
-                        # Envia para Telegram e marca como enviado
-                        self.telegram.enviar_sync('produto', produto)
-                        self.produtos_enviados.add(produto['name'])
+                        
+                        # Verifica status para decidir se publica direto ou se envia para moderação
+                        status = produto_retornado.get('status', 'pending')
+                        if status in ('active', 'approved'):
+                            links = produto_retornado.get('links', {}) or {}
+                            platform = None
+                            affiliate_link = None
+                            for p in ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum']:
+                                if links.get(p):
+                                    platform = p
+                                    affiliate_link = links.get(p)
+                                    break
+                            
+                            if platform and affiliate_link:
+                                print(f'⚡ Link de afiliado auto-gerado com sucesso! Aguardando IA para legenda...')
+                                # Aguarda a IA processar para ter a legenda (aiAnalysis)
+                                produto_com_ia = wait_for_ai_analysis(self.api, produto_retornado['id'])
+                                produto_para_publicar = produto_com_ia if produto_com_ia else produto_retornado
+                                print(f'⚡ Adicionando na fila para publicação no grupo...')
+                                self.fila_grupo.append({
+                                    'produto': produto_para_publicar,
+                                    'platform': platform,
+                                    'affiliate_link': affiliate_link
+                                })
+                                self._save_state()
+                            else:
+                                print(f'⚠️ Produto ativado mas nenhum link de afiliado correspondente foi encontrado. Enviando para moderação.')
+                                self.telegram.enviar_sync('produto', produto)
+                        else:
+                            # Envia para moderação/aprovação manual no Telegram
+                            self.telegram.enviar_sync('produto', produto)
+                            
+                        chave = self.scraper._normalizar(produto['name'])[:60]
+                        self.produtos_enviados.add(chave)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
+<<<<<<< HEAD
                         if not produto.get('id'):
                             produto['id'] = f'ERRO-API-{produto["name"][:20].replace(" ", "_")}'
                         print(f'📱 Enviando para Telegram mesmo sem ID válido...')
                         self.telegram.enviar_sync('produto', produto)
                         self.produtos_enviados.add(produto['name'])
                     time.sleep(1)  # Evitar rate limit
+=======
+                        print('⚠️ Produto não enviado ao Telegram devido a falha na API. O bot tentará novamente na próxima busca.')
+                        # Não adicionamos aos produtos_enviados para que o bot tente novamente
+                    
+                    # Pausa de 5 segundos entre cada produto para evitar estourar cota do Gemini (429) e Telegram Flood
+                    time.sleep(5)
+>>>>>>> 86ed893763b702676e2bb06f2956328cfbf172a6
             
             # 5. Adicionar cupons no site
             if cupons_novos:
@@ -162,6 +235,7 @@ class PromotionBot:
                 print(f'\n📱 Enviando cupons para Telegram...')
                 for cupom in cupons_novos:
                     self.telegram.enviar_sync('cupom', cupom)
+                    self.telegram.enviar_sync('publicar_cupom_grupo', cupom)
                     self.cupons_enviados.add(cupom['code'])
                     time.sleep(3)  # Evitar flood control do Telegram
             
@@ -174,6 +248,10 @@ class PromotionBot:
             
             # 8. Salvar o estado para evitar envios duplicados após reinicialização
             self._save_state()
+            
+            # 9. Processar a fila do grupo
+            self.publicar_fila_grupo()
+            
             print(f'\n✅ Busca concluída e estado salvo!')
             
         except Exception as e:
@@ -190,21 +268,84 @@ class PromotionBot:
         
         # Agendar execuções
         schedule.every(SEARCH_INTERVAL_MINUTES).minutes.do(self.executar_busca)
+        # Agendar verificações da fila do grupo a cada 1 minuto (ele respeitará o intervalo de 5 min internamente)
+        schedule.every(1).minutes.do(self.publicar_fila_grupo)
         
         # Loop principal
         while True:
             schedule.run_pending()
             time.sleep(60)
+            
+    def publicar_fila_grupo(self):
+        """Publica a melhor promoção da fila no grupo respeitando o intervalo de 5 minutos"""
+        agora = time.time()
+        # Permitir envio se já se passaram 5 minutos (300 segundos) desde o último envio
+        if agora - self.ultimo_envio_grupo < 300:
+            return
+
+        if not self.fila_grupo:
+            return
+
+        print(f'\n⏰ Processando fila do grupo ({len(self.fila_grupo)} itens)...')
+        
+        # Função para calcular pontuação/desconto
+        def get_score(item):
+            score = 0
+            try:
+                p = item['produto'].get('price')
+                o = item['produto'].get('originalPrice')
+                if p is not None and o is not None:
+                    p_float = float(p)
+                    o_float = float(o)
+                    if o_float > p_float and o_float > 0:
+                        score += ((o_float - p_float) / o_float) * 100  # 0 a 100
+            except:
+                pass
+                
+            # Bônus por nota da IA (0 a 10 vira 0 a 10)
+            ai_score = item['produto'].get('aiScore')
+            if ai_score is not None:
+                try:
+                    score += float(ai_score)
+                except:
+                    pass
+                    
+            return score
+            
+        # Ordenar a fila pelas melhores promoções (maior score: desconto + IA)
+        self.fila_grupo.sort(key=get_score, reverse=True)
+        
+        # Pegar a melhor e remover da fila
+        melhor_item = self.fila_grupo.pop(0)
+        
+        print(f'⭐ Publicando melhor promoção no grupo: {melhor_item["produto"].get("name")[:50]} (Score/Desconto: {get_score(melhor_item):.1f})')
+        
+        self.telegram.enviar_sync('publicar_grupo', melhor_item)
+        
+        self.ultimo_envio_grupo = agora
+        
+        # Limitar o tamanho da fila para não crescer infinitamente
+        if len(self.fila_grupo) > 50:
+            self.fila_grupo = self.fila_grupo[:50]
+            
+        self._save_state()
     
     def iniciar_modo_continuo(self):
         """Inicia o robô em modo contínuo (para testes)"""
         print('🤖 Robô de Promoções - Modo Contínuo')
         print('='*60)
         
+        ultimo_search = 0
+        
         while True:
-            self.executar_busca()
-            print(f'\n⏳ Aguardando {SEARCH_INTERVAL_MINUTES} minutos...\n')
-            time.sleep(SEARCH_INTERVAL_MINUTES * 60)
+            agora = time.time()
+            if agora - ultimo_search >= SEARCH_INTERVAL_MINUTES * 60:
+                self.executar_busca()
+                ultimo_search = time.time()
+                print(f'\n⏳ Aguardando {SEARCH_INTERVAL_MINUTES} minutos para a próxima busca...\n')
+            
+            self.publicar_fila_grupo()
+            time.sleep(60)
 
 
 def main():

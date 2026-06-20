@@ -5,6 +5,10 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { InstallBanner } from "@/components/InstallBanner";
 import { Header } from "@/components/Header";
+import { AuthProvider } from "@/components/AuthProvider";
+import { CategoriesModal } from "@/components/CategoriesModal";
+import { CouponsModal } from "@/components/CouponsModal";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,39 +31,40 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "123 Testando | Melhores Cupons e Promoções",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br'),
+  title: "Economizei | Melhores Cupons e Promoções",
   description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "123 Testando",
+    title: "Economizei",
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "32x32" },
-      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192x192.png",  sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512x512.png",  sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico?v=2", sizes: "32x32" },
+      { url: "/icons/favicon-16x16.png?v=2", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png?v=2", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png?v=2",  sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png?v=2",  sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
     ],
   },
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    siteName: "123 Testando",
-    title: "123 Testando | Melhores Cupons e Promoções",
-    description: "Melhores cupons e promoções do Brasil. Economize nas suas compras com os melhores descontos.",
-    images: [{ url: "/icons/og-image.png", width: 1200, height: 630, alt: "123 Testando" }],
+    siteName: "Economizei",
+    title: "Economizei | Melhores Cupons e Promoções",
+    description: "Encontre os melhores descontos, cupons e ofertas da internet em um só lugar.",
+    images: [{ url: "/icons/og-image.png?v=2", width: 1200, height: 630, alt: "Economizei" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "123 Testando | Melhores Cupons e Promoções",
+    title: "Economizei | Melhores Cupons e Promoções",
     description: "Melhores cupons e promoções do Brasil.",
-    images: ["/icons/og-image.png"],
+    images: ["/icons/og-image.png?v=2"],
   },
 };
 
@@ -73,14 +78,27 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
     >
-      <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans">
-        <Header />
-        <ToastProvider>
-          {children}
-        </ToastProvider>
-        <MobileBottomNav />
-        <InstallBanner />
+      <head>
+        <meta name="lomadee" content="2324685" />
+      </head>
+      <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans relative">
+        <div className="premium-bg fixed top-0 left-0 w-full h-full -z-10" />
+        <AuthProvider>
+          <Header />
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+          <CategoriesModal />
+          <CouponsModal />
+          <MobileBottomNav />
+          <InstallBanner />
+        </AuthProvider>
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
 }
+

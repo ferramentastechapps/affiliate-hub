@@ -32,8 +32,8 @@ echo "=== Parando processo duplicado affiliate-listener ==="
 pm2 stop affiliate-listener 2>/dev/null && echo "affiliate-listener parado" || echo "affiliate-listener nao encontrado"
 
 echo ""
-echo "=== Reiniciando affiliate-bot ==="
-pm2 restart affiliate-bot
+echo "=== Reiniciando affiliate-scraper ==="
+pm2 restart affiliate-scraper
 
 echo ""
 echo "=== Status final ==="
@@ -42,7 +42,7 @@ pm2 list
 echo ""
 echo "=== Aguardando 5s e verificando logs ==="
 sleep 5
-pm2 logs affiliate-bot --lines 20 --nostream
+pm2 logs affiliate-scraper --lines 20 --nostream
 "@
 
 $cleanCommand = $sshCommand -replace "`r", ""

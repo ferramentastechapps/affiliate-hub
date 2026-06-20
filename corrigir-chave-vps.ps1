@@ -20,8 +20,8 @@ echo "Testando API com nova chave..."
 curl -s -o /dev/null -w "Status: %{http_code}" -X POST http://127.0.0.1:3005/api/webhook/products -H "Content-Type: application/json" -H "x-api-key: $NOVA_CHAVE" -d '{"name":"Teste","category":"Diversos","imageUrl":"https://via.placeholder.com/100"}'
 
 echo ""
-echo "Reiniciando affiliate-bot..."
-pm2 restart affiliate-bot --update-env
+echo "Reiniciando affiliate-scraper..."
+pm2 restart affiliate-scraper --update-env
 
 echo "Pronto! Status:"
 pm2 list

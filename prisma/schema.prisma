@@ -13,6 +13,7 @@ datasource db {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Product {
   id          String   @id @default(cuid())
+  shortId     Int      @unique @default(autoincrement()) // ID numérico curto para URLs
   name        String
   category    String
   description String?  // URLs e textos longos
@@ -24,10 +25,57 @@ model Product {
   updatedAt   DateTime @updatedAt
   links       Link?
   coupons     Coupon[]
+  priceHistory PriceHistory[]
+  clickLogs   ClickLog[]
   
+  // Novos campos para IA e Analytics
+  aiScore     Float?   // Nota de 0 a 10 dada pela IA
+  aiAnalysis  String?  // Texto/Copy gerado pela IA
+  clicks      Int      @default(0) // Quantidade de cliques
+  externalId  String?  @unique // Hash ou ID original para deduplicação segura
+  enhancedImageUrl String? // Imagem processada pela IA (Fundo/4K)
+  isFixed     Boolean  @default(false) // Trava a imagem e os links para não serem sobrescritos pelo robô
+  
+  comments    Comment[]
+  votes       ProductVote[]
+  alerts      ProductAlert[]
+
   @@index([category])
   @@index([createdAt])
   @@index([status])
+  @@index([externalId])
+  @@index([shortId])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📈 HISTÓRICO DE PREÇOS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model PriceHistory {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price       Float
+  originalPrice Float?
+  createdAt   DateTime @default(now())
+  
+  @@index([productId, createdAt])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🖱️ RASTREAMENTO DE CLIQUES (ANALYTICS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model ClickLog {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userAgent   String?  // Navegador/Dispositivo do usuário
+  referrer    String?  // De onde veio o clique (Telegram, WhatsApp, Insta)
+  channel     String?  // Canal explícito se passado na URL (ex: ?ch=tg)
+  createdAt   DateTime @default(now())
+  
+  @@index([productId])
+  @@index([channel])
+  @@index([createdAt])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -98,4 +146,67 @@ model PushSubscription {
   createdAt   DateTime @default(now())
   
   @@index([endpoint])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 👤 USUÁRIOS E AUTENTICAÇÃO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String?  // Hashed password (null for Google-only users)
+  image     String?  // URL da imagem de perfil (ex: Google avatar)
+  googleId  String?  @unique // ID do Google para OAuth
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments  Comment[]
+  votes     ProductVote[]
+  alerts    ProductAlert[]
+
+  @@index([email])
+  @@index([googleId])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💬 COMENTÁRIOS E AVALIAÇÕES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model Comment {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, createdAt])
+}
+
+model ProductVote {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "LIKE" ou "DISLIKE"
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId])
+  @@index([productId])
+}
+
+model ProductAlert {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId])
+  @@index([productId])
 }

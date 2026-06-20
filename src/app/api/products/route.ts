@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get('status');
+
+    let whereClause: any = {
+      status: { in: ['active', 'approved'] } // Default: apenas aprovados/ativos
+    };
+
+    if (statusParam === 'all') {
+      whereClause = {};
+    } else if (statusParam === 'pending') {
+      whereClause = { status: 'pending' };
+    } else if (statusParam === 'rejected') {
+      whereClause = { status: 'rejected' };
+    } else if (statusParam === 'active') {
+      whereClause = { status: { in: ['active', 'approved'] } };
+    }
+
     const products = await prisma.product.findMany({
-      where: {
-        status: { in: ['active', 'approved'] } // Produtos aprovados
-      },
+      where: whereClause,
+      take: 100, // Limite para não sobrecarregar e travar o navegador
       include: {
         links: true,
         coupons: {
@@ -16,6 +32,14 @@ export async function GET() {
               { expiresAt: null },
               { expiresAt: { gte: new Date() } }
             ]
+          }
+        },
+        _count: {
+          select: {
+            votes: {
+              where: { type: 'LIKE' }
+            },
+            comments: true
           }
         }
       },
@@ -38,7 +62,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, category, description, imageUrl, price, links } = body;
+    const { name, category, description, imageUrl, price, originalPrice, links } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -63,6 +87,7 @@ export async function POST(request: Request) {
         description,
         imageUrl,
         price: price ? parseFloat(price) : null,
+        originalPrice: originalPrice ? parseFloat(originalPrice) : null,
         links: links ? {
           create: links
         } : undefined

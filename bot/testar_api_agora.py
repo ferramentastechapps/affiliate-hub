@@ -42,7 +42,7 @@ print('2️⃣  Testando POST /api/webhook/products...')
 produto_teste = {
     'name': 'Produto Teste Diagnóstico',
     'category': 'Diversos',
-    'imageUrl': 'https://via.placeholder.com/800x1000',
+    'imageUrl': '/placeholder.webp',
     'price': 99.90,
     'links': {'amazon': 'https://amazon.com.br'}
 }

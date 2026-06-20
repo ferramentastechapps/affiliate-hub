@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Economizai | Melhores Ofertas e Cupons</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Premium Modern Dark System Design */
+    :root {
+      --bg-dark: #090a0f;
+      --bg-card: #12141c;
+      --bg-card-hover: #181b26;
+      --text-primary: #ffffff;
+      --text-secondary: #8e92a4;
+      --accent-red: #ff334b;
+      --accent-red-hover: #e0243b;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --glass-bg: rgba(18, 20, 28, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.06);
+      
+      /* Store Colors */
+      --color-amazon: #ff9900;
+      --color-mercadolivre: #ffe600;
+      --color-shopee: #ff5722;
+      --color-aliexpress: #e62e04;
+      --color-tiktok: #00f2fe;
+      --color-kabum: #0060ff;
+      --color-magalu: #0086ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Glow overlays for ambient design aesthetic */
+    .ambient-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(255, 51, 75, 0.15) 0%, rgba(9, 10, 15, 0) 70%);
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Layout Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Header Styling */
+    header {
+      position: sticky;
+      top: 0;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      z-index: 1000;
+      padding: 16px 0;
+      transition: all 0.3s ease;
+    }
+
+    .header-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-badge {
+      background-color: var(--accent-red);
+      color: white;
+      font-weight: 800;
+      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(255, 51, 75, 0.3);
+    }
+
+    .logo-text {
+      color: white;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    /* Search Bar */
+    .search-container {
+      flex: 1;
+      max-width: 500px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 16px 10px 44px;
+      color: white;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: rgba(255, 51, 75, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px rgba(255, 51, 75, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+
+    /* Navigation */
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: white;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 60px 0 40px;
+      position: relative;
+    }
+
+    .hero-title {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff 60%, #a5a9c0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      max-width: 650px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    /* Section Headers */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .view-all {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s ease;
+    }
+
+    .view-all:hover {
+      color: white;
+    }
+
+    /* Highlights (Destaques da Semana) Carousel */
+    .carousel-section {
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    .carousel-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .carousel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+    }
+
+    .carousel-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .card-bg-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.25;
+      z-index: 1;
+      transition: transform 0.5s ease, opacity 0.3s ease;
+    }
+
+    .carousel-card:hover .card-bg-image {
+      transform: scale(1.05);
+      opacity: 0.35;
+    }
+
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(9, 10, 15, 0.9) 20%, rgba(9, 10, 15, 0.4) 60%, rgba(9, 10, 15, 0) 100%);
+      z-index: 2;
+    }
+
+    .card-content {
+      position: relative;
+      z-index: 3;
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .discount-badge {
+      background: var(--accent-red);
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .time-badge {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 8px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .old-price {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-decoration: line-through;
+    }
+
+    .new-price {
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+    }
+
+    /* Carousel navigation dots */
+    .carousel-nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot.active {
+      background: white;
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    /* Featured Stores Section */
+    .stores-section {
+      margin-bottom: 48px;
+    }
+
+    .stores-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 16px;
+    }
+
+    .store-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .store-logo-wrapper {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .store-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .store-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    /* Glowing Hover Effects per Store */
+    .store-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      border: 1.5px solid transparent;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    /* Store specific hovering rules */
+    .store-card.amazon:hover {
+      box-shadow: 0 8px 24px rgba(255, 153, 0, 0.12);
+      border-color: rgba(255, 153, 0, 0.3);
+    }
+    .store-card.amazon:hover::after { border-color: var(--color-amazon); opacity: 0.6; }
+    .store-card.amazon:hover .store-name { color: var(--color-amazon); }
+
+    .store-card.mercadolivre:hover {
+      box-shadow: 0 8px 24px rgba(255, 230, 0, 0.12);
+      border-color: rgba(255, 230, 0, 0.3);
+    }
+    .store-card.mercadolivre:hover::after { border-color: var(--color-mercadolivre); opacity: 0.6; }
+    .store-card.mercadolivre:hover .store-name { color: var(--color-mercadolivre); }
+
+    .store-card.shopee:hover {
+      box-shadow: 0 8px 24px rgba(255, 87, 34, 0.12);
+      border-color: rgba(255, 87, 34, 0.3);
+    }
+    .store-card.shopee:hover::after { border-color: var(--color-shopee); opacity: 0.6; }
+    .store-card.shopee:hover .store-name { color: var(--color-shopee); }
+
+    .store-card.aliexpress:hover {
+      box-shadow: 0 8px 24px rgba(230, 46, 4, 0.12);
+      border-color: rgba(230, 46, 4, 0.3);
+    }
+    .store-card.aliexpress:hover::after { border-color: var(--color-aliexpress); opacity: 0.6; }
+    .store-card.aliexpress:hover .store-name { color: var(--color-aliexpress); }
+
+    .store-card.tiktok:hover {
+      box-shadow: 0 8px 24px rgba(0, 242, 254, 0.12);
+      border-color: rgba(0, 242, 254, 0.3);
+    }
+    .store-card.tiktok:hover::after { border-color: var(--color-tiktok); opacity: 0.6; }
+    .store-card.tiktok:hover .store-name { color: var(--color-tiktok); }
+
+    .store-card.kabum:hover {
+      box-shadow: 0 8px 24px rgba(0, 96, 255, 0.12);
+      border-color: rgba(0, 96, 255, 0.3);
+    }
+    .store-card.kabum:hover::after { border-color: var(--color-kabum); opacity: 0.6; }
+    .store-card.kabum:hover .store-name { color: var(--color-kabum); }
+
+    .store-card.magalu:hover {
+      box-shadow: 0 8px 24px rgba(0, 134, 255, 0.12);
+      border-color: rgba(0, 134, 255, 0.3);
+    }
+    .store-card.magalu:hover::after { border-color: var(--color-magalu); opacity: 0.6; }
+    .store-card.magalu:hover .store-name { color: var(--color-magalu); }
+
+    /* Category Filter Section */
+    .filter-section {
+      margin-bottom: 32px;
+    }
+
+    .filter-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scrollbar-width: none; /* Firefox */
+    }
+
+    .filter-scroll::-webkit-scrollbar {
+      display: none; /* Safari and Chrome */
+    }
+
+    .filter-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 16px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      background: var(--bg-card-hover);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .filter-btn.active {
+      background: var(--accent-red);
+      color: white;
+      border-color: var(--accent-red);
+      box-shadow: 0 4px 14px rgba(255, 51, 75, 0.25);
+    }
+
+    /* Deals of the Day (Promoções do dia) Grid */
+    .deals-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 60px;
+    }
+
+    .deal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+    }
+
+    .deal-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .deal-image-container {
+      width: 100%;
+      aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .deal-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: transform 0.5s ease;
+    }
+
+    .deal-card:hover .deal-image {
+      transform: scale(1.05);
+    }
+
+    .card-top-badges {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .deal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .store-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 4px 8px;
+      align-self: flex-start;
+      margin-bottom: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .store-badge-icon {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+    }
+
+    .deal-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 38px;
+    }
+
+    .deal-price-section {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Community CTA Section */
+    .community-section {
+      background: radial-gradient(100% 100% at 50% 0%, rgba(255, 51, 75, 0.08) 0%, rgba(18, 20, 28, 0) 100%), var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 28px;
+      padding: 48px;
+      text-align: center;
+      margin-bottom: 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .community-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .community-subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      max-width: 500px;
+      margin: 0 auto 32px;
+    }
+
+    .community-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .com-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .com-icon-wrapper {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .com-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .com-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .com-action {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    /* Glow on community buttons */
+    .com-card.whatsapp:hover {
+      background: rgba(37, 211, 102, 0.04);
+      border-color: rgba(37, 211, 102, 0.4);
+      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.08);
+    }
+    .com-card.whatsapp:hover .com-icon-wrapper {
+      background: #25d366;
+      color: white;
+    }
+    .com-card.whatsapp .com-icon-wrapper { color: #25d366; }
+
+    .com-card.telegram:hover {
+      background: rgba(0, 136, 204, 0.04);
+      border-color: rgba(0, 136, 204, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 136, 204, 0.08);
+    }
+    .com-card.telegram:hover .com-icon-wrapper {
+      background: #0088cc;
+      color: white;
+    }
+    .com-card.telegram .com-icon-wrapper { color: #0088cc; }
+
+    .com-card.instagram:hover {
+      background: rgba(225, 48, 108, 0.04);
+      border-color: rgba(225, 48, 108, 0.4);
+      box-shadow: 0 8px 24px rgba(225, 48, 108, 0.08);
+    }
+    .com-card.instagram:hover .com-icon-wrapper {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      color: white;
+    }
+    .com-card.instagram .com-icon-wrapper { color: #e1306c; }
+
+    /* Footer Styling */
+    footer {
+      background: #06070a;
+      border-top: 1px solid var(--border-color);
+      padding: 60px 0 40px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    .footer-info {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .footer-desc {
+      color: var(--text-secondary);
+      font-size: 13px;
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    .footer-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: white;
+    }
+
+    .social-icons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .social-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .social-icon:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .copyright {
+      color: var(--text-secondary);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .copyright-heart {
+      color: var(--accent-red);
+    }
+
+    .disclaimer {
+      color: rgba(255, 255, 255, 0.25);
+      font-size: 11px;
+      text-align: center;
+      max-width: 800px;
+      line-height: 1.6;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+      .carousel-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .carousel-card:last-child {
+        display: none;
+      }
+      .stores-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .deals-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .nav-links {
+        justify-content: center;
+        margin-top: 12px;
+      }
+      .hero-title {
+        font-size: 28px;
+      }
+      .carousel-container {
+        grid-template-columns: 1fr;
+      }
+      .stores-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .deals-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .community-grid {
+        grid-template-columns: 1fr;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+      .footer-info {
+        align-items: center;
+        text-align: center;
+      }
+      .footer-title {
+        text-align: center;
+      }
+      .footer-links {
+        align-items: center;
+      }
+      .social-icons {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stores-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .deals-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background decorative light overlay -->
+  <div class="ambient-glow"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-wrapper">
+      <a href="#" class="logo-container">
+        <div class="logo-badge">E</div>
+        <span class="logo-text">economizai</span>
+      </a>
+      
+      <div class="search-container">
+        <span class="search-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
+        <input type="text" class="search-input" placeholder="Buscar um produto...">
+      </div>
+
+      <nav class="nav-links">
+        <a href="#" class="nav-link active">Início</a>
+        <a href="#" class="nav-link">Categorias</a>
+        <a href="#" class="nav-link">Cupons</a>
+        <a href="#" class="nav-link">Comunidade</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+    <!-- Hero Header -->
+    <section class="hero">
+      <h1 class="hero-title">Encontre as Melhores Ofertas e<br>Cupons em um Só Lugar!</h1>
+      <p class="hero-subtitle">Receba alertas exclusivos, cupons oficiais e participe de discussões sobre as melhores promoções e novidades promissoras 🎯</p>
+    </section>
+
+    <!-- Highlights (Destaques da Semana) -->
+    <section class="carousel-section">
+      <div class="section-header">
+        <h2 class="section-title">Destaques da Semana</h2>
+        <a href="#" class="view-all">Ver todas 
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </a>
+      </div>
+      
+      <div class="carousel-container">
+        <!-- Card 1 -->
+        <a href="#" class="carousel-card">
+          <!-- Background image simulation -->
+          <div style="position: absolute; inset:0; background: radial-gradient(circle at center, #501015 0%, #12141c 100%); z-index: 0;"></div>
+          <!-- Real image placeholder with stylish styling -->
+          <svg style="position: absolute; right: 20px; top: 20px; width: 100px; height: 100px; z-index: 1; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="#ff334b" stroke-width="1.5"><rect x="6" y="3" width="12" height="18" rx="2"></rect><line x1="6" y1="8" x2="18" y2="8"></line></svg>
+          <div class="card-overlay"></div>
+          <div class="card-content">
+            <div class="badge-row">
+              <span class="discount-badge">-28%</span>
+            </div>
+            <h3 class="card-title">Creatina 100% Pura 300g Integralmedica</h3>
+            <div class="price-row">
+              <span class="old-price">R$ 55,00</span>
+              <span class="new-price">R$ 39,83</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Card 2 -->
+        <a href="#" class="carousel-card">
+          <div style="position: absolute; inset:0; background: radial-gradient(circle at center, #1b3a24 0%, #12141c 100%); z-index: 0;"></div>
+          <svg style="position: absolute; right: 20px; top: 20px; width: 100px; height: 100px; z-index: 1; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+          <div class="card-overlay"></div>
+          <div class="card-content">
+            <div class="badge-row">
+              <span class="discount-badge">-13%</span>
+            </div>
+            <h3 class="card-title">Copa do Mundo Fifa 2026 - Blister com 12 envelopes...</h3>
+            <div class="price-row">
+              <span class="old-price">R$ 101,20</span>
+              <span class="new-price">R$ 87,20</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Card 3 -->
+        <a href="#" class="carousel-card">
+          <div style="position: absolute; inset:0; background: radial-gradient(circle at center, #102e50 0%, #12141c 100%); z-index: 0;"></div>
+          <svg style="position: absolute; right: 20px; top: 20px; width: 100px; height: 100px; z-index: 1; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="#0060ff" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+          <div class="card-overlay"></div>
+          <div class="card-content">
+            <div class="badge-row">
+              <span class="discount-badge">-45%</span>
+            </div>
+            <h3 class="card-title">Mini Localizador Rastreador Smart Tag GPS</h3>
+            <div class="price-row">
+              <span class="old-price">R$ 35,00</span>
+              <span class="new-price">R$ 19,00</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="carousel-nav">
+        <span class="dot active"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </section>
+
+    <!-- Featured Stores -->
+    <section class="stores-section">
+      <div class="section-header">
+        <h2 class="section-title">Compre nas suas lojas favoritas</h2>
+      </div>
+
+      <div class="stores-grid">
+        <!-- Amazon -->
+        <a href="#" class="store-card amazon">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          </div>
+          <span class="store-name">Amazon</span>
+        </a>
+
+        <!-- Mercado Livre -->
+        <a href="#" class="store-card mercadolivre">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <span class="store-name">Mercado Livre</span>
+        </a>
+
+        <!-- Shopee -->
+        <a href="#" class="store-card shopee">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+          </div>
+          <span class="store-name">Shopee</span>
+        </a>
+
+        <!-- AliExpress -->
+        <a href="#" class="store-card aliexpress">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+          </div>
+          <span class="store-name">AliExpress</span>
+        </a>
+
+        <!-- TikTok Shop -->
+        <a href="#" class="store-card tiktok">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
+          </div>
+          <span class="store-name">TikTok Shop</span>
+        </a>
+
+        <!-- KaBuM! -->
+        <a href="#" class="store-card kabum">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+          </div>
+          <span class="store-name">KaBuM!</span>
+        </a>
+
+        <!-- Magalu -->
+        <a href="#" class="store-card magalu">
+          <div class="store-logo-wrapper">
+            <svg class="store-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+          </div>
+          <span class="store-name">Magalu</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Daily Promotions Grid (Promocões do Dia) -->
+    <section class="filter-section">
+      <div class="section-header">
+        <h2 class="section-title">Promocões do dia <span style="color: var(--accent-red);">●</span></h2>
+        <a href="#" class="view-all">Ver todas 
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </a>
+      </div>
+
+      <!-- Categories Filter Tabs -->
+      <div class="filter-scroll">
+        <button class="filter-btn active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+          Eletrodomésticos
+        </button>
+        <button class="filter-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.38 3.46L16 2.14 11.62 3.46a2 2 0 0 0-1.24 1.86v6.62a8 8 0 0 0 4.18 7.03L16 20l1.44-.81A8 8 0 0 0 21.62 12V5.32a2 2 0 0 0-1.24-1.86z"></path></svg>
+          Moda
+        </button>
+        <button class="filter-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          Casa
+        </button>
+        <button class="filter-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path></svg>
+          Bebês
+        </button>
+        <button class="filter-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+          Esportes
+        </button>
+        <button class="filter-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="6" cy="12" r="1"></circle><circle cx="10" cy="12" r="1"></circle><line x1="14" y1="12" x2="18" y2="12"></line></svg>
+          Videogames
+        </button>
+        <button class="filter-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          Descontos
+        </button>
+      </div>
+    </section>
+
+    <!-- Daily Promotions Grid -->
+    <section class="deals-grid">
+      <!-- Deal 1 -->
+      <a href="#" class="deal-card">
+        <div class="deal-image-container">
+          <div class="card-top-badges">
+            <span class="discount-badge">-28%</span>
+            <span class="time-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              1h 45m
+            </span>
+          </div>
+          <!-- Creative representation of Creatina -->
+          <div style="width: 120px; height: 120px; border-radius: 12px; background: radial-gradient(circle, #501015 0%, #12141c 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color)">
+            <span style="color: var(--accent-red); font-weight: 800; font-size: 14px;">CREATINA</span>
+          </div>
+        </div>
+        <div class="deal-body">
+          <div class="store-badge">
+            Mercado Livre
+          </div>
+          <h3 class="deal-title">Creatina 100% Pura 300g Integralmedica</h3>
+          <div class="deal-price-section">
+            <span class="old-price">R$ 55,00</span>
+            <span class="new-price">R$ 39,83</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Deal 2 -->
+      <a href="#" class="deal-card">
+        <div class="deal-image-container">
+          <div class="card-top-badges">
+            <span class="discount-badge">-24%</span>
+            <span class="time-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              4h 12m
+            </span>
+          </div>
+          <div style="width: 120px; height: 120px; border-radius: 12px; background: radial-gradient(circle, #2d2a1b 0%, #12141c 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color)">
+            <span style="color: #ffe600; font-weight: 800; font-size: 14px;">T-SHIRTS</span>
+          </div>
+        </div>
+        <div class="deal-body">
+          <div class="store-badge">
+            Mercado Livre
+          </div>
+          <h3 class="deal-title">Kit 2 Camisetas Masculina 100% Algodão</h3>
+          <div class="deal-price-section">
+            <span class="old-price">R$ 69,00</span>
+            <span class="new-price">R$ 53,00</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Deal 3 -->
+      <a href="#" class="deal-card">
+        <div class="deal-image-container">
+          <div class="card-top-badges">
+            <span class="discount-badge">-13%</span>
+            <span class="time-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              8h 30m
+            </span>
+          </div>
+          <div style="width: 120px; height: 120px; border-radius: 12px; background: radial-gradient(circle, #1b3a24 0%, #12141c 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color)">
+            <span style="color: #28a745; font-weight: 800; font-size: 14px;">FIFA 2026</span>
+          </div>
+        </div>
+        <div class="deal-body">
+          <div class="store-badge">
+            Shopee
+          </div>
+          <h3 class="deal-title">Copa do Mundo Fifa 2026 - Blister com 12 envelopes...</h3>
+          <div class="deal-price-section">
+            <span class="old-price">R$ 101,20</span>
+            <span class="new-price">R$ 87,20</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Deal 4 -->
+      <a href="#" class="deal-card">
+        <div class="deal-image-container">
+          <div class="card-top-badges">
+            <span class="discount-badge">-45%</span>
+            <span class="time-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              12h 05m
+            </span>
+          </div>
+          <div style="width: 120px; height: 120px; border-radius: 12px; background: radial-gradient(circle, #102e50 0%, #12141c 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color)">
+            <span style="color: #0060ff; font-weight: 800; font-size: 14px;">SMART TAG</span>
+          </div>
+        </div>
+        <div class="deal-body">
+          <div class="store-badge">
+            Mercado Livre
+          </div>
+          <h3 class="deal-title">Mini Localizador Rastreador Smart Tag GPS</h3>
+          <div class="deal-price-section">
+            <span class="old-price">R$ 35,00</span>
+            <span class="new-price">R$ 19,00</span>
+          </div>
+        </div>
+      </a>
+    </section>
+
+    <!-- Community Section -->
+    <section class="community-section">
+      <h2 class="community-title">Junte-se à nossa comunidade! 🎉</h2>
+      <p class="community-subtitle">Receba ofertas exclusivas, cupons em primeira mão e participe de discussões sobre as melhores promoções</p>
+      
+      <div class="community-grid">
+        <!-- WhatsApp -->
+        <a href="#" class="com-card whatsapp">
+          <div class="com-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          </div>
+          <div class="com-info">
+            <span class="com-name">Grupo WhatsApp</span>
+            <span class="com-action">Clique para seguir</span>
+          </div>
+        </a>
+
+        <!-- Telegram -->
+        <a href="#" class="com-card telegram">
+          <div class="com-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </div>
+          <div class="com-info">
+            <span class="com-name">Canal Telegram</span>
+            <span class="com-action">Clique para seguir</span>
+          </div>
+        </a>
+
+        <!-- Instagram -->
+        <a href="#" class="com-card instagram">
+          <div class="com-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+          </div>
+          <div class="com-info">
+            <span class="com-name">Siga no Instagram</span>
+            <span class="com-action">Clique para seguir</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-grid">
+      <div class="footer-info">
+        <a href="#" class="logo-container" style="margin-bottom: 12px;">
+          <div class="logo-badge">E</div>
+          <span class="logo-text">economizai</span>
+        </a>
+        <p class="footer-desc">Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.</p>
+        <div class="social-icons">
+          <a href="#" class="social-icon">F</a>
+          <a href="#" class="social-icon">X</a>
+          <a href="#" class="social-icon">I</a>
+          <a href="#" class="social-icon">Y</a>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="footer-title">Links secundários</h4>
+        <ul class="footer-links">
+          <li><a href="#" class="footer-link">Início</a></li>
+          <li><a href="#" class="footer-link">Categorias</a></li>
+          <li><a href="#" class="footer-link">Cupons</a></li>
+          <li><a href="#" class="footer-link">Comunidade</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-title">Diversos</h4>
+        <ul class="footer-links">
+          <li><a href="#" class="footer-link">Moda e Acessórios</a></li>
+          <li><a href="#" class="footer-link">Smartphones e TV</a></li>
+          <li><a href="#" class="footer-link">Casa e Eletrodomésticos</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-title">Social</h4>
+        <ul class="footer-links">
+          <li><a href="#" class="footer-link">WhatsApp</a></li>
+          <li><a href="#" class="footer-link">Telegram</a></li>
+          <li><a href="#" class="footer-link">Instagram</a></li>
+          <li><a href="#" class="footer-link">TikTok</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p class="copyright">
+        © 2026 economizai. Feito com <span class="copyright-heart">♥</span> para você economizar.
+      </p>
+      <p class="disclaimer">
+        Os preços e a disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja parceira antes de finalizar sua compra. Economizai não se responsabiliza pelas compras realizadas nos links externos.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
