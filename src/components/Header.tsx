@@ -130,9 +130,7 @@ function NavLink({ href, children, active }: { href: string; children: React.Rea
     e.preventDefault();
     if (href === "#categorias") { window.dispatchEvent(new CustomEvent("open-categories")); return; }
     if (href === "#cupons") {
-      window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "CUPOM" } }));
-      const el = document.getElementById("ofertas");
-      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: "smooth" });
+      window.dispatchEvent(new CustomEvent("open-coupons"));
       return;
     }
     const el = document.getElementById(href.replace("#", ""));

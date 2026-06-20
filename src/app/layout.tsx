@@ -7,6 +7,7 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { Header } from "@/components/Header";
 import { AuthProvider } from "@/components/AuthProvider";
 import { CategoriesModal } from "@/components/CategoriesModal";
+import { CouponsModal } from "@/components/CouponsModal";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -88,6 +89,7 @@ export default function RootLayout({
             {children}
           </ToastProvider>
           <CategoriesModal />
+          <CouponsModal />
           <MobileBottomNav />
           <InstallBanner />
         </AuthProvider>
