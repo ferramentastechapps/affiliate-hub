@@ -53,11 +53,11 @@ function GoogleIcon() {
 // ─── Input field ───────────────────────────────────────────────────────────────
 function Field({
   id, label, type = "text", value, onChange, placeholder, error,
-  icon, right, autoComplete,
+  icon, right, autoComplete, disabled,
 }: {
   id: string; label: string; type?: string; value: string;
   onChange: (v: string) => void; placeholder: string; error?: string;
-  icon: React.ReactNode; right?: React.ReactNode; autoComplete?: string;
+  icon: React.ReactNode; right?: React.ReactNode; autoComplete?: string; disabled?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
@@ -72,9 +72,10 @@ function Field({
           id={id} type={type} value={value} autoComplete={autoComplete}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          disabled={disabled}
           className={[
             "w-full pl-10 py-3 text-sm font-medium rounded-xl transition-all outline-none",
-            "bg-white/[0.04] border placeholder:text-zinc-600",
+            "bg-white/[0.04] border placeholder:text-zinc-600 disabled:opacity-50",
             "focus:bg-white/[0.07] focus:ring-2",
             right ? "pr-11" : "pr-4",
             error
@@ -114,6 +115,8 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
   const [confirm, setConfirm]     = useState("");
+  
+  const [isEmailEntered, setIsEmailEntered]   = useState(false);
 
   const pwStrength       = getPasswordStrength(password);
   const googleInit       = useRef(false);
@@ -169,18 +172,35 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     }, 150);
 
     return () => clearTimeout(timer);
-  // Only re-run when isOpen changes — intentionally omitting stable callbacks
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
+  const handleContinueEmail = () => {
+    clearError(); setInfoMessage(null);
+    if (!email) {
+      setErrors({ email: "E-mail é obrigatório" });
+      return;
+    }
+    if (!validateEmail(email)) {
+      setErrors({ email: "E-mail inválido" });
+      return;
+    }
+    setErrors({});
+    setIsEmailEntered(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isEmailEntered) {
+      handleContinueEmail();
+      return;
+    }
+
     clearError(); setInfoMessage(null);
     const errs: Record<string, string> = {};
 
-    if (!email)               errs.email    = "E-mail é obrigatório";
-    else if (!validateEmail(email)) errs.email = "E-mail inválido";
     if (!password)            errs.password = "Senha é obrigatória";
     else if (password.length < 6) errs.password = "Mínimo 6 caracteres";
 
@@ -207,6 +227,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     setInfoMessage(null);
     setShowPassword(false);
     setShowConfirm(false);
+    setIsEmailEntered(false);
   };
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -220,7 +241,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50"
+            className="fixed inset-0 z-[100]"
             style={{
               backgroundImage: "url('/fundo-login.webp')",
               backgroundSize: "cover",
@@ -244,7 +265,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
-            className="fixed bottom-0 left-0 right-0 z-50 overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-[100] overflow-hidden"
             style={{
               background: "linear-gradient(180deg, #111217 0%, #0d0e14 100%)",
               borderRadius: "24px 24px 0 0",
@@ -322,8 +343,231 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                   )}
                 </AnimatePresence>
 
-                {/* ── Google button ── */}
-                <div className="space-y-3">
+                {/* Form Flow (Email primeiro, depois restante) */}
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                  {/* Email */}
+                  <Field
+                    id="auth-email" label="E-mail" type="email"
+                    value={email} onChange={(v) => { setEmail(v); clearField("email"); }}
+                    placeholder="seu@email.com" error={errors.email}
+                    autoComplete="email" icon={<EnvelopeSimple size={16} />}
+                  />
+
+                  <AnimatePresence mode="wait">
+                    {!isEmailEntered ? (
+                      <motion.div
+                        key="email-step"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <motion.button
+                          type="button" 
+                          onClick={handleContinueEmail}
+                          whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                          className="w-full py-3.5 mt-2 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+                          style={{
+                            background: "linear-gradient(135deg, #ff334b 0%, #e61932 100%)",
+                            boxShadow: "0 4px 18px rgba(255,51,75,0.35)",
+                          }}
+                        >
+                          Continuar
+                          <ArrowRight size={15} weight="bold" />
+                        </motion.button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="password-step"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-4 pt-1"
+                      >
+                        {/* Nome — só no signup */}
+                        <AnimatePresence>
+                          {mode === "signup" && (
+                            <motion.div
+                              key="name-field"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22 }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div className="pb-0">
+                                <Field
+                                  id="auth-name" label="Nome completo"
+                                  value={name} onChange={(v) => { setName(v); clearField("name"); }}
+                                  placeholder="João Silva" error={errors.name}
+                                  icon={<User size={16} />}
+                                />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Senha */}
+                        <div className="space-y-1.5">
+                          <Field
+                            id="auth-password" label="Senha" type={showPassword ? "text" : "password"}
+                            value={password} onChange={(v) => { setPassword(v); clearField("password"); }}
+                            placeholder="••••••••" error={errors.password}
+                            autoComplete={mode === "login" ? "current-password" : "new-password"}
+                            icon={<LockKey size={16} />}
+                            right={
+                              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
+                                {showPassword ? <EyeSlash size={15} /> : <Eye size={15} />}
+                              </button>
+                            }
+                          />
+                          <AnimatePresence>
+                            {mode === "signup" && password && pwStrength && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}
+                                className="space-y-1"
+                              >
+                                <div className="flex gap-1 pt-1">
+                                  {[1,2,3,4,5].map((i) => (
+                                    <motion.div key={i} className="flex-1 h-1 rounded-full"
+                                      animate={{ backgroundColor: i <= pwStrength.score ? pwStrength.color : "rgba(255,255,255,0.08)" }}
+                                      transition={{ duration: 0.3 }} />
+                                  ))}
+                                </div>
+                                <p className="text-[11px] font-semibold" style={{ color: pwStrength.color }}>
+                                  {pwStrength.label}
+                                </p>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        {/* Confirmar senha — só no signup */}
+                        <AnimatePresence>
+                          {mode === "signup" && (
+                            <motion.div
+                              key="confirm-field"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22 }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div className="space-y-1.5">
+                                <Field
+                                  id="auth-confirm" label="Confirmar senha" type={showConfirm ? "text" : "password"}
+                                  value={confirm} onChange={(v) => { setConfirm(v); clearField("confirm"); }}
+                                  placeholder="Repita a senha" error={errors.confirm}
+                                  autoComplete="new-password" icon={<LockKey size={16} />}
+                                  right={
+                                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                                      className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                      aria-label={showConfirm ? "Ocultar senha" : "Mostrar senha"}>
+                                      {showConfirm ? <EyeSlash size={15} /> : <Eye size={15} />}
+                                    </button>
+                                  }
+                                />
+                                <AnimatePresence>
+                                  {confirm && (
+                                    <motion.p
+                                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                      className={`text-[11px] font-semibold ${password === confirm ? "text-green-400" : "text-orange-400"}`}
+                                    >
+                                      {password === confirm ? "✓ Senhas coincidem" : "✗ Senhas não coincidem"}
+                                    </motion.p>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Esqueci senha — só no login */}
+                        <AnimatePresence>
+                          {mode === "login" && (
+                            <motion.div
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              className="flex justify-end -mt-1"
+                            >
+                              <button type="button"
+                                onClick={() => { clearError(); setInfoMessage("Para redefinir sua senha, entre em contato com nosso suporte."); }}
+                                className="text-xs font-semibold text-accent hover:text-accent/70 transition-colors"
+                              >
+                                Esqueci minha senha
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Submit */}
+                        <motion.button
+                          type="submit" disabled={isLoading || isGoogleLoading}
+                          whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                          className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{
+                            background: "linear-gradient(135deg, #ff334b 0%, #e61932 100%)",
+                            boxShadow: "0 4px 18px rgba(255,51,75,0.35)",
+                          }}
+                        >
+                          {isLoading ? (
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                          ) : (
+                            <>
+                              {mode === "login" ? "Entrar na conta" : "Criar minha conta"}
+                              <ArrowRight size={15} weight="bold" />
+                            </>
+                          )}
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </form>
+
+                {/* Toggle login/signup */}
+                <div className="text-center pb-2">
+                  <AnimatePresence mode="wait">
+                    {mode === "login" ? (
+                      <motion.p key="to-signup"
+                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
+                      >
+                        Não tem conta?{" "}
+                        <button onClick={() => switchMode("signup")}
+                          className="text-white font-semibold hover:text-accent transition-colors">
+                          Criar conta grátis →
+                        </button>
+                      </motion.p>
+                    ) : (
+                      <motion.p key="to-login"
+                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
+                      >
+                        Já tem conta?{" "}
+                        <button onClick={() => switchMode("login")}
+                          className="text-white font-semibold hover:text-accent transition-colors">
+                          Entrar →
+                        </button>
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                  <span className="text-[11px] font-medium text-zinc-600 uppercase tracking-widest">
+                    OU
+                  </span>
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                </div>
+
+                {/* ── Google button & Terms (Moveu pro fim) ── */}
+                <div className="space-y-3 pb-2">
                   <div className="relative h-[50px] rounded-xl overflow-hidden">
                     <div className="absolute inset-0 flex items-center justify-center gap-3 bg-white rounded-xl text-gray-800 font-bold text-sm pointer-events-none select-none z-0">
                       <GoogleIcon />
@@ -357,195 +601,6 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                       política de privacidade
                     </button>
                   </p>
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-                  <span className="text-[11px] font-medium text-zinc-600 uppercase tracking-widest">
-                    ou continue com e‑mail
-                  </span>
-                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-                </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-
-                  {/* Nome — só no signup */}
-                  <AnimatePresence>
-                    {mode === "signup" && (
-                      <motion.div
-                        key="name-field"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22 }}
-                        style={{ overflow: "hidden" }}
-                      >
-                        <div className="pb-0">
-                          <Field
-                            id="auth-name" label="Nome completo"
-                            value={name} onChange={(v) => { setName(v); clearField("name"); }}
-                            placeholder="João Silva" error={errors.name}
-                            icon={<User size={16} />}
-                          />
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Email */}
-                  <Field
-                    id="auth-email" label="E-mail" type="email"
-                    value={email} onChange={(v) => { setEmail(v); clearField("email"); }}
-                    placeholder="seu@email.com" error={errors.email}
-                    autoComplete="email" icon={<EnvelopeSimple size={16} />}
-                  />
-
-                  {/* Senha */}
-                  <div className="space-y-1.5">
-                    <Field
-                      id="auth-password" label="Senha" type={showPassword ? "text" : "password"}
-                      value={password} onChange={(v) => { setPassword(v); clearField("password"); }}
-                      placeholder="••••••••" error={errors.password}
-                      autoComplete={mode === "login" ? "current-password" : "new-password"}
-                      icon={<LockKey size={16} />}
-                      right={
-                        <button type="button" onClick={() => setShowPassword(!showPassword)}
-                          className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
-                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>
-                          {showPassword ? <EyeSlash size={15} /> : <Eye size={15} />}
-                        </button>
-                      }
-                    />
-                    <AnimatePresence>
-                      {mode === "signup" && password && pwStrength && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}
-                          className="space-y-1"
-                        >
-                          <div className="flex gap-1 pt-1">
-                            {[1,2,3,4,5].map((i) => (
-                              <motion.div key={i} className="flex-1 h-1 rounded-full"
-                                animate={{ backgroundColor: i <= pwStrength.score ? pwStrength.color : "rgba(255,255,255,0.08)" }}
-                                transition={{ duration: 0.3 }} />
-                            ))}
-                          </div>
-                          <p className="text-[11px] font-semibold" style={{ color: pwStrength.color }}>
-                            {pwStrength.label}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Confirmar senha — só no signup */}
-                  <AnimatePresence>
-                    {mode === "signup" && (
-                      <motion.div
-                        key="confirm-field"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22 }}
-                        style={{ overflow: "hidden" }}
-                      >
-                        <div className="space-y-1.5">
-                          <Field
-                            id="auth-confirm" label="Confirmar senha" type={showConfirm ? "text" : "password"}
-                            value={confirm} onChange={(v) => { setConfirm(v); clearField("confirm"); }}
-                            placeholder="Repita a senha" error={errors.confirm}
-                            autoComplete="new-password" icon={<LockKey size={16} />}
-                            right={
-                              <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                                className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors"
-                                aria-label={showConfirm ? "Ocultar senha" : "Mostrar senha"}>
-                                {showConfirm ? <EyeSlash size={15} /> : <Eye size={15} />}
-                              </button>
-                            }
-                          />
-                          <AnimatePresence>
-                            {confirm && (
-                              <motion.p
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                                className={`text-[11px] font-semibold ${password === confirm ? "text-green-400" : "text-orange-400"}`}
-                              >
-                                {password === confirm ? "✓ Senhas coincidem" : "✗ Senhas não coincidem"}
-                              </motion.p>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Esqueci senha — só no login */}
-                  <AnimatePresence>
-                    {mode === "login" && (
-                      <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="flex justify-end -mt-1"
-                      >
-                        <button type="button"
-                          onClick={() => { clearError(); setInfoMessage("Para redefinir sua senha, entre em contato com nosso suporte."); }}
-                          className="text-xs font-semibold text-accent hover:text-accent/70 transition-colors"
-                        >
-                          Esqueci minha senha
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Submit */}
-                  <motion.button
-                    type="submit" disabled={isLoading || isGoogleLoading}
-                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                    className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      background: "linear-gradient(135deg, #ff334b 0%, #e61932 100%)",
-                      boxShadow: "0 4px 18px rgba(255,51,75,0.35)",
-                    }}
-                  >
-                    {isLoading ? (
-                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-                    ) : (
-                      <>
-                        {mode === "login" ? "Entrar na conta" : "Criar minha conta"}
-                        <ArrowRight size={15} weight="bold" />
-                      </>
-                    )}
-                  </motion.button>
-                </form>
-
-                {/* Toggle login/signup */}
-                <div className="text-center pb-2">
-                  <AnimatePresence mode="wait">
-                    {mode === "login" ? (
-                      <motion.p key="to-signup"
-                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
-                      >
-                        Não tem conta?{" "}
-                        <button onClick={() => switchMode("signup")}
-                          className="text-white font-semibold hover:text-accent transition-colors">
-                          Criar conta grátis →
-                        </button>
-                      </motion.p>
-                    ) : (
-                      <motion.p key="to-login"
-                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }} className="text-sm text-zinc-500"
-                      >
-                        Já tem conta?{" "}
-                        <button onClick={() => switchMode("login")}
-                          className="text-white font-semibold hover:text-accent transition-colors">
-                          Entrar →
-                        </button>
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
                 </div>
 
               </div>
