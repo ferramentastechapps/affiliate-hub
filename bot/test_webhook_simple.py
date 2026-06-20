@@ -11,7 +11,7 @@ from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY
 produto = {
     "name": "Teste ID - Produto Simples",
     "category": "Teste",
-    "imageUrl": "https://via.placeholder.com/300"
+    "imageUrl": "/placeholder.webp"
 }
 
 print("🧪 Testando webhook de produtos...")

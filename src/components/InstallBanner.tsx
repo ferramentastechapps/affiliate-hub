@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, DeviceMobile, ShareNetwork } from '@phosphor-icons/react';
+import { X, Download, ShareNetwork } from '@phosphor-icons/react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -15,16 +15,33 @@ export function InstallBanner() {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Verifica se já foi instalado ou se o usuário já fechou o banner
+    // Verifica se já foi instalado ou se o usuário já fechou o banner recentemente
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
     const bannerDismissed = localStorage.getItem('installBannerDismissed');
     
-    if (isInstalled || bannerDismissed === 'true') {
+    if (isInstalled || bannerDismissed === 'installed') {
       return;
+    }
+
+    if (bannerDismissed) {
+      if (bannerDismissed === 'true') {
+        // Legado: converte para timestamp a partir de agora
+        localStorage.setItem('installBannerDismissed', Date.now().toString());
+        return;
+      }
+
+      const dismissedTime = parseInt(bannerDismissed, 10);
+      if (!isNaN(dismissedTime)) {
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+        if (Date.now() - dismissedTime < thirtyDaysInMs) {
+          return;
+        }
+      }
     }
 
     // Detecta iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsIOS(iOS);
 
     // Para iOS, mostra o banner após 3 segundos
@@ -60,7 +77,7 @@ export function InstallBanner() {
 
     if (outcome === 'accepted') {
       setShowBanner(false);
-      localStorage.setItem('installBannerDismissed', 'true');
+      localStorage.setItem('installBannerDismissed', 'installed');
     }
 
     setDeferredPrompt(null);
@@ -68,7 +85,7 @@ export function InstallBanner() {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    localStorage.setItem('installBannerDismissed', 'true');
+    localStorage.setItem('installBannerDismissed', Date.now().toString());
   };
 
   if (!showBanner) return null;
@@ -81,7 +98,7 @@ export function InstallBanner() {
           animation: 'slideUp 0.4s ease-out',
         }}
       >
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-2xl p-4 max-w-md mx-auto border border-orange-400/20">
+        <div className="relative bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-2xl p-4 max-w-md mx-auto border border-orange-400/20">
           <button
             onClick={handleDismiss}
             aria-label="Fechar banner de instalação"
@@ -92,12 +109,12 @@ export function InstallBanner() {
 
           <div className="flex items-start gap-3 pr-6">
             <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <img src="/icons/icon-72x72.png" alt="123 Testando" className="w-10 h-10" />
+              <img src="/icons/icon-72x72.png?v=2" alt="Economizei" className="w-10 h-10" />
             </div>
 
             <div className="flex-1">
               <h3 className="text-white font-bold text-base mb-1">
-                Instale o 123 Testando
+                Instale o Economizei
               </h3>
               <p className="text-white/90 text-sm mb-3">
                 Receba promoções na hora e acesse offline!
@@ -165,7 +182,7 @@ export function InstallBanner() {
                 <div>
                   <p className="font-medium text-white mb-1">Adicionar à Tela Inicial</p>
                   <p className="text-sm text-zinc-400">
-                    Role para baixo e toque em "Adicionar à Tela Inicial"
+                    Role para baixo e toque em &quot;Adicionar à Tela Inicial&quot;
                   </p>
                 </div>
               </div>
@@ -177,7 +194,7 @@ export function InstallBanner() {
                 <div>
                   <p className="font-medium text-white mb-1">Confirme</p>
                   <p className="text-sm text-zinc-400">
-                    Toque em "Adicionar" no canto superior direito
+                    Toque em &quot;Adicionar&quot; no canto superior direito
                   </p>
                 </div>
               </div>

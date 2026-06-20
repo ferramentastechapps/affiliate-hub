@@ -1,0 +1,564 @@
+<!DOCTYPE html><html class="dark" lang="pt-BR" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Economiza ai - Cupons e Ofertas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#131b2e",
+                        "inverse-surface": "#dae2fd",
+                        "secondary": "#89ceff",
+                        "on-error": "#690005",
+                        "on-background": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#842225",
+                        "on-surface": "#dae2fd",
+                        "inverse-primary": "#006c49",
+                        "discount-red": "#EF4444",
+                        "surface-bright": "#31394d",
+                        "on-primary-fixed": "#002113",
+                        "primary-container": "#10b981",
+                        "surface-dim": "#0b1326",
+                        "background": "#0b1326",
+                        "on-tertiary-fixed": "#410005",
+                        "on-tertiary-container": "#711419",
+                        "on-secondary-container": "#00344e",
+                        "inverse-on-surface": "#283044",
+                        "surface-container": "#171f33",
+                        "secondary-container": "#00a2e6",
+                        "primary-fixed-dim": "#4edea3",
+                        "on-primary-fixed-variant": "#005236",
+                        "on-tertiary": "#650911",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "error": "#ffb4ab",
+                        "surface": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "tertiary-fixed-dim": "#ffb3af",
+                        "surface-card": "#1E293B",
+                        "surface-container-highest": "#2d3449",
+                        "surface-variant": "#2d3449",
+                        "tertiary": "#ffb3af",
+                        "surface-tint": "#4edea3",
+                        "on-primary-container": "#00422b",
+                        "secondary-fixed-dim": "#89ceff",
+                        "on-primary": "#003824",
+                        "on-secondary-fixed": "#001e2f",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#c9e6ff",
+                        "on-surface-variant": "#bbcabf",
+                        "neon-blue": "#38BDF8",
+                        "primary": "#4edea3",
+                        "background-deep": "#020617",
+                        "tertiary-fixed": "#ffdad7",
+                        "neon-green": "#34D399",
+                        "outline-variant": "#3c4a42",
+                        "outline": "#86948a",
+                        "surface-container-lowest": "#060e20",
+                        "tertiary-container": "#fc7c78",
+                        "on-secondary": "#00344d",
+                        "text-muted": "#94A3B8",
+                        "primary-fixed": "#6ffbbe",
+                        "on-error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1280px",
+                        "stack-md": "16px",
+                        "card-padding": "20px",
+                        "gutter": "24px",
+                        "section-gap": "64px",
+                        "stack-sm": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "price-lg": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "label-md": ["JetBrains Mono"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "price-lg": ["22px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Ambient Hover Glow */
+        .card-glow:hover {
+            box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.15);
+            border-color: #4edea3;
+            transform: translateY(-2px);
+        }
+        .card-glow {
+            transition: all 0.3s ease;
+        }
+
+        /* Dashed Border for Coupons */
+        .coupon-dashed {
+            background-image: linear-gradient(to right, #38BDF8 50%, transparent 50%), linear-gradient(to right, #38BDF8 50%, transparent 50%), linear-gradient(to bottom, #38BDF8 50%, transparent 50%), linear-gradient(to bottom, #38BDF8 50%, transparent 50%);
+            background-position: left top, left bottom, left top, right top;
+            background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+            background-size: 10px 2px, 10px 2px, 2px 10px, 2px 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-deep text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-surface-container border-b border-outline-variant shadow-md fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-20 px-4 md:px-8 max-w-container-max mx-auto">
+<!-- Brand -->
+<div class="flex-shrink-0 flex items-center">
+<a class="flex items-center gap-2 font-headline-md text-headline-md font-bold text-on-surface" href="/">
+<div class="flex items-center gap-2">
+  <div class="flex-shrink-0 w-8 h-8 bg-[#ef4444] rounded-full flex items-center justify-center">
+    <span class="text-white font-bold text-xl leading-none font-display mb-1">e</span>
+  </div>
+  <img alt="Economiza ai Wordmark" class="h-6 object-contain" src="https://lh3.googleusercontent.com/aida/ADBb0uhBozN0kSZchoDirkTJHwwtkwsyN8TzYi9BHDqqg-3LFLGGViOnrqSdGP01CIl5AtpqeLLjEAlSC4hazYbNHmfROqPUJg6YXKjLdSLcfVjyAOqjtcsE0oUxybBdyTqU9BBPjbjF7iyyCZJHkf-36LNFvumQffQ8bWNxKm_Iwoa8xyq1Z299VLNm2N1Y7WnxCqhNhAAS_wy7c4ZuLZ1UwZI_e-sJeALoGzoLlNON5Lem4Vm8yMtoc1u3TmUs">
+</div>
+</a>
+</div>
+<!-- Search (Desktop) -->
+<div class="hidden md:flex flex-1 max-w-md mx-8">
+<div class="relative w-full">
+<input class="w-full bg-surface-container-high border border-outline-variant rounded-full py-2 pl-4 pr-10 text-on-surface focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-colors font-body-md text-body-md" placeholder="Buscar cupons e ofertas..." type="text">
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-neon-blue transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</div>
+<!-- Navigation Links (Desktop) -->
+<div class="hidden md:flex items-center gap-6">
+<a class="font-label-md text-label-md text-primary border-b-2 border-primary pb-1" href="#">Início</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors hover:bg-surface-container-high px-2 py-1 rounded" href="#">Categorias</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors hover:bg-surface-container-high px-2 py-1 rounded" href="#">Cupons</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors hover:bg-surface-container-high px-2 py-1 rounded" href="#">Ofertas</a>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors hidden sm:block">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="md:hidden text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<a class="hidden md:inline-flex items-center justify-center bg-neon-green text-background px-4 py-2 rounded-full font-label-md text-label-md hover:bg-primary transition-colors font-bold" href="#">
+                    Entrar
+                </a>
+<!-- Mobile Menu Button -->
+<button class="md:hidden text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-20">
+<!-- Hero Section -->
+<section class="py-section-gap px-4 md:px-8 max-w-container-max mx-auto text-center">
+<h1 class="font-display-lg text-display-lg md:text-[64px] md:leading-[72px] font-extrabold text-on-surface mb-6 max-w-4xl mx-auto tracking-tight">Cupons das Melhores <span class="text-neon-green">Lojas</span></h1>
+<p class="font-body-lg text-body-lg text-text-muted mb-10 max-w-2xl mx-auto">
+                Encontre os melhores cupons e ofertas das suas lojas favoritas em tempo real. Economizar nunca foi tão eficiente.
+            </p>
+<!-- Mobile Search Bar (Visible only on mobile) -->
+<div class="md:hidden w-full max-w-md mx-auto mb-8 relative">
+<input class="w-full bg-surface-container-high border border-outline-variant rounded-full py-3 pl-5 pr-12 text-on-surface focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-colors font-body-md text-body-md shadow-lg" placeholder="Buscar cupons e ofertas..." type="text">
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-neon-blue transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+<div class="flex flex-wrap justify-center gap-4">
+<a class="bg-neon-green text-background px-8 py-3 rounded-full font-label-md text-label-md font-bold hover:bg-primary transition-colors flex items-center gap-2" href="#ofertas">
+<span class="material-symbols-outlined" data-weight="fill">local_offer</span>
+                    Ver Ofertas do Dia
+                </a>
+<a class="bg-surface-container-high border border-outline-variant text-on-surface px-8 py-3 rounded-full font-label-md text-label-md hover:border-neon-blue hover:text-neon-blue transition-colors flex items-center gap-2" href="#lojas">
+                    Explorar Lojas
+                </a>
+</div>
+</section>
+<!-- Lojas Favoritas Section -->
+<section class="py-12 px-4 md:px-8 max-w-container-max mx-auto border-t border-outline-variant/30" id="lojas">
+<div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg md:text-[32px] font-bold flex items-center gap-3">
+<span class="material-symbols-outlined text-neon-blue text-3xl">storefront</span>
+                        Cupons das suas lojas preferidas
+                    </h2>
+<p class="font-body-md text-body-md text-text-muted mt-2">Selecione uma loja para ver os cupons disponíveis.</p>
+</div>
+<a class="font-label-md text-label-md text-neon-blue hover:text-primary transition-colors flex items-center gap-1 group" href="#">
+                    Ver todos <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+<!-- Store Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+<!-- Store Card 1 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center p-2">
+<!-- Placeholder for Amazon Logo -->
+<span class="text-background font-bold text-xl">A</span>
+</div>
+<span class="font-label-md text-label-md font-bold">Amazon</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">43</span>
+</a>
+<!-- Store Card 2 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center p-2">
+<!-- Placeholder for Mercado Livre Logo -->
+<span class="material-symbols-outlined text-background">handshake</span>
+</div>
+<span class="font-label-md text-label-md font-bold">Mercado Livre</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">121</span>
+</a>
+<!-- Store Card 3 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center p-2">
+<!-- Placeholder for Shopee Logo -->
+<span class="material-symbols-outlined text-white">shopping_bag</span>
+</div>
+<span class="font-label-md text-label-md font-bold">Shopee</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">37</span>
+</a>
+<!-- Store Card 4 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center p-2">
+<!-- Placeholder for AliExpress Logo -->
+<span class="material-symbols-outlined text-white">flight_takeoff</span>
+</div>
+<span class="font-label-md text-label-md font-bold">AliExpress</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">30</span>
+</a>
+<!-- Store Card 5 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-black flex items-center justify-center p-2">
+<!-- Placeholder for TikTok Logo -->
+<span class="material-symbols-outlined text-white">music_note</span>
+</div>
+<span class="font-label-md text-label-md font-bold">TikTok Shop</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">0</span>
+</a>
+<!-- Store Card 6 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center p-2">
+<!-- Placeholder for KaBuM Logo -->
+<span class="text-white font-bold font-headline-md">K</span>
+</div>
+<span class="font-label-md text-label-md font-bold">KaBuM</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">186</span>
+</a>
+<!-- Store Card 7 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center p-2">
+<!-- Placeholder for Magalu Logo -->
+<span class="text-white font-bold font-headline-md">m</span>
+</div>
+<span class="font-label-md text-label-md font-bold">Magalu</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">20</span>
+</a>
+<!-- Store Card 8 -->
+<a class="bg-surface-card border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-3 card-glow relative group" href="#">
+<div class="w-12 h-12 rounded-full bg-red-700 flex items-center justify-center p-2">
+<!-- Placeholder for Fast Shop Logo -->
+<span class="text-white font-bold font-headline-md text-[10px]">FAST</span>
+</div>
+<span class="font-label-md text-label-md font-bold text-center leading-tight">Fast Shop</span>
+<span class="absolute top-2 right-2 bg-surface-container-highest text-text-muted text-xs px-2 py-0.5 rounded-full font-label-md border border-outline-variant group-hover:border-neon-blue group-hover:text-neon-blue transition-colors">48</span>
+</a>
+</div>
+</section>
+<!-- Promoções do Dia Section -->
+<section class="py-section-gap px-4 md:px-8 max-w-container-max mx-auto" id="ofertas">
+<div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4 border-b border-outline-variant/30 pb-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg md:text-[32px] font-bold flex items-center gap-3">
+<span class="material-symbols-outlined text-discount-red text-3xl" data-weight="fill">whatshot</span>
+                        Promoções do dia
+                    </h2>
+<p class="font-body-md text-body-md text-text-muted mt-2">As ofertas mais quentes adicionadas recentemente</p>
+</div>
+<a class="font-label-md text-label-md text-neon-blue hover:text-primary transition-colors flex items-center gap-1 group" href="#">
+                    Ver todas <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+<!-- Categories Chips -->
+<div class="flex overflow-x-auto gap-3 pb-4 mb-6 scrollbar-hide">
+<button class="whitespace-nowrap px-4 py-2 rounded-full font-label-md text-label-md bg-neon-blue text-background font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-weight="fill">local_fire_department</span> Todas
+                </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full font-label-md text-label-md bg-surface-container-high border border-outline-variant text-on-surface hover:border-neon-blue transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">fitness_center</span> Esporte e Suplementos
+                </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full font-label-md text-label-md bg-surface-container-high border border-outline-variant text-on-surface hover:border-neon-blue transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">checkroom</span> Moda e Acessórios
+                </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full font-label-md text-label-md bg-surface-container-high border border-outline-variant text-on-surface hover:border-neon-blue transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">category</span> Diversos
+                </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full font-label-md text-label-md bg-surface-container-high border border-outline-variant text-on-surface hover:border-neon-blue transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">smartphone</span> Smartphones e TV
+                </button>
+</div>
+<!-- Offers Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Offer Card 1: Creatina -->
+<div class="bg-surface-card border border-outline-variant rounded-xl overflow-hidden card-glow flex flex-col h-full relative">
+<!-- Discount Badge -->
+<div class="absolute top-3 right-3 bg-discount-red text-white px-2 py-1 rounded font-label-md text-label-md font-bold z-10 shadow-lg">
+                        -49%
+                    </div>
+<!-- Time Info -->
+<div class="absolute top-3 left-3 bg-surface/80 backdrop-blur text-text-muted px-2 py-1 rounded font-label-md text-xs flex items-center gap-1 z-10 border border-outline-variant">
+<span class="material-symbols-outlined text-[14px]">schedule</span> há 6 h
+                    </div>
+<div class="relative aspect-[3/4] w-full bg-surface-container-highest overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1593095948071-474c5cc2989d?q=80&amp;w=600&amp;auto=format&amp;fit=crop" alt="Creatina 100% Pura" class="w-full h-full object-cover">
+<!-- Store Tag -->
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow flex items-center gap-1 z-20">
+                            Mercado Livre
+                        </div>
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<span class="text-xs font-label-md text-text-muted uppercase tracking-wider mb-1">Esporte e Suplementos</span>
+<h3 class="font-headline-md text-headline-md text-lg leading-tight mb-4 flex-grow text-on-surface">Creatina 100% Pura 300g Integralmédica</h3>
+<div class="mt-auto">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-text-muted line-through text-sm">R$ 78,10</span>
+</div>
+<div class="font-price-lg text-price-lg text-white mb-4">
+                                R$ 39,83
+                            </div>
+<button class="w-full bg-surface-container-high border border-outline-variant text-neon-green py-2 rounded font-label-md text-label-md font-bold hover:bg-neon-green hover:text-black transition-colors">
+                                Ver Oferta
+                            </button>
+</div>
+</div>
+</div>
+<!-- Offer Card 2: Camisetas -->
+<div class="bg-surface-card border border-outline-variant rounded-xl overflow-hidden card-glow flex flex-col h-full relative">
+<div class="absolute top-3 right-3 bg-discount-red text-white px-2 py-1 rounded font-label-md text-label-md font-bold z-10 shadow-lg">
+                        -24%
+                    </div>
+<div class="absolute top-3 left-3 bg-surface/80 backdrop-blur text-text-muted px-2 py-1 rounded font-label-md text-xs flex items-center gap-1 z-10 border border-outline-variant">
+<span class="material-symbols-outlined text-[14px]">schedule</span> há 17 h
+                    </div>
+<div class="relative aspect-[3/4] w-full bg-surface-container-highest overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&amp;w=600&amp;auto=format&amp;fit=crop" alt="Kit 3 Camisetas" class="w-full h-full object-cover">
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow flex items-center gap-1 z-20">
+                            Mercado Livre
+                        </div>
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<span class="text-xs font-label-md text-text-muted uppercase tracking-wider mb-1">Moda e Acessórios</span>
+<h3 class="font-headline-md text-headline-md text-lg leading-tight mb-4 flex-grow text-on-surface">Kit 3 Camisetas Masculina 100% Algodão</h3>
+<div class="mt-auto">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-text-muted line-through text-sm">R$ 69,74</span>
+</div>
+<div class="font-price-lg text-price-lg text-white mb-4">
+                                R$ 53,00
+                            </div>
+<button class="w-full bg-surface-container-high border border-outline-variant text-neon-green py-2 rounded font-label-md text-label-md font-bold hover:bg-neon-green hover:text-black transition-colors">
+                                Ver Oferta
+                            </button>
+</div>
+</div>
+</div>
+<!-- Offer Card 3: Álbum Copa -->
+<div class="bg-surface-card border border-outline-variant rounded-xl overflow-hidden card-glow flex flex-col h-full relative">
+<div class="absolute top-3 right-3 bg-discount-red text-white px-2 py-1 rounded font-label-md text-label-md font-bold z-10 shadow-lg">
+                        -34%
+                    </div>
+<div class="absolute top-3 left-3 bg-surface/80 backdrop-blur text-text-muted px-2 py-1 rounded font-label-md text-xs flex items-center gap-1 z-10 border border-outline-variant">
+<span class="material-symbols-outlined text-[14px]">schedule</span> há 17 h
+                    </div>
+<div class="relative aspect-[3/4] w-full bg-surface-container-highest overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&amp;w=600&amp;auto=format&amp;fit=crop" alt="Copa do Mundo" class="w-full h-full object-cover">
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[#EE4D2D] text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow flex items-center gap-1 z-20">
+                            Shopee
+                        </div>
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<span class="text-xs font-label-md text-text-muted uppercase tracking-wider mb-1">Diversos</span>
+<h3 class="font-headline-md text-headline-md text-lg leading-tight mb-4 flex-grow text-on-surface">Copa do Mundo Fifa 2026 - Blister com 12 envelopes...</h3>
+<div class="mt-auto">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-text-muted line-through text-sm">R$ 101,82</span>
+</div>
+<div class="font-price-lg text-price-lg text-white mb-4">
+                                R$ 67,20
+                            </div>
+<button class="w-full bg-surface-container-high border border-outline-variant text-neon-green py-2 rounded font-label-md text-label-md font-bold hover:bg-neon-green hover:text-black transition-colors">
+                                Ver Oferta
+                            </button>
+</div>
+</div>
+</div>
+<!-- Offer Card 4: Smart Tag -->
+<div class="bg-surface-card border border-outline-variant rounded-xl overflow-hidden card-glow flex flex-col h-full relative">
+<div class="absolute top-3 right-3 bg-discount-red text-white px-2 py-1 rounded font-label-md text-label-md font-bold z-10 shadow-lg">
+                        -46%
+                    </div>
+<div class="absolute top-3 left-3 bg-surface/80 backdrop-blur text-text-muted px-2 py-1 rounded font-label-md text-xs flex items-center gap-1 z-10 border border-outline-variant">
+<span class="material-symbols-outlined text-[14px]">schedule</span> há 18 h
+                    </div>
+<div class="relative aspect-[3/4] w-full bg-surface-container-highest overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-card to-transparent z-10"></div>
+<img src="https://images.unsplash.com/photo-1592839719941-8e2651039d01?q=80&amp;w=600&amp;auto=format&amp;fit=crop" alt="Smart Tag" class="w-full h-full object-cover">
+<div class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow flex items-center gap-1 z-20">
+                            Mercado Livre
+                        </div>
+</div>
+<div class="p-card-padding flex flex-col flex-grow">
+<span class="text-xs font-label-md text-text-muted uppercase tracking-wider mb-1">Diversos</span>
+<h3 class="font-headline-md text-headline-md text-lg leading-tight mb-4 flex-grow text-on-surface">Mini Localizador Rastreador Smart Tag GPS</h3>
+<div class="mt-auto">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-text-muted line-through text-sm">R$ 35,19</span>
+</div>
+<div class="font-price-lg text-price-lg text-white mb-4">
+                                R$ 19,00
+                            </div>
+<button class="w-full bg-surface-container-high border border-outline-variant text-neon-green py-2 rounded font-label-md text-label-md font-bold hover:bg-neon-green hover:text-black transition-colors">
+                                Ver Oferta
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Community Section -->
+<section class="py-16 px-4 md:px-8 bg-surface-container-low border-t border-b border-outline-variant/30 mt-8">
+<div class="max-w-container-max mx-auto">
+<div class="text-center max-w-2xl mx-auto mb-10">
+<h2 class="font-headline-lg text-headline-lg md:text-[36px] font-bold mb-4 flex justify-center items-center gap-2">
+                        Junte-se à nossa comunidade! 🎉
+                    </h2>
+<p class="font-body-lg text-body-lg text-text-muted">
+                        Receba ofertas exclusivas, cupons em primeira mão e participe de discussões sobre as melhores promoções
+                    </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- WhatsApp -->
+<a class="bg-[#0b1326] border border-[#128C7E]/30 rounded-xl p-4 flex items-center justify-between hover:border-[#25D366] transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#25D366]">chat</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md font-bold text-[#25D366]">Grupo WhatsApp</h4>
+<span class="text-xs text-text-muted">Clique para seguir</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted group-hover:text-[#25D366] group-hover:translate-x-1 transition-all">arrow_forward</span>
+</a>
+<!-- Telegram -->
+<a class="bg-[#0b1326] border border-[#0088cc]/30 rounded-xl p-4 flex items-center justify-between hover:border-[#0088cc] transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-[#0088cc]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#0088cc]">send</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md font-bold text-[#0088cc]">Canal Telegram</h4>
+<span class="text-xs text-text-muted">Clique para seguir</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted group-hover:text-[#0088cc] group-hover:translate-x-1 transition-all">arrow_forward</span>
+</a>
+<!-- Instagram -->
+<a class="bg-[#0b1326] border border-[#E1306C]/30 rounded-xl p-4 flex items-center justify-between hover:border-[#E1306C] transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-[#E1306C]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#E1306C]">photo_camera</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md font-bold text-[#E1306C]">Siga no Instagram</h4>
+<span class="text-xs text-text-muted">Clique para seguir</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted group-hover:text-[#E1306C] group-hover:translate-x-1 transition-all">arrow_forward</span>
+</a>
+<!-- TikTok -->
+<a class="bg-[#0b1326] border border-white/20 rounded-xl p-4 flex items-center justify-between hover:border-white transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-white">music_note</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md font-bold text-white">Siga no TikTok</h4>
+<span class="text-xs text-text-muted">Clique para seguir</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-text-muted group-hover:text-white group-hover:translate-x-1 transition-all">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-background-deep text-primary border-t border-outline-variant w-full py-12">
+<div class="flex flex-col md:flex-row justify-between items-center gap-stack-md px-4 md:px-8 max-w-container-max mx-auto">
+<!-- Brand & Copyright -->
+<div class="flex flex-col items-center md:items-start gap-4">
+<a class="flex items-center gap-2 font-headline-md text-headline-md font-bold text-on-surface" href="/">
+<div class="flex items-center gap-2">
+  <div class="flex-shrink-0 w-8 h-8 bg-[#ef4444] rounded-full flex items-center justify-center">
+    <span class="text-white font-bold text-xl leading-none font-display mb-1">e</span>
+  </div>
+  <img alt="Economiza ai Wordmark" class="h-6 object-contain opacity-80 hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida/ADBb0uhBozN0kSZchoDirkTJHwwtkwsyN8TzYi9BHDqqg-3LFLGGViOnrqSdGP01CIl5AtpqeLLjEAlSC4hazYbNHmfROqPUJg6YXKjLdSLcfVjyAOqjtcsE0oUxybBdyTqU9BBPjbjF7iyyCZJHkf-36LNFvumQffQ8bWNxKm_Iwoa8xyq1Z299VLNm2N1Y7WnxCqhNhAAS_wy7c4ZuLZ1UwZI_e-sJeALoGzoLlNON5Lem4Vm8yMtoc1u3TmUs">
+</div>
+</a>
+<p class="font-body-md text-body-md text-text-muted text-sm text-center md:text-left">
+                    © 2026 Economiza ai. Feito com ❤️ para você economizar
+                </p>
+</div>
+<!-- Links -->
+<div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
+<a class="font-label-md text-label-md text-text-muted hover:text-on-surface hover:text-neon-blue transition-colors" href="#">Início</a>
+<a class="font-label-md text-label-md text-text-muted hover:text-on-surface hover:text-neon-blue transition-colors" href="#">Categorias</a>
+<a class="font-label-md text-label-md text-text-muted hover:text-on-surface hover:text-neon-blue transition-colors" href="#">Cupons</a>
+<a class="font-label-md text-label-md text-text-muted hover:text-on-surface hover:text-neon-blue transition-colors" href="#">Ofertas</a>
+<a class="font-label-md text-label-md text-text-muted hover:text-on-surface hover:text-neon-blue transition-colors" href="#">Termos de Uso</a>
+<a class="font-label-md text-label-md text-text-muted hover:text-on-surface hover:text-neon-blue transition-colors" href="#">Privacidade</a>
+</div>
+</div>
+<div class="max-w-container-max mx-auto px-4 md:px-8 mt-8 text-center">
+<p class="text-xs text-text-muted/60 max-w-3xl mx-auto">
+                Os preços e disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja antes de finalizar sua compra. Economiza ai não é responsável por transações realizadas em sites de terceiros.
+            </p>
+</div>
+</footer>
+
+
+</body></html>

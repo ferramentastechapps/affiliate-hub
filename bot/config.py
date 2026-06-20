@@ -5,20 +5,26 @@ from pathlib import Path
 # Carrega o .env da raiz do projeto (um nível acima da pasta bot/)
 _root = Path(__file__).parent.parent
 load_dotenv(_root / '.env')
-load_dotenv()  # fallback: .env no diretório atual
+load_dotenv(override=True)  # fallback: .env no diretório atual (sobrescreve se houver conflito)
 
 # Affiliate Hub
 AFFILIATE_HUB_URL = os.getenv('AFFILIATE_HUB_URL', 'http://localhost:3000')
 AFFILIATE_HUB_API_KEY = os.getenv('AFFILIATE_HUB_API_KEY')
+WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
 
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')         # Chat de aprovação (seu chat privado)
 TELEGRAM_PROMO_GROUP_ID = os.getenv('TELEGRAM_PROMO_GROUP_ID')  # Grupo onde publica as promos aprovadas
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 
 # Configurações de busca
+<<<<<<< HEAD
 SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 2))  # Reduzido de 15 para 2 minutos
+=======
+SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 5))
+>>>>>>> 86ed893763b702676e2bb06f2956328cfbf172a6
 MIN_DISCOUNT_PERCENT = int(os.getenv('MIN_DISCOUNT_PERCENT', 20))
 MIN_QUALITY_SCORE = int(os.getenv('MIN_QUALITY_SCORE', 30))  # Score mínimo para enviar promoção
 DEBUG_FILTROS = os.getenv('DEBUG_FILTROS', 'false').lower() == 'true'  # Modo debug para ver tudo

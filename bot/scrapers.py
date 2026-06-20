@@ -8,6 +8,54 @@ from difflib import SequenceMatcher
 import time
 
 
+def _melhorar_qualidade_imagem(url: str) -> str:
+    """
+    Tenta obter a versão de maior qualidade de uma URL de imagem de produto.
+    Suporta: Mercado Livre, Amazon, Shopee, e CDNs genéricos.
+    """
+    if not url or 'placeholder' in url:
+        return url
+
+    # --- Mercado Livre ---
+    # Padrão: https://http2.mlstatic.com/D_NQ_NP_XXXXX-MLB_XXXXX-I.jpg
+    # Sufixos de tamanho: -I (interme.), -V (variante), -S (small), -F, -O (original/máx)
+    if 'mlstatic.com' in url or 'mla-s' in url or 'mlimg' in url:
+        url = re.sub(r'-[A-Z]\.(jpg|jpeg|png|webp)', r'-O.\1', url, flags=re.IGNORECASE)
+        return url
+
+    # --- Amazon ---
+    # Padrão: https://m.media-amazon.com/images/I/XXXXX._SX300_.jpg
+    # Remover restrições de tamanho (._SX300_, ._AC_SX450_, etc.) para obter imagem original
+    if 'amazon.com' in url or 'media-amazon.com' in url:
+        # Remove qualquer ._XXXX_. (parâmetros de resize da Amazon)
+        url = re.sub(r'\._[A-Z0-9_,]+_\.', '.', url)
+        return url
+
+    # --- Shopee ---
+    # Padrão: https://down-br.img.susercontent.com/file/XXXXX
+    # Shopee usa sufixos como _tn (thumbnail), removendo fica a original
+    if 'susercontent.com' in url or 'shopee' in url.lower():
+        url = re.sub(r'_tn$', '', url)  # Remove sufixo de thumbnail
+        return url
+
+    # --- Promobit CDN (i.promobit.com.br) ---
+    # Promobit redimensiona: ?w=200&h=200 — sem parâmetros = qualidade máxima
+    if 'promobit.com.br' in url:
+        # Remove parâmetros de resize se existirem
+        url = url.split('?')[0]
+        return url
+
+    return url
+
+
+try:
+    from scraper_ml import MercadoLivreAPIScraper
+    _ml_scraper = MercadoLivreAPIScraper()
+except Exception as _e:
+    print(f'⚠️ Scraper ML não carregado: {_e}')
+    _ml_scraper = None
+
+
 class PromotionScraper:
     """Busca promoções em diferentes sites"""
 
@@ -38,14 +86,34 @@ class PromotionScraper:
             for offer in offers[:limite]:
                 try:
                     nome = offer.get('offerTitle', 'Sem título')
+                    # Usar o link direto do produto (evita passar pela página do Promobit)
+                    # offerUrl pode ser: (a) link direto da loja, (b) link social do ML com ref=
+                    link_direto = offer.get('offerUrl') or offer.get('offer_url') or offer.get('url')
                     link_oferta = f"https://www.promobit.com.br/oferta/{offer.get('offerSlug', '')}-{offer.get('offerId', '')}"
-                    preco = float(offer.get('offerPrice', 0))
 
-                    foto = offer.get('offerPhoto')
-                    imagem_url = f"https://i.promobit.com.br{foto}" if foto else 'https://via.placeholder.com/800x1000'
+                    # Diagnóstico: identificar tipo de link
+                    if link_direto and 'mercadolivre.com.br/social/' in link_direto.lower():
+                        # É um link social do ML — preservar o ref= intacto para resolveRedirect
+                        # O next.js affiliate.ts tentará decodificar o ref= para obter o produto
+                        print(f'  ⚠️  [Promobit] offerUrl é link social ML: {link_direto[:80]}')
+                        link_produto = link_direto  # Preservar com ref= para resolveRedirect
+                    elif link_direto:
+                        link_produto = link_direto  # Link direto da loja
+                    else:
+                        link_produto = link_oferta  # Fallback: página do Promobit
+                        print(f'  ⚠️  [Promobit] offerUrl ausente, usando link da página do Promobit')
 
                     loja = offer.get('storeName', 'Desconhecido')
-                    links = self._criar_links(link_oferta, loja)
+                    links = self._criar_links(link_produto, loja)
+
+                    preco = float(offer.get('offerPrice', 0))
+                    foto = offer.get('offerPhoto')
+                    if foto:
+                        # Montar URL completa do CDN do Promobit e garantir máxima qualidade
+                        imagem_raw = f"https://i.promobit.com.br{foto}" if foto.startswith('/') else foto
+                        imagem_url = _melhorar_qualidade_imagem(imagem_raw)
+                    else:
+                        imagem_url = '/placeholder.webp'
 
                     # Tentar pegar categoria do Promobit primeiro
                     categoria_promobit = offer.get('categoryName') or offer.get('category', {}).get('name')
@@ -56,7 +124,13 @@ class PromotionScraper:
 
                     # Cupom: tentar vários campos possíveis do JSON do Promobit
                     # Nota: 'coupon' pode retornar "NORMAL" (tipo de desconto), não um código real
-                    _VALORES_INVALIDOS_CUPOM = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
+                    _VALORES_INVALIDOS_CUPOM = {
+                        'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', '',
+                        'ADMIN', 'GRATIS', 'FREE', 'DESCONTO', 'OFERTA',
+                        'PROMO', 'PROMOBIT', 'PECHINCHOU', 'PELANDO',
+                        'DISCOUNT', 'COUPON', 'CODE', 'CUPOM', 'CODIGO',
+                        'SIM', 'NAO', 'YES', 'NO', 'TRUE', 'FALSE',
+                    }
                     def _cupom_valido(v):
                         return v and str(v).strip().upper() not in _VALORES_INVALIDOS_CUPOM
 
@@ -90,6 +164,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
                     produtos.append({
                         'name': nome,
                         'category': categoria,
@@ -98,7 +173,8 @@ class PromotionScraper:
                         'price': preco,
                         'originalPrice': float(offer.get('offerOriginalPrice', 0)) if offer.get('offerOriginalPrice') else None,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'autoApprove': loja in LOJAS_COM_AFILIADO
                     })
                     print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
@@ -252,7 +328,7 @@ class PromotionScraper:
                                 'name': nome[:200],
                                 'category': categoria,
                                 'description': descricao,
-                                'imageUrl': 'https://via.placeholder.com/800x1000',
+                                'imageUrl': '/placeholder.webp',
                                 'price': preco,
                                 'originalPrice': preco_original,
                                 'links': links,
@@ -369,7 +445,7 @@ class PromotionScraper:
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Pelando via {loja}",
-                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'originalPrice': preco_original,
                         'links': links,
@@ -447,7 +523,7 @@ class PromotionScraper:
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Gatry via {loja}",
-                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'links': links,
                         'storeName': loja
@@ -506,7 +582,7 @@ class PromotionScraper:
                     
                     # Imagem
                     img_elem = card.select_one('img')
-                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    imagem_url = '/placeholder.webp'
                     if img_elem:
                         imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
                         if imagem_url.startswith('//'):
@@ -600,7 +676,7 @@ class PromotionScraper:
                     
                     # Imagem
                     img_elem = card.select_one('img')
-                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    imagem_url = '/placeholder.webp'
                     if img_elem:
                         imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
                         if imagem_url.startswith('//'):
@@ -718,7 +794,7 @@ class PromotionScraper:
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Hardmob via {loja}",
-                        'imageUrl': 'https://via.placeholder.com/800x1000',
+                        'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'links': links,
                         'storeName': loja
@@ -777,6 +853,7 @@ class PromotionScraper:
         
         return produtos
 
+<<<<<<< HEAD
     def buscar_promocoes_shopee(self, limite: int = 20) -> List[Dict]:
         """Busca promoções do Shopee Flash Sale"""
         produtos = []
@@ -1436,9 +1513,284 @@ class PromotionScraper:
                     if 'Cupons' not in fonte:
                         produtos_por_fonte[fonte] = []
                         metricas_por_fonte[fonte] = {'count': 0, 'time': elapsed, 'erro': str(e)}
+=======
+    def _resolver_link_meli_la(self, url_curta: str) -> str:
+        """
+        Resolve um link meli.la que aponta para uma vitrine social do ML.
+
+        Fluxo real:
+          1. meli.la/XXXXX  ->  redireciona para  mercadolivre.com.br/social/pp2025.../lists
+          2. Nessa pagina social os produtos sao listados como cards com links diretos
+             (anchor tags com classe 'poly-component__title' apontando para /p/MLB ou /MLB)
+          3. O primeiro link de produto encontrado e o produto anunciado.
+
+        Retorna o link real do produto ou a url_curta original se nao conseguir.
+        """
+        try:
+            import re as _re
+
+            headers = dict(self.headers)
+            headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            resp = requests.get(url_curta, headers=headers, allow_redirects=True, timeout=15)
+            url_social = resp.url
+            print(f'  [meli.la] resolvido para: {url_social[:80]}')
+
+            def _extrair_primeiro_produto(html_content):
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+                # Prioridade 1: botao com texto "Ir para produto" / "Ir ao produto"
+                for a in soup.find_all('a', href=True):
+                    texto = a.get_text(strip=True).lower()
+                    href = a['href']
+                    if 'ir para produto' in texto or 'ir ao produto' in texto:
+                        if href.startswith('/'):
+                            href = 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] link extraido (botao): {href[:80]}')
+                        return href
+
+                # Prioridade 2: card de produto (poly-component__title)
+                for a in soup.find_all('a', class_='poly-component__title', href=True):
+                    href = a['href'].split('#')[0]
+                    if 'MLB' in href:
+                        if href.startswith('/'):
+                            href = 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] link extraido (card ML): {href[:80]}')
+                        return href
+
+                # Prioridade 3: qualquer link /p/MLB ou /MLB
+                for a in soup.find_all('a', href=True):
+                    href = a['href']
+                    if _re.search(r'/(?:p/)?MLB\d+', href):
+                        href = href.split('#')[0]
+                        if href.startswith('/'):
+                            href = 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] link extraido (MLB fallback): {href[:80]}')
+                        return href
+
+                return None
+
+            # Tentar extrair da pagina de redirect direto
+            link = _extrair_primeiro_produto(resp.content)
+            if link:
+                return link
+
+            # Se a pagina tem sublistas (/lists/UUID), buscar a primeira
+            if '/social/' in url_social:
+                soup_social = BeautifulSoup(resp.content, 'html.parser')
+                for a in soup_social.find_all('a', href=True):
+                    href = a['href']
+                    if _re.search(r'/social/.+/lists/[a-f0-9-]{36}', href):
+                        lista_url = href if href.startswith('http') else 'https://www.mercadolivre.com.br' + href
+                        print(f'  [meli.la] buscando na sublista: {lista_url[:80]}')
+                        try:
+                            resp2 = requests.get(lista_url, headers=headers, timeout=15)
+                            link = _extrair_primeiro_produto(resp2.content)
+                            if link:
+                                return link
+                        except Exception:
+                            pass
+                        break  # tenta apenas a primeira sublista
+
+            print(f'  [meli.la] nao encontrou link do produto - falha na resolucao')
+            return None
+
+        except Exception as e:
+            print(f'  [meli.la] erro ao resolver {url_curta}: {e}')
+            return url_curta
+
+    def buscar_promocoes_pechinchou(self, limite: int = 15) -> List[Dict]:
+        """Busca as promoções mais recentes do Pechinchou"""
+        produtos = []
+        try:
+            print('🔥 Buscando promoções no Pechinchou...')
+            response = requests.get('https://pechinchou.com.br/', headers=self.headers, timeout=15)
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Pechinchou: {response.status_code}')
+                return produtos
+
+            import json
+            soup = BeautifulSoup(response.content, 'html.parser')
+            script = soup.find('script', id='__NEXT_DATA__')
+            if not script:
+                return produtos
+
+            data = json.loads(script.string)
+            results = data.get('props', {}).get('pageProps', {}).get('promos', {}).get('results', [])
+
+            for promo in results[:limite]:
+                try:
+                    nome = promo.get('title', 'Sem título')
+                    link_oferta = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
+                    preco = float(promo.get('price', 0))
+                    
+                    foto = promo.get('image')
+                    imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
+
+                    loja_dict = promo.get('store') or {}
+                    loja = loja_dict.get('name', 'Desconhecido')
+                    
+                    # Usar o link direto do produto (long_url/short_url) ao invés do link da página do Pechinchou
+                    # Isso evita que o usuário veja o perfil social do Pechinchou no ML.
+                    # EXCEÇÃO: se o link for meli.la, ele redireciona para uma vitrine genérica ML
+                    # (ex: /social/pp2025...) que mostra um produto DIFERENTE do anunciado.
+                    # Nesses casos, usamos a página do Pechinchou que tem o botão correto.
+                    link_direto = promo.get('long_url') or promo.get('short_url') or promo.get('url') or promo.get('offer_url')
+                    link_pechinchou = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
+                    
+                    # Se o link direto é vitrine (meli.la, /sec/ ou /social/), tentar extrair o produto
+                    is_vitrine = link_direto and any(x in link_direto for x in ['meli.la', '/sec/', '/social/'])
+                    if is_vitrine:
+                        print(f'  🔍 [Pechinchou] Link vitrine ML detectado → tentando resolver para produto real...')
+                        link_resolvido = self._resolver_link_meli_la(link_direto)
+                        
+                        # Apenas usa o resolvido se ele for um link direto de produto (não for outra vitrine)
+                        if link_resolvido and not any(x in link_resolvido for x in ['meli.la', '/sec/', '/social/']):
+                            link_produto = link_resolvido
+                        else:
+                            print(f'  [Pechinchou] ⚠️ Produto não extraído da vitrine. Ignorando oferta (sem fallback Pechinchou).')
+                            continue
+                    else:
+                        if not link_direto:
+                            print(f'  [Pechinchou] ⚠️ Sem link direto. Ignorando oferta (sem fallback Pechinchou).')
+                            continue
+                        link_produto = link_direto
+                        
+                    links = self._criar_links(link_produto, loja)
+
+                    categoria_str = promo.get('subcategory', {}).get('category', {}).get('name')
+                    if categoria_str:
+                        categoria = self._detectar_categoria(categoria_str)
+                    else:
+                        categoria = self._detectar_categoria(nome)
+
+                    cupom = ''
+                    cupons_list = promo.get('coupons', [])
+                    if cupons_list and isinstance(cupons_list, list) and len(cupons_list) > 0:
+                        cupom = cupons_list[0]
+                    
+                    descricao = f"Oferta na loja {loja} no Pechinchou"
+                    if cupom and str(cupom).strip():
+                        descricao += f"\n🎟️ CUPOM: {cupom}"
+
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
+                    produtos.append({
+                        'name': nome,
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': float(promo.get('old_price', 0)) if promo.get('old_price') else None,
+                        'links': links,
+                        'storeName': loja,
+                        'autoApprove': loja in LOJAS_COM_AFILIADO
+                    })
+                    print(f'  ✅ [Pechinchou] {nome[:45]}...')
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta: {e}')
+
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Pechinchou: {e}')
+        
+        print(f'   ✅ Total Pechinchou: {len(produtos)} produtos')
+        return produtos
+
+    def buscar_promocoes_lomadee(self, limite: int = 15) -> List[Dict]:
+        """Busca promoções na API da Lomadee"""
+        produtos = []
+        try:
+            print('🔥 Buscando promoções na Lomadee...')
+            import os
+            app_token = os.getenv('LOMADEE_APP_TOKEN')
+            source_id = os.getenv('LOMADEE_SOURCE_ID')
+            
+            if not app_token or not source_id:
+                print('⚠️  LOMADEE_APP_TOKEN ou LOMADEE_SOURCE_ID não configurados no .env')
+                return produtos
+
+            url = f'https://api.lomadee.com/v3/{app_token}/offer/_search'
+            params = {
+                'sourceId': source_id,
+                'size': limite,
+                'sort': 'discount'
+            }
+            
+            response = requests.get(url, params=params, headers=self.headers, timeout=15)
+            if response.status_code != 200:
+                print(f'❌ Erro HTTP Lomadee: {response.status_code}')
+                return produtos
+                
+            data = response.json()
+            offers = data.get('offers', [])
+            
+            for offer in offers[:limite]:
+                try:
+                    nome = offer.get('name', 'Sem título')
+                    preco = offer.get('price')
+                    preco_original = offer.get('priceFrom')
+                    imagem_url = _melhorar_qualidade_imagem(offer.get('thumbnail') or '') or '/placeholder.webp'
+                    link_afiliado = offer.get('link')
+                    
+                    store_info = offer.get('store', {})
+                    loja = store_info.get('name') if isinstance(store_info, dict) else 'Lomadee'
+                    if not loja or loja.lower() == 'lomadee':
+                        loja = self._detectar_loja_promobyte(nome, link_afiliado)
+                    
+                    links = self._criar_links(link_afiliado, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    desconto = offer.get('discount', 0)
+                    descricao = f"Oferta via {loja} na Lomadee"
+                    if desconto and desconto > 0:
+                        descricao += f"\nDesconto de {desconto}%!"
+                    
+                    LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM', 'Lomadee', 'Shopee', 'Americanas', 'Netshoes'}
+                    
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': float(preco) if preco else None,
+                        'originalPrice': float(preco_original) if preco_original else None,
+                        'links': links,
+                        'storeName': loja,
+                        'autoApprove': True  # Link já é afiliado
+                    })
+                    print(f'  ✅ [Lomadee] {nome[:45]}...')
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Lomadee: {e}')
+                    
+        except Exception as e:
+            print(f'❌ Erro ao buscar na Lomadee: {e}')
+            
+        print(f'   ✅ Total Lomadee: {len(produtos)} produtos')
+        return produtos
+
+    def buscar_todas_promocoes(self) -> Dict[str, List]:
+        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé, TikTok e ML API"""
+        print('\n📡 Buscando em múltiplas fontes...')
+
+        produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
+        produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte (corrigido)
+        produtos_gatry     = self.buscar_promocoes_gatry()         # Gatry
+        produtos_zoom      = self.buscar_promocoes_zoom()          # Zoom (novo)
+        produtos_buscape   = self.buscar_promocoes_buscape()       # Buscapé (novo)
+        produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
+        produtos_pechinchou = self.buscar_promocoes_pechinchou()   # Pechinchou
+        produtos_lomadee   = self.buscar_promocoes_lomadee()       # Lomadee (novo)
+
+        # 🆕 Mercado Livre API Oficial (links de afiliado já gerados, sem intermediários!)
+        produtos_ml_api = []
+        if _ml_scraper:
+            try:
+                produtos_ml_api = _ml_scraper.buscar_promocoes_mercadolivre(limite_por_categoria=8)
+            except Exception as e:
+                print(f'⚠️ Erro no scraper ML API: {e}')
+>>>>>>> 86ed893763b702676e2bb06f2956328cfbf172a6
 
         # Combinar todos os produtos
         todos_produtos = []
+<<<<<<< HEAD
         for produtos in produtos_por_fonte.values():
             todos_produtos.extend(produtos)
 
@@ -1461,6 +1813,19 @@ class PromotionScraper:
             if not eh_duplicado:
                 nomes_vistos.append(nome_atual)
                 produtos_unicos.append(p)
+=======
+        nomes_vistos: set = set()
+        # ML API e Lomadee primeiro para garantir que links limpos tenham prioridade
+        for p in produtos_ml_api + produtos_lomadee + produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
+            chave = self._normalizar(p['name'])[:60]
+            if chave not in nomes_vistos:
+                nomes_vistos.add(chave)
+                todos_produtos.append(p)
+
+        print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
+        print(f'   🛒 ML API: {len(produtos_ml_api)} | Lomadee: {len(produtos_lomadee)} | Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)}')
+        print(f'   🔍 Gatry: {len(produtos_gatry)} | Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | Pechinchou: {len(produtos_pechinchou)}')
+>>>>>>> 86ed893763b702676e2bb06f2956328cfbf172a6
 
         # Calcular score e filtrar
         produtos_com_score = []
@@ -1559,7 +1924,7 @@ class PromotionScraper:
         if preco_elem:
             preco = self._extrair_preco(preco_elem.text.strip())
 
-        imagem_url = 'https://via.placeholder.com/800x1000'
+        imagem_url = '/placeholder.webp'
         img_elem = oferta.find('img', class_='thread-image')
         if img_elem:
             imagem_url = img_elem.get('src', '') or img_elem.get('data-src', '')

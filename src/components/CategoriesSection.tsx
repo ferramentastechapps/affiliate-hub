@@ -20,17 +20,14 @@ type Product = {
   category: string;
   imageUrl: string;
   price?: number;
+  originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
 };
 
-function getSimulatedDiscount(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-  return 15 + (Math.abs(hash) % 45);
-}
+
 
 export function CategoriesSection() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -59,6 +56,7 @@ export function CategoriesSection() {
           category: p.category,
           imageUrl: p.imageUrl,
           price: p.price,
+          originalPrice: p.originalPrice,
           description: p.description,
           coupons: p.coupons || [],
           createdAt: p.createdAt,
@@ -100,10 +98,10 @@ export function CategoriesSection() {
           <button
             key={category.key}
             onClick={() => setActiveCategory(activeCategory === category.key ? null : category.key)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-2xl border transition-all duration-200 whitespace-nowrap shrink-0 min-h-[48px] ${
+            className={`flex items-center gap-2 px-4 py-3 rounded-[20px] border transition-all duration-200 whitespace-nowrap shrink-0 min-h-[48px] ${
               activeCategory === category.key
-                ? "bg-accent/15 border-accent/50 shadow-lg shadow-accent/10"
-                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+                ? "btn-3d text-white border-transparent"
+                : "bg-black/20 border-white/10 hover:bg-white/10"
             }`}
           >
             <span className="text-2xl">{category.icon}</span>
@@ -161,9 +159,11 @@ export function CategoriesSection() {
               {!loading && products.length > 0 && (
                 <div className="flex lg:grid lg:grid-cols-4 gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide lg:overflow-visible">
                   {products.map((product, index) => {
-                    const discount = getSimulatedDiscount(product.id);
                     const price = product.price || 0;
-                    const originalPrice = price > 0 ? price / (1 - discount / 100) : 0;
+                    const originalPrice = product.originalPrice || 0;
+                    const discount = (originalPrice > price && price > 0)
+                      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+                      : 0;
 
                     let mainPlatformText = "Link";
                     let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=64";
@@ -180,24 +180,43 @@ export function CategoriesSection() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1, type: "spring", stiffness: 80 }}
                         onClick={() => setSelectedProduct(product)}
-                        className="group cursor-pointer bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/80 hover:border-accent/50 rounded-3xl p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_-10px_var(--accent)] min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-start"
+                        className="group cursor-pointer glass-3d-card rounded-[20px] p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-start"
                       >
                         {/* Badge Desconto */}
-                        <div className="absolute top-4 right-4 z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white font-black text-sm px-3 py-1.5 rounded-xl border border-white/20 shadow-lg">
-                          -{discount}%
-                        </div>
+                        {discount > 0 && (
+                          <div className="absolute top-4 right-4 z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white font-black text-sm px-3 py-1.5 rounded-xl border border-white/20 shadow-lg">
+                            -{discount}%
+                          </div>
+                        )}
 
                         {/* Imagem */}
-                        <div className="w-full aspect-[3/4] bg-zinc-900 rounded-2xl mb-5 relative overflow-hidden flex items-center justify-center">
+                        <div className="w-full aspect-[3/4] bg-black/40 rounded-xl mb-5 relative overflow-hidden flex items-center justify-center">
                           <img
                             src={product.imageUrl}
                             alt={product.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/placeholder.webp";
+                            }}
                           />
-                          {/* Store badge */}
-                          <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] px-3 py-1.5 border border-zinc-200 flex items-center gap-1.5">
-                            <img src={mainPlatformLogo} alt={mainPlatformText} className="w-4 h-4 rounded-full object-contain" />
-                            <span className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">{mainPlatformText}</span>
+                          {/* Store badge — logo larger and clean */}
+                          <div
+                            className="absolute bottom-3 right-3 z-10 flex items-center justify-center rounded-full bg-white shadow-xl"
+                            style={{
+                              width: '48px',
+                              height: '48px',
+                              boxShadow: '0 0 0 2px #18181b, 0 4px 16px rgba(0,0,0,0.4)',
+                            }}
+                          >
+                             <img 
+                              src={mainPlatformLogo} 
+                              alt={mainPlatformText} 
+                              title={mainPlatformText} 
+                              className="w-8 h-8 object-contain" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.webp";
+                              }}
+                            />
                           </div>
                           {/* Badge cupom */}
                           {product.coupons && product.coupons.length > 0 && (
@@ -218,9 +237,11 @@ export function CategoriesSection() {
                           <div className="mt-auto pt-2 border-t border-zinc-800/50 flex flex-col">
                             {price > 0 ? (
                               <>
-                                <span className="text-zinc-500 text-xs line-through font-normal mb-0.5">
-                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                                </span>
+                                {discount > 0 && (
+                                  <span className="text-zinc-500 text-xs line-through font-normal mb-0.5">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                                  </span>
+                                )}
                                 <span className="text-xl font-bold text-white tracking-tight">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>
@@ -244,6 +265,7 @@ export function CategoriesSection() {
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
+        onSelectRelated={setSelectedProduct}
       />
     </section>
   );

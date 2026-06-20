@@ -9,6 +9,7 @@ const withPWA = withPWAInit({
   reloadOnOnline: true,
   workboxOptions: {
     disableDevLogs: true,
+    cleanupOutdatedCaches: true,
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/.*\.(jpg|jpeg|png|gif|webp|avif|svg)$/i,
@@ -19,6 +20,9 @@ const withPWA = withPWAInit({
             maxEntries: 200,
             maxAgeSeconds: 86400, // 24 horas
           },
+          cacheableResponse: {
+            statuses: [0, 200]
+          }
         },
       },
       {
@@ -120,11 +124,6 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '**.promobit.com.br',
-      },
-      // Placeholder genérico
-      {
-        protocol: 'https',
-        hostname: 'via.placeholder.com',
       },
       // Permitir qualquer CDN comum
       {

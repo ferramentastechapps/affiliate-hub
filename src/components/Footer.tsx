@@ -1,7 +1,42 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { WhatsappLogo, TelegramLogo, InstagramLogo, VideoCamera, Heart } from "@phosphor-icons/react";
+import { WhatsappLogo, TelegramLogo, InstagramLogo, Heart, FacebookLogo, TwitterLogo, YoutubeLogo } from "@phosphor-icons/react";
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (href === "#categorias") {
+      window.dispatchEvent(new CustomEvent("open-categories"));
+      return;
+    }
+    if (href === "#cupons") {
+      window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "CUPOM" } }));
+      const el = document.getElementById("ofertas");
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 100;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+      return;
+    }
+    const id = href.replace("#", "");
+    const el = document.getElementById(id);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 100;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    }
+  };
+
+  return (
+    <a
+      href={href}
+      onClick={handleClick}
+      className="text-zinc-400 hover:text-white transition-colors text-sm cursor-pointer"
+    >
+      {children}
+    </a>
+  );
+}
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,166 +45,188 @@ export function Footer() {
     {
       name: "WhatsApp",
       icon: WhatsappLogo,
-      url: "https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_tTelegram",
-      color: "lg:hover:bg-green-500/20 lg:hover:text-green-400 lg:hover:border-green-500/50",
-      bgColor: "bg-green-500/10",
-      mobileColor: "bg-green-500/20 text-green-400 border-green-500/50",
+      url: "https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t",
       description: "Grupo WhatsApp",
+      actionText: "Clique para entrar",
+      btnText: "Entrar no grupo"
     },
     {
       name: "Telegram",
       icon: TelegramLogo,
       url: "https://t.me/+OFDVybtJcc40YmZh",
-      color: "lg:hover:bg-blue-500/20 lg:hover:text-blue-400 lg:hover:border-blue-500/50",
-      bgColor: "bg-blue-500/10",
-      mobileColor: "bg-blue-500/20 text-blue-400 border-blue-500/50",
       description: "Canal Telegram",
+      actionText: "Clique para entrar",
+      btnText: "Entrar no grupo"
     },
     {
       name: "Instagram",
       icon: InstagramLogo,
-      url: "https://www.instagram.com/jota123testando?igsh=MTBuY3dueWQ4N3c3Mw%3D%3D&utm_source=qr",
-      color: "lg:hover:bg-pink-500/20 lg:hover:text-pink-400 lg:hover:border-pink-500/50",
-      bgColor: "bg-pink-500/10",
-      mobileColor: "bg-pink-500/20 text-pink-400 border-pink-500/50",
+      url: "https://www.instagram.com/economizeicomjota",
       description: "Siga no Instagram",
-    },
-    {
-      name: "TikTok",
-      icon: VideoCamera,
-      url: "https://www.tiktok.com/@jota123testando?_r=1&_t=ZS-95lRBdrstLW",
-      color: "lg:hover:bg-purple-500/20 lg:hover:text-purple-400 lg:hover:border-purple-500/50",
-      bgColor: "bg-purple-500/10",
-      mobileColor: "bg-purple-500/20 text-purple-400 border-purple-500/50",
-      description: "Siga no TikTok",
+      actionText: "Clique para seguir",
+      btnText: "Seguir página"
     },
   ];
 
   return (
-    <footer className="w-full bg-zinc-950/50 backdrop-blur-xl border-t border-zinc-800/50 mt-20 pb-20 md:pb-8">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-12">
-        {/* Seção de Comunidade */}
-        <div className="text-center mb-12">
+    <footer className="w-full mt-20">
+      {/* Seção de Comunidade */}
+      <section className="max-w-[1200px] mx-auto px-6 mb-16">
+        <div className="bg-gradient-to-b from-[#ff334b]/[0.08] to-transparent bg-card border border-border-custom rounded-[28px] p-12 text-center relative overflow-hidden">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
+            className="relative z-10 font-sans"
           >
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+            <h2 className="text-2xl md:text-3xl font-black text-white mb-3">
               Junte-se à nossa comunidade! 🎉
-            </h3>
+            </h2>
             <p className="text-zinc-400 text-sm md:text-base mb-8 max-w-2xl mx-auto">
               Receba ofertas exclusivas, cupons em primeira mão e participe de discussões sobre as melhores promoções
             </p>
           </motion.div>
+ 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto relative z-10">
+            {socialLinks.map((social, index) => {
+              // Obter cores específicas da marca para botões e glows
+              let brandColor = "#25d366";
+              let outlineBtnClass = "border-[#25d366]/40 text-[#25d366] hover:bg-[#25d366] hover:border-[#25d366] hover:text-white";
+              let bgGlow = "rgba(37,211,102,0.06)";
 
-          {/* Botões de Redes Sociais - Todos iguais */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12 max-w-5xl mx-auto">
-            {socialLinks.map((social, index) => (
-              <motion.a
-                key={social.name}
-                href={social.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className={`group flex items-center gap-3 px-6 py-4 rounded-2xl border bg-zinc-900/50 backdrop-blur-sm transition-all duration-300 ${social.mobileColor} ${social.color}`}
-              >
-                <div className={`p-3 rounded-xl ${social.bgColor} transition-colors`}>
-                  <social.icon size={24} weight="fill" />
-                </div>
-                <div className="text-left flex-1">
-                  <div className="text-sm font-semibold">
-                    {social.description}
+              if (social.name === "Telegram") {
+                brandColor = "#0088cc";
+                outlineBtnClass = "border-[#0088cc]/40 text-[#0088cc] hover:bg-[#0088cc] hover:border-[#0088cc] hover:text-white";
+                bgGlow = "rgba(0,136,204,0.06)";
+              } else if (social.name === "Instagram") {
+                brandColor = "#e1306c";
+                outlineBtnClass = "border-[#e1306c]/40 text-[#e1306c] hover:bg-gradient-to-tr hover:from-[#f09433] hover:via-[#dc2743] hover:to-[#bc1888] hover:border-transparent hover:text-white";
+                bgGlow = "rgba(225,48,108,0.06)";
+              }
+
+              return (
+                <motion.div
+                  key={social.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                  className="bg-[#12141c]/50 border border-white/[0.04] rounded-[24px] p-5 flex flex-col justify-between transition-all duration-300 hover:border-white/[0.1] hover:bg-[#12141c] hover:shadow-[0_12px_24px_rgba(0,0,0,0.4)] group h-[170px]"
+                >
+                  {/* Top Row - Horizontal Layout */}
+                  <div className="flex items-center justify-between w-full">
+                    {/* Left Icon with sutil background glow */}
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300"
+                      style={{
+                        backgroundColor: bgGlow,
+                        color: brandColor,
+                        boxShadow: `0 0 15px ${bgGlow}`
+                      }}
+                    >
+                      <social.icon size={22} weight="bold" />
+                    </div>
+
+                    {/* Middle Info */}
+                    <div className="flex flex-col items-start flex-1 ml-3.5 text-left">
+                      <span className="text-sm font-black text-white leading-tight">{social.name}</span>
+                      <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-400 transition-colors mt-0.5">{social.actionText}</span>
+                    </div>
+
+                    {/* Right Arrow */}
+                    <div className="text-zinc-600 group-hover:text-white transition-colors">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4.66663 11.3333L11.3333 4.66663" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M4.66663 4.66663H11.3333V11.3333" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
                   </div>
-                  <div className="text-xs opacity-80">
-                    Clique para seguir
-                  </div>
-                </div>
-                <div className="opacity-80 transition-opacity group-hover:opacity-100">
-                  →
-                </div>
-              </motion.a>
-            ))}
+
+                  {/* Bottom Outline Button */}
+                  <a
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full py-2 rounded-xl border text-[11px] font-extrabold tracking-wider uppercase text-center transition-all duration-300 ${outlineBtnClass}`}
+                  >
+                    {social.btnText}
+                  </a>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
-
-        {/* Divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent mb-8" />
-
-        {/* Bottom Section */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Logo e Copyright */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="flex flex-col items-center md:items-start gap-3"
-          >
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo2.png"
-                alt="123 Testando"
-                className="h-8 w-auto"
-              />
+      </section>
+ 
+      {/* Rodapé Principal */}
+      <div className="bg-[#06070a] border-t border-border-custom py-16">
+        <div className="max-w-[1200px] mx-auto px-6 relative z-10 font-sans">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+            
+            {/* Coluna 1: Info e Social Icons */}
+            <div className="flex flex-col gap-4">
+              <a href="#" className="flex items-center gap-3 text-decoration-none select-none">
+                <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-12 w-auto object-contain" />
+              </a>
+              <p className="text-zinc-500 text-xs leading-relaxed max-w-[320px]">
+                Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.
+              </p>
             </div>
-            <p className="text-zinc-500 text-sm flex items-center gap-1.5">
-              © {currentYear} 123 Testando. Feito com <Heart size={14} weight="fill" className="text-red-500" /> para você economizar
+ 
+            {/* Coluna 2: Links secundários */}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Links secundários</h4>
+              <FooterLink href="#inicio">Início</FooterLink>
+              <FooterLink href="#categorias">Categorias</FooterLink>
+              <FooterLink href="#cupons">Cupons</FooterLink>
+              <FooterLink href="#footer">Comunidade</FooterLink>
+            </div>
+ 
+            {/* Coluna 3: Diversos */}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Diversos</h4>
+              <a href="#ofertas" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "Moda" } })); }} className="text-zinc-400 hover:text-white transition-colors text-sm">Moda e Acessórios</a>
+              <a href="#ofertas" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "TV" } })); }} className="text-zinc-400 hover:text-white transition-colors text-sm">Smartphones e TV</a>
+              <a href="#ofertas" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "Casa" } })); }} className="text-zinc-400 hover:text-white transition-colors text-sm">Casa e Eletrodomésticos</a>
+            </div>
+ 
+            {/* Coluna 4: Social */}
+            <div className="flex flex-col gap-3">
+              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Social</h4>
+              <div className="flex gap-2.5 mb-2">
+                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <FacebookLogo size={16} weight="fill" />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <TwitterLogo size={16} weight="fill" />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <InstagramLogo size={16} weight="bold" />
+                </a>
+                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                  <YoutubeLogo size={16} weight="fill" />
+                </a>
+              </div>
+              <FooterLink href="#inicio">Início</FooterLink>
+              <FooterLink href="#categorias">Categorias</FooterLink>
+              <FooterLink href="#cupons">Cupons</FooterLink>
+              <FooterLink href="#ofertas">Ofertas</FooterLink>
+            </div>
+ 
+          </div>
+
+          {/* Copyright e Disclaimer */}
+          <div className="border-t border-white/[0.04] pt-8 mt-8 flex flex-col items-center gap-4 text-center">
+            <p className="text-zinc-500 text-xs flex items-center gap-1.5 justify-center">
+              © {currentYear} Economizei. Feito com <Heart size={12} weight="fill" className="text-[#ff334b]" /> para você economizar.
             </p>
-          </motion.div>
+            <p className="text-[#ffffff]/25 text-[11px] max-w-[800px] leading-relaxed mx-auto">
+              Os preços e a disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. Verifique sempre as condições no site da loja parceira antes de finalizar sua compra. Economizei não se responsabiliza pelas compras realizadas nos links externos.
+            </p>
+          </div>
 
-          {/* Links Rápidos */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="flex flex-wrap items-center justify-center gap-6 text-sm"
-          >
-            <a
-              href="#inicio"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              Início
-            </a>
-            <a
-              href="#categorias"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              Categorias
-            </a>
-            <a
-              href="#cupons"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              Cupons
-            </a>
-            <a
-              href="#ofertas"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              Ofertas
-            </a>
-          </motion.div>
         </div>
-
-        {/* Disclaimer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-8 pt-6 border-t border-zinc-800/50"
-        >
-          <p className="text-zinc-600 text-xs text-center max-w-4xl mx-auto leading-relaxed">
-            Os preços e disponibilidade dos produtos estão sujeitos a alterações sem aviso prévio. 
-            Verifique sempre as condições no site da loja antes de finalizar sua compra. 
-            123 Testando não é responsável por transações realizadas em sites de terceiros.
-          </p>
-        </motion.div>
       </div>
     </footer>
   );

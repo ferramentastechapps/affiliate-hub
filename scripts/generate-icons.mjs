@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT   = path.join(__dirname, '..');
-const SOURCE = path.join(ROOT, 'public', 'logo.png');
+const SOURCE = path.join(ROOT, 'public', 'logo base.webp');
 const OUT    = path.join(ROOT, 'public', 'icons');
 
 if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });

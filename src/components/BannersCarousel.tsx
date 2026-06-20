@@ -78,6 +78,9 @@ export function BannersCarousel({ onBannerClick }: BannersCarouselProps) {
                   src={isMobile ? banner.imageMobile : banner.imageDesktop}
                   alt={banner.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/placeholder.webp";
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="absolute bottom-6 left-6 right-6">

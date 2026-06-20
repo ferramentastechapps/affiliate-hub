@@ -1,3 +1,11 @@
 {
-    "typescript.autoClosingTags": false
+    "typescript.autoClosingTags": false,
+    "mcpServers": {
+        "stitch": {
+            "serverUrl": "https://stitch.googleapis.com/mcp",
+            "headers": {
+                "X-Goog-Api-Key": "AQ.Ab8RN6Jcx8f_x7BFBQZV9nFyYhbIcuwZqlJ9zGCaw_HlZf5_rg"
+            }
+        }
+    }
 }

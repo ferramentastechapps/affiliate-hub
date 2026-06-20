@@ -7,15 +7,16 @@ import re
 import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY, OPENROUTER_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
+from telegram_bot import TelegramNotifier
 
-# Inicializa o cliente da API para comunicar com o Next.js
+notifier = TelegramNotifier()
 api = AffiliateHubAPI()
 
 def infer_platform_from_url(url: str) -> str:
     """Descobre qual mercado o link pertence baseado na URL."""
-    url_lower = url.lower()
+    url_lower = url.lower() if url else ''
     
     if 'amazon' in url_lower or 'amzn.to' in url_lower:
         return 'amazon'
@@ -29,108 +30,16 @@ def infer_platform_from_url(url: str) -> str:
         return 'tiktok'
     if 'netshoes' in url_lower:
         return 'netshoes'
-    if 'magazineluiza' in url_lower or 'magalu' in url_lower:
+    if 'magazineluiza' in url_lower or 'magalu' in url_lower or 'magazinevoce' in url_lower or 'influenciadormagalu' in url_lower:
         return 'magalu'
     if 'kabum' in url_lower:
         return 'kabum'
         
     return 'amazon' # Default fallback
 
-PLATAFORMA_EMOJIS = {
-    'amazon':      '🟠 Amazon',
-    'mercadoLivre':'🟡 Mercado Livre',
-    'shopee':      '🟠 Shopee',
-    'aliexpress':  '🔴 AliExpress',
-    'tiktok':      '⚫ TikTok Shop',
-    'netshoes':    '🟣 Netshoes',
-    'magalu':      '🔵 Magalu',
-    'kabum':       '🔵 Kabum',
-}
-
-async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None):
+async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_link: str, foto_file_id: str = None, custom_caption: str = None):
     """Publica a promoção aprovada no grupo de promoções."""
-    if not TELEGRAM_PROMO_GROUP_ID:
-        print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação no grupo.')
-        return
-
-    nome = produto.get('name', 'Produto')
-    preco = produto.get('price')
-    imagem = produto.get('imageUrl')
-    categoria = produto.get('category', 'Setup')
-    plataforma_label = PLATAFORMA_EMOJIS.get(platform, '🛒 ' + platform)
-
-    legenda_engracada = "🔥 ACHADINHO IMPERDÍVEL!"
-    
-    import google.generativeai as genai
-    import asyncio
-    if GEMINI_API_KEY:
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-2.0-flash')
-            prompt = (
-                f"Você é dono de um canal de achadinhos e utilidades. "
-                f"Crie UMA FRASE muito curta (máximo 1 linha), engraçada, irreverente e chamativa em CAIXA ALTA "
-                f"para anunciar a venda deste produto: '{nome}'. "
-                f"Exemplos do estilo que eu quero: 'MEU ÚNICO CARDIO NESSE FERIADO', 'PRA NÃO BRIGAR MAIS COM A ESPOSA', "
-                f"'SUA CASA CLAMAVA POR ESSE MIMO', 'O ESTAGIÁRIO ERROU O PREÇO DE NOVO'. "
-                f"Seja criativo e focado no uso diário do produto. Retorne APENAS a frase, sem aspas, sem hashtag e sem enrolação."
-            )
-            response = await asyncio.to_thread(model.generate_content, prompt)
-            if response and response.text:
-                legenda_engracada = response.text.strip().replace('"', '').replace('*', '')
-                print(f"✅ Legenda Gemini gerada: {legenda_engracada}")
-            else:
-                print("⚠️ Gemini retornou resposta vazia, usando legenda padrão")
-        except Exception as e:
-            print(f"⚠️ Gemini indisponível, usando legenda padrão: {e}")
-    else:
-        print("⚠️ GEMINI_API_KEY não configurada, usando legenda padrão")
-
-    preco_original = produto.get('originalPrice')
-    if preco_original and preco and float(preco_original) > float(preco):
-        preco_txt = f"💰 de <s>R$ {float(preco_original):.2f}</s> por <b>R$ {float(preco):.2f}</b>".replace('.', ',')
-    else:
-        preco_txt = f"💰 <b>R$ {float(preco):.2f}</b>".replace('.', ',') if preco else ""
-    
-    descricao_prod = produto.get('description', '')
-    cupom_msg = ""
-    if '🎟️ CUPOM:' in descricao_prod:
-        cupom_extraido = descricao_prod.split('🎟️ CUPOM:')[1].split('\n')[0].strip()
-        _invalidos = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
-        if cupom_extraido.upper() not in _invalidos:
-            cupom_msg = f"🎟️ Cupom: <code>{cupom_extraido}</code>\n"
-
-    mensagem = (
-        f"{legenda_engracada}\n\n"
-        f"📦 <b>{nome}</b>\n"
-        f"🏪 {plataforma_label}\n"
-        f"{preco_txt}\n"
-        f"{cupom_msg}\n"
-        f"🔗 <a href='{affiliate_link}'>👉 CLIQUE AQUI PARA COMPRAR</a>"
-    )
-
-    try:
-        # Prioridade: foto enviada pelo admin > imageUrl do produto
-        foto_para_usar = foto_file_id or imagem
-        print(f'📸 foto_file_id (admin): {foto_file_id}')
-        print(f'🖼️ imageUrl (produto): {imagem}')
-        print(f'✅ foto_para_usar: {foto_para_usar}')
-        if foto_para_usar:
-            await context.bot.send_photo(
-                chat_id=TELEGRAM_PROMO_GROUP_ID,
-                photo=foto_para_usar,
-                caption=mensagem,
-                parse_mode='HTML'
-            )
-        else:
-            await context.bot.send_message(
-                chat_id=TELEGRAM_PROMO_GROUP_ID,
-                text=mensagem,
-                parse_mode='HTML'
-            )
-        print(f'📢 Promoção publicada no grupo: {nome[:50]}')
-    except Exception as e:
-        print(f'❌ Erro ao publicar no grupo: {e}')
+    await notifier.publicar_no_grupo(produto, platform, affiliate_link, foto_file_id, custom_caption)
 
 async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Intercepta fotos com legenda e redireciona para /aprovar ou /tiktok se necessário."""
@@ -145,7 +54,8 @@ async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_
         context.args = partes[1:]
         await handle_tiktok_command(update, context)
     else:
-        print(f'📸 Foto com legenda ignorada: {caption[:50]}')
+        print(f'📸 Foto com legenda recebida (não é comando), tentando processar como promo...')
+        await handle_forwarded_or_text_promo(update, context)
 
 async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -171,15 +81,14 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     print(f'🔍 DEBUG - Comando /aprovar recebido')
     print(f'   Args finais: {args}')
 
-    if len(args) < 2:
+    if not args:
         await update.message.reply_text(
             "❌ Uso incorreto!\n\n"
-            "✅ Formato correto:\n"
-            "<code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
-            "📸 Para enviar foto personalizada:\n"
-            "Envie a foto com a legenda: <code>/aprovar [ID] [LINK]</code>\n\n"
+            "✅ Formatos aceitos:\n"
+            "• Auto-gerar link de afiliado: <code>/aprovar [ID]</code>\n"
+            "• Especificar link manual: <code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
             "Exemplo:\n"
-            "<code>/aprovar clxyz123 https://amzn.to/abc123</code>",
+            "<code>/aprovar clxyz123</code>",
             parse_mode='HTML'
         )
         return
@@ -189,19 +98,13 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     # O ID é o primeiro argumento que NÃO é um link
     produto_id = next((arg for arg in args if not arg.startswith('http')), None)
 
+    # O que sobrar é a legenda customizada
+    outros_args = [arg for arg in args if arg != affiliate_link and arg != produto_id]
+    custom_caption = " ".join(outros_args) if outros_args else None
+
     print(f'   ID extraído: {produto_id}')
     print(f'   Link extraído: {affiliate_link}')
-
-    if not affiliate_link:
-        await update.message.reply_text(
-            "❌ Nenhum link encontrado!\n\n"
-            "✅ Formato correto:\n"
-            "<code>/aprovar [ID] [LINK_AFILIADO]</code>\n\n"
-            "Exemplo:\n"
-            "<code>/aprovar clxyz123 https://amzn.to/abc123</code>",
-            parse_mode='HTML'
-        )
-        return
+    print(f'   Legenda extraída: {custom_caption}')
 
     if not produto_id:
         await update.message.reply_text("❌ ID do produto não encontrado no comando.")
@@ -225,10 +128,10 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
             print(f'⚠️ Erro ao obter URL da foto: {e}')
 
     # Detectar plataforma
-    platform = infer_platform_from_url(affiliate_link)
+    platform = infer_platform_from_url(affiliate_link) if affiliate_link else None
     print(f'   Plataforma detectada: {platform}')
 
-    msg_status = await update.message.reply_text("⏳ Aprovando produto e atualizando link...")
+    msg_status = await update.message.reply_text("⏳ Aprovando produto...")
 
     # Chamar API de aprovação
     print(f'🔄 Chamando API de aprovação...')
@@ -238,29 +141,37 @@ async def handle_aprovar_command(update: Update, context: ContextTypes.DEFAULT_T
     print(f'   Resultado: {resultado}')
 
     if resultado and resultado.get('success'):
+        # Obter dados resolvidos pelo servidor
+        final_platform = resultado.get('platform')
+        final_affiliate_link = resultado.get('affiliateLink')
+        
         # Publicar no grupo de promoções
         produto_info = resultado.get('product', {})
         print(f'✅ Produto aprovado com sucesso!')
-        print(f'   Publicando no grupo...')
+        print(f'   Publicando no grupo com link: {final_affiliate_link}')
         
-        await publicar_no_grupo(context, produto_info, platform, affiliate_link, foto_file_id)
+        await publicar_no_grupo(context, produto_info, final_platform, final_affiliate_link, foto_file_id, custom_caption)
 
         # Verificar se cupom foi salvo no banco
         cupom_info = resultado.get('coupon')
         cupom_msg = f"\n🎫 Cupom salvo no banco de dados!" if cupom_info else ""
         foto_msg = "\n📸 Foto personalizada usada!" if foto_file_id else ""
+        origem_msg = "\n✨ Link gerado automaticamente!" if not affiliate_link else "\n🔗 Usado link manual fornecido."
 
         await msg_status.edit_text(
             f"✅ <b>Produto Aprovado com Sucesso!</b>\n\n"
             f"🆔 ID: <code>{produto_id}</code>\n"
-            f"🏪 Plataforma: <b>{platform}</b>\n"
-            f"🔗 Link atualizado\n\n"
+            f"🏪 Plataforma: <b>{final_platform}</b>\n"
+            f"🔗 Link: {final_affiliate_link}\n\n"
             f"✅ Promoção publicada no grupo!"
-            + cupom_msg + foto_msg,
+            + origem_msg + cupom_msg + foto_msg,
             parse_mode='HTML'
         )
     else:
         erro_msg = resultado.get('error') if resultado else "Erro na comunicação com a API."
+        # Tenta pegar details do erro do Next.js
+        if resultado and resultado.get('details'):
+            erro_msg += f"\n\n💡 {resultado.get('details')}"
         print(f'❌ Erro ao aprovar: {erro_msg}')
         await msg_status.edit_text(f"❌ Falha ao aprovar: {erro_msg}")
 
@@ -297,6 +208,169 @@ async def handle_rejeitar_command(update: Update, context: ContextTypes.DEFAULT_
     else:
         erro_msg = resultado.get('error') if resultado else "Erro na comunicação com a API."
         await msg_status.edit_text(f"❌ Falha ao rejeitar: {erro_msg}")
+
+async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Processa textos (encaminhados ou não) que contenham link para cadastrar como pendente"""
+    text = update.message.text or update.message.caption or ""
+    
+    # Se for uma resposta a uma mensagem (o handle_reply cuida disso)
+    if update.message.reply_to_message:
+        reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
+        if "ID_DO_PRODUTO:" in reply_text:
+            # Deixa o handle_reply normal processar
+            return await handle_reply(update, context)
+            
+    # Ignorar se for comando explícito
+    if text.strip().startswith('/'):
+        return
+
+    # Verificar se tem link
+    import re
+    if 'http' not in text.lower():
+        return
+        
+    msg_status = await update.message.reply_text("⏳ Analisando oferta encaminhada...")
+    
+    import json
+    import requests
+    
+    try:
+        if not OPENROUTER_API_KEY:
+            await msg_status.edit_text("❌ OPENROUTER_API_KEY não configurada. Não é possível extrair os dados da promoção.")
+            return
+
+        prompt = (
+            f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
+            f"{text}\n\n"
+            f"Responda APENAS em um JSON válido com estas exatas chaves:\n"
+            f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
+            f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
+            f"- link: URL completa para compra do produto (string)\n"
+            f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
+            f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
+        )
+        
+        # Async request run in executor
+        loop = asyncio.get_event_loop()
+        
+        def call_openrouter():
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "meta-llama/llama-3.1-8b-instruct:free",
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"}
+                },
+                timeout=30
+            )
+            if response.status_code != 200:
+                raise Exception(f"OpenRouter API error: {response.text}")
+            return response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
+
+        response_text = await loop.run_in_executor(None, call_openrouter)
+        
+        texto_limpo = response_text.replace('```json', '').replace('```', '').strip()
+        dados = json.loads(texto_limpo)
+        
+        nome = dados.get('name') or 'Produto Encontrado'
+        preco = dados.get('price')
+        link = dados.get('link')
+        cupom = dados.get('coupon')
+        
+        if not link:
+            await msg_status.edit_text("❌ Não consegui extrair um link válido dessa mensagem.")
+            return
+            
+        # Tentar raspar os dados da página se faltar nome, preço ou imagem (quando não houver foto enviada)
+        scraped_data = {}
+        try:
+            scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link}, timeout=60)
+            if scrape_resp.status_code == 200:
+                scraped_data = scrape_resp.json()
+                print(f"🔍 Scraped fallback: {scraped_data}")
+        except Exception as e:
+            print(f"⚠️ Erro no scraper de fallback: {e}")
+
+        # Pegar a foto original se a mensagem tiver foto, senão usa a do scraper
+        foto_url = None
+        if update.message.photo:
+            foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
+            foto_url = foto_file.file_path
+        elif scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
+            foto_url = scraped_data.get('imageUrl')
+
+        # Se o Gemini não achou nome ou preço, usa o do scraper
+        if nome == 'Produto Encontrado' and scraped_data.get('name'):
+            nome = scraped_data.get('name')
+        if not preco and scraped_data.get('price'):
+            preco = scraped_data.get('price')
+            
+        # Determinar categoria
+        from config import CATEGORY_KEYWORDS
+        categoria = 'Diversos'
+        nome_lower = nome.lower()
+        for cat, keywords in CATEGORY_KEYWORDS.items():
+            if any(k in nome_lower for k in keywords):
+                categoria = cat
+                break
+                
+        platform = infer_platform_from_url(link)
+        
+        descricao = f"Oferta encaminhada de grupos"
+        if cupom:
+            descricao += f"\n🎟️ CUPOM: {cupom}"
+            
+        produto_data = {
+            'name': nome,
+            'category': categoria,
+            'description': descricao,
+            'imageUrl': foto_url or '/placeholder.webp',
+            'price': preco,
+            'originalPrice': None,
+            'links': {
+                platform: link
+            },
+            'storeName': platform.capitalize()
+        }
+        
+        print(f"📦 Enviando produto encaminhado: {produto_data}")
+        resultado = api.adicionar_produto(produto_data)
+        
+        if resultado and resultado.get('success'):
+            produto_id = resultado.get('product', {}).get('id', 'N/A')
+            produto_data['id'] = produto_id
+            
+            # Notifica os administradores para aprovação usando o notifier padrão
+            try:
+                notifier = TelegramNotifier()
+                await notifier.enviar_produto(produto_data)
+            except Exception as e:
+                print(f"⚠️ Erro ao enviar notificação de aprovação: {e}")
+                
+            await msg_status.edit_text(
+                f"✅ <b>Oferta capturada com sucesso!</b>\n\n"
+                f"📦 {nome}\n"
+                f"💰 Preço: R$ {preco if preco else 'N/A'}\n\n"
+                f"O produto foi enviado para o sistema como <b>Pendente</b>.\n"
+                f"<i>A notificação de aprovação foi enviada!</i>",
+                parse_mode='HTML'
+            )
+        else:
+            erro = resultado.get('error', 'Erro desconhecido') if resultado else "Sem resposta da API"
+            await msg_status.edit_text(f"❌ Falha ao salvar a promoção: {erro}")
+            
+    except json.JSONDecodeError:
+        print(f"❌ Erro de JSON ao processar mensagem encaminhada")
+        await msg_status.edit_text("❌ Erro ao extrair dados. Tente formatar a mensagem de outra forma.")
+    except Exception as e:
+        print(f"❌ Erro ao processar mensagem encaminhada: {e}")
+        await msg_status.edit_text("❌ Não consegui entender essa mensagem ou houve um erro interno.")
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -441,7 +515,7 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
         'name': nome_produto,
         'category': categoria,
         'description': f'Oferta exclusiva no TikTok Shop',
-        'imageUrl': foto_url or 'https://via.placeholder.com/600x800',
+        'imageUrl': foto_url or '/placeholder.webp',
         'price': preco_float,
         'status': 'active',  # Status correto para aparecer no site
         'links': {
@@ -545,13 +619,15 @@ def run_listener():
     app.add_handler(CommandHandler("help", handle_help_command))
     app.add_handler(CommandHandler("start", handle_help_command))
 
-    # Método legado: responder à mensagem
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_reply))
+    # Mensagens de texto gerais (Pode ser encaminhado, texto puro ou reply)
+    # Se for uma reply "ID_DO_PRODUTO", o handle_forwarded_or_text_promo repassa pro handle_reply.
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_forwarded_or_text_promo))
     
     app.add_error_handler(error_handler)
 
-    # Inicia o polling
-    app.run_polling()
+    # Inicia o polling — drop_pending_updates garante que este listener
+    # assuma o controle mesmo se outro processo Bot() estava ativo antes
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     try:

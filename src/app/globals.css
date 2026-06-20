@@ -1,13 +1,23 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
-  /* Using a deep charcoal / Zinc-950 as the background */
-  --background: #09090b; 
-  --foreground: #fafafa;
+  /* Background: deep dark from mockup (#090a0f) */
+  --background: #090a0f; 
+  --foreground: #ffffff;
   
-  /* Electric Blue Accent */
-  --accent: #2563eb;
+  /* Accent Color: Vibrant Red (#ff334b) from mockup */
+  --accent: #ff334b;
   --accent-foreground: #ffffff;
+  
+  /* Mockup Palette */
+  --bg-card: #12141c;
+  --bg-card-hover: #181b26;
+  --text-secondary: #8e92a4;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(18, 20, 28, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
@@ -16,6 +26,22 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   
+  --color-card: var(--bg-card);
+  --color-card-hover: var(--bg-card-hover);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-custom: var(--border-color);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  
+  /* Store Colors */
+  --color-amazon: #ff9900;
+  --color-mercadolivre: #ffe600;
+  --color-shopee: #ff5722;
+  --color-aliexpress: #e62e04;
+  --color-tiktok: #00f2fe;
+  --color-kabum: #0060ff;
+  --color-magalu: #0086ff;
+  
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   
@@ -23,7 +49,7 @@
   --shadow-liquid: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 20px 40px -15px rgba(0, 0, 0, 0.3);
   --shadow-diffusion: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
   
-  /* Animation Spring Timing (Approximation for CSS, but we use Framer for real spring) */
+  /* Animation Shimmer */
   --animate-shimmer: shimmer 2s linear infinite;
 
   @keyframes shimmer {
@@ -43,10 +69,101 @@ body {
 
 /* Liquid Glass Utilities */
 .glass-panel {
-  background: rgba(24, 24, 27, 0.4);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Ambient light overlay decoration */
+.premium-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(18, 20, 28, 0.8) 0%, #090a0f 100%);
+  z-index: -1;
+  overflow: hidden;
+}
+
+.premium-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  transform: perspective(500px) rotateX(60deg) translateY(-100px) scale(3);
+  opacity: 0.3;
+  pointer-events: none;
+  animation: bgPulse 10s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+  0% { opacity: 0.2; transform: perspective(500px) rotateX(60deg) translateY(-100px) scale(3); }
+  100% { opacity: 0.4; transform: perspective(500px) rotateX(60deg) translateY(-120px) scale(3.2); }
+}
+
+/* 3D Premium Utilities */
+.text-3d {
+  background: linear-gradient(to bottom, #ffffff 0%, #a0a5ba 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-premium {
+  background: linear-gradient(135deg, #ff334b 0%, #ff7a8a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.btn-3d {
+  background: linear-gradient(135deg, #ff334b 0%, #e61932 100%);
+  box-shadow: 0 4px 14px 0 rgba(255, 51, 75, 0.39);
+  transform: translateY(0);
+  transition: all 0.2s ease;
+  color: white;
+  border: none;
+}
+
+.btn-3d:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 51, 75, 0.5);
+}
+
+.btn-3d:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(255, 51, 75, 0.4);
+}
+
+.glass-3d-card {
+  background: linear-gradient(145deg, rgba(30, 34, 45, 0.8) 0%, rgba(18, 20, 28, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 30px -10px rgba(0, 0, 0, 0.8),
+    0 4px 10px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, border 0.4s ease;
+}
+
+.glass-3d-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 24px -10px rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: var(--shadow-liquid);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Hide scrollbar but keep functionality */
@@ -59,3 +176,19 @@ body {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Mobile touch improvements */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth momentum scroll for horizontal scrolling containers */
+.scrollbar-hide {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area for bottom nav on iOS */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  }
+}
