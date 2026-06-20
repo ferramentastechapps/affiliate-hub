@@ -1,0 +1,12 @@
+{
+  "name": "whatsapp-engine",
+  "version": "1.0.0",
+  "description": "Integração do WhatsApp para afiliado hub",
+  "main": "engine.js",
+  "dependencies": {
+    "whatsapp-web.js": "^1.26.0",
+    "qrcode-terminal": "^0.12.0",
+    "express": "^4.21.2",
+    "dotenv": "^16.4.5"
+  }
+}

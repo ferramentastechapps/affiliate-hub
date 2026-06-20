@@ -63,6 +63,11 @@ echo "🏗️  Fazendo build do Next.js..."
 rm -rf .next
 npm run build
 
+echo "📦 Instalando dependências do WhatsApp..."
+cd ~/affiliate-hub/whatsapp
+npm install
+cd ~/affiliate-hub
+
 echo "🤖 Configurando bot..."
 cd bot
 sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=https://economizei.ftech-apps.com.br|g' ~/affiliate-hub/bot/.env
