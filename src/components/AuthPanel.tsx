@@ -117,6 +117,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const [confirm, setConfirm]     = useState("");
   
   const [isEmailEntered, setIsEmailEntered]   = useState(false);
+  const [isMobile, setIsMobile]               = useState(true);
 
   const pwStrength       = getPasswordStrength(password);
   const googleInit       = useRef(false);
@@ -129,6 +130,10 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     if (!isOpen) return;
     clearError();
     setInfoMessage(null);
+    
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
 
     const render = () => {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -171,7 +176,10 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
       }
     }, 150);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkMobile);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -257,21 +265,22 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             />
           </motion.div>
 
-          {/* ── Card ancorado na base, bordas arredondadas só no topo ── */}
+          {/* ── Card responsivo: bottom sheet no mobile, sidebar no desktop ── */}
           <motion.div
             role="dialog"
             aria-label="Autenticação"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={isMobile ? { y: "100%", x: 0 } : { x: "100%", y: 0 }}
+            animate={{ y: 0, x: 0 }}
+            exit={isMobile ? { y: "100%" } : { x: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
-            className="fixed bottom-0 left-0 right-0 z-[100] overflow-hidden"
+            className="fixed z-[100] overflow-hidden bottom-0 left-0 right-0 sm:top-0 sm:bottom-0 sm:left-auto sm:w-[420px]"
             style={{
               background: "linear-gradient(180deg, #111217 0%, #0d0e14 100%)",
-              borderRadius: "24px 24px 0 0",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 -20px 80px rgba(0,0,0,0.7)",
-              maxHeight: "92dvh",
+              borderRadius: isMobile ? "24px 24px 0 0" : "0",
+              borderTop: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
+              borderLeft: !isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
+              boxShadow: isMobile ? "0 -20px 80px rgba(0,0,0,0.7)" : "-20px 0 60px rgba(0,0,0,0.5)",
+              maxHeight: isMobile ? "92dvh" : "100dvh",
             }}
           >
             {/* Faixa vermelha no topo do card */}
@@ -280,16 +289,18 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
               style={{ background: "linear-gradient(90deg, #ff334b, #ff7a45, #ff334b)" }}
             />
 
-            {/* Handle drag indicator */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div
-                className="w-10 h-1 rounded-full"
-                style={{ background: "rgba(255,255,255,0.15)" }}
-              />
-            </div>
+            {/* Handle drag indicator (só mobile) */}
+            {isMobile && (
+              <div className="flex justify-center pt-3 pb-1">
+                <div
+                  className="w-10 h-1 rounded-full"
+                  style={{ background: "rgba(255,255,255,0.15)" }}
+                />
+              </div>
+            )}
 
             {/* Scrollable content */}
-            <div className="overflow-y-auto" style={{ maxHeight: "calc(92dvh - 24px)" }}>
+            <div className="overflow-y-auto" style={{ maxHeight: isMobile ? "calc(92dvh - 24px)" : "100dvh" }}>
 
               {/* Header */}
               <div className="px-6 pt-4 pb-5">
