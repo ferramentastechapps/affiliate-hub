@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Tag, Copy, Check } from "@phosphor-icons/react";
+import { X, Tag, CaretLeft, Copy, Check } from "@phosphor-icons/react";
 
 type Coupon = {
   id: string;
@@ -34,9 +34,9 @@ function getDomainFromPlatform(platform: string): string {
 
 export function CouponsModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<string>("Todos");
+  const [activePlatform, setActivePlatform] = useState<string | null>(null);
   const [allCoupons, setAllCoupons] = useState<Coupon[]>([]);
-  const [platforms, setPlatforms] = useState<{name: string, count: number}[]>([]);
+  const [platforms, setPlatforms] = useState<{name: string, count: number, coupons: Coupon[]}[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -64,7 +64,7 @@ export function CouponsModal() {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      fetchCoupons(); // Load data when opened
+      if (allCoupons.length === 0) fetchCoupons(); // Load data when opened
     } else {
       document.body.style.overflow = "unset";
     }
@@ -81,7 +81,7 @@ export function CouponsModal() {
         if (!Array.isArray(data)) return;
 
         const unique: Coupon[] = [];
-        const byPlatform: Record<string, number> = {};
+        const byPlatform: Record<string, { count: number, coupons: Coupon[] }> = {};
         
         for (const c of data) {
           let p = c.platform.toLowerCase().trim();
@@ -95,18 +95,20 @@ export function CouponsModal() {
           else if (p.includes('kabum')) p = 'KaBuM!';
           else p = c.platform;
 
-          // Replace with normalized
           const coupon = { ...c, platform: p };
-
           const upperCode = coupon.code.toUpperCase();
-          if (!unique.find(existing => existing.code.toUpperCase() === upperCode)) {
+          
+          if (!byPlatform[p]) byPlatform[p] = { count: 0, coupons: [] };
+
+          if (!byPlatform[p].coupons.find(existing => existing.code.toUpperCase() === upperCode)) {
             unique.push(coupon);
-            byPlatform[p] = (byPlatform[p] || 0) + 1;
+            byPlatform[p].coupons.push(coupon);
+            byPlatform[p].count++;
           }
         }
 
         const plats = Object.entries(byPlatform)
-          .map(([name, count]) => ({ name, count }))
+          .map(([name, d]) => ({ name, count: d.count, coupons: d.coupons }))
           .sort((a, b) => b.count - a.count);
 
         setAllCoupons(unique);
@@ -118,8 +120,7 @@ export function CouponsModal() {
 
   const handleClose = () => {
     setIsOpen(false);
-    // Reset to "Todos" only if you want it to forget the state
-    // setActiveFilter("Todos"); 
+    setActivePlatform(null);
     if (window.location.hash === "#cupons") {
       window.history.pushState("", document.title, window.location.pathname + window.location.search);
     }
@@ -131,9 +132,7 @@ export function CouponsModal() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const displayedCoupons = activeFilter === "Todos" 
-    ? allCoupons 
-    : allCoupons.filter(c => c.platform === activeFilter);
+  const activePlatformData = platforms.find((p) => p.name === activePlatform);
 
   return (
     <AnimatePresence>
@@ -171,115 +170,154 @@ export function CouponsModal() {
               <X size={20} weight="bold" />
             </button>
 
-            <div className="flex flex-col h-full">
-              {/* Header Fixado */}
-              <div className="p-6 sm:p-8 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-orange-500/20">
-                    <Tag size={24} weight="fill" className="text-accent" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-1">
-                      Cupons de Desconto
-                    </h2>
-                    <p className="text-zinc-400 text-sm">
-                      Economize nas melhores lojas com nossos cupons exclusivos
-                    </p>
-                  </div>
-                </div>
+            <div className="overflow-y-auto hidden-scrollbar flex-1 p-6 sm:p-8 pb-10">
+              <AnimatePresence mode="wait">
+                {!activePlatform ? (
+                  <motion.div
+                    key="platforms-grid"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col h-full"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-accent/20 to-orange-500/20">
+                        <Tag size={24} weight="fill" className="text-accent" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-1">
+                          Cupons de Desconto
+                        </h2>
+                        <p className="text-zinc-400 text-sm">
+                          Escolha uma loja para ver os cupons disponíveis
+                        </p>
+                      </div>
+                    </div>
 
-                {/* Chips de Lojas (Filtro) */}
-                {!loading && platforms.length > 0 && (
-                  <div className="flex items-center gap-2 overflow-x-auto hidden-scrollbar pb-2 pt-1 -mx-2 px-2 mask-linear-fade">
-                    <button
-                      onClick={() => setActiveFilter("Todos")}
-                      className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all border ${
-                        activeFilter === "Todos"
-                          ? "bg-accent/20 border-accent/40 text-accent"
-                          : "bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10"
-                      }`}
-                    >
-                      Todos <span className="ml-1 opacity-70">({allCoupons.length})</span>
-                    </button>
-                    {platforms.map(p => (
-                      <button
-                        key={p.name}
-                        onClick={() => setActiveFilter(p.name)}
-                        className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all border ${
-                          activeFilter === p.name
-                            ? "bg-white/15 border-white/30 text-white"
-                            : "bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10"
-                        }`}
-                      >
-                        <img 
-                          src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(p.name)}&sz=64`} 
-                          alt="" 
-                          className="w-4 h-4 rounded-full bg-white p-[1px] object-contain mix-blend-multiply"
-                        />
-                        <span className="capitalize">{p.name}</span>
-                        <span className="opacity-70">({p.count})</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    {/* Loading */}
+                    {loading && (
+                      <div className="flex flex-col items-center justify-center py-12 gap-4">
+                        <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
+                        <span className="text-zinc-400 text-sm font-medium">Buscando lojas com cupons...</span>
+                      </div>
+                    )}
 
-              {/* Lista Scrollável de Cupons */}
-              <div className="overflow-y-auto hidden-scrollbar flex-1 p-6 sm:p-8">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-4">
-                    <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
-                    <span className="text-zinc-400 text-sm font-medium">Carregando cupons...</span>
-                  </div>
-                ) : displayedCoupons.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {displayedCoupons.map((coupon) => (
-                      <div key={coupon.id} className="relative bg-[#111] border border-white/5 rounded-[1.5rem] p-4 sm:p-5 flex flex-col gap-3 group hover:border-accent/30 transition-colors">
-                        
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner shrink-0">
-                            <img 
-                              src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(coupon.platform)}&sz=64`} 
-                              alt="logo" 
-                              className="w-full h-full object-contain mix-blend-multiply" 
-                              onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
-                            />
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-zinc-400 capitalize">{coupon.platform}</span>
-                            <h4 className="font-bold text-base sm:text-lg text-white leading-tight">{coupon.discount}</h4>
-                          </div>
-                        </div>
-
-                        <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mt-1">{coupon.description}</p>
-                        
-                        <div className="mt-3 flex items-center bg-black rounded-xl p-1 border border-white/5">
-                          <div className="flex-1 text-center font-mono font-bold tracking-widest text-zinc-300 pt-[2px] text-sm sm:text-base break-all px-2">
-                            {coupon.code}
-                          </div>
-                          <button 
-                            onClick={() => copyToClipboard(coupon.code)}
-                            className={`px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 font-bold transition-all text-xs sm:text-sm min-h-[40px] shrink-0 ${
-                              copied === coupon.code 
-                                ? "bg-emerald-500 text-white" 
-                                : "bg-white text-black hover:bg-zinc-200"
-                            }`}
+                    {/* Grid de Lojas (3 colunas) */}
+                    {!loading && platforms.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4">
+                        {platforms.map(p => (
+                          <button
+                            key={p.name}
+                            onClick={() => setActivePlatform(p.name)}
+                            className="flex flex-col items-center justify-center p-4 rounded-[20px] bg-black/20 border border-white/10 hover:bg-white/10 hover:border-accent/40 transition-all duration-300 group gap-3"
                           >
-                            {copied === coupon.code ? <Check size={16} weight="bold" /> : <Copy size={16} weight="bold" />}
-                            <span className="hidden sm:inline">{copied === coupon.code ? "Copiado!" : "Copiar"}</span>
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white flex items-center justify-center p-2 sm:p-3 shadow-sm group-hover:scale-110 transition-transform">
+                              <img 
+                                src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(p.name)}&sz=64`} 
+                                alt={p.name} 
+                                className="w-full h-full object-contain mix-blend-multiply"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            </div>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-xs sm:text-sm font-bold text-zinc-300 group-hover:text-white capitalize text-center leading-tight">
+                                {p.name}
+                              </span>
+                              <span className="text-[10px] sm:text-[11px] text-accent font-semibold px-2 py-0.5 rounded-full bg-accent/10">
+                                {p.count} {p.count === 1 ? 'cupom' : 'cupons'}
+                              </span>
+                            </div>
                           </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {!loading && platforms.length === 0 && (
+                      <div className="text-center py-12 text-zinc-500 border border-dashed border-white/5 rounded-2xl">
+                        <Tag size={48} className="text-zinc-600 mb-2 mx-auto" weight="duotone" />
+                        <h3 className="text-lg font-bold text-white mb-1">Nenhum cupom no momento</h3>
+                        <p className="text-sm">Volte mais tarde para novas ofertas!</p>
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="coupons-list"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col h-full"
+                  >
+                    {/* Back Button & Header */}
+                    <div className="flex items-center gap-4 mb-8">
+                      <button
+                        onClick={() => setActivePlatform(null)}
+                        className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-zinc-300 hover:text-white border border-white/5 flex-shrink-0"
+                      >
+                        <CaretLeft size={20} weight="bold" />
+                      </button>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner shrink-0 hidden sm:flex">
+                          <img 
+                            src={`https://www.google.com/s2/favicons?domain=${getDomainFromPlatform(activePlatform)}&sz=64`} 
+                            alt="logo" 
+                            className="w-full h-full object-contain mix-blend-multiply" 
+                            onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
+                          />
+                        </div>
+                        <div>
+                          <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 capitalize truncate">
+                            {activePlatform}
+                          </h3>
+                          <p className="text-zinc-400 text-xs sm:text-sm">
+                            {activePlatformData?.count || 0} cupons disponíveis
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-zinc-500 border border-dashed border-white/5 rounded-2xl">
-                    <Tag size={48} className="text-zinc-600 mb-2 mx-auto" weight="duotone" />
-                    <h3 className="text-lg font-bold text-white mb-1">Nenhum cupom encontrado</h3>
-                    <p className="text-sm">Os cupons desta loja podem ter esgotado.</p>
-                  </div>
+                    </div>
+
+                    {/* Coupons List */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {activePlatformData?.coupons.map(coupon => (
+                        <div key={coupon.id} className="relative bg-[#111] border border-white/5 rounded-[1.5rem] p-4 sm:p-5 flex flex-col gap-4 group hover:border-accent/30 transition-colors">
+                          {/* Pontilhado lateral de ingresso */}
+                          <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-zinc-900 rounded-full border-r border-white/5 hidden sm:block" />
+                          <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-zinc-900 rounded-full border-l border-white/5 hidden sm:block" />
+
+                          <div className="sm:px-4">
+                            <div className="flex justify-between items-start gap-4 mb-2">
+                              <div>
+                                <h4 className="font-bold text-base sm:text-lg text-white leading-tight">{coupon.discount}</h4>
+                                <p className="text-xs sm:text-sm text-zinc-400 mt-1.5 leading-relaxed">{coupon.description}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-5 flex items-center bg-black rounded-xl p-1 border border-white/5">
+                              <div className="flex-1 text-center font-mono font-bold tracking-widest text-zinc-300 pt-[2px] text-sm sm:text-base break-all px-2">
+                                {coupon.code}
+                              </div>
+                              <button 
+                                onClick={() => copyToClipboard(coupon.code)}
+                                className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg flex items-center justify-center gap-2 font-bold transition-all text-sm min-h-[44px] shrink-0 ${
+                                  copied === coupon.code 
+                                    ? "bg-emerald-500 text-white" 
+                                    : "bg-white text-black hover:bg-zinc-200"
+                                }`}
+                              >
+                                {copied === coupon.code ? <Check size={18} weight="bold" /> : <Copy size={18} weight="bold" />}
+                                <span className="hidden sm:inline">{copied === coupon.code ? "Copiado!" : "Copiar"}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             </div>
           </motion.div>
         </motion.div>
