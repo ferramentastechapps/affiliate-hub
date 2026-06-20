@@ -71,8 +71,7 @@ export function MobileBottomNav() {
 
             <button 
               onClick={() => {
-                window.dispatchEvent(new CustomEvent("search-change", { detail: { query: "CUPOM" } }));
-                scrollTo('ofertas');
+                window.dispatchEvent(new CustomEvent("open-coupons"));
               }} 
               className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-accent min-h-[56px] py-2"
               aria-label="Ir para cupons"
