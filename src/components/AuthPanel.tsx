@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  X,
   Eye,
   EyeSlash,
   EnvelopeSimple,
   LockKey,
   User,
-  ShieldCheck,
   ArrowRight,
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +19,7 @@ interface AuthPanelProps {
 
 type Mode = "login" | "signup";
 
-// ─── Password strength ────────────────────────────────────────────────────────
+// ─── Password strength ─────────────────────────────────────────────────────────
 function getPasswordStrength(pw: string) {
   if (!pw) return null;
   let score = 0;
@@ -40,7 +38,7 @@ function getPasswordStrength(pw: string) {
   return { score, ...levels[Math.max(Math.min(score, 5) - 1, 0)] };
 }
 
-// ─── Google SVG ───────────────────────────────────────────────────────────────
+// ─── Google SVG ────────────────────────────────────────────────────────────────
 function GoogleIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
@@ -52,7 +50,7 @@ function GoogleIcon() {
   );
 }
 
-// ─── Input field ──────────────────────────────────────────────────────────────
+// ─── Input field ───────────────────────────────────────────────────────────────
 function Field({
   id, label, type = "text", value, onChange, placeholder, error,
   icon, right, autoComplete,
@@ -100,7 +98,7 @@ function Field({
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ──────────────────────────────────────────────────────────────────────
 export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const { login, signup, loginWithGoogle, error, clearError } = useAuth();
 
@@ -122,7 +120,8 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const clearField       = (k: string) => setErrors((p) => ({ ...p, [k]: "" }));
   const validateEmail    = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  // ── Google SDK ──────────────────────────────────────────────────────────────
+  // ── Google SDK ───────────────────────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isOpen) return;
     clearError();
@@ -139,7 +138,6 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             auto_select: false,
             callback: async (resp: any) => {
               setIsGoogleLoading(true);
-              clearError();
               const ok = await loginWithGoogle(resp.credential);
               setIsGoogleLoading(false);
               if (ok) onClose();
@@ -171,9 +169,11 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     }, 150);
 
     return () => clearTimeout(timer);
+  // Only re-run when isOpen changes — intentionally omitting stable callbacks
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError(); setInfoMessage(null);
@@ -209,63 +209,79 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
     setShowConfirm(false);
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────────────────
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* ── Fullscreen backdrop with background image ── */}
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             className="fixed inset-0 z-50"
-            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
-            onClick={onClose}
-          />
-
-          {/* Panel */}
-          <motion.aside
-            role="dialog" aria-label="Autenticação"
-            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-50 flex flex-col overflow-hidden"
             style={{
-              background: "linear-gradient(180deg, #0d0e14 0%, #0a0b10 100%)",
-              borderLeft: "1px solid rgba(255,255,255,0.06)",
-              boxShadow: "-20px 0 60px rgba(0,0,0,0.5)",
+              backgroundImage: "url('/fundo-login.webp')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+            onClick={onClose}
+          >
+            {/* Dark overlay sobre a imagem */}
+            <div
+              className="absolute inset-0"
+              style={{ background: "rgba(0,0,0,0.45)" }}
+            />
+          </motion.div>
+
+          {/* ── Card ancorado na base, bordas arredondadas só no topo ── */}
+          <motion.div
+            role="dialog"
+            aria-label="Autenticação"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            className="fixed bottom-0 left-0 right-0 z-50 overflow-hidden"
+            style={{
+              background: "linear-gradient(180deg, #111217 0%, #0d0e14 100%)",
+              borderRadius: "24px 24px 0 0",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 -20px 80px rgba(0,0,0,0.7)",
+              maxHeight: "92dvh",
             }}
           >
-            {/* Top accent */}
-            <div className="absolute top-0 left-0 right-0 h-[2px]"
-              style={{ background: "linear-gradient(90deg, #ff334b, #ff7a45, #ff334b)" }} />
-            <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
-              style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(255,51,75,0.08) 0%, transparent 70%)" }} />
+            {/* Faixa vermelha no topo do card */}
+            <div
+              className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{ background: "linear-gradient(90deg, #ff334b, #ff7a45, #ff334b)" }}
+            />
 
-            <div className="flex flex-col h-full overflow-y-auto scrollbar-hide">
+            {/* Handle drag indicator */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div
+                className="w-10 h-1 rounded-full"
+                style={{ background: "rgba(255,255,255,0.15)" }}
+              />
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto" style={{ maxHeight: "calc(92dvh - 24px)" }}>
 
               {/* Header */}
-              <header className="flex items-center justify-between px-6 pt-7 pb-5 relative">
-                <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-11 w-auto object-contain" />
-                <motion.button
-                  onClick={onClose} aria-label="Fechar"
-                  whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 400 }}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-                >
-                  <X size={15} weight="bold" />
-                </motion.button>
-              </header>
-
-              {/* Welcome */}
-              <div className="px-6 pb-6">
+              <div className="px-6 pt-4 pb-5">
                 <AnimatePresence mode="wait">
-                  <motion.div key={mode}
-                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
+                  <motion.div
+                    key={mode}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.15 }}
                   >
                     <h2 className="text-[22px] font-extrabold text-white leading-tight">
-                      {mode === "login" ? "Bem‑vindo de volta! 👋" : "Crie sua conta grátis ✨"}
+                      Faça login ou cadastre-se
                     </h2>
                     <p className="text-zinc-500 text-sm mt-1">
                       {mode === "login"
@@ -277,13 +293,14 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
               </div>
 
               {/* Content */}
-              <div className="flex-1 px-6 space-y-5">
+              <div className="px-6 pb-8 space-y-5">
 
                 {/* Alerts */}
                 <AnimatePresence>
                   {error && (
                     <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.97 }}
                       className="flex items-start gap-3 p-4 rounded-xl"
                       style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
@@ -308,26 +325,28 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                 {/* ── Google button ── */}
                 <div className="space-y-3">
                   <div className="relative h-[50px] rounded-xl overflow-hidden">
-                    {/* Visible styled layer */}
                     <div className="absolute inset-0 flex items-center justify-center gap-3 bg-white rounded-xl text-gray-800 font-bold text-sm pointer-events-none select-none z-0">
                       <GoogleIcon />
                       {isGoogleLoading ? "Aguarde..." : "Continuar com Google"}
                     </div>
-                    {/* Loading */}
                     {isGoogleLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl z-20">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                          className="w-5 h-5 border-2 border-gray-200 border-t-gray-700 rounded-full" />
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                          className="w-5 h-5 border-2 border-gray-200 border-t-gray-700 rounded-full"
+                        />
                       </div>
                     )}
-                    {/* Invisible Google SDK overlay — intercepta cliques */}
                     {!isGoogleLoading && (
-                      <div id="google-ol-main" className="absolute inset-0 z-10 overflow-hidden"
-                        style={{ opacity: 0.002, cursor: "pointer" }} />
+                      <div
+                        id="google-ol-main"
+                        className="absolute inset-0 z-10 overflow-hidden"
+                        style={{ opacity: 0.002, cursor: "pointer" }}
+                      />
                     )}
                   </div>
 
-                  {/* Disclaimer — exibido aqui, dispensa checkbox de termos */}
                   <p className="text-[11px] text-zinc-600 text-center leading-relaxed px-2">
                     Ao continuar, você concorda com nossos{" "}
                     <button type="button" className="text-zinc-400 hover:text-accent underline underline-offset-2 transition-colors">
@@ -352,7 +371,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
-                  {/* Nome — só no signup, animado */}
+                  {/* Nome — só no signup */}
                   <AnimatePresence>
                     {mode === "signup" && (
                       <motion.div
@@ -399,7 +418,6 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                         </button>
                       }
                     />
-                    {/* Força da senha — só no signup */}
                     <AnimatePresence>
                       {mode === "signup" && password && pwStrength && (
                         <motion.div
@@ -422,7 +440,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                     </AnimatePresence>
                   </div>
 
-                  {/* Confirmar senha — só no signup, animado */}
+                  {/* Confirmar senha — só no signup */}
                   <AnimatePresence>
                     {mode === "signup" && (
                       <motion.div
@@ -529,21 +547,10 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
                     )}
                   </AnimatePresence>
                 </div>
+
               </div>
-
-              {/* Security footer */}
-              <footer className="px-6 py-5">
-                <div className="flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl"
-                  style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <ShieldCheck size={14} className="text-zinc-500 flex-shrink-0" />
-                  <span className="text-[11px] text-zinc-600">
-                    Protegido com criptografia SSL 256-bit · Seus dados estão seguros
-                  </span>
-                </div>
-              </footer>
-
             </div>
-          </motion.aside>
+          </motion.div>
         </>
       )}
     </AnimatePresence>
