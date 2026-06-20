@@ -11,7 +11,7 @@ import {
   Sparkle,
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "./AuthProvider";
 
 interface AuthPanelProps {
@@ -136,38 +136,46 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const pwStrength = getPasswordStrength(signupPassword);
 
   // ── Google SDK init ─────────────────────────────────────────────────────────
+  // initialize() só pode ser chamado UMA vez por sessão — usamos ref para garantir isso
+  const googleInitialized = useRef(false);
+
   useEffect(() => {
     if (!isOpen) return;
     clearError();
     setInfoMessage(null);
 
-    const init = () => {
+    const renderButton = () => {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       const google   = (window as any).google;
-      if (!clientId || !google) return false;
-      try {
-        google.accounts.id.initialize({
-          client_id: clientId,
-          auto_select: false,
-          callback: async (resp: any) => {
-            setIsGoogleLoading(true);
-            clearError();
-            const ok = await loginWithGoogle(resp.credential);
-            setIsGoogleLoading(false);
-            if (ok) onClose();
-          },
-        });
+      if (!clientId || !google?.accounts?.id) return false;
 
-        // Render in invisible overlays (opacity ≈0 but fully interactive)
-        (["google-ol-login", "google-ol-signup"] as const).forEach((id) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          google.accounts.id.renderButton(el, {
-            theme: "filled_black",
-            size: "large",
-            width: el.parentElement?.clientWidth ?? 440,
-            shape: "rectangular",
+      try {
+        // Só inicializa uma vez durante toda a sessão da página
+        if (!googleInitialized.current) {
+          google.accounts.id.initialize({
+            client_id: clientId,
+            auto_select: false,
+            callback: async (resp: any) => {
+              setIsGoogleLoading(true);
+              clearError();
+              const ok = await loginWithGoogle(resp.credential);
+              setIsGoogleLoading(false);
+              if (ok) onClose();
+            },
           });
+          googleInitialized.current = true;
+        }
+
+        // Renderiza apenas no container do tab ativo (o outro não está no DOM)
+        const overlayId = activeTab === "login" ? "google-ol-login" : "google-ol-signup";
+        const el = document.getElementById(overlayId);
+        if (!el) return false;
+
+        google.accounts.id.renderButton(el, {
+          theme: "filled_black",
+          size: "large",
+          width: el.parentElement?.clientWidth ?? 440,
+          shape: "rectangular",
         });
 
         return true;
@@ -177,10 +185,19 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
       }
     };
 
-    if (!init()) {
-      const t = setInterval(() => { if (init()) clearInterval(t); }, 300);
-      return () => clearInterval(t);
-    }
+    // Aguarda 180ms para a animação do AnimatePresence terminar antes de buscar o DOM
+    const timer = setTimeout(() => {
+      if (!renderButton()) {
+        const interval = setInterval(() => {
+          if (renderButton()) clearInterval(interval);
+        }, 300);
+        // Limpa após 5s para evitar loop infinito
+        const cleanup = setTimeout(() => clearInterval(interval), 5000);
+        return () => { clearInterval(interval); clearTimeout(cleanup); };
+      }
+    }, 180);
+
+    return () => clearTimeout(timer);
   }, [isOpen, activeTab]);
 
   // ── Validation helpers ──────────────────────────────────────────────────────
