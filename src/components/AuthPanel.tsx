@@ -279,11 +279,7 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
             className="fixed z-[100] overflow-hidden bottom-0 left-0 right-0 sm:top-0 sm:bottom-0 sm:left-auto sm:w-[420px]"
             style={{
-              background: isMobile 
-                ? "linear-gradient(180deg, #111217 0%, #0d0e14 100%)" 
-                : "linear-gradient(rgba(17,18,23,0.7), rgba(13,14,20,0.85)), url('/fundo-login.webp')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
+              background: "linear-gradient(180deg, #111217 0%, #0d0e14 100%)",
               borderRadius: isMobile ? "24px 24px 0 0" : "0",
               borderTop: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
               borderLeft: !isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
