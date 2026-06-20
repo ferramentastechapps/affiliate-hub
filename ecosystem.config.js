@@ -17,6 +17,12 @@ module.exports = {
       script: './bot/main.py',
       interpreter: 'python3',
       watch: false,
+    },
+    {
+      name: 'whatsapp-engine',
+      script: './whatsapp/engine.js',
+      interpreter: 'node',
+      watch: false,
     }
   ]
 };
