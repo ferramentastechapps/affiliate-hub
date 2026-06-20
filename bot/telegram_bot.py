@@ -286,11 +286,9 @@ class TelegramNotifier:
             if cupom_extraido.upper() not in _invalidos:
                 cupom_msg = f"\n🎟️ <b>CUPOM:</b> <code>{cupom_extraido}</code>"
 
-<<<<<<< HEAD
         # Score visual
         score_visual = "⭐" * min(5, score // 20)
-        
-=======
+
         # Verificar se existe configuração de afiliados para a plataforma do produto
         tem_autogeracao = False
         mapeamento_envs = {
@@ -319,8 +317,6 @@ class TelegramNotifier:
             aprovar_msg = f"<code>/aprovar {produto_id}</code>\n💡 <i>(Link de afiliado será gerado automaticamente!)</i>"
         else:
             aprovar_msg = f"<code>/aprovar {produto_id} [SEU_LINK]</code>\n⚠️ <i>(Configurações de afiliado ausentes no .env. Envie o link manualmente ou configure o .env.)</i>"
-
->>>>>>> 86ed893763b702676e2bb06f2956328cfbf172a6
         mensagem = f"""
 {emoji_qualidade}
 ⚠️ <b>AGUARDANDO APROVAÇÃO</b>
