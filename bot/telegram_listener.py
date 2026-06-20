@@ -216,7 +216,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     # Se for uma resposta a uma mensagem (o handle_reply cuida disso)
     if update.message.reply_to_message:
         reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
-        if "ID_DO_PRODUTO:" in reply_text:
+        if "ID_DO_PRODUTO:" in reply_text or "🆔 ID:" in reply_text:
             # Deixa o handle_reply normal processar
             return await handle_reply(update, context)
             
@@ -236,8 +236,17 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     
     try:
         if not OPENROUTER_API_KEY:
-            await msg_status.edit_text("❌ OPENROUTER_API_KEY não configurada. Não é possível extrair os dados da promoção.")
+            await msg_status.edit_text(
+                "❌ <b>OPENROUTER_API_KEY não configurada</b>\n\n"
+                "Para processar produtos encaminhados, você precisa configurar a chave da API OpenRouter no arquivo .env:\n\n"
+                "<code>OPENROUTER_API_KEY=sk-or-v1-...</code>\n\n"
+                "🔗 Obtenha sua chave em: https://openrouter.ai/keys",
+                parse_mode='HTML'
+            )
             return
+
+        print(f"🤖 Enviando texto para OpenRouter AI extrair dados...")
+        print(f"   Texto: {text[:200]}...")
 
         prompt = (
             f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
@@ -270,13 +279,17 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 timeout=30
             )
             if response.status_code != 200:
-                raise Exception(f"OpenRouter API error: {response.text}")
+                raise Exception(f"OpenRouter API error: {response.status_code} - {response.text}")
             return response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
 
         response_text = await loop.run_in_executor(None, call_openrouter)
         
+        print(f"✅ Resposta da AI recebida: {response_text[:200]}...")
+        
         texto_limpo = response_text.replace('```json', '').replace('```', '').strip()
         dados = json.loads(texto_limpo)
+        
+        print(f"📦 Dados extraídos: {dados}")
         
         nome = dados.get('name') or 'Produto Encontrado'
         preco = dados.get('price')
@@ -284,16 +297,30 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         cupom = dados.get('coupon')
         
         if not link:
-            await msg_status.edit_text("❌ Não consegui extrair um link válido dessa mensagem.")
+            await msg_status.edit_text(
+                "❌ <b>Link não encontrado</b>\n\n"
+                "Não consegui extrair um link válido dessa mensagem.\n\n"
+                "💡 Certifique-se de que a mensagem contém um link de produto válido.",
+                parse_mode='HTML'
+            )
             return
+            
+        await msg_status.edit_text("⏳ Buscando mais informações sobre o produto...")
             
         # Tentar raspar os dados da página se faltar nome, preço ou imagem (quando não houver foto enviada)
         scraped_data = {}
         try:
+            print(f"🔍 Tentando fazer scraping do link: {link}")
             scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link}, timeout=60)
             if scrape_resp.status_code == 200:
                 scraped_data = scrape_resp.json()
-                print(f"🔍 Scraped fallback: {scraped_data}")
+                print(f"✅ Scraped fallback: {scraped_data}")
+            else:
+                print(f"⚠️ Scraper retornou status {scrape_resp.status_code}")
+        except requests.exceptions.Timeout:
+            print(f"⚠️ Timeout no scraper de fallback (60s)")
+        except requests.exceptions.ConnectionError:
+            print(f"⚠️ Erro de conexão no scraper - verifique se o Next.js está rodando na porta 3005")
         except Exception as e:
             print(f"⚠️ Erro no scraper de fallback: {e}")
 
@@ -302,14 +329,18 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         if update.message.photo:
             foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
             foto_url = foto_file.file_path
+            print(f"📸 Foto da mensagem capturada: {foto_url}")
         elif scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
             foto_url = scraped_data.get('imageUrl')
+            print(f"📸 Foto do scraper: {foto_url}")
 
         # Se o Gemini não achou nome ou preço, usa o do scraper
         if nome == 'Produto Encontrado' and scraped_data.get('name'):
             nome = scraped_data.get('name')
+            print(f"📝 Nome atualizado do scraper: {nome}")
         if not preco and scraped_data.get('price'):
             preco = scraped_data.get('price')
+            print(f"💰 Preço atualizado do scraper: R$ {preco}")
             
         # Determinar categoria
         from config import CATEGORY_KEYWORDS
@@ -319,12 +350,16 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             if any(k in nome_lower for k in keywords):
                 categoria = cat
                 break
+        
+        print(f"📂 Categoria detectada: {categoria}")
                 
         platform = infer_platform_from_url(link)
+        print(f"🏪 Plataforma detectada: {platform}")
         
         descricao = f"Oferta encaminhada de grupos"
         if cupom:
             descricao += f"\n🎟️ CUPOM: {cupom}"
+            print(f"🎟️ Cupom detectado: {cupom}")
             
         produto_data = {
             'name': nome,
@@ -339,38 +374,80 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             'storeName': platform.capitalize()
         }
         
-        print(f"📦 Enviando produto encaminhado: {produto_data}")
+        print(f"📦 Enviando produto encaminhado para API: {produto_data}")
         resultado = api.adicionar_produto(produto_data)
         
         if resultado and resultado.get('success'):
             produto_id = resultado.get('product', {}).get('id', 'N/A')
             produto_data['id'] = produto_id
             
+            print(f"✅ Produto adicionado com sucesso! ID: {produto_id}")
+            
             # Notifica os administradores para aprovação usando o notifier padrão
             try:
                 notifier = TelegramNotifier()
                 await notifier.enviar_produto(produto_data)
+                print(f"📱 Notificação de aprovação enviada!")
             except Exception as e:
                 print(f"⚠️ Erro ao enviar notificação de aprovação: {e}")
                 
             await msg_status.edit_text(
                 f"✅ <b>Oferta capturada com sucesso!</b>\n\n"
-                f"📦 {nome}\n"
-                f"💰 Preço: R$ {preco if preco else 'N/A'}\n\n"
-                f"O produto foi enviado para o sistema como <b>Pendente</b>.\n"
-                f"<i>A notificação de aprovação foi enviada!</i>",
+                f"📦 {nome[:100]}\n"
+                f"💰 Preço: R$ {preco if preco else 'N/A'}\n"
+                f"📂 Categoria: {categoria}\n"
+                f"🏪 Plataforma: {platform.capitalize()}\n\n"
+                f"🆔 ID: <code>{produto_id}</code>\n\n"
+                f"O produto foi enviado como <b>Pendente</b> para aprovação.\n"
+                f"Use <code>/aprovar {produto_id}</code> para publicar!",
                 parse_mode='HTML'
             )
         else:
             erro = resultado.get('error', 'Erro desconhecido') if resultado else "Sem resposta da API"
-            await msg_status.edit_text(f"❌ Falha ao salvar a promoção: {erro}")
+            print(f"❌ Falha ao salvar produto: {erro}")
+            await msg_status.edit_text(
+                f"❌ <b>Falha ao salvar a promoção</b>\n\n"
+                f"Erro: {erro}\n\n"
+                f"💡 Verifique se o servidor Next.js está rodando e a API está acessível.",
+                parse_mode='HTML'
+            )
             
-    except json.JSONDecodeError:
-        print(f"❌ Erro de JSON ao processar mensagem encaminhada")
-        await msg_status.edit_text("❌ Erro ao extrair dados. Tente formatar a mensagem de outra forma.")
+    except json.JSONDecodeError as e:
+        print(f"❌ Erro de JSON ao processar mensagem encaminhada: {e}")
+        print(f"   Resposta recebida: {response_text if 'response_text' in locals() else 'N/A'}")
+        await msg_status.edit_text(
+            "❌ <b>Erro ao processar resposta da AI</b>\n\n"
+            "A resposta da inteligência artificial não está em formato JSON válido.\n\n"
+            "💡 Tente reformatar a mensagem ou enviar apenas o link do produto.",
+            parse_mode='HTML'
+        )
+    except requests.exceptions.Timeout:
+        print(f"❌ Timeout ao chamar OpenRouter API")
+        await msg_status.edit_text(
+            "❌ <b>Timeout ao processar</b>\n\n"
+            "A API demorou muito para responder (>30s).\n\n"
+            "💡 Tente novamente em alguns instantes.",
+            parse_mode='HTML'
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Erro de rede ao chamar OpenRouter API: {e}")
+        await msg_status.edit_text(
+            "❌ <b>Erro de conexão com a AI</b>\n\n"
+            f"Não foi possível conectar com o OpenRouter.\n\n"
+            f"Erro: {str(e)[:100]}",
+            parse_mode='HTML'
+        )
     except Exception as e:
-        print(f"❌ Erro ao processar mensagem encaminhada: {e}")
-        await msg_status.edit_text("❌ Não consegui entender essa mensagem ou houve um erro interno.")
+        print(f"❌ Erro inesperado ao processar mensagem encaminhada: {e}")
+        import traceback
+        traceback.print_exc()
+        await msg_status.edit_text(
+            "❌ <b>Erro inesperado</b>\n\n"
+            f"Ocorreu um erro ao processar a mensagem.\n\n"
+            f"Erro: {str(e)[:150]}\n\n"
+            "💡 Verifique os logs do bot para mais detalhes.",
+            parse_mode='HTML'
+        )
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -385,8 +462,10 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not original_text:
         return
         
-    # Tenta achar o ID do produto na mensagem que está sendo respondida
+    # Tenta achar o ID do produto na mensagem que está sendo respondida (ambos formatos)
     match = re.search(r'ID_DO_PRODUTO:\s*([a-zA-Z0-9_-]+)', original_text)
+    if not match:
+        match = re.search(r'🆔\s*ID:\s*([a-zA-Z0-9_-]+)', original_text)
     
     if not match:
         return
