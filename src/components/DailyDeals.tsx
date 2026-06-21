@@ -125,9 +125,26 @@ export function DailyDeals() {
 
   useEffect(() => {
     fetchProducts();
-    // Refresh a cada 5 minutos silenciosamente (não passamos setLoading(true) aqui mas não tem como diferenciar agora, tudo bem)
-    const interval = setInterval(fetchProducts, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    
+    // Refresh a cada 5 minutos silenciosamente
+    const interval = setInterval(() => fetchProducts(true), 5 * 60 * 1000);
+    
+    // Refresh quando o usuário volta pro app (foco ou visibilidade)
+    const handleFocus = () => fetchProducts(true);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProducts(true);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [filterType]);
 
   // Reset pagination when filters change
@@ -148,9 +165,11 @@ export function DailyDeals() {
     };
   }, []);
 
-  async function fetchProducts() {
+  async function fetchProducts(silent = false) {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const res = await fetch(`/api/products?filter=${filterType}&_t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       
