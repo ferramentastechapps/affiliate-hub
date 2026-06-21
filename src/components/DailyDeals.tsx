@@ -145,7 +145,7 @@ export function DailyDeals() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [filterType]);
+  }, [filterType, user?.id]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -170,7 +170,8 @@ export function DailyDeals() {
       if (!silent) {
         setLoading(true);
       }
-      const res = await fetch(`/api/products?filter=${filterType}&_t=${Date.now()}`, { cache: "no-store" });
+      const userParam = user?.id ? `&userId=${user.id}` : '';
+      const res = await fetch(`/api/products?filter=${filterType}${userParam}&_t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       
       if (data && data.length > 0) {
@@ -185,6 +186,7 @@ export function DailyDeals() {
           description: p.description,
           coupons: p.coupons || [],
           votes: p.votes || [],
+          alerts: p.alerts || [],
           _count: p._count || { likes: 0, dislikes: 0, comments: 0 },
           links: {
             amazon: p.links?.amazon,
@@ -202,7 +204,9 @@ export function DailyDeals() {
     } catch (error) {
       console.error("Erro ao buscar promoções:", error);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }
 
@@ -230,10 +234,10 @@ export function DailyDeals() {
   filteredProducts = [...filteredProducts].sort((a, b) => {
     switch (filterType) {
       case 'alertas':
-        // Produtos com cupons primeiro
-        const aCoupons = (a.coupons?.length || 0);
-        const bCoupons = (b.coupons?.length || 0);
-        if (aCoupons !== bCoupons) return bCoupons - aCoupons;
+        // Produtos alertados pelo usuário vêm primeiro
+        const aAlert = a.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
+        const bAlert = b.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
+        if (aAlert !== bAlert) return bAlert - aAlert;
         return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       
       case 'destaques':
