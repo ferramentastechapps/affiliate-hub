@@ -268,13 +268,13 @@ export function ProductDetail({ product }: { product: Product }) {
           {/* Details Section */}
           <div className="p-6 md:p-8 lg:p-10 flex flex-col w-full md:w-7/12">
             <span className="text-sm font-bold text-accent uppercase tracking-widest bg-accent/10 w-fit px-3 py-1 rounded-full">{product.category}</span>
-            <h1 className="text-2xl md:text-3xl tracking-tight text-white font-medium mt-4 mb-6 leading-tight">
+            <h1 className="text-xl md:text-2xl tracking-tight text-[#8e92a4] font-normal uppercase mt-4 mb-6 leading-tight">
               {product.name}
             </h1>
             
             {price > 0 ? (
               <div className="flex flex-row items-center gap-4 mb-8">
-                <span className="text-4xl md:text-5xl font-black text-red-600 tracking-tighter leading-none">
+                <span className="text-4xl md:text-5xl font-normal text-red-600 tracking-tighter leading-none">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                 </span>
                 {discount > 0 && (
@@ -295,24 +295,18 @@ export function ProductDetail({ product }: { product: Product }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => setShowCouponModal(true)}
-                className="w-full flex items-center text-left gap-4 mb-6 p-4 md:p-5 bg-gradient-to-r from-accent/20 to-accent/5 hover:from-accent/30 hover:to-accent/10 border border-accent/30 rounded-[20px] transition-all group shadow-lg"
+                className="w-full flex items-center justify-between px-5 h-[52px] mb-4 bg-gradient-to-r from-accent/20 to-accent/5 hover:from-accent/30 hover:to-accent/10 border border-accent/30 rounded-2xl transition-all group shadow-lg"
               >
-                <div className="bg-accent text-white p-3 rounded-2xl shadow-inner">
-                  <Tag size={28} weight="fill" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-accent/80 uppercase mb-1">Cupom Disponível</p>
-                  <code className="text-white font-mono font-bold text-xl md:text-2xl break-all drop-shadow-md">{displayCoupon}</code>
-                </div>
-                <div className="bg-white/10 p-3 rounded-2xl text-white group-hover:bg-white/20 transition-colors">
-                  <Copy size={24} weight="duotone" />
+                <code className="text-white font-mono font-bold text-lg md:text-xl drop-shadow-md">{displayCoupon}</code>
+                <div className="text-white group-hover:text-accent transition-colors">
+                  <Copy size={22} weight="duotone" />
                 </div>
               </motion.button>
             )}
 
             <button
               onClick={handlePlatformClick}
-              className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors text-white font-bold text-lg py-3.5 md:py-4 rounded-[20px] shadow-[0_8px_30px_rgba(220,38,38,0.3)] mt-auto"
+              className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors text-white font-bold text-base md:text-lg h-[52px] rounded-2xl shadow-[0_8px_30px_rgba(220,38,38,0.3)] mt-auto"
             >
               Ir para {platformName}
               <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
