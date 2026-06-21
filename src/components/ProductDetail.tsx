@@ -46,6 +46,8 @@ export function ProductDetail({ product }: { product: Product }) {
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  const [visibleRelatedCount, setVisibleRelatedCount] = useState(10);
+  
   const commentsRef = useRef<HTMLDivElement>(null);
 
   // Load related products, votes and comments
@@ -54,7 +56,7 @@ export function ProductDetail({ product }: { product: Product }) {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter((p: any) => p.id !== product.id).slice(0, 4);
+          const filtered = data.filter((p: any) => p.id !== product.id);
           setRelatedProducts(filtered);
         }
       })
@@ -287,41 +289,6 @@ export function ProductDetail({ product }: { product: Product }) {
               </div>
             )}
 
-            {/* Action Bar (Alert, Likes, Share) */}
-            <div className="flex flex-wrap items-center gap-2 mb-8">
-              <button 
-                onClick={handleAlert}
-                className={`flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${hasAlert ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20'}`}
-              >
-                <Bell size={22} weight={hasAlert ? "fill" : "regular"} />
-                <span className="text-xs font-semibold">{hasAlert ? 'Alerta Ativo' : 'Criar Alerta'}</span>
-              </button>
-
-              <button 
-                onClick={() => handleVote('LIKE')}
-                className={`flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${votes.userVote === 'LIKE' ? 'bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/30' : 'bg-white/5 hover:bg-white/10 text-white border border-transparent'}`}
-              >
-                <ThumbsUp size={22} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
-                <span className="text-xs font-semibold">{votes.likes > 0 ? `${votes.likes} Curtidas` : 'Curtir'}</span>
-              </button>
-
-              <button 
-                onClick={() => handleVote('DISLIKE')}
-                className={`flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${votes.userVote === 'DISLIKE' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 hover:bg-white/10 text-white border border-transparent'}`}
-              >
-                <ThumbsDown size={22} weight={votes.userVote === 'DISLIKE' ? "fill" : "regular"} />
-                <span className="text-xs font-semibold">{votes.dislikes > 0 ? votes.dislikes : 'Não Curtir'}</span>
-              </button>
-
-              <button 
-                onClick={handleShare}
-                className="flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#1DA851] text-white transition-all shadow-[0_4px_20px_rgba(37,211,102,0.3)] active:scale-95"
-              >
-                <WhatsappLogo size={22} weight="fill" />
-                <span className="text-xs font-bold">Mandar</span>
-              </button>
-            </div>
-
             {/* Coupon Box */}
             {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
               <motion.button 
@@ -345,42 +312,35 @@ export function ProductDetail({ product }: { product: Product }) {
 
             <button
               onClick={handlePlatformClick}
-              className="w-full flex items-center justify-center gap-3 group btn-3d text-white font-bold text-lg md:text-xl py-5 md:py-6 rounded-[24px] shadow-2xl mt-auto"
+              className="w-full flex items-center justify-center gap-3 group btn-3d text-white font-bold text-lg py-3.5 md:py-4 rounded-[20px] shadow-2xl mt-auto"
             >
               Ir para {platformName}
-              <ArrowRight size={24} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
+              <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
             </button>
 
-            <div className="mt-6 flex items-center justify-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-400/10 w-fit mx-auto px-4 py-2 rounded-full">
-              <ShieldCheck size={20} weight="fill" />
-              Loja Segura Verificada
+            {/* Action Bar (Alert, Likes, Share) */}
+            <div className="flex justify-between items-center mt-6 px-2">
+              <button onClick={handleAlert} className={`p-3 rounded-2xl transition-all ${hasAlert ? 'text-yellow-400 bg-yellow-400/10' : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10'}`}>
+                <Bell size={24} weight={hasAlert ? "fill" : "regular"} />
+              </button>
+
+              <div className="flex items-center gap-4 bg-white/5 px-4 py-2.5 rounded-2xl">
+                <button onClick={() => handleVote('LIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'LIKE' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}>
+                  <ThumbsUp size={24} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
+                  {votes.likes > 0 && <span className="text-sm font-bold">{votes.likes}</span>}
+                </button>
+                <div className="w-[1px] h-6 bg-white/10" />
+                <button onClick={() => handleVote('DISLIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'DISLIKE' ? 'text-red-400' : 'text-zinc-400 hover:text-white'}`}>
+                  <ThumbsDown size={24} weight={votes.userVote === 'DISLIKE' ? "fill" : "regular"} />
+                  {(votes.userVote === 'DISLIKE' && votes.dislikes > 0) && <span className="text-sm font-bold">{votes.dislikes}</span>}
+                </button>
+              </div>
+
+              <button onClick={handleShare} className="p-3 rounded-2xl transition-all text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 shadow-[0_4px_20px_rgba(37,211,102,0.15)]">
+                <WhatsappLogo size={24} weight="fill" />
+              </button>
             </div>
           </div>
-        </div>
-
-        {/* WhatsApp Banner */}
-        <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-[2.5rem] p-6 sm:p-10 flex flex-col md:flex-row items-center md:justify-between text-center md:text-left shadow-[0_0_40px_rgba(37,211,102,0.1)] gap-6">
-          <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#25D366]/20 blur-[100px] rounded-full pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-[#25D366]/10 blur-[100px] rounded-full pointer-events-none" />
-          
-          <div className="relative z-10">
-            <h4 className="text-white font-bold text-xl sm:text-2xl mb-2">
-              Já está no nosso grupo de promoções?
-            </h4>
-            <p className="text-emerald-100/80 text-sm max-w-md">
-              <span className="font-bold text-white">É Grátis!</span> Entre no nosso grupo VIP do WhatsApp e receba os melhores descontos e cupons antes de todo mundo.
-            </p>
-          </div>
-          
-          <a 
-            href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="relative z-10 inline-flex items-center justify-center gap-3 w-full md:w-auto bg-[#25D366] hover:bg-[#1DA851] text-zinc-950 font-black text-base py-4 px-8 rounded-2xl transition-all hover:scale-105 shadow-xl whitespace-nowrap"
-          >
-            <WhatsappLogo size={28} weight="fill" />
-            Entrar no Grupo
-          </a>
         </div>
 
         {/* Comments Section */}
@@ -463,8 +423,8 @@ export function ProductDetail({ product }: { product: Product }) {
         {relatedProducts.length > 0 && (
           <div className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
             <h4 className="text-xl md:text-2xl font-bold text-white mb-6">Veja mais ofertas incríveis</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {relatedProducts.map((relItem) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {relatedProducts.slice(0, visibleRelatedCount).map((relItem) => (
                 <button 
                   key={relItem.id}
                   onClick={() => router.push(`/produto/${relItem.shortId || relItem.id}`)}
@@ -492,6 +452,17 @@ export function ProductDetail({ product }: { product: Product }) {
                 </button>
               ))}
             </div>
+
+            {visibleRelatedCount < relatedProducts.length && (
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={() => setVisibleRelatedCount(prev => prev + 10)}
+                  className="text-white border border-white/10 hover:bg-white/5 font-semibold text-sm py-3 px-8 rounded-xl transition-all"
+                >
+                  Ver mais ofertas ({relatedProducts.length - visibleRelatedCount})
+                </button>
+              </div>
+            )}
           </div>
         )}
 
