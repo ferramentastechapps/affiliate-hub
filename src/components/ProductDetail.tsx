@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check } from "@phosphor-icons/react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check, Bell, ThumbsUp, ThumbsDown, WhatsappLogo, ChatText, PaperPlaneRight, User } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { CouponModal } from "./CouponModal";
+import { useAuth } from "./AuthProvider";
+import { AuthPanel } from "./AuthPanel";
 
 type Product = {
   id: string;
+  shortId?: number;
   name: string;
   category: string;
   description: string | null;
@@ -29,10 +33,22 @@ type Product = {
 
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
+  const { user } = useAuth();
+  
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [showCouponModal, setShowCouponModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  const [votes, setVotes] = useState({ likes: 0, dislikes: 0, userVote: null as string | null });
+  const [hasAlert, setHasAlert] = useState(false);
+  
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const commentsRef = useRef<HTMLDivElement>(null);
 
-  // Carrega produtos relacionados
+  // Load related products, votes and comments
   useEffect(() => {
     fetch('/api/products')
       .then(res => res.json())
@@ -43,9 +59,98 @@ export function ProductDetail({ product }: { product: Product }) {
         }
       })
       .catch(console.error);
-  }, [product.id]);
 
-  // Determinar URL e plataforma principal
+    fetch(`/api/products/${product.id}/vote`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setVotes({
+            likes: data.likes,
+            dislikes: data.dislikes,
+            userVote: user ? data.votes?.find((v: any) => v.userId === user?.id)?.type || null : null
+          });
+        }
+      });
+
+    fetch(`/api/products/${product.id}/comments`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setComments(data);
+      });
+  }, [product.id, user]);
+
+  function requireAuth() {
+    if (!user) {
+      setShowAuthModal(true);
+      return false;
+    }
+    return true;
+  }
+
+  async function handleVote(type: 'LIKE' | 'DISLIKE') {
+    if (!requireAuth()) return;
+    try {
+      const newType = votes.userVote === type ? 'REMOVE' : type;
+      // Optimistic update
+      setVotes(prev => {
+        let { likes, dislikes } = prev;
+        if (prev.userVote === 'LIKE') likes--;
+        if (prev.userVote === 'DISLIKE') dislikes--;
+        
+        if (newType === 'LIKE') likes++;
+        if (newType === 'DISLIKE') dislikes++;
+        
+        return { likes, dislikes, userVote: newType === 'REMOVE' ? null : newType };
+      });
+
+      await fetch(`/api/products/${product.id}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user!.id, type: newType })
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  async function handleAlert() {
+    if (!requireAuth()) return;
+    try {
+      setHasAlert(true);
+      await fetch(`/api/products/${product.id}/alert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user!.id })
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  async function handlePostComment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newComment.trim() || !requireAuth()) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/products/${product.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newComment, userId: user!.id })
+      });
+      const data = await res.json();
+      if (!data.error) {
+        setComments([data, ...comments]);
+        setNewComment("");
+      }
+    } catch (e) { console.error(e); }
+    setIsSubmitting(false);
+  }
+
+  function handleShare() {
+    const linkPath = product.shortId ? `/produto/${product.shortId}` : `/produto/${product.id}`;
+    const fullLink = `${window.location.origin}${linkPath}`;
+    const text = encodeURIComponent(`🔥 *Olha essa promoção!* 🔥\n\n${product.name}\n\n👉 Acesse aqui: ${fullLink}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  }
+
+  // Determine target platform
   let targetUrl = "";
   let platformName = "";
   if (product.links?.amazon) { targetUrl = product.links.amazon; platformName = "Amazon"; }
@@ -94,10 +199,6 @@ export function ProductDetail({ product }: { product: Product }) {
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
   }
 
-  function handleOpenRelated(relatedItem: any) {
-    router.push(`/produto/${relatedItem.id}`);
-  }
-
   const price = product.price || 0;
   const originalPrice = product.originalPrice || 0;
   const discount = (originalPrice > price && price > 0)
@@ -108,7 +209,7 @@ export function ProductDetail({ product }: { product: Product }) {
     ? "https://" + targetUrl 
     : targetUrl;
 
-  // Buscar cupom
+  // Find coupon
   let displayCoupon = "";
   if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
     const firstCoupon = product.coupons[0];
@@ -124,52 +225,58 @@ export function ProductDetail({ product }: { product: Product }) {
 
   return (
     <main className="min-h-screen text-white pt-24 md:pt-28 pb-16">
-      <div className="container mx-auto px-4 max-w-2xl">
-        {/* Botão Voltar */}
+      <div className="container mx-auto px-4 max-w-4xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/')}
           className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6"
         >
           <ArrowLeft size={20} />
-          Voltar
+          Voltar para Home
         </button>
 
-        <div className="w-full glass-3d-card rounded-[2rem] overflow-hidden">
-          {/* Imagem do Produto */}
-          <div className="relative w-full bg-black/20 backdrop-blur-sm border-b border-white/5 flex items-center justify-center p-4" style={{ minHeight: '220px', maxHeight: '380px' }}>
+        <div className="w-full glass-3d-card rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row shadow-2xl">
+          
+          {/* Image Section */}
+          <div className="relative w-full md:w-5/12 bg-black/40 backdrop-blur-sm border-b md:border-b-0 md:border-r border-white/5 flex items-center justify-center p-8 lg:p-12 min-h-[300px] md:min-h-[450px]">
             {price > 0 && discount > 0 && (
-              <div className="absolute top-4 left-4 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-lg">
-                <Tag size={20} weight="fill" />
+              <motion.div 
+                initial={{ scale: 0, rotate: -10 }} 
+                animate={{ scale: 1, rotate: 0 }} 
+                className="absolute top-6 left-6 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-xl"
+              >
+                <Tag size={22} weight="fill" />
                 -{discount}%
-              </div>
+              </motion.div>
             )}
             
-            <img 
+            <motion.img 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
               src={product.imageUrl} 
               alt={product.name}
-              className="w-full h-full object-contain rounded-2xl"
-              style={{ maxHeight: '360px' }}
+              className="w-full h-full object-contain filter drop-shadow-2xl transition-transform hover:scale-105 duration-500"
+              style={{ maxHeight: '400px' }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "/placeholder.webp";
               }}
             />
           </div>
 
-          <div className="p-6 sm:p-8 pb-6">
-            <span className="text-xs font-bold text-accent uppercase tracking-widest">{product.category}</span>
-            <h1 className="text-xl md:text-2xl tracking-tight text-white font-semibold mt-2 mb-4 leading-snug">
+          {/* Details Section */}
+          <div className="p-6 md:p-8 lg:p-10 flex flex-col w-full md:w-7/12">
+            <span className="text-sm font-bold text-accent uppercase tracking-widest bg-accent/10 w-fit px-3 py-1 rounded-full">{product.category}</span>
+            <h1 className="text-2xl md:text-3xl tracking-tight text-white font-bold mt-4 mb-6 leading-tight">
               {product.name}
             </h1>
-
-
             
             {price > 0 ? (
-              <div className="flex flex-row items-center gap-3 mb-8 border border-white/5 bg-white/5 rounded-2xl p-5">
-                <span className="text-3xl font-black text-white tracking-tighter leading-none">
+              <div className="flex flex-row items-center gap-4 mb-8">
+                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                 </span>
                 {discount > 0 && (
-                  <span className="text-sm text-zinc-500 font-medium line-through">
+                  <span className="text-lg md:text-xl text-zinc-500 font-medium line-through">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                   </span>
                 )}
@@ -180,105 +287,217 @@ export function ProductDetail({ product }: { product: Product }) {
               </div>
             )}
 
-            {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
+            {/* Action Bar (Alert, Likes, Share) */}
+            <div className="flex flex-wrap items-center gap-2 mb-8">
               <button 
-                onClick={() => setShowCouponModal(true)}
-                className="w-full flex items-center text-left gap-3 mb-4 p-3 sm:p-4 bg-gradient-to-r from-accent/20 to-accent/5 hover:from-accent/30 hover:to-accent/10 border border-accent/30 rounded-2xl transition-all group"
+                onClick={handleAlert}
+                className={`flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${hasAlert ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20'}`}
               >
-                <div className="bg-accent/20 p-2 rounded-xl text-accent">
-                  <Tag size={24} weight="duotone" />
-                </div>
-                <div className="flex-1 min-w-0 flex items-center">
-                  <code className="text-white font-mono font-bold text-lg sm:text-xl break-all">{displayCoupon}</code>
-                </div>
-                <div className="bg-white/10 p-2 rounded-xl text-white group-hover:bg-white/20 transition-colors">
-                  <Copy size={20} weight="duotone" />
-                </div>
+                <Bell size={22} weight={hasAlert ? "fill" : "regular"} />
+                <span className="text-xs font-semibold">{hasAlert ? 'Alerta Ativo' : 'Criar Alerta'}</span>
               </button>
+
+              <button 
+                onClick={() => handleVote('LIKE')}
+                className={`flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${votes.userVote === 'LIKE' ? 'bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/30' : 'bg-white/5 hover:bg-white/10 text-white border border-transparent'}`}
+              >
+                <ThumbsUp size={22} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
+                <span className="text-xs font-semibold">{votes.likes > 0 ? `${votes.likes} Curtidas` : 'Curtir'}</span>
+              </button>
+
+              <button 
+                onClick={() => handleVote('DISLIKE')}
+                className={`flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 ${votes.userVote === 'DISLIKE' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 hover:bg-white/10 text-white border border-transparent'}`}
+              >
+                <ThumbsDown size={22} weight={votes.userVote === 'DISLIKE' ? "fill" : "regular"} />
+                <span className="text-xs font-semibold">{votes.dislikes > 0 ? votes.dislikes : 'Não Curtir'}</span>
+              </button>
+
+              <button 
+                onClick={handleShare}
+                className="flex-1 min-w-[80px] py-3 px-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#1DA851] text-white transition-all shadow-[0_4px_20px_rgba(37,211,102,0.3)] active:scale-95"
+              >
+                <WhatsappLogo size={22} weight="fill" />
+                <span className="text-xs font-bold">Mandar</span>
+              </button>
+            </div>
+
+            {/* Coupon Box */}
+            {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
+              <motion.button 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setShowCouponModal(true)}
+                className="w-full flex items-center text-left gap-4 mb-6 p-4 md:p-5 bg-gradient-to-r from-accent/20 to-accent/5 hover:from-accent/30 hover:to-accent/10 border border-accent/30 rounded-[20px] transition-all group shadow-lg"
+              >
+                <div className="bg-accent text-white p-3 rounded-2xl shadow-inner">
+                  <Tag size={28} weight="fill" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-accent/80 uppercase mb-1">Cupom Disponível</p>
+                  <code className="text-white font-mono font-bold text-xl md:text-2xl break-all drop-shadow-md">{displayCoupon}</code>
+                </div>
+                <div className="bg-white/10 p-3 rounded-2xl text-white group-hover:bg-white/20 transition-colors">
+                  <Copy size={24} weight="duotone" />
+                </div>
+              </motion.button>
             )}
 
             <button
               onClick={handlePlatformClick}
-              className="w-full flex items-center justify-center gap-2 group btn-3d text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-[20px] min-h-[56px]"
+              className="w-full flex items-center justify-center gap-3 group btn-3d text-white font-bold text-lg md:text-xl py-5 md:py-6 rounded-[24px] shadow-2xl mt-auto"
             >
               Ir para {platformName}
-              <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1 transition-transform" />
+              <ArrowRight size={24} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
             </button>
 
-            <div className="mt-5 flex items-center justify-center gap-2 text-zinc-400 text-sm font-medium">
-              <ShieldCheck size={18} weight="duotone" className="text-emerald-400" />
+            <div className="mt-6 flex items-center justify-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-400/10 w-fit mx-auto px-4 py-2 rounded-full">
+              <ShieldCheck size={20} weight="fill" />
               Loja Segura Verificada
             </div>
+          </div>
+        </div>
 
-            <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-2xl p-4 sm:p-5 gap-3 flex flex-col items-center text-center shadow-[0_0_40px_rgba(37,211,102,0.1)]">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#25D366]/20 blur-3xl rounded-full" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#25D366]/10 blur-3xl rounded-full" />
-              
-              <div className="relative z-10">
-                <h4 className="text-white font-bold text-sm sm:text-[15px] mb-1">
-                  Já está no nosso grupo de promoções?
-                </h4>
-                <p className="text-emerald-100/70 text-xs mb-4 max-w-[260px] mx-auto leading-relaxed">
-                  <span className="font-bold text-white">É Grátis!</span> Receba no Whatsapp as melhores promoções e economize mais.
-                </p>
-                
-                <a 
-                  href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1DA851] text-zinc-950 font-bold text-sm py-3.5 px-5 rounded-xl transition-all hover:scale-[1.02] min-h-[48px]"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a5.8 5.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372C7.382 7.07 6.61 7.79 6.61 9.253c0 1.463 1.11 2.876 1.26 3.074.148.198 2.094 3.196 5.076 4.482.71.306 1.264.489 1.696.625.714.227 1.365.195 1.876.118.575-.087 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.82 11.82 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.88 11.88 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 0 0-3.48-8.413Z"/>
-                  </svg>
-                  Clique aqui para entrar
-                </a>
-              </div>
-            </div>
-
-            <p className="mt-8 text-[11px] text-zinc-600 leading-tight text-center max-w-sm mx-auto">
-              *Preço e disponibilidade sujeito a alteração a qualquer momento dependendo da loja parceira.
+        {/* WhatsApp Banner */}
+        <div className="mt-8 relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-[2.5rem] p-6 sm:p-10 flex flex-col md:flex-row items-center md:justify-between text-center md:text-left shadow-[0_0_40px_rgba(37,211,102,0.1)] gap-6">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#25D366]/20 blur-[100px] rounded-full pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-[#25D366]/10 blur-[100px] rounded-full pointer-events-none" />
+          
+          <div className="relative z-10">
+            <h4 className="text-white font-bold text-xl sm:text-2xl mb-2">
+              Já está no nosso grupo de promoções?
+            </h4>
+            <p className="text-emerald-100/80 text-sm max-w-md">
+              <span className="font-bold text-white">É Grátis!</span> Entre no nosso grupo VIP do WhatsApp e receba os melhores descontos e cupons antes de todo mundo.
             </p>
           </div>
-
-          {/* Produtos Relacionados */}
-          {relatedProducts.length > 0 && (
-            <div className="border-t border-white/5 pt-6 sm:pt-8 px-4 sm:px-8 pb-6 bg-black/30">
-              <h4 className="text-base sm:text-lg font-bold text-white mb-4">Veja mais ofertas de hoje</h4>
-              <div className="grid grid-cols-2 gap-3">
-                {relatedProducts.map((relItem) => (
-                  <button 
-                    key={relItem.id}
-                    onClick={() => handleOpenRelated(relItem)}
-                    className="group glass-3d-card rounded-xl overflow-hidden flex flex-col text-left transition-all min-h-[44px]"
-                  >
-                    <div className="w-full aspect-[3/4] bg-black/30 flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={relItem.imageUrl} 
-                        alt={relItem.name} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/placeholder.webp";
-                        }}
-                      />
-                    </div>
-                    <div className="p-3 bg-black/20 border-t border-white/5">
-                      <h5 className="font-semibold text-white text-xs line-clamp-2 leading-tight group-hover:text-accent transition-colors">
-                        {relItem.name}
-                      </h5>
-                      <span className="text-accent text-sm font-bold block mt-1">
-                        {relItem.price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(relItem.price) : 'Ver Promoção'}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          
+          <a 
+            href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="relative z-10 inline-flex items-center justify-center gap-3 w-full md:w-auto bg-[#25D366] hover:bg-[#1DA851] text-zinc-950 font-black text-base py-4 px-8 rounded-2xl transition-all hover:scale-105 shadow-xl whitespace-nowrap"
+          >
+            <WhatsappLogo size={28} weight="fill" />
+            Entrar no Grupo
+          </a>
         </div>
+
+        {/* Comments Section */}
+        <div ref={commentsRef} className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-3 bg-accent/20 rounded-2xl text-accent">
+              <ChatText size={28} weight="fill" />
+            </div>
+            <div>
+              <h4 className="text-xl font-bold text-white">Comentários</h4>
+              <p className="text-sm text-zinc-400">{comments.length} avaliações da comunidade</p>
+            </div>
+          </div>
+          
+          <form onSubmit={handlePostComment} className="flex gap-3 mb-10">
+            {user?.image ? (
+              <img src={user.image} alt={user.name} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 shrink-0 border-2 border-white/10">
+                <User size={24} />
+              </div>
+            )}
+            <div className="flex-1 relative">
+              <input 
+                type="text" 
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                placeholder={user ? "Compartilhe sua opinião sobre este produto..." : "Faça login para comentar"}
+                className="w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 pl-5 pr-14 text-white placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:bg-black/60 transition-colors shadow-inner"
+                disabled={isSubmitting || !user}
+              />
+              {user && (
+                <button 
+                  type="submit" 
+                  disabled={!newComment.trim() || isSubmitting}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-accent text-white hover:bg-accent-light rounded-xl disabled:opacity-40 transition-colors"
+                >
+                  <PaperPlaneRight size={20} weight="fill" />
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="space-y-4">
+            {comments.map((comment, i) => (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                key={comment.id} 
+                className="flex gap-4 p-5 bg-white/5 rounded-3xl border border-white/5 hover:border-white/10 transition-colors"
+              >
+                {comment.user?.image ? (
+                  <img src={comment.user.image} alt={comment.user.name} className="w-10 h-10 rounded-full object-cover shrink-0 border border-white/10 shadow-lg" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-white shrink-0 shadow-lg">
+                    <span className="text-sm font-bold">{comment.user?.name?.charAt(0) || comment.guestName?.charAt(0) || 'A'}</span>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="text-sm font-bold text-white">{comment.user?.name || comment.guestName || 'Anônimo'}</span>
+                    <span className="text-xs text-zinc-500 font-medium bg-black/30 px-2 py-0.5 rounded-md">
+                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(comment.createdAt))}
+                    </span>
+                  </div>
+                  <p className="text-sm text-zinc-300 leading-relaxed">{comment.text}</p>
+                </div>
+              </motion.div>
+            ))}
+            {comments.length === 0 && (
+              <div className="text-center py-10 bg-black/20 rounded-3xl border border-dashed border-white/10 text-zinc-500">
+                Nenhum comentário ainda. Seja o primeiro a avaliar!
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
+            <h4 className="text-xl md:text-2xl font-bold text-white mb-6">Veja mais ofertas incríveis</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map((relItem) => (
+                <button 
+                  key={relItem.id}
+                  onClick={() => router.push(`/produto/${relItem.shortId || relItem.id}`)}
+                  className="group bg-black/40 border border-white/5 hover:border-accent/30 rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:-translate-y-1 duration-300"
+                >
+                  <div className="w-full aspect-square bg-black/60 flex items-center justify-center overflow-hidden p-4">
+                    <img 
+                      src={relItem.imageUrl} 
+                      alt={relItem.name} 
+                      className="w-full h-full object-contain mix-blend-screen opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.webp";
+                      }}
+                    />
+                  </div>
+                  <div className="p-4 bg-gradient-to-t from-black/80 to-transparent flex-1 flex flex-col">
+                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1 line-clamp-1">{relItem.category}</span>
+                    <h5 className="font-semibold text-white text-sm line-clamp-2 leading-tight group-hover:text-accent-light transition-colors mb-2">
+                      {relItem.name}
+                    </h5>
+                    <span className="text-white text-base font-black mt-auto">
+                      {relItem.price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(relItem.price) : 'Ver Oferta'}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* Modal de Cupom */}
+      {/* Modals */}
       {displayCoupon && displayCoupon.toUpperCase() !== "NORMAL" && (
         <CouponModal
           isOpen={showCouponModal}
@@ -291,6 +510,8 @@ export function ProductDetail({ product }: { product: Product }) {
           onGoToStore={handleGoToStore}
         />
       )}
+
+      <AuthPanel isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </main>
   );
 }
