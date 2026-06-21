@@ -56,7 +56,7 @@ export function ProductDetail({ product }: { product: Product }) {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter((p: any) => p.id !== product.id);
+          const filtered = data.filter((p: any) => p.id !== product.id && p.category === product.category);
           setRelatedProducts(filtered);
         }
       })
@@ -268,13 +268,13 @@ export function ProductDetail({ product }: { product: Product }) {
           {/* Details Section */}
           <div className="p-6 md:p-8 lg:p-10 flex flex-col w-full md:w-7/12">
             <span className="text-sm font-bold text-accent uppercase tracking-widest bg-accent/10 w-fit px-3 py-1 rounded-full">{product.category}</span>
-            <h1 className="text-2xl md:text-3xl tracking-tight text-white font-bold mt-4 mb-6 leading-tight">
+            <h1 className="text-2xl md:text-3xl tracking-tight text-white font-medium mt-4 mb-6 leading-tight">
               {product.name}
             </h1>
             
             {price > 0 ? (
               <div className="flex flex-row items-center gap-4 mb-8">
-                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+                <span className="text-4xl md:text-5xl font-black text-red-600 tracking-tighter leading-none">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                 </span>
                 {discount > 0 && (
@@ -312,7 +312,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
             <button
               onClick={handlePlatformClick}
-              className="w-full flex items-center justify-center gap-3 group btn-3d text-white font-bold text-lg py-3.5 md:py-4 rounded-[20px] shadow-2xl mt-auto"
+              className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors text-white font-bold text-lg py-3.5 md:py-4 rounded-[20px] shadow-[0_8px_30px_rgba(220,38,38,0.3)] mt-auto"
             >
               Ir para {platformName}
               <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
@@ -422,7 +422,7 @@ export function ProductDetail({ product }: { product: Product }) {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
-            <h4 className="text-xl md:text-2xl font-bold text-white mb-6">Veja mais ofertas incríveis</h4>
+            <h4 className="text-xl md:text-2xl font-bold text-white mb-6">Ofertas Relacionadas</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               {relatedProducts.slice(0, visibleRelatedCount).map((relItem) => (
                 <button 
