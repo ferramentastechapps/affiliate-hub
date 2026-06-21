@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     }
 
     const filterParam = searchParams.get('filter');
+    const userIdParam = searchParams.get('userId');
     let orderByClause: any = { createdAt: 'desc' };
 
     if (filterParam === 'baratinho') {
@@ -33,7 +34,25 @@ export async function GET(request: Request) {
     } else if (filterParam === 'pontuados') {
       orderByClause = { clicks: 'desc' };
     } else if (filterParam === 'alertas') {
-      whereClause.coupons = { some: {} };
+      if (userIdParam) {
+        // Obter os produtos que o usuário alertou para achar as categorias ("relacionados")
+        const userAlerts = await prisma.productAlert.findMany({
+          where: { userId: userIdParam },
+          include: { product: { select: { category: true } } }
+        });
+        
+        if (userAlerts.length > 0) {
+          const alertedCategories = [...new Set(userAlerts.map(a => a.product.category))].filter(Boolean);
+          whereClause.OR = [
+            { alerts: { some: { userId: userIdParam } } },
+            { category: { in: alertedCategories } }
+          ];
+        } else {
+          whereClause.alerts = { some: { userId: userIdParam } }; // Sem alertas = array vazio
+        }
+      } else {
+        whereClause.alerts = { some: {} }; // Fallback
+      }
     }
 
     const products = await prisma.product.findMany({
@@ -41,6 +60,9 @@ export async function GET(request: Request) {
       take: 200, // Aumentado para 200 para ter mais massa de dados pros filtros que dependem de sort no front
       include: {
         links: true,
+        alerts: {
+          select: { userId: true }
+        },
         coupons: {
           where: { 
             isActive: true,
