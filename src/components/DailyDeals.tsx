@@ -30,7 +30,10 @@ import {
   Truck,
   Heart,
   ChatCircle,
-  ArrowRight
+  ArrowRight,
+  Bell,
+  Star,
+  TrendDown
 } from "@phosphor-icons/react";
 
 // Types
@@ -269,22 +272,23 @@ export function DailyDeals() {
       {/* Abas de Filtro */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {[
-          { key: 'alertas', label: 'Meus Alertas' },
-          { key: 'destaques', label: 'Destaques' },
-          { key: 'recentes', label: 'Recentes' },
-          { key: 'menorPreco', label: 'Menor Preço' },
-          { key: 'pontuados', label: 'Mais Pontuados' },
-          { key: 'baratinho', label: 'Baratinho' },
+          { key: 'alertas', label: 'Meus Alertas', icon: <Bell size={18} weight="regular" className="text-[#ff334b]" /> },
+          { key: 'destaques', label: 'Destaques', icon: <Star size={18} weight="regular" className="text-[#ff334b]" /> },
+          { key: 'recentes', label: 'Recentes', icon: <Clock size={18} weight="regular" className="text-[#ff334b]" /> },
+          { key: 'menorPreco', label: 'Menor Preço', icon: <TrendDown size={18} weight="regular" className="text-[#ff334b]" /> },
+          { key: 'pontuados', label: 'Mais Pontuados', icon: <Flame size={18} weight="regular" className="text-[#ff334b]" /> },
+          { key: 'baratinho', label: 'Baratinho', icon: <Tag size={18} weight="regular" className="text-[#ff334b]" /> },
         ].map((filter) => (
           <button
             key={filter.key}
             onClick={() => setFilterType(filter.key as any)}
-            className={`px-5 py-2.5 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap ${
               filterType === filter.key
-                ? 'btn-3d'
-                : 'bg-[#181b26] text-zinc-400 hover:text-white hover:bg-[#202433] border border-white/5'
+                ? 'bg-transparent text-white border border-[#ff334b] shadow-[0_0_15px_rgba(255,51,75,0.4)]'
+                : 'bg-transparent text-white hover:bg-white/5 border border-white/10'
             }`}
           >
+            {filter.icon}
             {filter.label}
           </button>
         ))}
