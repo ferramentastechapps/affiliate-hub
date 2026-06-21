@@ -25,8 +25,8 @@ export function Header() {
           <div className="flex md:hidden items-center justify-between gap-2">
 
             {/* Logo */}
-            <a href="/" className="flex items-center gap-2 shrink-0">
-              <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-10 w-auto object-contain" />
+            <a href="/" className={`flex items-center shrink-0 overflow-hidden transition-all duration-300 ${mobileSearchOpen ? 'w-[40px]' : 'w-[180px]'}`}>
+              <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-10 w-auto max-w-none object-left" />
             </a>
 
             {/* Busca expandida no mobile */}

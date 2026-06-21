@@ -268,9 +268,9 @@ export function DailyDeals() {
   const displayProducts = filteredProducts.slice(0, visibleCount);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 mb-10 relative">
+    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-6 md:pt-10 mb-10 relative">
       {/* Abas de Filtro */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mt-6 md:mt-8 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {[
           { key: 'alertas', label: 'Meus Alertas', icon: <Bell size={18} weight="regular" className="text-[#ff334b]" /> },
           { key: 'destaques', label: 'Destaques', icon: <Star size={18} weight="regular" className="text-[#ff334b]" /> },
@@ -488,15 +488,16 @@ export function DailyDeals() {
 
                     {/* Coupons and Free Shipping Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                      {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" && (
-                         <span className="bg-[#ff9900]/10 text-[#ff9900] border border-[#ff9900]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[120px] truncate" title={product.coupons[0].code}>
-                           <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">{product.coupons[0].code}</span>
+                      {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" ? (
+                         <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={product.coupons[0].code}>
+                           <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">CUPOM: {product.coupons[0].code}</span>
                          </span>
+                      ) : (
+                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1" title="Frete Grátis">
+                          <Truck size={10} weight="fill" />
+                          <span>FRETE GRÁTIS*</span>
+                        </span>
                       )}
-                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1" title="Frete Grátis">
-                        <Truck size={10} weight="fill" />
-                        <span>FRETE GRÁTIS*</span>
-                      </span>
                     </div>
 
                     <div className="mt-auto flex items-end gap-2">
