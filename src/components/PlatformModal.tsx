@@ -300,7 +300,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoF
               transition: { type: "spring", stiffness: 300, damping: 30 }
             }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden max-h-[90vh] mx-2 sm:mx-0"
+            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-2xl rounded-lg sm:rounded-xl flex flex-col overflow-hidden max-h-[90vh] mx-2 sm:mx-0"
           >
             <button 
               onClick={onClose}
