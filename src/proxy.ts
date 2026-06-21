@@ -33,7 +33,10 @@ export function proxy(request: NextRequest) {
   const isSensitiveGet = request.method === 'GET' && 
     (searchParams.get('status') === 'all' || searchParams.get('status') === 'pending')
 
-  if (isApiRoute && (isModifying || isSensitiveGet)) {
+  // Exceções para rotas públicas de interação de usuários
+  const isPublicAction = pathname.match(/^\/api\/products\/[^\/]+\/(vote|alert|comments)$/)
+
+  if (isApiRoute && (isModifying || isSensitiveGet) && !isPublicAction) {
     // Permite se tiver a sessão admin
     if (isAuthenticated) {
       return NextResponse.next()
