@@ -9,7 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const app = express();
 app.use(express.json());
 
-const PORT = 3005;
+const PORT = 3006;
 
 // Variables from env
 const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || "";

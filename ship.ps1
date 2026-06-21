@@ -83,7 +83,8 @@ sed -i 's|LOMADEE_SOURCE_ID=.*|LOMADEE_SOURCE_ID=2324685|g' ~/affiliate-hub/bot/
 # WhatsApp Env Vars
 grep -q 'WHATSAPP_GROUP_NAME' ~/affiliate-hub/.env || echo 'WHATSAPP_GROUP_NAME=""' >> ~/affiliate-hub/.env
 grep -q 'WHATSAPP_DELAY_MINUTES' ~/affiliate-hub/.env || echo 'WHATSAPP_DELAY_MINUTES=30' >> ~/affiliate-hub/.env
-grep -q 'WHATSAPP_API_URL' ~/affiliate-hub/.env || echo 'WHATSAPP_API_URL="http://localhost:3005/send"' >> ~/affiliate-hub/.env
+grep -q 'WHATSAPP_API_URL' ~/affiliate-hub/.env || echo 'WHATSAPP_API_URL="http://localhost:3006/send"' >> ~/affiliate-hub/.env
+sed -i 's|WHATSAPP_API_URL=.*|WHATSAPP_API_URL="http://localhost:3006/send"|g' ~/affiliate-hub/.env
 
 pip3 install -r requirements.txt --break-system-packages
 

@@ -574,7 +574,7 @@ class TelegramNotifier:
             import requests
             import os
             
-            whatsapp_url = os.getenv('WHATSAPP_API_URL', 'http://localhost:3005/send')
+            whatsapp_url = os.getenv('WHATSAPP_API_URL', 'http://localhost:3006/send')
             whatsapp_text = html_to_whatsapp_md(mensagem)
             score_wpp = produto.get('qualityScore') or 0
             
