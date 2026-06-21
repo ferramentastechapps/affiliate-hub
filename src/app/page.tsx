@@ -1,5 +1,6 @@
 import { DailyDeals } from "@/components/DailyDeals";
 import { Footer } from "@/components/Footer";
+import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { Metadata } from "next";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -78,6 +79,11 @@ export default async function Home() {
   return (
     <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-16 md:pt-28 pb-28 md:pb-8 relative">
       {/* Fundo Premium 3D animado (agora no layout) */}
+
+      {/* Botão de Notificações */}
+      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 pt-2 flex justify-end">
+        <PushNotificationButton />
+      </div>
 
       {/* Promocoes do Dia com Filtros */}
       <div id="ofertas" className="w-full">
