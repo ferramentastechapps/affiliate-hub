@@ -147,7 +147,7 @@ export function DailyDeals() {
 
   async function fetchProducts() {
     try {
-      const res = await fetch("/api/products");
+      const res = await fetch(`/api/products?_t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       
       if (data && data.length > 0) {

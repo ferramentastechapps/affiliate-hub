@@ -279,8 +279,8 @@ export async function POST(request: Request) {
         pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
       }
 
-      // Envia notificação (não aguarda resposta para não bloquear)
-      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+      // Envia notificação aguardando a resposta para não ser cancelada
+      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
