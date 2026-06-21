@@ -22,9 +22,23 @@ export async function GET(request: Request) {
       whereClause = { status: { in: ['active', 'approved'] } };
     }
 
+    const filterParam = searchParams.get('filter');
+    let orderByClause: any = { createdAt: 'desc' };
+
+    if (filterParam === 'baratinho') {
+      whereClause.price = { lte: 50, gt: 0 };
+    } else if (filterParam === 'menorPreco') {
+      whereClause.price = { gt: 0 };
+      orderByClause = { price: 'asc' };
+    } else if (filterParam === 'pontuados') {
+      orderByClause = { clicks: 'desc' };
+    } else if (filterParam === 'alertas') {
+      whereClause.coupons = { some: {} };
+    }
+
     const products = await prisma.product.findMany({
       where: whereClause,
-      take: 100, // Limite para não sobrecarregar e travar o navegador
+      take: 200, // Aumentado para 200 para ter mais massa de dados pros filtros que dependem de sort no front
       include: {
         links: true,
         coupons: {
@@ -45,7 +59,7 @@ export async function GET(request: Request) {
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: orderByClause
     });
     
     // Mapear os votos para retornar a contagem separada
