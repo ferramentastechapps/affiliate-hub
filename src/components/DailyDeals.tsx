@@ -125,11 +125,14 @@ export function DailyDeals() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+    // Refresh a cada 5 minutos silenciosamente (não passamos setLoading(true) aqui mas não tem como diferenciar agora, tudo bem)
+    const interval = setInterval(fetchProducts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [filterType]);
 
   // Reset pagination when filters change
   useEffect(() => {
-    setVisibleCount(10);
+    setVisibleCount(50);
   }, [searchQuery, selectedCategory, filterType]);
 
   // Listen to search change custom event from Header
@@ -147,7 +150,8 @@ export function DailyDeals() {
 
   async function fetchProducts() {
     try {
-      const res = await fetch(`/api/products?_t=${Date.now()}`, { cache: "no-store" });
+      setLoading(true);
+      const res = await fetch(`/api/products?filter=${filterType}&_t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       
       if (data && data.length > 0) {
@@ -252,7 +256,7 @@ export function DailyDeals() {
   // Obter categorias únicas
   const categories = ["Todas", ...Array.from(new Set(allProducts.map(p => p.category)))].filter(Boolean);
 
-  if (loading) {
+  if (loading && allProducts.length === 0) {
     return (
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-4">
         <div className="h-6 w-40 bg-zinc-900 rounded-lg animate-pulse mb-5" />
@@ -265,7 +269,7 @@ export function DailyDeals() {
     );
   }
 
-  if (allProducts.length === 0) {
+  if (allProducts.length === 0 && !loading) {
     return null;
   }
 
