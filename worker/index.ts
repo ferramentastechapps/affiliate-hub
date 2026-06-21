@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-
-declare const self: ServiceWorkerGlobalScope;
+export type {};
+declare let self: ServiceWorkerGlobalScope;
 
 self.addEventListener("push", (event) => {
   if (event.data) {
