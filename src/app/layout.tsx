@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ToastProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -10,8 +10,8 @@ import { CategoriesModal } from "@/components/CategoriesModal";
 import { CouponsModal } from "@/components/CouponsModal";
 import Script from "next/script";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
   display: "swap",
   preload: true,
@@ -76,7 +76,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} dark antialiased`}
+      className={`${montserrat.variable} ${geistMono.variable} dark antialiased`}
     >
       <head>
         <meta name="lomadee" content="2324685" />
