@@ -189,12 +189,16 @@ export function DailyDeals() {
     const matchesCategory = selectedCategory === "Todas" || p.category === selectedCategory;
     
     // Search query filter (matches name, description, category or brand)
-    const matchesSearch = !searchQuery || 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      // Special case: if query is "CUPOM", filter products that have coupons
-      (searchQuery.toUpperCase() === "CUPOM" && p.coupons && p.coupons.length > 0);
+    let matchesSearch = true;
+    if (searchQuery) {
+      if (searchQuery.toUpperCase() === "CUPOM") {
+        matchesSearch = !!(p.coupons && p.coupons.length > 0);
+      } else {
+        const terms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+        const productText = `${p.name} ${p.category} ${p.description || ''}`.toLowerCase();
+        matchesSearch = terms.every(term => productText.includes(term));
+      }
+    }
 
     return matchesCategory && matchesSearch;
   });
@@ -268,7 +272,10 @@ export function DailyDeals() {
   const displayProducts = filteredProducts.slice(0, visibleCount);
 
   return (
-    <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-6 md:pt-10 mb-10 relative">
+    <section 
+      className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-6 mb-10 relative"
+      onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
+    >
       {/* Abas de Filtro */}
       <div className="flex gap-2 mt-6 md:mt-8 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {[

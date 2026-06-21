@@ -39,14 +39,18 @@ export function Header() {
                   transition={{ duration: 0.2 }}
                   className="flex-1 relative"
                 >
-                  <input
-                    autoFocus
-                    type="text"
-                    value={searchVal}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full bg-white/8 border border-white/10 focus:border-accent/50 rounded-xl py-2 pl-3 pr-9 text-white text-sm placeholder-text-secondary outline-none"
-                    placeholder="Buscar produto..."
-                  />
+                  <form onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} className="w-full">
+                    <input
+                      autoFocus
+                      type="search"
+                      inputMode="search"
+                      enterKeyHint="search"
+                      value={searchVal}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      className="w-full bg-white/8 border border-white/10 focus:border-accent/50 rounded-xl py-2 pl-3 pr-9 text-white text-sm placeholder-text-secondary outline-none appearance-none"
+                      placeholder="Buscar produto..."
+                    />
+                  </form>
                   <button
                     onClick={() => { setMobileSearchOpen(false); handleSearchChange(""); }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
@@ -86,12 +90,14 @@ export function Header() {
             </motion.a>
 
             {/* Barra de Busca */}
-            <div className="relative w-full max-w-[500px]">
+            <form onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} className="relative w-full max-w-[500px]">
               <input
-                type="text"
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
                 value={searchVal}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full bg-white/5 border border-border-custom hover:border-white/10 focus:border-accent/50 focus:bg-white/8 focus:shadow-[0_0_0_3px_rgba(255,51,75,0.1)] rounded-xl py-2 pl-4 pr-11 text-white text-sm placeholder-text-secondary outline-none transition-all duration-200"
+                className="w-full bg-white/5 border border-border-custom hover:border-white/10 focus:border-accent/50 focus:bg-white/8 focus:shadow-[0_0_0_3px_rgba(255,51,75,0.1)] rounded-xl py-2 pl-4 pr-11 text-white text-sm placeholder-text-secondary outline-none transition-all duration-200 appearance-none"
                 placeholder="Buscar um produto..."
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">
@@ -100,7 +106,7 @@ export function Header() {
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
               </span>
-            </div>
+            </form>
 
             {/* Nav + Auth */}
             <div className="flex items-center gap-6">
