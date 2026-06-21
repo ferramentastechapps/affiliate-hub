@@ -46,6 +46,7 @@ type Product = {
   originalPrice?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
+  alerts?: { userId: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
   clicks?: number;
