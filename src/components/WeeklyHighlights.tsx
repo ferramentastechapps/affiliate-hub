@@ -16,12 +16,16 @@ type Product = {
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
+  shortId?: number;
 };
 
 // Deterministic discount based on ID
 
 
+import { useRouter } from "next/navigation";
+
 export function WeeklyHighlights() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -35,6 +39,7 @@ export function WeeklyHighlights() {
           // Select products with highest discounts or simply first 3
           const formatted = data.map((p: any) => ({
             id: p.id,
+            shortId: p.shortId,
             name: p.name,
             category: p.category,
             imageUrl: p.imageUrl,
@@ -105,7 +110,7 @@ export function WeeklyHighlights() {
           return (
             <motion.div
               key={product.id}
-              onClick={() => setSelectedProduct(product)}
+              onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
               whileHover={{ y: -3 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className="group cursor-pointer bg-card hover:bg-[#161722] border border-white/5 hover:border-white/10 rounded-2xl p-4 relative flex items-center justify-between overflow-hidden select-none transition-all duration-300 h-32 shadow-lg hover:shadow-black/40 w-[260px] shrink-0 md:w-auto snap-start"

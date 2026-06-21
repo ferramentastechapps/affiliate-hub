@@ -15,6 +15,7 @@ export type Product = {
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: ProductLinks;
+  shortId?: number;
 };
 
 type ProductCardProps = {

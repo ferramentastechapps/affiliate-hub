@@ -32,9 +32,9 @@ type Product = {
   price?: number;
   originalPrice?: number;
   description?: string;
-  coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
+  shortId?: number;
 };
 
 
@@ -53,7 +53,10 @@ function getTimeAgo(dateString?: string | Date) {
   return `${diffInDays}d`;
 }
 
+import { useRouter } from "next/navigation";
+
 export function StoreFilter() {
+  const router = useRouter();
   const [activeStore, setActiveStore] = useState<string | null>(null);
   const [hoveredStore, setHoveredStore] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -79,6 +82,7 @@ export function StoreFilter() {
 
         setProducts(filtered.map(p => ({
           id: p.id,
+          shortId: p.shortId,
           name: p.name,
           category: p.category,
           imageUrl: p.imageUrl,
@@ -304,7 +308,7 @@ export function StoreFilter() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
-                        onClick={() => setSelectedProduct(product)}
+                        onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
                         className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
                       >
                         {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
