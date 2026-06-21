@@ -34,15 +34,6 @@ CRITÉRIOS DE SCORE (Mantenha a coerência):
 - abaixo de 5: preço normal.
 
 REGRAS DE CONTEXTO TEMPORAL:
-- O contexto de dia/hora é uma INSPIRAÇÃO DISCRETA, não um tema obrigatório
-- NUNCA mencione explicitamente "sábado", "sexta", "fim de semana", 
-  "FDS", "sabadou" ou qualquer referência de dia na frase
-- Se for fim de semana, você PODE usar referências INDIRETAS que 
-  remetem ao clima do momento: churras, rolê, almoço de família, 
-  cerveja gelada, sair de casa, etc — só se encaixar NATURALMENTE
-- Se não encaixar com o produto, ignore completamente o contexto temporal
-- A regra de ouro: se a piada precisar forçar o dia pra fazer sentido, 
-  descarte e faça uma piada sobre o produto mesmo
 - Copa do Mundo (junho/julho 2026): referências como "hexa", "torcida", 
   "jogo", "manto" só quando o produto tiver conexão óbvia
 - Inverno/frio (junho/julho/agosto): você PODE usar referências 

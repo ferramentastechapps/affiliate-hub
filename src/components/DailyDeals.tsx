@@ -24,6 +24,7 @@ import {
   Clock,
   ArrowUpRight,
   ThumbsUp,
+  ThumbsDown,
   Tag,
   ShieldCheck,
   Truck,
