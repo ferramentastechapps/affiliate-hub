@@ -133,7 +133,10 @@ const fallbackProducts: Product[] = [
   }
 ];
 
+import { useRouter } from "next/navigation";
+
 export function ProductGrid() {
+  const router = useRouter();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const [loading, setLoading] = useState(true);
@@ -153,6 +156,7 @@ export function ProductGrid() {
         } else {
           const formattedProducts = data.map((p: any) => ({
             id: p.id,
+            shortId: p.shortId,
             name: p.name,
             category: p.category,
             imageUrl: p.imageUrl,
@@ -221,7 +225,7 @@ export function ProductGrid() {
           <ProductCard 
             key={product.id} 
             product={product} 
-            onClick={setSelectedProduct} 
+            onClick={(product) => router.push(`/produto/${product.shortId || product.id}`)} 
           />
         ))}
       </motion.div>

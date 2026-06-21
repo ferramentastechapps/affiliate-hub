@@ -48,14 +48,17 @@ type Product = {
   price?: number;
   originalPrice?: number;
   description?: string;
-  coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
+  shortId?: number;
 };
 
 
 
+import { useRouter } from "next/navigation";
+
 export function CategoriesModal() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -119,6 +122,7 @@ export function CategoriesModal() {
         setProducts(
           filtered.map((p) => ({
             id: p.id,
+            shortId: p.shortId,
             name: p.name,
             category: p.category,
             imageUrl: p.imageUrl,
@@ -331,7 +335,10 @@ export function CategoriesModal() {
                                   type: "spring",
                                   stiffness: 100,
                                 }}
-                                onClick={() => setSelectedProduct(product)}
+                                onClick={() => {
+                                  handleClose();
+                                  router.push(`/produto/${product.shortId || product.id}`);
+                                }}
                                 className="group cursor-pointer glass-3d-card rounded-[20px] p-4 flex flex-col relative transition-all duration-300"
                               >
                                 {/* Badge Desconto */}

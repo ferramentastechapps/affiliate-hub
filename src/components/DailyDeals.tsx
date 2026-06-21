@@ -56,6 +56,7 @@ type Product = {
     dislikes?: number;
     comments?: number;
   };
+  shortId?: number;
 };
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
@@ -112,7 +113,10 @@ function getTimeAgo(dateString?: string | Date) {
   return `há ${diffInDays} ${diffInDays === 1 ? 'dia' : 'dias'}`;
 }
 
+import { useRouter } from "next/navigation";
+
 export function DailyDeals() {
+  const router = useRouter();
   const { user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -178,6 +182,7 @@ export function DailyDeals() {
       if (data && data.length > 0) {
         const parsedProducts = data.map((p: any) => ({
           id: p.id,
+          shortId: p.shortId,
           name: p.name,
           category: p.category,
           imageUrl: p.imageUrl,
@@ -474,7 +479,7 @@ export function DailyDeals() {
                 initial={{ opacity: 0, y: 20, rotateX: 5 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: (index % 4) * 0.05, type: "spring", stiffness: 100 }}
-                onClick={() => setSelectedProduct(product)}
+                onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
                 className="group cursor-pointer glass-3d-card rounded-[16px] overflow-hidden flex flex-col relative z-0"
               >
                 {/* Header (Store Info) */}
@@ -579,8 +584,7 @@ export function DailyDeals() {
                     <button 
                       onClick={(e) => { 
                         e.stopPropagation(); 
-                        setSelectedProduct(product);
-                        setOpenCommentsFor(product.id);
+                        router.push(`/produto/${product.shortId || product.id}#comments`);
                       }}
                       className="flex items-center gap-1.5 text-[#8e92a4] hover:text-white transition-colors text-[11px] font-bold"
                     >

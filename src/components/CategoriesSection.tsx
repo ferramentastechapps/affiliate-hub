@@ -22,14 +22,17 @@ type Product = {
   price?: number;
   originalPrice?: number;
   description?: string;
-  coupons?: { id: string; code: string; discount: string; platform: string }[];
   links: Record<string, string | undefined>;
   createdAt?: string;
+  shortId?: number;
 };
 
 
 
+import { useRouter } from "next/navigation";
+
 export function CategoriesSection() {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,6 +55,7 @@ export function CategoriesSection() {
 
         setProducts(filtered.map(p => ({
           id: p.id,
+          shortId: p.shortId,
           name: p.name,
           category: p.category,
           imageUrl: p.imageUrl,
@@ -179,7 +183,7 @@ export function CategoriesSection() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1, type: "spring", stiffness: 80 }}
-                        onClick={() => setSelectedProduct(product)}
+                        onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
                         className="group cursor-pointer glass-3d-card rounded-[20px] p-5 flex flex-col relative transition-all duration-300 hover:-translate-y-1 min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-start"
                       >
                         {/* Badge Desconto */}
