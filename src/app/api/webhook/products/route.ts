@@ -303,8 +303,8 @@ export async function POST(request: Request) {
           pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
         }
 
-        // Disparar push de forma assíncrona, não precisa awaitar pois o script vai processar a IA logo depois
-        fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+        // Disparar push e aguardar
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -629,7 +629,7 @@ export async function PUT(request: Request) {
               pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
             }
 
-            fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+            await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

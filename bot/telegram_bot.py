@@ -6,6 +6,19 @@ from telegram.error import RetryAfter
 from telegram.constants import ParseMode
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL
 
+import re
+
+def html_to_whatsapp_md(text: str) -> str:
+    if not text:
+        return ""
+    # Substituições básicas de HTML para Markdown do WhatsApp
+    text = re.sub(r'<b>(.*?)</b>', r'*\1*', text, flags=re.IGNORECASE)
+    text = re.sub(r'<i>(.*?)</i>', r'_\1_', text, flags=re.IGNORECASE)
+    text = re.sub(r'<s>(.*?)</s>', r'~\1~', text, flags=re.IGNORECASE)
+    text = re.sub(r'<code>(.*?)</code>', r'```\1```', text, flags=re.IGNORECASE)
+    text = re.sub(r'<a href=["\']?(.*?)["\']?>(.*?)</a>', r'\2', text, flags=re.IGNORECASE)
+    text = re.sub(r'<.*?>', '', text) # remove any remaining HTML tags
+    return text
 
 def _baixar_imagem_bytes(url: str, timeout: int = 15) -> bytes | None:
     """
