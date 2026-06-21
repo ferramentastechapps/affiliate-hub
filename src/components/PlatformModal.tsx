@@ -300,7 +300,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoF
               transition: { type: "spring", stiffness: 300, damping: 30 }
             }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-[0_0_80px_rgba(40,110,250,0.15)] rounded-[2rem] sm:rounded-[2.5rem] flex flex-col overflow-hidden max-h-[90vh] mx-2 sm:mx-0"
+            className="relative w-full max-w-lg bg-[#0a0a0b] border border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden max-h-[90vh] mx-2 sm:mx-0"
           >
             <button 
               onClick={onClose}
@@ -390,7 +390,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoF
 
                   <button 
                     onClick={handleShare}
-                    className="flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 bg-[#25D366] hover:bg-[#1DA851] text-white transition-colors shadow-md"
+                    className="flex-1 py-2 px-1 sm:px-2 rounded-xl flex flex-col items-center justify-center gap-1 bg-[#25D366] hover:bg-[#1DA851] text-white transition-colors"
                   >
                     <WhatsappLogo size={18} />
                     <span className="text-[10px] sm:text-xs font-bold whitespace-nowrap">Mandar</span>
@@ -551,9 +551,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoF
 
               {/* WhatsApp Community Banner */}
               <div className="mt-4 px-4 sm:px-8 pb-4">
-                <div className="relative overflow-hidden bg-gradient-to-br from-[#124237] to-[#0A261E] border border-[#25D366]/30 rounded-2xl p-4 sm:p-5 gap-3 flex flex-col items-center text-center shadow-[0_0_40px_rgba(37,211,102,0.1)]">
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#25D366]/20 blur-3xl rounded-full" />
-                  <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#25D366]/10 blur-3xl rounded-full" />
+                <div className="relative overflow-hidden bg-[#124237]/40 border border-[#25D366]/20 rounded-2xl p-4 sm:p-5 gap-3 flex flex-col items-center text-center">
                   
                   <div className="relative z-10">
                     <h4 className="text-white font-bold text-sm sm:text-[15px] mb-1">
