@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { PlatformModal } from "./PlatformModal";
+import { useAuth } from "./AuthProvider";
+import { AuthPanel } from "./AuthPanel";
 import { 
   Flame, 
   DeviceMobile, 
@@ -43,9 +45,11 @@ type Product = {
   links: Record<string, string | undefined>;
   createdAt?: string;
   clicks?: number;
+  votes?: { type: string, userId: string }[];
   _count?: {
-    votes: number;
-    comments: number;
+    likes?: number;
+    dislikes?: number;
+    comments?: number;
   };
 };
 
@@ -104,7 +108,10 @@ function getTimeAgo(dateString?: string | Date) {
 }
 
 export function DailyDeals() {
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +157,8 @@ export function DailyDeals() {
           createdAt: p.createdAt,
           description: p.description,
           coupons: p.coupons || [],
-          _count: p._count,
+          votes: p.votes || [],
+          _count: p._count || { likes: 0, dislikes: 0, comments: 0 },
           links: {
             amazon: p.links?.amazon,
             mercadoLivre: p.links?.mercadoLivre,
@@ -309,6 +317,56 @@ export function DailyDeals() {
               ? Math.round(((originalPrice - price) / originalPrice) * 100)
               : 0;
 
+            const userVote = user ? product.votes?.find(v => v.userId === user.id)?.type : null;
+
+            async function handleVote(type: 'LIKE' | 'DISLIKE') {
+              if (!user) {
+                setShowAuthModal(true);
+                return;
+              }
+              try {
+                const newType = userVote === type ? 'REMOVE' : type;
+                
+                // Optimistic update na lista global
+                setAllProducts(prev => prev.map(p => {
+                  if (p.id === product.id) {
+                    let likes = p._count?.likes || 0;
+                    let dislikes = p._count?.dislikes || 0;
+                    
+                    if (userVote === 'LIKE') likes--;
+                    if (userVote === 'DISLIKE') dislikes--;
+                    
+                    if (newType === 'LIKE') likes++;
+                    if (newType === 'DISLIKE') dislikes++;
+
+                    const newVotes = p.votes?.filter(v => v.userId !== user.id) || [];
+                    if (newType !== 'REMOVE') {
+                      newVotes.push({ type: newType, userId: user.id });
+                    }
+
+                    return {
+                      ...p,
+                      votes: newVotes,
+                      _count: {
+                        ...p._count,
+                        likes,
+                        dislikes
+                      }
+                    };
+                  }
+                  return p;
+                }));
+
+                await fetch(`/api/products/${product.id}/vote`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: user!.id, type: newType })
+                });
+              } catch (e) {
+                console.error("Erro ao votar", e);
+              }
+            }
+
             // Mapeamento de cor e label do badge de plataforma
             const storeBadgeConfig: Record<string, { bg: string, text: string, label: string }> = {
               amazon:       { bg: "#ff9900", text: "#ffffff", label: "Amazon" },
@@ -457,20 +515,35 @@ export function DailyDeals() {
 
                 {/* Footer (Actions) */}
                 <div className="p-2.5 px-4 border-t border-white/5 flex items-center justify-between bg-black/20">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <button 
                       onClick={(e) => { 
                         e.stopPropagation(); 
-                        setSelectedProduct(product); // Abre o modal por enquanto, curtida direta precisaria de autenticação na tela principal
+                        handleVote('LIKE');
                       }}
-                      className="flex items-center gap-1.5 text-[#8e92a4] hover:text-emerald-500 transition-colors text-[11px] font-bold"
+                      className={`flex items-center gap-1 transition-colors text-[11px] font-bold ${userVote === 'LIKE' ? 'text-emerald-500' : 'text-[#8e92a4] hover:text-emerald-500'}`}
                     >
-                      <Heart size={14} weight="bold" /> {product._count?.votes || 0}
+                      <ThumbsUp size={16} weight={userVote === 'LIKE' ? "fill" : "bold"} /> {product._count?.likes || 0}
                     </button>
                     <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        handleVote('DISLIKE');
+                      }}
+                      className={`flex items-center gap-1 transition-colors text-[11px] font-bold ${userVote === 'DISLIKE' ? 'text-red-500' : 'text-[#8e92a4] hover:text-red-500'}`}
+                    >
+                      <ThumbsDown size={16} weight={userVote === 'DISLIKE' ? "fill" : "bold"} /> {product._count?.dislikes || 0}
+                    </button>
+                    <div className="w-[1px] h-3 bg-white/10 mx-1"></div>
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setSelectedProduct(product);
+                        setOpenCommentsFor(product.id);
+                      }}
                       className="flex items-center gap-1.5 text-[#8e92a4] hover:text-white transition-colors text-[11px] font-bold"
                     >
-                      <ChatCircle size={14} weight="bold" /> {product._count?.comments || 0}
+                      <ChatCircle size={16} weight="bold" /> {product._count?.comments || 0}
                     </button>
                   </div>
                   <button className="text-[10px] font-bold uppercase tracking-wider text-white hover:text-[#ff334b] transition-colors flex items-center gap-1">
@@ -497,10 +570,16 @@ export function DailyDeals() {
 
       <PlatformModal 
         isOpen={!!selectedProduct} 
-        onClose={() => setSelectedProduct(null)} 
+        onClose={() => {
+          setSelectedProduct(null);
+          setOpenCommentsFor(null);
+        }} 
         product={selectedProduct} 
         onSelectRelated={setSelectedProduct}
+        autoFocusComments={openCommentsFor === selectedProduct?.id}
       />
+      
+      <AuthPanel isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </section>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { X, ArrowRight, ShieldCheck, Tag, Bell, ThumbsUp, ThumbsDown, WhatsappLogo, ChatText, PaperPlaneRight, User, Copy, Check } from "@phosphor-icons/react";
 import { CouponModal } from "./CouponModal";
 import { useAuth } from "./AuthProvider";
@@ -41,6 +41,7 @@ type PlatformModalProps = {
   onClose: () => void;
   product: any;
   onSelectRelated?: (product: any) => void;
+  autoFocusComments?: boolean;
 };
 
 // Tracking fake function
@@ -59,7 +60,7 @@ function trackAffiliateClick(platform: string, productName: string, url: string)
   }
 }
 
-export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: PlatformModalProps) {
+export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoFocusComments }: PlatformModalProps) {
   const { user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -71,6 +72,8 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [visibleRelatedCount, setVisibleRelatedCount] = useState(10);
   const [showCouponModal, setShowCouponModal] = useState(false);
+  
+  const commentsRef = useRef<HTMLDivElement>(null);
 
   // Carrega produtos relacionados e dados de interação ao abrir a modal
   useEffect(() => {
@@ -111,6 +114,12 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
       // Reset alert state if a new product is opened
       setHasAlert(false);
       setVisibleRelatedCount(10);
+
+      if (autoFocusComments) {
+        setTimeout(() => {
+          commentsRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+      }
 
     } else {
       document.body.style.overflow = "unset";
@@ -419,7 +428,7 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated }: Pla
                 </div>
 
                 {/* Comments Section */}
-                <div className="mt-8 border-t border-white/5 pt-6 pb-2">
+                <div ref={commentsRef} className="mt-8 border-t border-white/5 pt-6 pb-2">
                   <div className="flex items-center gap-2 mb-4">
                     <ChatText size={20} className="text-zinc-400" />
                     <h4 className="text-sm font-bold text-white">Comentários {comments.length > 0 && `(${comments.length})`}</h4>

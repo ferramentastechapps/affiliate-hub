@@ -34,11 +34,11 @@ export async function GET(request: Request) {
             ]
           }
         },
+        votes: {
+          select: { type: true, userId: true } // Pegamos o userId para que o front saiba se o usuário já curtiu
+        },
         _count: {
           select: {
-            votes: {
-              where: { type: 'LIKE' }
-            },
             comments: true
           }
         }
@@ -46,7 +46,23 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' }
     });
     
-    return NextResponse.json(products);
+    // Mapear os votos para retornar a contagem separada
+    const mappedProducts = products.map(p => {
+      const likes = p.votes.filter(v => v.type === 'LIKE').length;
+      const dislikes = p.votes.filter(v => v.type === 'DISLIKE').length;
+      
+      return {
+        ...p,
+        _count: {
+          ...p._count,
+          likes,
+          dislikes
+        }
+        // Mantemos os `votes` no payload para o front-end saber o voto atual do usuário sem fazer fetch extra
+      };
+    });
+
+    return NextResponse.json(mappedProducts);
   } catch (error) {
     console.error('❌ Erro ao buscar produtos:', error);
     return NextResponse.json(
