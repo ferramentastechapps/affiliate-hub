@@ -285,6 +285,39 @@ export async function POST(request: Request) {
       allKeys: Object.keys(product)
     });
 
+    // Se o produto já foi aprovado direto na criação (autoApprove: true), disparar notificação push
+    if (finalStatus === 'active') {
+      try {
+        const discount = product.originalPrice && product.price && product.originalPrice > product.price 
+          ? ((product.originalPrice - product.price) / product.originalPrice) * 100 
+          : 0;
+          
+        const pushPayload = {
+          title: `Nova Oferta: ${product.name}`,
+          body: `Preço: R$ ${product.price?.toFixed(2)}`,
+          icon: product.imageUrl,
+          url: `/produto/${product.id}`
+        };
+
+        if (discount > 0) {
+          pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
+        }
+
+        // Disparar push de forma assíncrona, não precisa awaitar pois o script vai processar a IA logo depois
+        fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.API_SECRET_KEY || '',
+          },
+          body: JSON.stringify(pushPayload),
+        }).catch(err => console.error('Erro push autoApprove POST:', err));
+        console.log(`📱 Notificação push enviada para autoApprove (POST): ${product.id}`);
+      } catch (pushErr) {
+        console.error(`Erro ao enviar push notification autoApprove para produto ${product.id}:`, pushErr);
+      }
+    }
+
     const response = NextResponse.json({
       success: true,
       product: {
@@ -337,6 +370,40 @@ export async function POST(request: Request) {
         }
       });
       console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+
+      // Se a IA aprovou o produto, disparar notificação push!
+      if (finalStatus === 'pending' && newStatus === 'active') {
+        try {
+          const discount = product.originalPrice && product.price && product.originalPrice > product.price 
+            ? ((product.originalPrice - product.price) / product.originalPrice) * 100 
+            : 0;
+            
+          const pushPayload = {
+            title: `Novo Produto Aprovado: ${product.name}`,
+            body: `Preço: R$ ${product.price?.toFixed(2)}`,
+            icon: finalEnhancedImageUrl || product.imageUrl,
+            url: `/produto/${product.id}`
+          };
+
+          if (discount > 0) {
+            pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
+          }
+
+          // Disparar push de forma assíncrona, mas aguardando para não cancelar
+          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.API_SECRET_KEY || '',
+            },
+            body: JSON.stringify(pushPayload),
+          });
+          console.log(`📱 Notificação push enviada para produto aprovado pela IA: ${product.id}`);
+        } catch (pushErr) {
+          console.error(`Erro ao enviar push notification para produto ${product.id}:`, pushErr);
+        }
+      }
+
     }).catch(error => {
       console.error(`Erro no processamento de IA em background para ${product.id}:`, error);
     });
@@ -544,6 +611,38 @@ export async function PUT(request: Request) {
           });
         }
 
+        // Se o produto já foi aprovado direto na criação (autoApprove: true), disparar notificação push
+        if (finalStatus === 'active') {
+          try {
+            const discount = product.originalPrice && product.price && product.originalPrice > product.price 
+              ? ((product.originalPrice - product.price) / product.originalPrice) * 100 
+              : 0;
+              
+            const pushPayload = {
+              title: `Nova Oferta: ${product.name}`,
+              body: `Preço: R$ ${product.price?.toFixed(2)}`,
+              icon: product.imageUrl,
+              url: `/produto/${product.id}`
+            };
+
+            if (discount > 0) {
+              pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
+            }
+
+            fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.API_SECRET_KEY || '',
+              },
+              body: JSON.stringify(pushPayload),
+            }).catch(err => console.error('Erro push autoApprove PUT:', err));
+            console.log(`📱 Notificação push enviada para autoApprove (PUT): ${product.id}`);
+          } catch (pushErr) {
+            console.error(`Erro ao enviar push notification autoApprove para produto ${product.id}:`, pushErr);
+          }
+        }
+
         results.push(product);
 
         // Processar IA em background sem await
@@ -577,6 +676,40 @@ export async function PUT(request: Request) {
             }
           });
           console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+
+          // Se a IA aprovou o produto, disparar notificação push!
+          if (finalStatus === 'pending' && newStatus === 'active') {
+            try {
+              const discount = product.originalPrice && product.price && product.originalPrice > product.price 
+                ? ((product.originalPrice - product.price) / product.originalPrice) * 100 
+                : 0;
+                
+              const pushPayload = {
+                title: `Novo Produto Aprovado: ${product.name}`,
+                body: `Preço: R$ ${product.price?.toFixed(2)}`,
+                icon: finalEnhancedImageUrl || product.imageUrl,
+                url: `/produto/${product.id}`
+              };
+
+              if (discount > 0) {
+                pushPayload.body += ` (${discount.toFixed(0)}% OFF)`;
+              }
+
+              // Disparar push de forma assíncrona, mas aguardando
+              await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push/send`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-api-key': process.env.API_SECRET_KEY || '',
+                },
+                body: JSON.stringify(pushPayload),
+              });
+              console.log(`📱 Notificação push enviada para produto aprovado pela IA: ${product.id}`);
+            } catch (pushErr) {
+              console.error(`Erro ao enviar push notification para produto ${product.id}:`, pushErr);
+            }
+          }
+
         }).catch(error => {
           console.error(`Erro no processamento de IA em background para ${product.id}:`, error);
         });
