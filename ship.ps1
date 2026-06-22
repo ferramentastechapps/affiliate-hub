@@ -61,6 +61,7 @@ npx prisma db push --accept-data-loss
 
 echo "🏗️  Fazendo build do Next.js..."
 rm -rf .next
+rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
 npm run build
 
 echo "📦 Instalando dependências do WhatsApp..."
