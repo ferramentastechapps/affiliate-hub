@@ -10,7 +10,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; imgId: string }> }
 ) {
   try {
-    const sessionToken = cookies().get('session')?.value;
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
     if (!sessionToken || !verifyToken(sessionToken)) {
       return NextResponse.json({ error: 'Não Autorizado' }, { status: 401 });
     }
