@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { LockKey, Envelope, ShieldCheck, WarningCircle } from '@phosphor-icons/react'
-import { loginAction } from './actions'
+import { useAuth } from '@/components/AuthProvider'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -19,16 +20,12 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const formData = new FormData()
-      formData.append('email', email)
-      formData.append('password', password)
+      const success = await login(email, password)
 
-      const result = await loginAction(formData)
-
-      if (result.success) {
+      if (success) {
         router.push('/admin')
       } else {
-        setError(result.error || 'Erro ao realizar login')
+        setError('Credenciais inválidas ou sem permissão de admin')
       }
     } catch (err) {
       setError('Ocorreu um erro inesperado')
