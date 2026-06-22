@@ -212,7 +212,7 @@ class TelegramNotifier:
 🆔 ID: <code>{produto.get('id', 'N/A')}</code>
 """
             
-            await self.bot.send_message(
+            await self._send_message_with_retry(
                 chat_id=self.chat_id,
                 text=mensagem.strip(),
                 parse_mode=ParseMode.HTML
