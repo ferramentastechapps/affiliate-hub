@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, MagicWand, TelegramLogo, Check, PaperPlaneTilt, Plus, Trash } from "@phosphor-icons/react";
+import { X, MagicWand, TelegramLogo, Check, PaperPlaneTilt, Plus, Trash, ArrowSquareOut } from "@phosphor-icons/react";
 
 type ProductModalProps = {
   isOpen: boolean;
@@ -270,21 +270,33 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     setLoading(true);
 
     try {
+      // Salva os dados do produto (nome, links, imagens, etc.)
       const payload = getPayload(status);
       const url = product ? `/api/products/${product.id}` : "/api/products";
       const method = product ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      const saveRes = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
-        onClose();
-      } else {
+      if (!saveRes.ok) {
         alert("Erro ao salvar produto");
+        return;
       }
+
+      // Se for aprovação (status active), usa o endpoint silencioso.
+      // NÃO dispara Telegram nem push — a fila do bot cuida disso.
+      if (status === 'active' && product?.id) {
+        await fetch(`/api/admin/products/${product.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'active' }),
+        });
+      }
+
+      onClose();
     } catch (error) {
       alert("Erro ao salvar produto");
     } finally {
@@ -559,15 +571,36 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                     </div>
                     <div>
                       <label className="block text-[10px] uppercase text-zinc-500 mb-1">URL Original (Source)</label>
-                      <input type="url" value={link.sourceUrl || ''} onChange={e => updateLink(idx, 'sourceUrl', e.target.value)} placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                      <div className="flex items-center gap-1">
+                        <input type="url" value={link.sourceUrl || ''} onChange={e => updateLink(idx, 'sourceUrl', e.target.value)} placeholder="https://..." className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                        {link.sourceUrl && (
+                          <a href={link.sourceUrl} target="_blank" rel="noopener noreferrer" title="Abrir link original" className="text-zinc-400 hover:text-accent transition-colors shrink-0 p-1">
+                            <ArrowSquareOut size={16} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] uppercase text-zinc-500 mb-1">URL Afiliado (Parceiro)</label>
-                      <input type="url" value={link.affiliateUrl || ''} onChange={e => updateLink(idx, 'affiliateUrl', e.target.value)} placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                      <div className="flex items-center gap-1">
+                        <input type="url" value={link.affiliateUrl || ''} onChange={e => updateLink(idx, 'affiliateUrl', e.target.value)} placeholder="https://..." className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                        {link.affiliateUrl && (
+                          <a href={link.affiliateUrl} target="_blank" rel="noopener noreferrer" title="Abrir link de afiliado" className="text-zinc-400 hover:text-accent transition-colors shrink-0 p-1">
+                            <ArrowSquareOut size={16} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] uppercase text-zinc-500 mb-1">URL Gerada (Bot)</label>
-                      <input type="url" value={link.generatedAffiliateUrl || ''} onChange={e => updateLink(idx, 'generatedAffiliateUrl', e.target.value)} placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                      <div className="flex items-center gap-1">
+                        <input type="url" value={link.generatedAffiliateUrl || ''} onChange={e => updateLink(idx, 'generatedAffiliateUrl', e.target.value)} placeholder="https://..." className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                        {link.generatedAffiliateUrl && (
+                          <a href={link.generatedAffiliateUrl} target="_blank" rel="noopener noreferrer" title="Abrir URL gerada" className="text-zinc-400 hover:text-accent transition-colors shrink-0 p-1">
+                            <ArrowSquareOut size={16} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
