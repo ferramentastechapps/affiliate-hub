@@ -64,6 +64,27 @@ rm -rf .next
 rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
 npm run build
 
+echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrome)..."
+if command -v ffmpeg &>/dev/null; then
+  MOV_SRC="public/Video de entrada.mov"
+  MP4_DST="public/Video de entrada.mp4"
+  if [ -f "$MOV_SRC" ]; then
+    if [ ! -f "$MP4_DST" ] || [ "$MOV_SRC" -nt "$MP4_DST" ]; then
+      ffmpeg -y -i "$MOV_SRC" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "$MP4_DST" 2>/dev/null \
+        && echo "  ✅ Video de entrada.mp4 convertido com sucesso!" \
+        || echo "  ⚠️  Falha ao converter vídeo — o .mov será usado como fallback"
+    else
+      echo "  ℹ️  MP4 já atualizado, pulando conversão"
+    fi
+  else
+    echo "  ⚠️  Arquivo .mov não encontrado em public/ — ignorando conversão"
+  fi
+else
+  echo "  ⚠️  ffmpeg não instalado. Instale com: apt-get install -y ffmpeg"
+  echo "       Sem conversão, Android não exibirá o vídeo de entrada"
+fi
+
+
 echo "📦 Instalando dependências do WhatsApp..."
 cd ~/affiliate-hub/whatsapp
 npm install

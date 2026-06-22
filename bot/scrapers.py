@@ -158,7 +158,8 @@ class PromotionScraper:
                         cupom = self._extrair_cupom_texto(texto_completo)
 
                     descricao = f"Oferta na loja {loja} no Promobit"
-                    if cupom and str(cupom).strip():
+                    # Validação final: garante que o cupom não é um valor inválido
+                    if cupom and str(cupom).strip() and str(cupom).strip().upper() not in _VALORES_INVALIDOS_CUPOM:
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
@@ -273,8 +274,14 @@ class PromotionScraper:
                         continue
 
                     soup = BeautifulSoup(response.content, 'html.parser')
-                    # Promobyte mudou de /p/ para /promo
-                    cards = soup.select('a[href*="/promo"]')
+                    # Promobyte: tentar múltiplos seletores pois o site atualiza o layout com frequência
+                    cards = (
+                        soup.select('a[href*="/promo/"]') or
+                        soup.select('a[href*="/promo"]') or
+                        soup.select('article a[href]') or
+                        soup.select('.deal a[href], .offer a[href], .card a[href]') or
+                        []
+                    )
                     print(f'   📦 Encontrados {len(cards)} cards nesta página')
 
                     for card in cards:
