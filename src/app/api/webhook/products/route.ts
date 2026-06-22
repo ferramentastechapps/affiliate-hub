@@ -215,14 +215,14 @@ export async function POST(request: Request) {
 
         if (precoAnterior && precoNovo < precoAnterior) {
           verificarEDispararAlertas(existingProduct.id, precoAnterior, precoNovo).catch(err => {
-            console.error('[Webhook] Erro ao verificar alertas para produto:', existingProduct.id, err);
+            console.error('[Webhook] Erro ao verificar alertas para produto:', existingProduct?.id, err);
           });
         }
         
         // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
-        if (existingProduct.isFixed && existingProduct.status === 'active') {
+        if (existingProduct?.isFixed && existingProduct?.status === 'active') {
           // Extrair o primeiro link que ele tiver para publicar
-          const existingLinks: any = existingProduct.links || {};
+          const existingLinks: any = existingProduct?.links || {};
           let publishLink = '';
           const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
           let activePlatform = 'amazon';
