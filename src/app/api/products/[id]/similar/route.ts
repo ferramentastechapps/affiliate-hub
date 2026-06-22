@@ -5,10 +5,10 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : 8;
@@ -40,23 +40,23 @@ export async function GET(
     // Calcular pontuação de similaridade
     const scoredProducts = otherProducts.map(product => {
       let score = 0;
-      
+
       // subcategory igual -> peso 3
       if (targetProduct.subcategory && product.subcategory === targetProduct.subcategory) {
         score += 3;
       }
-      
+
       // brand igual -> peso 2
       if (targetProduct.brand && product.brand === targetProduct.brand) {
         score += 2;
       }
-      
+
       // category igual -> peso 1
       if (targetProduct.category && product.category === targetProduct.category) {
         score += 1;
       }
 
-      // Adicionar o aiScore (se existir) para desempatar/recompensar produtos de alta qualidade
+      // Adicionar o aiScore para desempatar produtos de alta qualidade
       const totalScore = score + (product.aiScore || 0);
 
       return {
@@ -65,8 +65,7 @@ export async function GET(
       };
     });
 
-    // Filtrar apenas produtos que possuem pelo menos a mesma categoria ou uma pontuação > 0
-    // (Opcional, mas ajuda a não retornar produtos completamente aleatórios)
+    // Filtrar apenas produtos com alguma pontuação
     const validScoredProducts = scoredProducts.filter(p => p.similarityScore > 0);
 
     // Ordenar por score combinado em ordem decrescente

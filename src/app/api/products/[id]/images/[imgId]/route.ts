@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string, imgId: string } }
+  { params }: { params: Promise<{ id: string; imgId: string }> }
 ) {
   try {
     const sessionToken = cookies().get('session')?.value;
@@ -15,6 +15,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Não Autorizado' }, { status: 401 });
     }
 
+    const { id, imgId } = await params;
     const body = await request.json();
     const { isPrimary, order } = body;
 
@@ -24,21 +25,21 @@ export async function PATCH(
     if (isPrimary === true) {
       // Desmarcar outras imagens como primárias
       await prisma.productImage.updateMany({
-        where: { productId: params.id },
+        where: { productId: id },
         data: { isPrimary: false }
       });
       data.isPrimary = true;
     }
 
     const updated = await prisma.productImage.update({
-      where: { id: params.imgId },
+      where: { id: imgId },
       data
     });
 
     if (isPrimary === true) {
       // Atualizar imagem legada no Produto
       await prisma.product.update({
-        where: { id: params.id },
+        where: { id },
         data: { imageUrl: updated.url }
       });
     }
@@ -52,7 +53,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string, imgId: string } }
+  { params }: { params: Promise<{ id: string; imgId: string }> }
 ) {
   try {
     const sessionToken = cookies().get('session')?.value;
@@ -60,13 +61,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não Autorizado' }, { status: 401 });
     }
 
+    const { id, imgId } = await params;
+
     await prisma.productImage.delete({
-      where: { id: params.imgId }
+      where: { id: imgId }
     });
 
     // Se deletou a principal, garantir que tem outra (se existir)
     const remainingImages = await prisma.productImage.findMany({
-      where: { productId: params.id },
+      where: { productId: id },
       orderBy: { order: 'asc' }
     });
 
@@ -78,12 +81,10 @@ export async function DELETE(
           data: { isPrimary: true }
         });
         await prisma.product.update({
-          where: { id: params.id },
+          where: { id },
           data: { imageUrl: remainingImages[0].url }
         });
       }
-    } else {
-      // Nenhuma imagem sobrou. Manter URL antiga ou colocar placeholder (pode manter URL se quiser evitar quebrar tela legada sem imagem)
     }
 
     return NextResponse.json({ success: true });
