@@ -274,21 +274,24 @@ class PromotionScraper:
                         continue
 
                     soup = BeautifulSoup(response.content, 'html.parser')
-                    # Promobyte: tentar múltiplos seletores pois o site atualiza o layout com frequência
+                    # Promobyte: evitar links do cabeçalho
                     cards = (
-                        soup.select('a[href*="/promo/"]') or
-                        soup.select('a[href*="/promo"]') or
-                        soup.select('article a[href]') or
-                        soup.select('.deal a[href], .offer a[href], .card a[href]') or
+                        soup.select('article') or
+                        soup.select('.card, .deal-card, .promo-card') or
                         []
                     )
+                    # Fallback: se não achar cards, procura por links de deals específicos
+                    if not cards:
+                        cards = [a for a in soup.select('a[href]') if '/p/' in a['href'] or '/oferta/' in a['href'] or re.search(r'-\d+$', a['href'])]
                     print(f'   📦 Encontrados {len(cards)} cards nesta página')
 
                     for card in cards:
                         if len(produtos) >= limite:
                             break
                         try:
-                            link = card.get('href', '')
+                            # Se card for a tag <a>, usa o href dele. Se for article, busca o link dentro
+                            link = card.get('href') if card.name == 'a' else card.select_one('a').get('href', '')
+                            if not link: continue
                             if not link.startswith('http'):
                                 link = 'https://promobyte.site' + link
                             if link in vistos:
@@ -480,8 +483,8 @@ class PromotionScraper:
 
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Gatry usa cards de promoção
-            cards = soup.select('article.deal-card, div.deal-item, a[href*="/deal/"]')
+            # Gatry usa cards de promoção em tags <article> sem classe específica
+            cards = soup.select('article') or soup.select('div.deal-item')
             print(f'   📦 Encontrados {len(cards)} cards')
             
             for card in cards[:limite]:
