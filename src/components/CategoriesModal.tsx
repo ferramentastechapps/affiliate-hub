@@ -2,42 +2,56 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  X,
-  Tag,
-  CaretLeft,
-  DeviceMobile,
-  GameController,
-  House,
-  TShirt,
-  Baby,
-  Sparkle,
-  Barbell,
-  ShoppingCart,
-  BookOpen,
-  Wrench,
-  Car,
-  PawPrint,
-  Airplane,
-  Package
-} from "@phosphor-icons/react";
+import { X, Tag, CaretLeft } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
 
 const CATEGORIES = [
-  { key: "smartphones-tv", label: "Smartphones e TV", icon: DeviceMobile },
-  { key: "games", label: "Informática e Games", icon: GameController },
-  { key: "casa", label: "Casa e Eletrodomésticos", icon: House },
-  { key: "moda", label: "Moda e Acessórios", icon: TShirt },
-  { key: "bebes", label: "Bebês e Crianças", icon: Baby },
-  { key: "saude", label: "Saúde e Beleza", icon: Sparkle },
-  { key: "esporte", label: "Esporte e Suplementos", icon: Barbell },
-  { key: "supermercado", label: "Supermercado e Delivery", icon: ShoppingCart },
-  { key: "livros", label: "Livros, eBooks e eReaders", icon: BookOpen },
-  { key: "ferramentas", label: "Ferramentas e Jardim", icon: Wrench },
-  { key: "automotivo", label: "Automotivo", icon: Car },
-  { key: "pet", label: "Pet", icon: PawPrint },
-  { key: "viagem", label: "Viagem", icon: Airplane },
-  { key: "diversos", label: "Diversos", icon: Package }
+  // Eletrônicos e Tech
+  { key: "smartphones", label: "Smartphones", icon: "📱" },
+  { key: "smart-tvs", label: "Smart TVs", icon: "📺" },
+  { key: "fones-de-ouvido", label: "Fones de Ouvido", icon: "🎧" },
+  { key: "caixas-de-som", label: "Caixas de Som", icon: "🔊" },
+  { key: "smartwatches", label: "Smartwatches", icon: "⌚" },
+  { key: "cameras", label: "Câmeras", icon: "📷" },
+  { key: "tablets", label: "Tablets", icon: "🗂️" },
+  // Informática e Games
+  { key: "notebooks", label: "Notebooks", icon: "💻" },
+  { key: "pcs-e-desktops", label: "PCs e Desktops", icon: "🖥️" },
+  { key: "monitores", label: "Monitores", icon: "🖱️" },
+  { key: "perifericos", label: "Periféricos", icon: "⌨️" },
+  { key: "ssd-hds-memoria", label: "SSD, HDs e Memória", icon: "💾" },
+  { key: "consoles-e-games", label: "Consoles e Games", icon: "🎮" },
+  // Casa e Eletrodomésticos
+  { key: "air-fryers", label: "Air Fryers", icon: "🍟" },
+  { key: "cafeteiras", label: "Cafeteiras", icon: "☕" },
+  { key: "geladeiras", label: "Geladeiras e Freezers", icon: "🧊" },
+  { key: "lavadoras", label: "Lavadoras", icon: "🫧" },
+  { key: "micro-ondas", label: "Micro-ondas", icon: "📡" },
+  { key: "aspiradores", label: "Aspiradores", icon: "🌀" },
+  { key: "ar-condicionado", label: "Ar Condicionado", icon: "❄️" },
+  // Moda e Acessórios
+  { key: "tenis-calcados", label: "Tênis e Calçados", icon: "👟" },
+  { key: "roupas-moda", label: "Roupas e Moda", icon: "👕" },
+  { key: "bolsas-acessorios", label: "Bolsas e Acessórios", icon: "👜" },
+  // Saúde e Beleza
+  { key: "perfumes", label: "Perfumes", icon: "🌺" },
+  { key: "maquiagem-pele", label: "Maquiagem e Pele", icon: "💄" },
+  { key: "shampoo-cabelo", label: "Shampoo e Cabelo", icon: "💆" },
+  // Esporte e Suplementos
+  { key: "whey-suplementos", label: "Whey e Suplementos", icon: "💪" },
+  { key: "bicicletas-esporte", label: "Bicicletas e Esporte", icon: "🚴" },
+  // Supermercado
+  { key: "chocolates-doces", label: "Chocolates e Doces", icon: "🍫" },
+  { key: "cafe-bebidas", label: "Café e Bebidas", icon: "☕" },
+  { key: "cervejas-vinhos", label: "Cervejas e Vinhos", icon: "🍺" },
+  // Outros
+  { key: "livros-ereaders", label: "Livros e eReaders", icon: "📚" },
+  { key: "bebes-criancas", label: "Bebês e Crianças", icon: "👶" },
+  { key: "pet", label: "Pet", icon: "🐾" },
+  { key: "ferramentas", label: "Ferramentas", icon: "🔧" },
+  { key: "automotivo", label: "Automotivo", icon: "🚗" },
+  { key: "viagem", label: "Viagem", icon: "✈️" },
+  { key: "diversos", label: "Diversos", icon: "🔖" },
 ];
 
 type Product = {
@@ -228,8 +242,8 @@ export function CategoriesModal() {
                             onClick={() => setActiveCategory(category.key)}
                             className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-[20px] transition-all duration-300 text-center sm:text-left border bg-black/20 border-white/10 hover:bg-white/10 group"
                           >
-                            <div className="p-2 rounded-xl bg-white/5 text-zinc-400 group-hover:text-accent group-hover:bg-accent/10 transition-colors">
-                              <category.icon size={24} weight="duotone" />
+                            <div className="p-2 rounded-xl bg-white/5 text-2xl group-hover:bg-accent/10 transition-colors">
+                              <span>{category.icon}</span>
                             </div>
                             <span className="text-xs sm:text-sm font-bold leading-tight text-zinc-300 group-hover:text-white transition-colors break-words w-full">
                               {category.label}
@@ -258,9 +272,7 @@ export function CategoriesModal() {
                         <div>
                           <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-white mb-1 flex items-center gap-2">
                             {activeCategoryInfo && (
-                              <div className="p-1.5 rounded-lg bg-accent/20 text-accent">
-                                <activeCategoryInfo.icon size={20} weight="fill" />
-                              </div>
+                              <span className="text-2xl">{activeCategoryInfo.icon}</span>
                             )}
                             {activeCategoryInfo?.label}
                           </h3>

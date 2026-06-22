@@ -1,73 +1,17 @@
 """
 Bot Python — utilitários de metadados
-Extrai subcategoria, marca e modelo do título do produto de forma automática.
+Extrai categoria granular, marca e modelo do título do produto de forma automática.
 """
 
 import re
 from typing import Optional
+from config import CATEGORY_KEYWORDS
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# MAPEAMENTO DE SUBCATEGORIAS
+# MAPEAMENTO E EXTRAÇÃO
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-SUBCATEGORY_KEYWORDS: dict[str, list[str]] = {
-    # Smartphones e TV
-    'Smartphones':    ['iphone', 'samsung galaxy', 'xiaomi', 'motorola moto', 'poco', 'redmi', 'oneplus', 'smartphone', 'celular', 'android phone'],
-    'Tablets':        ['ipad', 'tablet', 'kindle fire', 'galaxy tab'],
-    'Smart TVs':      ['smart tv', 'qled', 'oled tv', 'neo qled', '4k tv', 'televisão', 'televisao'],
-    'Fones de Ouvido':['airpods', 'fone de ouvido', 'headphone', 'earbuds', 'tws', 'headset wireless', 'fone bluetooth'],
-    'Caixas de Som':  ['caixa de som', 'soundbar', 'alto-falante', 'speaker bluetooth', 'jbl', 'bose speaker'],
-    'Smartwatches':   ['smartwatch', 'apple watch', 'galaxy watch', 'relógio inteligente', 'relogio inteligente'],
-    'Câmeras':        ['câmera digital', 'camera digital', 'mirrorless', 'dslr', 'action cam', 'gopro', 'webcam'],
-
-    # Informática e Games
-    'Notebooks':      ['notebook', 'laptop', 'macbook', 'ultrabook', 'chromebook'],
-    'Desktops':       ['desktop', 'computador', 'pc gamer', 'mini pc'],
-    'Monitores':      ['monitor', 'tela led', 'display gamer'],
-    'Teclados':       ['teclado', 'keyboard', 'teclado mecânico', 'teclado mecanico'],
-    'Mouses':         ['mouse', 'mouse gamer', 'mouse sem fio'],
-    'SSDs e HDs':     ['ssd', 'hd externo', 'pendrive', 'memória usb', 'memoria usb', 'disco rígido', 'nvme'],
-    'Memória RAM':    ['memória ram', 'memoria ram', 'ddr4', 'ddr5'],
-    'Placas de Vídeo':['placa de vídeo', 'placa de video', 'gpu', 'rtx', 'radeon', 'geforce'],
-    'Consoles':       ['playstation', 'ps5', 'ps4', 'xbox series', 'nintendo switch'],
-    'Jogos':          ['jogo ', 'game ', 'fifa ', 'call of duty', 'gta', 'minecraft'],
-
-    # Casa e Eletrodomésticos
-    'Geladeiras':     ['geladeira', 'refrigerador', 'frigobar'],
-    'Fogões':         ['fogão', 'fogao', 'cooktop', 'forno'],
-    'Micro-ondas':    ['micro-ondas', 'microondas', 'forno micro'],
-    'Air Fryers':     ['air fryer', 'fritadeira elétrica', 'fritadeira eletrica'],
-    'Aspiradores':    ['aspirador', 'robô aspirador', 'robo aspirador', 'roomba'],
-    'Cafeteiras':     ['cafeteira', 'nespresso', 'dolce gusto', 'expresso'],
-    'Lavadoras':      ['lavadora', 'máquina de lavar', 'maquina de lavar', 'lava e seca'],
-    'Ar Condicionado':['ar condicionado', 'split', 'janeleiro', 'inverter'],
-
-    # Moda e Acessórios
-    'Tênis':          ['tênis', 'tenis', 'sneaker', 'nike', 'adidas', 'puma', 'vans', 'converse'],
-    'Óculos':         ['óculos', 'oculos', 'ray-ban', 'oakley', 'óculos de sol'],
-    'Relógios':       ['relógio', 'relogio', 'casio', 'orient', 'seiko'],
-    'Bolsas':         ['bolsa', 'mochila', 'carteira', 'pochete'],
-
-    # Saúde e Beleza
-    'Maquiagem':      ['batom', 'base maquiagem', 'blush', 'contorno', 'paleta de sombra'],
-    'Cuidados com a Pele': ['hidratante', 'sérum', 'serum facial', 'protetor solar'],
-    'Shampoo e Condicionador': ['shampoo', 'condicionador', 'máscara capilar', 'mascara capilar'],
-    'Perfumes':       ['perfume', 'eau de parfum', 'colônia', 'colonia', 'deo parfum'],
-
-    # Esporte e Suplementos
-    'Whey Protein':   ['whey protein', 'whey isolado', 'proteína', 'proteina'],
-    'Creatina':       ['creatina', 'creatine'],
-    'BCAA':           ['bcaa', 'aminoácido', 'aminoacido'],
-    'Bicicletas':     ['bicicleta', 'bike', 'mountain bike', 'speed'],
-
-    # Supermercado e Delivery
-    'Chocolates':     ['chocolate', 'bombom', 'kit kat', 'bis '],
-    'Café':           ['café', 'cafe ', 'nescafé', 'pilão', 'melitta'],
-    'Cervejas':       ['cerveja', 'beer', 'heineken', 'skol', 'brahma', 'corona'],
-    'Vinhos':         ['vinho', 'wine', 'rosé', 'espumante', 'prosecco'],
-}
-
-# Mapeamento de brand → subcategoria padrão
+# Mapeamento de brand → categoria padrão (fallback)
 BRAND_DEFAULTS: dict[str, str] = {
     'apple':    'Smartphones',
     'samsung':  'Smartphones',
@@ -86,10 +30,10 @@ BRAND_DEFAULTS: dict[str, str] = {
     'sony':     'Smart TVs',
     'tcl':      'Smart TVs',
     'philips':  'Smart TVs',
-    'nike':     'Tênis',
-    'adidas':   'Tênis',
-    'puma':     'Tênis',
-    'vans':     'Tênis',
+    'nike':     'Tênis e Calçados',
+    'adidas':   'Tênis e Calçados',
+    'puma':     'Tênis e Calçados',
+    'vans':     'Tênis e Calçados',
 }
 
 # Marcas conhecidas para extração do título (ordem importa: mais longas primeiro)
@@ -112,17 +56,17 @@ def _normalizar(texto: str) -> str:
     return ''.join(c for c in nfkd if not unicodedata.combining(c))
 
 
-def extrair_subcategoria(titulo: str, categoria: str) -> Optional[str]:
+def extrair_categoria_granular(titulo: str) -> Optional[str]:
     """
-    Tenta detectar a subcategoria do produto com base no título e categoria.
+    Tenta detectar a categoria granular do produto com base no título.
     Retorna None se não conseguir identificar.
     """
     titulo_norm = _normalizar(titulo)
 
-    for subcat, keywords in SUBCATEGORY_KEYWORDS.items():
+    for cat, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
             if _normalizar(kw) in titulo_norm:
-                return subcat
+                return cat
 
     return None
 
@@ -130,13 +74,13 @@ def extrair_subcategoria(titulo: str, categoria: str) -> Optional[str]:
 def extrair_brand(titulo: str) -> Optional[str]:
     """
     Tenta extrair a marca do produto do título.
-    Prioriza marcas mais longas para evitar falsos positivos (ex: 'HP' dentro de 'Shopee').
+    Prioriza marcas mais longas para evitar falsos positivos.
     """
     titulo_norm = _normalizar(titulo)
 
     for brand in sorted(KNOWN_BRANDS, key=len, reverse=True):
         brand_norm = _normalizar(brand)
-        # Verifica como palavra isolada (evita 'sony' dentro de 'sony headphones' ser pego 2x)
+        # Verifica como palavra isolada
         if re.search(r'\b' + re.escape(brand_norm) + r'\b', titulo_norm):
             return brand
 
@@ -146,7 +90,6 @@ def extrair_brand(titulo: str) -> Optional[str]:
 def extrair_model(titulo: str, brand: Optional[str]) -> Optional[str]:
     """
     Tenta extrair o modelo do produto, removendo a marca e termos genéricos.
-    Ex: 'Smartphone Samsung Galaxy S24 Ultra 256GB' → 'Galaxy S24 Ultra'
     """
     if not brand:
         return None
@@ -156,11 +99,10 @@ def extrair_model(titulo: str, brand: Optional[str]) -> Optional[str]:
         r'(?i)\b' + re.escape(brand) + r'\b\s*', '', titulo, count=1
     ).strip()
 
-    # Pegar as primeiras 3-5 palavras como modelo (heurística)
+    # Pegar as primeiras palavras como modelo
     words = titulo_sem_marca.split()
     model_words = []
     for w in words[:6]:
-        # Parar em termos genéricos de especificação
         if re.match(r'^\d+(gb|tb|mb|hz|mp|w|pol|"|\')$', w.lower()):
             break
         if w.lower() in {'preto', 'branco', 'azul', 'verde', 'vermelho', 'dourado',
@@ -177,15 +119,26 @@ def extrair_model(titulo: str, brand: Optional[str]) -> Optional[str]:
 
 def enriquecer_produto(produto: dict) -> dict:
     """
-    Enriquece um produto com subcategoria, brand e model extraídos do título.
-    Não sobrescreve valores já preenchidos.
+    Enriquece um produto com categoria granular, brand e model extraídos do título.
     """
     nome = produto.get('name', '')
-    categoria = produto.get('category', '')
 
-    # Só extrai se não estiver preenchido
-    if not produto.get('subcategory'):
-        produto['subcategory'] = extrair_subcategoria(nome, categoria)
+    # Tenta descobrir categoria de forma granular pelo título
+    cat_granular = extrair_categoria_granular(nome)
+    
+    # Se não encontrar no título, usa fallback de marca, senão Diversos
+    if not cat_granular:
+        brand_temp = extrair_brand(nome)
+        if brand_temp and brand_temp.lower() in BRAND_DEFAULTS:
+            cat_granular = BRAND_DEFAULTS[brand_temp.lower()]
+        else:
+            cat_granular = 'Diversos'
+
+    # Força a categoria a ser a granular
+    produto['category'] = cat_granular
+    
+    # Como passamos a ter categorias granulares, subcategory fica em branco
+    produto['subcategory'] = None
 
     if not produto.get('brand'):
         produto['brand'] = extrair_brand(nome)
@@ -218,10 +171,9 @@ if __name__ == '__main__':
     ]
 
     for nome in testes:
-        subcategoria = extrair_subcategoria(nome, '')
-        brand = extrair_brand(nome)
-        model = extrair_model(nome, brand)
+        prod = {'name': nome}
+        prod = enriquecer_produto(prod)
         print(f'\nNome: {nome[:60]}')
-        print(f'  Subcategoria: {subcategoria}')
-        print(f'  Brand: {brand}')
-        print(f'  Model: {model}')
+        print(f'  Categoria Granular: {prod.get("category")}')
+        print(f'  Brand: {prod.get("brand")}')
+        print(f'  Model: {prod.get("model")}')
