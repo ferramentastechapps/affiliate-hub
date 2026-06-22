@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       userId: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
     });
 
     // Configura o cookie de sessão HTTP-Only
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         image: user.image,
+        role: user.role,
       },
     });
   } catch (error) {

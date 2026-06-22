@@ -83,6 +83,20 @@ async function main() {
     console.log(`✅ Produto criado: ${p.name}`);
   }
 
+  console.log('🌱 Configurando usuário admin...');
+  const adminEmail = 'jotanogueira@icloud.com';
+  
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { role: 'admin' },
+    create: {
+      email: adminEmail,
+      name: 'Admin Jota',
+      role: 'admin',
+    },
+  });
+  console.log(`✅ Admin configurado: ${adminEmail}`);
+
   console.log('\n🎉 Seed concluído! Produtos adicionados ao banco.');
 }
 
