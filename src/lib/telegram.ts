@@ -38,7 +38,7 @@ function formatBrCurrency(val: number | string | null | undefined): string {
   return num.toFixed(2).replace('.', ',');
 }
 
-async function sendTelegramMessage(chatId: string, text: string, imageUrl?: string) {
+export async function sendTelegramMessage(chatId: string, text: string, imageUrl?: string) {
   if (!TELEGRAM_BOT_TOKEN) {
     console.error('[Telegram] TELEGRAM_BOT_TOKEN não configurada!');
     return false;

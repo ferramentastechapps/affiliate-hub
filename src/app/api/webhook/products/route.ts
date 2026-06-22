@@ -6,6 +6,8 @@ import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
 import { getSecondaryLifestyleImage } from '@/lib/scraper';
 import { publishToGroup } from '@/lib/telegram';
+import { verificarEDispararAlertas } from '@/lib/notifications';
+import { fetchAndSaveMLReviews } from '@/lib/reviews';
 
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
@@ -180,6 +182,8 @@ export async function POST(request: Request) {
           }
         }
 
+        const precoAnterior = existingProduct.price;
+        const precoNovo = parseFloat(body.price);
 
         // Atualizar preço atual no produto e obter objeto atualizado
         const updatedProduct = await prisma.product.update({
@@ -206,6 +210,12 @@ export async function POST(request: Request) {
             where: { productId_platform: { productId: existingProduct.id, platform: pl.platform } },
             create: { ...pl, productId: existingProduct.id },
             update: { sourceUrl: pl.sourceUrl, affiliateUrl: pl.affiliateUrl, generatedAffiliateUrl: pl.generatedAffiliateUrl }
+          });
+        }
+
+        if (precoAnterior && precoNovo < precoAnterior) {
+          verificarEDispararAlertas(existingProduct.id, precoAnterior, precoNovo).catch(err => {
+            console.error('[Webhook] Erro ao verificar alertas para produto:', existingProduct.id, err);
           });
         }
         
@@ -416,16 +426,22 @@ export async function POST(request: Request) {
         }
       }
 
-      await prisma.product.update({
-        where: { id: product.id },
-        data: {
-          aiScore: aiResult.score,
-          aiAnalysis: aiResult.rawJson,
-          enhancedImageUrl: finalEnhancedImageUrl,
-          status: newStatus
-        }
-      });
-      console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+          await prisma.product.update({
+            where: { id: product.id },
+            data: {
+              aiScore: aiResult.score,
+              aiAnalysis: aiResult.rawJson,
+              enhancedImageUrl: finalEnhancedImageUrl,
+              status: newStatus,
+              aiProcessed: true,
+              aiProcessedAt: new Date()
+            }
+          });
+          console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+
+          if (body.links?.mercadoLivre) {
+            await fetchAndSaveMLReviews(product.id, body.links.mercadoLivre);
+          }
 
       // Se a IA aprovou o produto, disparar notificação push!
       if (finalStatus === 'pending' && newStatus === 'active') {
@@ -573,6 +589,8 @@ export async function PUT(request: Request) {
               }
             }
 
+            const precoAnterior = existingProduct.price;
+            const precoNovo = parseFloat(productData.price);
 
             // Atualizar preço atual no produto
             const updatedProduct = await prisma.product.update({
@@ -599,6 +617,12 @@ export async function PUT(request: Request) {
                 where: { productId_platform: { productId: existingProduct.id, platform: pl.platform } },
                 create: { ...pl, productId: existingProduct.id },
                 update: { sourceUrl: pl.sourceUrl, affiliateUrl: pl.affiliateUrl, generatedAffiliateUrl: pl.generatedAffiliateUrl }
+              });
+            }
+
+            if (precoAnterior && precoNovo < precoAnterior) {
+              verificarEDispararAlertas(existingProduct.id, precoAnterior, precoNovo).catch(err => {
+                console.error('[Webhook Batch] Erro ao verificar alertas para produto:', existingProduct.id, err);
               });
             }// Repostagem no Telegram se o produto estiver 'isFixed' e ativo
             if (updatedProduct.isFixed && updatedProduct.status === 'active') {
@@ -762,10 +786,16 @@ export async function PUT(request: Request) {
               aiScore: aiResult.score,
               aiAnalysis: aiResult.rawJson,
               enhancedImageUrl: finalEnhancedImageUrl,
-              status: newStatus
+              status: newStatus,
+              aiProcessed: true,
+              aiProcessedAt: new Date()
             }
           });
           console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+
+          if (body.links?.mercadoLivre) {
+            await fetchAndSaveMLReviews(product.id, body.links.mercadoLivre);
+          }
 
           // Se a IA aprovou o produto, disparar notificação push!
           if (finalStatus === 'pending' && newStatus === 'active') {
