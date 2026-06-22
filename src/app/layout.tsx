@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { AuthProvider } from "@/components/AuthProvider";
 import { CategoriesModal } from "@/components/CategoriesModal";
 import { CouponsModal } from "@/components/CouponsModal";
+import { SplashScreen } from "@/components/SplashScreen";
 import Script from "next/script";
 
 const montserrat = Montserrat({
@@ -82,6 +83,7 @@ export default function RootLayout({
         <meta name="lomadee" content="2324685" />
       </head>
       <body className="min-h-[100dvh] flex flex-col bg-background text-foreground selection:bg-accent selection:text-accent-foreground font-sans relative">
+        <SplashScreen />
         <div className="premium-bg fixed top-0 left-0 w-full h-full -z-10" />
         <AuthProvider>
           <Header />

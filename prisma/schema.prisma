@@ -158,12 +158,19 @@ model User {
   password  String?  // Hashed password (null for Google-only users)
   image     String?  // URL da imagem de perfil (ex: Google avatar)
   googleId  String?  @unique // ID do Google para OAuth
+  role      String   @default("user") // "user", "moderator", "admin"
+  isActive  Boolean  @default(true)
+  lastLoginAt DateTime?
+  engagementScore Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   comments  Comment[]
   votes     ProductVote[]
   alerts    ProductAlert[]
+  activityLogs ActivityLog[]
+  tags      UserTagAssignment[]
+  notes     UserNote[]
 
   @@index([email])
   @@index([googleId])
@@ -209,4 +216,85 @@ model ProductAlert {
 
   @@unique([productId, userId])
   @@index([productId])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📝 LOG DE ATIVIDADES (AUDIT TRAIL) E CRM
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entityType  String
+  entityId    String?
+  details     String?  @db.Text
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model UserTag {
+  id    String @id @default(cuid())
+  name  String @unique
+  color String @default("#6366f1")
+  users UserTagAssignment[]
+}
+
+model UserTagAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       UserTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tagId])
+}
+
+model UserNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorId  String?
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🤝 PARCEIROS E SISTEMA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Partner {
+  id             String   @id @default(cuid())
+  name           String
+  email          String?
+  platform       String
+  channelName    String?
+  trackingCode   String   @unique
+  totalClicks    Int      @default(0)
+  totalRevenue   Float    @default(0)
+  commissionRate Float    @default(0)
+  isActive       Boolean  @default(true)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([trackingCode])
+  @@index([platform])
+}
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
 }
