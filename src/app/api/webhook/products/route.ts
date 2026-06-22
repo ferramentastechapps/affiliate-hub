@@ -621,8 +621,8 @@ export async function PUT(request: Request) {
             }
 
             if (precoAnterior && precoNovo < precoAnterior) {
-              verificarEDispararAlertas(existingProduct.id, precoAnterior, precoNovo).catch(err => {
-                console.error('[Webhook Batch] Erro ao verificar alertas para produto:', existingProduct.id, err);
+              verificarEDispararAlertas(existingProduct?.id || updatedProduct.id, precoAnterior, precoNovo).catch(err => {
+                console.error('[Webhook Batch] Erro ao verificar alertas para produto:', existingProduct?.id || updatedProduct.id, err);
               });
             }// Repostagem no Telegram se o produto estiver 'isFixed' e ativo
             if (updatedProduct.isFixed && updatedProduct.status === 'active') {
