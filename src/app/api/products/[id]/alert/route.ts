@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth-utils';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    
+    const payload = verifyToken(sessionToken);
+    if (!payload || !payload.userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -18,13 +24,13 @@ export async function GET(
       where: {
         productId_userId: {
           productId: id,
-          userId: session.user.id
+          userId: payload.userId
         }
       }
     });
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: payload.userId },
       select: { telegramId: true }
     });
 
@@ -43,8 +49,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    
+    const payload = verifyToken(sessionToken);
+    if (!payload || !payload.userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -54,7 +66,7 @@ export async function POST(
     if (telegramId) {
       // Salva ou atualiza o telegramId do usuário
       await prisma.user.update({
-        where: { id: session.user.id },
+        where: { id: payload.userId },
         data: { telegramId: telegramId.toString() }
       });
     }
@@ -64,7 +76,7 @@ export async function POST(
       where: {
         productId_userId: {
           productId: id,
-          userId: session.user.id
+          userId: payload.userId
         }
       }
     });
@@ -82,7 +94,7 @@ export async function POST(
     const newAlert = await prisma.productAlert.create({
       data: {
         productId: id,
-        userId: session.user.id,
+        userId: payload.userId,
         isActive: true,
         channel: 'telegram'
       }
