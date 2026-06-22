@@ -10,6 +10,7 @@ import { publishToGroup } from '@/lib/telegram';
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
   const generatedLinks: Record<string, string> = {};
+  const productLinksData: Array<{ platform: string, sourceUrl?: string, affiliateUrl?: string, generatedAffiliateUrl?: string, isActive: boolean }> = [];
   let hasAffiliate = false;
   let isAggregatorFailed = false;
 
@@ -23,6 +24,13 @@ async function processProductAffiliates(productData: { links?: Record<string, st
         const generated = await generateAffiliateLink(originalUrl);
         if (generated) {
           generatedLinks[platform] = generated;
+          productLinksData.push({
+            platform,
+            sourceUrl: originalUrl,
+            affiliateUrl: originalUrl,
+            generatedAffiliateUrl: generated,
+            isActive: true
+          });
           hasAffiliate = true;
         } else {
           const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
@@ -31,6 +39,12 @@ async function processProductAffiliates(productData: { links?: Record<string, st
             isAggregatorFailed = true;
           } else {
             generatedLinks[platform] = originalUrl;
+            productLinksData.push({
+              platform,
+              sourceUrl: originalUrl,
+              affiliateUrl: originalUrl,
+              isActive: true
+            });
           }
         }
       } catch (e) {
@@ -40,6 +54,12 @@ async function processProductAffiliates(productData: { links?: Record<string, st
            isAggregatorFailed = true;
         } else {
            generatedLinks[platform] = originalUrl;
+           productLinksData.push({
+             platform,
+             sourceUrl: originalUrl,
+             affiliateUrl: originalUrl,
+             isActive: true
+           });
         }
       }
     }
@@ -47,6 +67,7 @@ async function processProductAffiliates(productData: { links?: Record<string, st
 
   return {
     links: Object.keys(generatedLinks).length > 0 ? generatedLinks : null,
+    productLinksData,
     status: hasAffiliate ? 'active' : 'pending'
   };
 }
@@ -131,32 +152,34 @@ export async function POST(request: Request) {
           };
         }
 
-        // Processar links novos para ver se temos novos links de afiliados
-        const { links: processedLinks } = await processProductAffiliates(body);
-        const linksUpdate: Record<string, string> = {};
-        if (processedLinks) {
-          const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-          for (const platform of platforms) {
-            const newLink = processedLinks[platform];
-            const oldLink = existingProduct.links?.[platform];
-            if (newLink) {
-              const isOldAggregator = !oldLink || oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br');
-              const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
-              if (isOldAggregator && isNewDirect) {
-                linksUpdate[platform] = newLink;
+
+        const skipProcessing = existingProduct.aiProcessed && existingProduct.affiliateProcessed;
+        let linksData = undefined;
+        let productLinksDataUpdate: any[] = [];
+        
+        if (!skipProcessing) {
+          const { links: processedLinks, productLinksData } = await processProductAffiliates(body);
+          productLinksDataUpdate = productLinksData;
+          const linksUpdate: Record<string, string> = {};
+          if (processedLinks) {
+            const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+            for (const platform of platforms) {
+              const newLink = processedLinks[platform];
+              const oldLink = existingProduct.links?.[platform as keyof typeof existingProduct.links];
+              if (newLink) {
+                const isOldAggregator = !oldLink || (typeof oldLink === 'string' && (oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br')));
+                const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
+                if (isOldAggregator && isNewDirect) {
+                  linksUpdate[platform] = newLink;
+                }
               }
             }
           }
-        }
-
-        let linksData = undefined;
-        if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
-          if (existingProduct.links) {
-            linksData = { update: linksUpdate };
-          } else {
-            linksData = { create: linksUpdate };
+          if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
+            linksData = existingProduct.links ? { update: linksUpdate } : { create: linksUpdate };
           }
         }
+
 
         // Atualizar preço atual no produto e obter objeto atualizado
         const updatedProduct = await prisma.product.update({
@@ -164,6 +187,11 @@ export async function POST(request: Request) {
           data: { 
             price: parseFloat(body.price),
             originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : existingProduct.originalPrice,
+            subcategory: body.subcategory || existingProduct.subcategory,
+            brand: body.brand || existingProduct.brand,
+            model: body.model || existingProduct.model,
+            platformProductId: body.platformProductId || existingProduct.platformProductId,
+            storeName: body.storeName || existingProduct.storeName,
             ...imageUpdateData,
             links: linksData
           },
@@ -172,6 +200,14 @@ export async function POST(request: Request) {
           }
         });
         existingProduct = updatedProduct;
+        
+        for (const pl of productLinksDataUpdate) {
+          await prisma.productLink.upsert({
+            where: { productId_platform: { productId: existingProduct.id, platform: pl.platform } },
+            create: { ...pl, productId: existingProduct.id },
+            update: { sourceUrl: pl.sourceUrl, affiliateUrl: pl.affiliateUrl, generatedAffiliateUrl: pl.generatedAffiliateUrl }
+          });
+        }
         
         // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
         if (existingProduct.isFixed && existingProduct.status === 'active') {
@@ -223,7 +259,7 @@ export async function POST(request: Request) {
       }, { status: 200 });
     }
 
-    const { links: processedLinks, status: processedStatus } = await processProductAffiliates(body);
+    const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(body);
     
     // isAggregatorFailed removido - agora mantemos o link original para aprovação manual
 
@@ -238,10 +274,24 @@ export async function POST(request: Request) {
     }
 
     // Criar produto
+    const imagesToCreate = [];
+    if (Array.isArray(body.images) && body.images.length > 0) {
+      body.images.forEach((url: string, index: number) => {
+        imagesToCreate.push({ url, source: index === 0 ? 'scraper' : 'scraper_gallery', isPrimary: index === 0, order: index });
+      });
+    } else if (body.imageUrl) {
+      imagesToCreate.push({ url: body.imageUrl, source: 'scraper', isPrimary: true, order: 0 });
+    }
+    
     const product = await prisma.product.create({
       data: {
         name: body.name,
         category: body.category,
+        subcategory: body.subcategory || null,
+        brand: body.brand || null,
+        model: body.model || null,
+        platformProductId: body.platformProductId || null,
+        storeName: body.storeName || null,
         description: body.description || null,
         imageUrl: body.imageUrl,
         price: body.price ? parseFloat(body.price) : null,
@@ -259,6 +309,12 @@ export async function POST(request: Request) {
             magalu: processedLinks.magalu || null,
             kabum: processedLinks.kabum || null,
           }
+        } : undefined,
+        productLinks: productLinksData && productLinksData.length > 0 ? {
+          create: productLinksData
+        } : undefined,
+        images: imagesToCreate.length > 0 ? {
+          create: imagesToCreate
         } : undefined
       },
       include: {
@@ -445,7 +501,7 @@ export async function PUT(request: Request) {
     for (const productData of body.products) {
       try {
         // Tenta encontrar por externalId, senão por nome recente
-        const existingProduct = await prisma.product.findFirst({
+        let existingProduct = await prisma.product.findFirst({
           where: productData.externalId ? { externalId: productData.externalId } : {
             name: productData.name,
             createdAt: {
@@ -489,32 +545,34 @@ export async function PUT(request: Request) {
               };
             }
 
-            // Processar links novos para ver se temos novos links de afiliados
-            const { links: processedLinks } = await processProductAffiliates(productData);
-            const linksUpdate: Record<string, string> = {};
-            if (processedLinks) {
-              const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-              for (const platform of platforms) {
-                const newLink = processedLinks[platform];
-                const oldLink = existingProduct.links?.[platform];
-                if (newLink) {
-                  const isOldAggregator = !oldLink || oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br');
-                  const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
-                  if (isOldAggregator && isNewDirect) {
-                    linksUpdate[platform] = newLink;
+
+            const skipProcessing = existingProduct.aiProcessed && existingProduct.affiliateProcessed;
+            let linksData = undefined;
+            let productLinksDataUpdate: any[] = [];
+            
+            if (!skipProcessing) {
+              const { links: processedLinks, productLinksData } = await processProductAffiliates(productData);
+              productLinksDataUpdate = productLinksData;
+              const linksUpdate: Record<string, string> = {};
+              if (processedLinks) {
+                const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+                for (const platform of platforms) {
+                  const newLink = processedLinks[platform];
+                  const oldLink = existingProduct.links?.[platform as keyof typeof existingProduct.links];
+                  if (newLink) {
+                    const isOldAggregator = !oldLink || (typeof oldLink === 'string' && (oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br')));
+                    const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
+                    if (isOldAggregator && isNewDirect) {
+                      linksUpdate[platform] = newLink;
+                    }
                   }
                 }
               }
-            }
-
-            let linksData = undefined;
-            if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
-              if (existingProduct.links) {
-                linksData = { update: linksUpdate };
-              } else {
-                linksData = { create: linksUpdate };
+              if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
+                linksData = existingProduct.links ? { update: linksUpdate } : { create: linksUpdate };
               }
             }
+
 
             // Atualizar preço atual no produto
             const updatedProduct = await prisma.product.update({
@@ -522,6 +580,11 @@ export async function PUT(request: Request) {
               data: { 
                 price: parseFloat(productData.price),
                 originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : existingProduct.originalPrice,
+                subcategory: productData.subcategory || existingProduct.subcategory,
+                brand: productData.brand || existingProduct.brand,
+                model: productData.model || existingProduct.model,
+                platformProductId: productData.platformProductId || existingProduct.platformProductId,
+                storeName: productData.storeName || existingProduct.storeName,
                 ...imageUpdateData,
                 links: linksData
               },
@@ -529,8 +592,15 @@ export async function PUT(request: Request) {
                 links: true
               }
             });
+            existingProduct = updatedProduct;
             
-            // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
+            for (const pl of productLinksDataUpdate) {
+              await prisma.productLink.upsert({
+                where: { productId_platform: { productId: existingProduct.id, platform: pl.platform } },
+                create: { ...pl, productId: existingProduct.id },
+                update: { sourceUrl: pl.sourceUrl, affiliateUrl: pl.affiliateUrl, generatedAffiliateUrl: pl.generatedAffiliateUrl }
+              });
+            }// Repostagem no Telegram se o produto estiver 'isFixed' e ativo
             if (updatedProduct.isFixed && updatedProduct.status === 'active') {
               const existingLinks: any = updatedProduct.links || {};
               let publishLink = '';
@@ -559,7 +629,7 @@ export async function PUT(request: Request) {
           continue;
         }
 
-        const { links: processedLinks, status: processedStatus } = await processProductAffiliates(productData);
+        const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(productData);
         
         // isAggregatorFailed removido - mantemos links originais
 
@@ -572,10 +642,24 @@ export async function PUT(request: Request) {
           finalStatus = 'pending';
         }
 
+        const imagesToCreate = [];
+        if (Array.isArray(productData.images) && productData.images.length > 0) {
+          productData.images.forEach((url: string, index: number) => {
+            imagesToCreate.push({ url, source: index === 0 ? 'scraper' : 'scraper_gallery', isPrimary: index === 0, order: index });
+          });
+        } else if (productData.imageUrl) {
+          imagesToCreate.push({ url: productData.imageUrl, source: 'scraper', isPrimary: true, order: 0 });
+        }
+        
         const product = await prisma.product.create({
           data: {
             name: productData.name,
             category: productData.category,
+            subcategory: productData.subcategory || null,
+            brand: productData.brand || null,
+            model: productData.model || null,
+            platformProductId: productData.platformProductId || null,
+            storeName: productData.storeName || null,
             description: productData.description || null,
             imageUrl: productData.imageUrl,
             price: productData.price ? parseFloat(productData.price) : null,
@@ -593,6 +677,12 @@ export async function PUT(request: Request) {
                 magalu: processedLinks.magalu || null,
                 kabum: processedLinks.kabum || null,
               }
+            } : undefined,
+            productLinks: productLinksData && productLinksData.length > 0 ? {
+              create: productLinksData
+            } : undefined,
+            images: imagesToCreate.length > 0 ? {
+              create: imagesToCreate
             } : undefined
           },
           include: {

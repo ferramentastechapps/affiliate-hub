@@ -60,6 +60,8 @@ export async function GET(request: Request) {
       take: 200, // Aumentado para 200 para ter mais massa de dados pros filtros que dependem de sort no front
       include: {
         links: true,
+        productLinks: true,
+        images: true,
         alerts: {
           select: { userId: true }
         },
@@ -116,7 +118,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, category, description, imageUrl, price, originalPrice, links } = body;
+    const { name, category, description, imageUrl, price, originalPrice, links, brand, subcategory, platformProductId, productLinks, images } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -138,16 +140,37 @@ export async function POST(request: Request) {
       data: {
         name,
         category,
+        brand,
+        subcategory,
+        platformProductId,
         description,
         imageUrl,
         price: price ? parseFloat(price) : null,
         originalPrice: originalPrice ? parseFloat(originalPrice) : null,
         links: links ? {
           create: links
+        } : undefined,
+        productLinks: productLinks ? {
+          create: productLinks.map((link: any) => ({
+            platform: link.platform,
+            sourceUrl: link.sourceUrl,
+            affiliateUrl: link.affiliateUrl,
+            generatedAffiliateUrl: link.generatedAffiliateUrl,
+            isActive: link.isActive !== undefined ? link.isActive : true
+          }))
+        } : undefined,
+        images: images ? {
+          create: images.map((img: any, index: number) => ({
+            url: img.url,
+            isPrimary: img.isPrimary || false,
+            order: img.order ?? index
+          }))
         } : undefined
       },
       include: {
-        links: true
+        links: true,
+        productLinks: true,
+        images: true
       }
     });
     

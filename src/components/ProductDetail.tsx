@@ -29,6 +29,11 @@ type Product = {
     description: string;
     discount: string;
   }>;
+  images?: Array<{
+    id: string;
+    url: string;
+    isPrimary: boolean;
+  }>;
 };
 
 export function ProductDetail({ product }: { product: Product }) {
@@ -38,6 +43,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const [votes, setVotes] = useState({ likes: 0, dislikes: 0, userVote: null as string | null });
   const [hasAlert, setHasAlert] = useState(false);
@@ -52,12 +58,11 @@ export function ProductDetail({ product }: { product: Product }) {
 
   // Load related products, votes and comments
   useEffect(() => {
-    fetch('/api/products')
+    fetch(`/api/products/${product.id}/similar?limit=8`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          const filtered = data.filter((p: any) => p.id !== product.id && p.category === product.category);
-          setRelatedProducts(filtered);
+          setRelatedProducts(data);
         }
       })
       .catch(console.error);
@@ -239,7 +244,7 @@ export function ProductDetail({ product }: { product: Product }) {
         <div className="w-full glass-3d-card rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row shadow-2xl">
           
           {/* Image Section */}
-          <div className="relative w-full md:w-5/12 bg-black/40 backdrop-blur-sm border-b md:border-b-0 md:border-r border-white/5 flex items-center justify-center p-8 lg:p-12 min-h-[300px] md:min-h-[450px]">
+          <div className="relative w-full md:w-5/12 bg-black/40 backdrop-blur-sm border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-8 lg:p-12 min-h-[300px] md:min-h-[450px]">
             {price > 0 && discount > 0 && (
               <motion.div 
                 initial={{ scale: 0, rotate: -10 }} 
@@ -251,18 +256,60 @@ export function ProductDetail({ product }: { product: Product }) {
               </motion.div>
             )}
             
-            <motion.img 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              src={product.imageUrl} 
-              alt={product.name}
-              className="w-full h-full object-contain filter drop-shadow-2xl transition-transform hover:scale-105 duration-500"
-              style={{ maxHeight: '400px' }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/placeholder.webp";
-              }}
-            />
+            <div className="flex-1 flex items-center justify-center relative group">
+              {(product.images && product.images.length > 1) && (
+                <button 
+                  onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : product.images!.length - 1)}
+                  className="absolute left-0 z-20 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent focus:outline-none"
+                >
+                  <ArrowLeft size={20} weight="bold" />
+                </button>
+              )}
+
+              <motion.img 
+                key={currentImageIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                src={product.images && product.images.length > 0 ? product.images[currentImageIndex].url : product.imageUrl} 
+                alt={product.name}
+                className="w-full h-full object-contain filter drop-shadow-2xl transition-transform hover:scale-105 duration-500 max-h-[350px]"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/placeholder.webp";
+                }}
+              />
+
+              {(product.images && product.images.length > 1) && (
+                <button 
+                  onClick={() => setCurrentImageIndex(prev => prev < product.images!.length - 1 ? prev + 1 : 0)}
+                  className="absolute right-0 z-20 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent focus:outline-none"
+                >
+                  <ArrowRight size={20} weight="bold" />
+                </button>
+              )}
+            </div>
+
+            {/* Thumbnail Strip */}
+            {product.images && product.images.length > 1 && (
+              <div className="flex gap-2 mt-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+                {product.images.map((img, idx) => (
+                  <button
+                    key={img.id}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                      currentImageIndex === idx ? 'border-accent scale-105 opacity-100' : 'border-white/10 opacity-50 hover:opacity-100'
+                    }`}
+                  >
+                    <img 
+                      src={img.url} 
+                      alt={`Thumbnail ${idx}`} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Details Section */}

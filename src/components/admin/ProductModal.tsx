@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, MagicWand, TelegramLogo, Check, PaperPlaneTilt } from "@phosphor-icons/react";
+import { X, MagicWand, TelegramLogo, Check, PaperPlaneTilt, Plus, Trash } from "@phosphor-icons/react";
 
 type ProductModalProps = {
   isOpen: boolean;
@@ -13,16 +13,18 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     category: "",
+    brand: "",
+    subcategory: "",
+    platformProductId: "",
     description: "",
     imageUrl: "",
     price: "",
-    amazon: "",
-    mercadoLivre: "",
-    shopee: "",
-    aliexpress: "",
-    tiktok: "",
     isFixed: false,
   });
+
+  const [productLinks, setProductLinks] = useState<any[]>([]);
+  const [images, setImages] = useState<any[]>([]);
+
   const [scrapeUrl, setScrapeUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,38 +35,72 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
   const [telegramLoading, setTelegramLoading] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showAlternativeImages, setShowAlternativeImages] = useState(true);
+  const [reprocessStatus, setReprocessStatus] = useState({ aiProcessed: false, affiliateProcessed: false, aiProcessedAt: null as string | null });
 
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name || "",
         category: product.category || "",
+        brand: product.brand || "",
+        subcategory: product.subcategory || "",
+        platformProductId: product.platformProductId || "",
         description: product.description || "",
         imageUrl: product.imageUrl || "",
         price: product.price?.toString() || "",
-        amazon: product.links?.amazon || "",
-        mercadoLivre: product.links?.mercadoLivre || "",
-        shopee: product.links?.shopee || "",
-        aliexpress: product.links?.aliexpress || "",
-        tiktok: product.links?.tiktok || "",
         isFixed: product.isFixed || false,
       });
+
+      setReprocessStatus({
+        aiProcessed: product.aiProcessed || false,
+        affiliateProcessed: product.affiliateProcessed || false,
+        aiProcessedAt: product.aiProcessedAt || null
+      });
+
+      if (product.productLinks && product.productLinks.length > 0) {
+        setProductLinks(product.productLinks);
+      } else {
+        const initialLinks: any[] = [];
+        const platforms = ["amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok", "magalu", "kabum", "netshoes"];
+        const legacy = product.links || {};
+        platforms.forEach(p => {
+          if (legacy[p]) {
+            initialLinks.push({
+              platform: p,
+              sourceUrl: "",
+              affiliateUrl: "",
+              generatedAffiliateUrl: legacy[p],
+              isActive: true
+            });
+          }
+        });
+        setProductLinks(initialLinks);
+      }
+
+      if (product.images && product.images.length > 0) {
+        setImages(product.images);
+      } else if (product.imageUrl) {
+        setImages([{ url: product.imageUrl, isPrimary: true }]);
+      } else {
+        setImages([]);
+      }
+
       setSearchQuery(product.name || "");
       handleSearchImages(product.name || "");
     } else {
       setFormData({
         name: "",
         category: "",
+        brand: "",
+        subcategory: "",
+        platformProductId: "",
         description: "",
         imageUrl: "",
         price: "",
-        amazon: "",
-        mercadoLivre: "",
-        shopee: "",
-        aliexpress: "",
-        tiktok: "",
         isFixed: false,
       });
+      setProductLinks([]);
+      setImages([]);
       setAlternativeImages([]);
       setSearchQuery("");
     }
@@ -110,23 +146,29 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         description: data.description || prev.description,
       }));
 
-      // Se retornou nome do produto, busca imagens no DDG
       if (data.name) {
         setSearchQuery(data.name);
         handleSearchImages(data.name);
       }
 
-      // Adicionar URL ao campo correto baseado na plataforma
-      if (scrapeUrl.includes("amazon")) {
-        setFormData((prev) => ({ ...prev, amazon: scrapeUrl }));
-      } else if (scrapeUrl.includes("mercadolivre")) {
-        setFormData((prev) => ({ ...prev, mercadoLivre: scrapeUrl }));
-      } else if (scrapeUrl.includes("shopee")) {
-        setFormData((prev) => ({ ...prev, shopee: scrapeUrl }));
-      } else if (scrapeUrl.includes("aliexpress")) {
-        setFormData((prev) => ({ ...prev, aliexpress: scrapeUrl }));
-      } else if (scrapeUrl.includes("tiktok")) {
-        setFormData((prev) => ({ ...prev, tiktok: scrapeUrl }));
+      const getPlatform = (url: string) => {
+        if (url.includes("amazon")) return "amazon";
+        if (url.includes("mercadolivre")) return "mercadoLivre";
+        if (url.includes("shopee")) return "shopee";
+        if (url.includes("aliexpress")) return "aliexpress";
+        if (url.includes("tiktok")) return "tiktok";
+        return null;
+      };
+
+      const platform = getPlatform(scrapeUrl);
+      if (platform) {
+        setProductLinks(prev => {
+          const exists = prev.find(p => p.platform === platform);
+          if (exists) {
+            return prev.map(p => p.platform === platform ? { ...p, sourceUrl: scrapeUrl } : p);
+          }
+          return [...prev, { platform, sourceUrl: scrapeUrl, affiliateUrl: "", generatedAffiliateUrl: "", isActive: true }];
+        });
       }
 
       setScrapeUrl("");
@@ -152,7 +194,10 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       });
       const data = await res.json();
       if (res.ok && data.imageUrl) {
-        setFormData(prev => ({ ...prev, imageUrl: data.imageUrl }));
+        setImages(prev => [...prev, { url: data.imageUrl, isPrimary: prev.length === 0 }]);
+        if (!formData.imageUrl) {
+          setFormData(prev => ({ ...prev, imageUrl: data.imageUrl }));
+        }
       } else {
         alert(data.error || "Erro ao fazer upload da imagem");
       }
@@ -165,28 +210,67 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     }
   }
 
+  async function handleReprocess(type: 'ai' | 'affiliate') {
+    if (!product?.id) return;
+    if (!confirm(`Deseja forçar o reprocessamento de ${type === 'ai' ? 'IA' : 'Links'}? O bot irá atualizar este produto no próximo ciclo.`)) return;
+
+    setLoading(true);
+    try {
+      const payload = type === 'ai' ? { ai: true } : { affiliate: true };
+      const res = await fetch(`/api/products/${product.id}/reprocess`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        setReprocessStatus(prev => ({
+          ...prev,
+          ...(type === 'ai' ? { aiProcessed: false, aiProcessedAt: null } : { affiliateProcessed: false })
+        }));
+      } else {
+        alert("Erro ao solicitar reprocessamento");
+      }
+    } catch (error) {
+      alert("Erro ao solicitar reprocessamento");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function getPayload(status?: string) {
+    const legacyLinks: any = {};
+    productLinks.forEach(link => {
+      if (link.generatedAffiliateUrl || link.affiliateUrl || link.sourceUrl) {
+        legacyLinks[link.platform] = link.generatedAffiliateUrl || link.affiliateUrl || link.sourceUrl;
+      }
+    });
+
+    const primaryImage = images.find(img => img.isPrimary)?.url || images[0]?.url || formData.imageUrl;
+
+    return {
+      name: formData.name,
+      category: formData.category,
+      brand: formData.brand,
+      subcategory: formData.subcategory,
+      platformProductId: formData.platformProductId,
+      description: formData.description,
+      imageUrl: primaryImage,
+      price: formData.price ? parseFloat(formData.price) : null,
+      status: status,
+      isFixed: formData.isFixed,
+      links: legacyLinks,
+      productLinks: productLinks,
+      images: images.map((img, idx) => ({ ...img, order: idx }))
+    };
+  }
+
   async function handleSaveWithStatus(status: 'active' | 'pending' | 'approved', e: React.MouseEvent) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const payload = {
-        name: formData.name,
-        category: formData.category,
-        description: formData.description,
-        imageUrl: formData.imageUrl,
-        price: formData.price ? parseFloat(formData.price) : null,
-        status,
-        isFixed: formData.isFixed,
-        links: {
-          amazon: formData.amazon || null,
-          mercadoLivre: formData.mercadoLivre || null,
-          shopee: formData.shopee || null,
-          aliexpress: formData.aliexpress || null,
-          tiktok: formData.tiktok || null,
-        },
-      };
-
+      const payload = getPayload(status);
       const url = product ? `/api/products/${product.id}` : "/api/products";
       const method = product ? "PUT" : "POST";
 
@@ -217,24 +301,8 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
 
     setTelegramLoading(action);
     try {
-      // 1. Salvar dados atuais do modal e mudar status se for publicação direta
-      const payload = {
-        name: formData.name,
-        category: formData.category,
-        description: formData.description,
-        imageUrl: formData.imageUrl,
-        price: formData.price ? parseFloat(formData.price) : null,
-        status: action === 'publish' ? 'active' : undefined,
-        isFixed: formData.isFixed,
-        links: {
-          amazon: formData.amazon || null,
-          mercadoLivre: formData.mercadoLivre || null,
-          shopee: formData.shopee || null,
-          aliexpress: formData.aliexpress || null,
-          tiktok: formData.tiktok || null,
-        },
-      };
-
+      const payload = getPayload(action === 'publish' ? 'active' : undefined);
+      
       const saveRes = await fetch(`/api/products/${product.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -245,7 +313,6 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         throw new Error("Falha ao salvar produto antes de enviar ao Telegram");
       }
 
-      // 2. Chamar endpoint do Telegram
       const res = await fetch(`/api/products/${product.id}/telegram`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -272,22 +339,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     setLoading(true);
 
     try {
-      const payload = {
-        name: formData.name,
-        category: formData.category,
-        description: formData.description,
-        imageUrl: formData.imageUrl,
-        price: formData.price ? parseFloat(formData.price) : null,
-        isFixed: formData.isFixed,
-        links: {
-          amazon: formData.amazon || null,
-          mercadoLivre: formData.mercadoLivre || null,
-          shopee: formData.shopee || null,
-          aliexpress: formData.aliexpress || null,
-          tiktok: formData.tiktok || null,
-        },
-      };
-
+      const payload = getPayload();
       const url = product ? `/api/products/${product.id}` : "/api/products";
       const method = product ? "PUT" : "POST";
 
@@ -303,6 +355,35 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function addLink() {
+    setProductLinks([...productLinks, { platform: "", sourceUrl: "", affiliateUrl: "", generatedAffiliateUrl: "", isActive: true }]);
+  }
+
+  function updateLink(index: number, field: string, value: any) {
+    const newLinks = [...productLinks];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    setProductLinks(newLinks);
+  }
+
+  function removeLink(index: number) {
+    setProductLinks(productLinks.filter((_, i) => i !== index));
+  }
+
+  function setPrimaryImage(index: number) {
+    const newImages = images.map((img, i) => ({ ...img, isPrimary: i === index }));
+    setImages(newImages);
+    setFormData(prev => ({ ...prev, imageUrl: newImages[index].url }));
+  }
+
+  function removeImage(index: number) {
+    const newImages = images.filter((_, i) => i !== index);
+    if (newImages.length > 0 && images[index]?.isPrimary) {
+      newImages[0].isPrimary = true;
+      setFormData(prev => ({ ...prev, imageUrl: newImages[0].url }));
+    }
+    setImages(newImages);
   }
 
   if (!isOpen) return null;
@@ -321,290 +402,266 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
               <span className="text-xs text-amber-400 font-medium">Aguardando aprovação</span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Nome *</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">Nome *</label>
+              <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Categoria *</label>
+              <select required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm">
+                <option value="">Selecione...</option>
+                <option value="Smartphones e TV">Smartphones e TV</option>
+                <option value="Informática e Games">Informática e Games</option>
+                <option value="Casa e Eletrodomésticos">Casa e Eletrodomésticos</option>
+                <option value="Moda e Acessórios">Moda e Acessórios</option>
+                <option value="Saúde e Beleza">Saúde e Beleza</option>
+                <option value="Esporte e Suplementos">Esporte e Suplementos</option>
+                <option value="Supermercado e Delivery">Supermercado e Delivery</option>
+                <option value="Bebês e Crianças">Bebês e Crianças</option>
+                <option value="Livros, eBooks e eReaders">Livros, eBooks e eReaders</option>
+                <option value="Ferramentas e Jardim">Ferramentas e Jardim</option>
+                <option value="Automotivo">Automotivo</option>
+                <option value="Pet">Pet</option>
+                <option value="Viagem">Viagem</option>
+                <option value="Diversos">Diversos</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Subcategoria</label>
+              <input type="text" value={formData.subcategory} onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Marca</label>
+              <input type="text" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Preço (R$)</label>
+              <input type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">ID na Plataforma (Opcional)</label>
+              <input type="text" value={formData.platformProductId} onChange={(e) => setFormData({ ...formData, platformProductId: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" placeholder="ASIN, MLB-xxx, etc." />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">Descrição</label>
+              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Categoria *</label>
-            <select
-              required
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-            >
-              <option value="">Selecione...</option>
-              <option value="Smartphones e TV">Smartphones e TV</option>
-              <option value="Informática e Games">Informática e Games</option>
-              <option value="Casa e Eletrodomésticos">Casa e Eletrodomésticos</option>
-              <option value="Moda e Acessórios">Moda e Acessórios</option>
-              <option value="Saúde e Beleza">Saúde e Beleza</option>
-              <option value="Esporte e Suplementos">Esporte e Suplementos</option>
-              <option value="Supermercado e Delivery">Supermercado e Delivery</option>
-              <option value="Bebês e Crianças">Bebês e Crianças</option>
-              <option value="Livros, eBooks e eReaders">Livros, eBooks e eReaders</option>
-              <option value="Ferramentas e Jardim">Ferramentas e Jardim</option>
-              <option value="Automotivo">Automotivo</option>
-              <option value="Pet">Pet</option>
-              <option value="Viagem">Viagem</option>
-              <option value="Diversos">Diversos</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Descrição</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">URL da Imagem *</label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                required
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                className="flex-1 w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-              />
-              <label className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 cursor-pointer px-4 py-2 rounded-lg font-medium transition-colors text-sm shrink-0 whitespace-nowrap">
-                {uploadingImage ? "Enviando..." : "Fazer Upload"}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageUpload} 
-                  disabled={uploadingImage}
-                />
+          <div className="border-t border-zinc-800 pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Galeria de Imagens</h3>
+              <label className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 cursor-pointer px-3 py-1.5 rounded-lg font-medium transition-colors text-xs">
+                {uploadingImage ? "Enviando..." : "Adicionar Imagem"}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
               </label>
             </div>
+            
+            {images.length > 0 ? (
+              <div className="grid grid-cols-4 gap-3">
+                {images.map((img, idx) => (
+                  <div key={idx} className={`relative group aspect-square rounded-lg overflow-hidden border-2 ${img.isPrimary ? 'border-accent' : 'border-zinc-800'}`}>
+                    <img src={img.url} alt="Galeria" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                      {!img.isPrimary && (
+                        <button type="button" onClick={() => setPrimaryImage(idx)} className="text-[10px] bg-zinc-800 px-2 py-1 rounded text-white hover:bg-zinc-700">
+                          Tornar Principal
+                        </button>
+                      )}
+                      <button type="button" onClick={() => removeImage(idx)} className="text-[10px] bg-red-900/50 px-2 py-1 rounded text-red-300 hover:bg-red-900">
+                        Remover
+                      </button>
+                    </div>
+                    {img.isPrimary && <span className="absolute top-1 left-1 bg-accent text-black text-[10px] font-bold px-1.5 py-0.5 rounded">Principal</span>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500 italic">Nenhuma imagem na galeria. Use o upload ou busque alternativas.</p>
+            )}
           </div>
 
           {/* Grade de Imagens Alternativas (Opção C) */}
           <div className="bg-zinc-850/50 border border-zinc-800 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-zinc-300">Imagens Alternativas (Opção C)</span>
+              <span className="text-sm font-medium text-zinc-300">Imagens Alternativas</span>
               <div className="flex items-center gap-3">
                 {searchingImages && <span className="text-xs text-accent animate-pulse">Buscando imagens...</span>}
-                <button
-                  type="button"
-                  onClick={() => setShowAlternativeImages(!showAlternativeImages)}
-                  className="text-xs text-zinc-400 hover:text-white underline decoration-zinc-600 underline-offset-2"
-                >
-                  {showAlternativeImages ? "Ocultar / Apagar" : "Mostrar"}
+                <button type="button" onClick={() => setShowAlternativeImages(!showAlternativeImages)} className="text-xs text-zinc-400 hover:text-white underline decoration-zinc-600 underline-offset-2">
+                  {showAlternativeImages ? "Ocultar" : "Mostrar"}
                 </button>
               </div>
             </div>
 
             {showAlternativeImages && (
               <>
-                {alternativeImages.length > 0 ? (
+                {alternativeImages.length > 0 && (
                   <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1.5 bg-zinc-950/70 border border-zinc-800 rounded-lg">
                     {alternativeImages.map((img, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, imageUrl: img.image }))}
-                        className={`aspect-square relative rounded-md overflow-hidden bg-zinc-900 border transition-all hover:scale-[1.03] ${
-                          formData.imageUrl === img.image
-                            ? 'border-accent ring-1 ring-accent'
-                            : 'border-zinc-800 hover:border-zinc-700'
-                        }`}
-                      >
-                        <img
-                          src={img.thumbnail || img.image}
-                          alt={img.title || "Imagem alternativa"}
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/placeholder.webp";
-                          }}
-                        />
+                      <button key={idx} type="button" onClick={() => {
+                        setImages(prev => [...prev, { url: img.image, isPrimary: prev.length === 0 }]);
+                        if (!formData.imageUrl) setFormData(prev => ({ ...prev, imageUrl: img.image }));
+                      }} className="aspect-square relative rounded-md overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all hover:scale-[1.03]">
+                        <img src={img.thumbnail || img.image} alt={img.title || "Imagem alternativa"} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }} />
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-zinc-500 italic">Nenhuma imagem alternativa encontrada.</p>
                 )}
-
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Palavra-chave para buscar imagens..."
-                    className="flex-1 bg-zinc-900 text-xs border border-zinc-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleSearchImages(searchQuery)}
-                    disabled={searchingImages || !searchQuery}
-                    className="bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:text-zinc-600 text-xs text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
-                  >
-                    Buscar
-                  </button>
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Palavra-chave para buscar..." className="flex-1 bg-zinc-900 text-xs border border-zinc-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent" />
+                  <button type="button" onClick={() => handleSearchImages(searchQuery)} disabled={searchingImages || !searchQuery} className="bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:text-zinc-600 text-xs text-white px-3 py-1.5 rounded-lg font-medium transition-colors">Buscar</button>
                 </div>
               </>
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Preço (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-            />
-          </div>
-
           <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-lg font-semibold mb-4">Links de Afiliados</h3>
-            <div className="space-y-3">
-              {["amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok"]
-                .filter((platform) => {
-                  const value = formData[platform as keyof typeof formData] as string;
-                  return value && value.trim() !== "" && value !== "https://...";
-                })
-                .map((platform) => (
-                  <div key={platform}>
-                    <label className="block text-sm font-medium mb-2 capitalize">
-                      {platform === "mercadoLivre" ? "Mercado Livre" : platform}
-                    </label>
-                    <input
-                      type="url"
-                      value={(formData[platform as keyof typeof formData] as string) || ""}
-                      onChange={(e) => setFormData({ ...formData, [platform]: e.target.value })}
-                      placeholder={`https://...`}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm"
-                    />
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Links do Produto</h3>
+              <button type="button" onClick={addLink} className="flex items-center gap-1 text-xs bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition-colors">
+                <Plus size={14} /> Adicionar
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {productLinks.map((link, idx) => (
+                <div key={idx} className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800 relative">
+                  <button type="button" onClick={() => removeLink(idx)} className="absolute top-3 right-3 text-zinc-500 hover:text-red-400">
+                    <Trash size={16} />
+                  </button>
+                  <div className="grid grid-cols-2 gap-3 pr-6">
+                    <div>
+                      <label className="block text-[10px] uppercase text-zinc-500 mb-1">Plataforma</label>
+                      <select value={link.platform} onChange={e => updateLink(idx, 'platform', e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm">
+                        <option value="">Selecione...</option>
+                        <option value="amazon">Amazon</option>
+                        <option value="mercadoLivre">Mercado Livre</option>
+                        <option value="shopee">Shopee</option>
+                        <option value="aliexpress">AliExpress</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="magalu">Magalu</option>
+                        <option value="kabum">KaBuM!</option>
+                        <option value="netshoes">Netshoes</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-zinc-500 mb-1">URL Original (Source)</label>
+                      <input type="url" value={link.sourceUrl || ''} onChange={e => updateLink(idx, 'sourceUrl', e.target.value)} placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-zinc-500 mb-1">URL Afiliado (Parceiro)</label>
+                      <input type="url" value={link.affiliateUrl || ''} onChange={e => updateLink(idx, 'affiliateUrl', e.target.value)} placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-zinc-500 mb-1">URL Gerada (Bot)</label>
+                      <input type="url" value={link.generatedAffiliateUrl || ''} onChange={e => updateLink(idx, 'generatedAffiliateUrl', e.target.value)} placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm" />
+                    </div>
                   </div>
-                ))}
-              {["amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok"].every((platform) => {
-                const value = formData[platform as keyof typeof formData] as string;
-                return !value || value.trim() === "" || value === "https://...";
-              }) && (
-                <p className="text-sm text-zinc-500 italic">Nenhum link de afiliado cadastrado ainda.</p>
-              )}
+                </div>
+              ))}
+              {productLinks.length === 0 && <p className="text-sm text-zinc-500 italic">Nenhum link cadastrado.</p>}
             </div>
           </div>
 
           <div className="border-t border-zinc-800 pt-6">
             <div className="flex items-start gap-3 bg-accent/10 border border-accent/20 p-4 rounded-xl">
               <div className="flex items-center h-5">
-                <input
-                  id="isFixed"
-                  type="checkbox"
-                  checked={formData.isFixed}
-                  onChange={(e) => setFormData({ ...formData, isFixed: e.target.checked })}
-                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-accent focus:ring-accent focus:ring-offset-zinc-900"
-                />
+                <input id="isFixed" type="checkbox" checked={formData.isFixed} onChange={(e) => setFormData({ ...formData, isFixed: e.target.checked })} className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-accent focus:ring-accent focus:ring-offset-zinc-900" />
               </div>
               <div className="flex flex-col">
-                <label htmlFor="isFixed" className="text-sm font-medium text-white cursor-pointer">
-                  Travar Dados e Habilitar Repostagem
-                </label>
+                <label htmlFor="isFixed" className="text-sm font-medium text-white cursor-pointer">Travar Dados e Habilitar Repostagem</label>
                 <p className="text-xs text-zinc-400 mt-1">
-                  Protege este produto contra atualizações automáticas do robô (imagem e links serão preservados). 
-                  Quando o robô detectar este produto novamente nas ofertas, ele será repostado no Telegram automaticamente com a imagem e os links definidos acima.
+                  Protege este produto contra atualizações automáticas do robô.
                 </p>
               </div>
             </div>
           </div>
 
+          {product && (
+            <div className="border-t border-zinc-800 pt-6">
+              <h3 className="text-lg font-semibold mb-4">Reprocessamento Avançado</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Processamento de IA</h4>
+                    <p className="text-xs text-zinc-400 mb-3">
+                      Status: {reprocessStatus.aiProcessed 
+                        ? <span className="text-emerald-400 font-medium">Processado ({reprocessStatus.aiProcessedAt ? new Date(reprocessStatus.aiProcessedAt).toLocaleDateString('pt-BR') : 'Sem data'})</span> 
+                        : <span className="text-amber-400 font-medium">Pendente</span>}
+                    </p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => handleReprocess('ai')} 
+                    disabled={!reprocessStatus.aiProcessed || loading}
+                    className="w-full text-xs bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:text-zinc-600 px-3 py-2 rounded-lg font-medium transition-colors border border-zinc-700"
+                  >
+                    Reprocessar IA
+                  </button>
+                </div>
+                
+                <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-1">Links de Afiliados</h4>
+                    <p className="text-xs text-zinc-400 mb-3">
+                      Status: {reprocessStatus.affiliateProcessed 
+                        ? <span className="text-emerald-400 font-medium">Gerados</span> 
+                        : <span className="text-amber-400 font-medium">Pendentes</span>}
+                    </p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => handleReprocess('affiliate')} 
+                    disabled={!reprocessStatus.affiliateProcessed || loading}
+                    className="w-full text-xs bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 disabled:text-zinc-600 px-3 py-2 rounded-lg font-medium transition-colors border border-zinc-700"
+                  >
+                    Regenerar Links
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Botões do Modal */}
           <div className="flex flex-col gap-3 border-t border-zinc-800 pt-6">
             {isPending ? (
-              // Modo de moderação para produto pendente
               <div className="space-y-3">
                 <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={(e) => handleSaveWithStatus('active', e)}
-                    disabled={loading || telegramLoading !== null}
-                    className="flex-1 flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-650 text-white px-4 py-3 rounded-lg font-medium transition-colors text-sm"
-                  >
-                    <Check size={18} weight="bold" />
-                    Aprovar no Site
+                  <button type="button" onClick={(e) => handleSaveWithStatus('active', e)} disabled={loading || telegramLoading !== null} className="flex-1 flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-650 text-white px-4 py-3 rounded-lg font-medium transition-colors text-sm">
+                    <Check size={18} weight="bold" /> Aprovar no Site
                   </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handleTelegramAction('publish', e)}
-                    disabled={loading || telegramLoading !== null}
-                    className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 text-black px-4 py-3 rounded-lg font-medium transition-colors text-sm"
-                  >
-                    {telegramLoading === 'publish' ? (
-                      "Publicando..."
-                    ) : (
-                      <>
-                        <TelegramLogo size={18} weight="bold" />
-                        Aprovar e Enviar Telegram
-                      </>
-                    )}
+                  <button type="button" onClick={(e) => handleTelegramAction('publish', e)} disabled={loading || telegramLoading !== null} className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 text-black px-4 py-3 rounded-lg font-medium transition-colors text-sm">
+                    {telegramLoading === 'publish' ? "Publicando..." : <><TelegramLogo size={18} weight="bold" /> Aprovar e Enviar Telegram</>}
                   </button>
                 </div>
                 <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={(e) => handleTelegramAction('moderate', e)}
-                    disabled={loading || telegramLoading !== null}
-                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-3 rounded-lg font-medium transition-colors text-sm border border-zinc-700"
-                  >
-                    {telegramLoading === 'moderate' ? (
-                      "Enviando..."
-                    ) : (
-                      <>
-                        <PaperPlaneTilt size={18} weight="bold" />
-                        Enviar p/ Telegram (Aprovação)
-                      </>
-                    )}
+                  <button type="button" onClick={(e) => handleTelegramAction('moderate', e)} disabled={loading || telegramLoading !== null} className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-3 rounded-lg font-medium transition-colors text-sm border border-zinc-700">
+                    {telegramLoading === 'moderate' ? "Enviando..." : <><PaperPlaneTilt size={18} weight="bold" /> Enviar p/ Telegram (Aprovação)</>}
                   </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handleSaveWithStatus('pending', e)}
-                    disabled={loading || telegramLoading !== null}
-                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-3 rounded-lg font-medium transition-colors text-sm border border-zinc-750"
-                  >
+                  <button type="button" onClick={(e) => handleSaveWithStatus('pending', e)} disabled={loading || telegramLoading !== null} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-3 rounded-lg font-medium transition-colors text-sm border border-zinc-750">
                     Salvar Alterações
                   </button>
                 </div>
               </div>
             ) : (
-              // Modo padrão de edição / adição
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 px-4 py-3 rounded-lg font-medium transition-colors text-sm"
-                >
+                <button type="button" onClick={onClose} className="flex-1 bg-zinc-800 hover:bg-zinc-700 px-4 py-3 rounded-lg font-medium transition-colors text-sm">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 text-black px-4 py-3 rounded-lg font-medium transition-colors text-sm"
-                >
+                <button type="submit" disabled={loading} className="flex-1 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 text-black px-4 py-3 rounded-lg font-medium transition-colors text-sm">
                   {loading ? "Salvando..." : "Salvar"}
                 </button>
               </div>
