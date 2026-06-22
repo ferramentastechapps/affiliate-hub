@@ -24,7 +24,10 @@ export async function GET(request: Request) {
     const products = await prisma.product.findMany({
       where: {
         category,
-        subcategory: { not: null, not: "" }
+        AND: [
+          { subcategory: { not: null } },
+          { subcategory: { not: "" } }
+        ]
       },
       select: { subcategory: true },
       distinct: ['subcategory']
