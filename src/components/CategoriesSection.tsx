@@ -6,12 +6,52 @@ import { X, Tag } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
 
 const CATEGORIES = [
-  { key: "gaming", label: "Gaming", icon: "🎮" },
-  { key: "setup", label: "Setup", icon: "🖥️" },
-  { key: "home-office", label: "Home Office", icon: "💼" },
-  { key: "streaming", label: "Streaming", icon: "🎥" },
-  { key: "smartphones-tv", label: "Smartphones e TV", icon: "📱" },
+  // Eletrônicos e Tech
+  { key: "smartphones", label: "Smartphones", icon: "📱" },
+  { key: "smart-tvs", label: "Smart TVs", icon: "📺" },
+  { key: "fones-de-ouvido", label: "Fones de Ouvido", icon: "🎧" },
+  { key: "caixas-de-som", label: "Caixas de Som", icon: "🔊" },
+  { key: "smartwatches", label: "Smartwatches", icon: "⌚" },
+  { key: "cameras", label: "Câmeras", icon: "📷" },
+  { key: "tablets", label: "Tablets", icon: "🗂️" },
+  // Informática e Games
+  { key: "notebooks", label: "Notebooks", icon: "💻" },
+  { key: "pcs-e-desktops", label: "PCs e Desktops", icon: "🖥️" },
+  { key: "monitores", label: "Monitores", icon: "🖱️" },
+  { key: "perifericos", label: "Periféricos", icon: "⌨️" },
+  { key: "ssd-hds-memoria", label: "SSD, HDs e Memória", icon: "💾" },
+  { key: "consoles-e-games", label: "Consoles e Games", icon: "🎮" },
+  // Casa e Eletrodomésticos
+  { key: "air-fryers", label: "Air Fryers", icon: "🍟" },
+  { key: "cafeteiras", label: "Cafeteiras", icon: "☕" },
+  { key: "geladeiras", label: "Geladeiras e Freezers", icon: "🧊" },
+  { key: "lavadoras", label: "Lavadoras", icon: "🫧" },
+  { key: "micro-ondas", label: "Micro-ondas", icon: "📡" },
+  { key: "aspiradores", label: "Aspiradores", icon: "🌀" },
+  { key: "ar-condicionado", label: "Ar Condicionado", icon: "❄️" },
+  // Moda e Acessórios
+  { key: "tenis-calcados", label: "Tênis e Calçados", icon: "👟" },
+  { key: "roupas-moda", label: "Roupas e Moda", icon: "👕" },
+  { key: "bolsas-acessorios", label: "Bolsas e Acessórios", icon: "👜" },
+  // Saúde e Beleza
+  { key: "perfumes", label: "Perfumes", icon: "🌺" },
+  { key: "maquiagem-pele", label: "Maquiagem e Pele", icon: "💄" },
+  { key: "shampoo-cabelo", label: "Shampoo e Cabelo", icon: "💆" },
+  // Esporte e Suplementos
+  { key: "whey-suplementos", label: "Whey e Suplementos", icon: "💪" },
+  { key: "bicicletas-esporte", label: "Bicicletas e Esporte", icon: "🚴" },
+  // Supermercado
+  { key: "chocolates-doces", label: "Chocolates e Doces", icon: "🍫" },
+  { key: "cafe-bebidas", label: "Café e Bebidas", icon: "☕" },
+  { key: "cervejas-vinhos", label: "Cervejas e Vinhos", icon: "🍺" },
+  // Outros
+  { key: "livros-ereaders", label: "Livros e eReaders", icon: "📚" },
   { key: "bebes-criancas", label: "Bebês e Crianças", icon: "👶" },
+  { key: "pet", label: "Pet", icon: "🐾" },
+  { key: "ferramentas", label: "Ferramentas", icon: "🔧" },
+  { key: "automotivo", label: "Automotivo", icon: "🚗" },
+  { key: "viagem", label: "Viagem", icon: "✈️" },
+  { key: "diversos", label: "Diversos", icon: "🔖" },
 ];
 
 type Product = {
@@ -49,9 +89,9 @@ export function CategoriesSection() {
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
         
+        const activeCatObj = CATEGORIES.find(c => c.key === activeCategory);
         const filtered = data.filter(p => {
-          const category = p.category?.toLowerCase().replace(/\s+/g, '-') || '';
-          return category === activeCategory;
+          return p.category === activeCatObj?.label;
         });
 
         setProducts(filtered.map(p => ({
