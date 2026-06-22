@@ -13,6 +13,7 @@ type Product = {
   price?: number;
   status?: string;
   isFixed?: boolean;
+  brand?: string;
   links?: {
     amazon?: string;
     mercadoLivre?: string;
@@ -20,6 +21,17 @@ type Product = {
     aliexpress?: string;
     tiktok?: string;
   };
+  productLinks?: {
+    platform: string;
+    sourceUrl: string | null;
+    affiliateUrl: string | null;
+    generatedAffiliateUrl: string | null;
+  }[];
+  images?: {
+    id: string;
+    url: string;
+    isPrimary: boolean;
+  }[];
 };
 
 export function ProductsTab() {
@@ -137,6 +149,11 @@ export function ProductsTab() {
                       (e.target as HTMLImageElement).src = "/placeholder.webp";
                     }}
                   />
+                  {product.images && product.images.length > 0 && (
+                    <div className="absolute bottom-3 left-3 flex items-center justify-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[10px] font-bold text-white">
+                      📸 {product.images.length}
+                    </div>
+                  )}
                   {/* Etiqueta de Status */}
                   <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
                     <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider border shadow-lg backdrop-blur-md ${
@@ -156,15 +173,33 @@ export function ProductsTab() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <span className="text-xs text-accent font-mono uppercase">
-                    {product.category}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-accent font-mono uppercase">
+                      {product.category}
+                    </span>
+                    {product.brand && (
+                      <span className="text-[10px] bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded font-medium border border-zinc-700">
+                        {product.brand}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-lg font-semibold mt-1 line-clamp-2 min-h-[56px]">{product.name}</h3>
                   {product.price && (
-                    <p className="text-zinc-400 mt-1">
+                    <p className="text-zinc-400 mt-1 font-medium">
                       R$ {product.price.toFixed(2)}
                     </p>
                   )}
+                  <div className="mt-3 flex gap-1 flex-wrap min-h-[24px]">
+                    {product.productLinks && product.productLinks.length > 0 ? (
+                      product.productLinks.map((pl, idx) => (
+                        <span key={idx} className="text-[10px] bg-zinc-800/50 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-800 capitalize">
+                          {pl.platform === "mercadoLivre" ? "Meli" : pl.platform}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-zinc-600 italic">Sem links gerados</span>
+                    )}
+                  </div>
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleEdit(product)}

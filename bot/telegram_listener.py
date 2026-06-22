@@ -10,6 +10,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, fil
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_PROMO_GROUP_ID, GEMINI_API_KEY, OPENROUTER_API_KEY
 from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
+from metadata_utils import enriquecer_produto
 
 notifier = TelegramNotifier()
 api = AffiliateHubAPI()
@@ -374,6 +375,8 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             'storeName': platform.capitalize()
         }
         
+        produto_data = enriquecer_produto(produto_data)
+        
         print(f"📦 Enviando produto encaminhado para API: {produto_data}")
         resultado = api.adicionar_produto(produto_data)
         
@@ -601,6 +604,8 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
             'tiktok': link_tiktok
         }
     }
+
+    produto_data = enriquecer_produto(produto_data)
 
     # Adicionar produto via API
     try:

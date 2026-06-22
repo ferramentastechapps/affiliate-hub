@@ -10,7 +10,7 @@ from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
 from scrapers import PromotionScraper
 from config import SEARCH_INTERVAL_MINUTES
-
+from metadata_utils import enriquecer_produto
 
 import json
 from pathlib import Path
@@ -128,6 +128,8 @@ class PromotionBot:
                     score = produto.get('qualityScore', 0)
                     print(f'\n🔥 URGENTE (score {score}): {produto["name"][:50]}...')
                     
+                    produto = enriquecer_produto(produto)
+                    
                     # Adicionar produto na API
                     resultado = self.api.adicionar_produto(produto)
                     
@@ -159,6 +161,9 @@ class PromotionBot:
                 # Processar produtos normais
                 for produto in produtos_normais:
                     score = produto.get('qualityScore', 0)
+                    
+                    produto = enriquecer_produto(produto)
+                    
                     # Adicionar produto na API
                     resultado = self.api.adicionar_produto(produto)
                     

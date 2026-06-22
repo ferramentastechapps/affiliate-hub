@@ -12,60 +12,39 @@ datasource db {
 // 📦 PRODUTO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Product {
-  id            String   @id @default(cuid())
-  shortId       Int      @unique @default(autoincrement()) // ID numérico curto para URLs
-  name          String
-  category      String
-  subcategory   String?  // Subcategoria para recomendações granulares (ex: "Smartphones" dentro de "Smartphones e TV")
-  brand         String?  // Marca do produto (Apple, Samsung, Xiaomi...)
-  model         String?  // Modelo específico (iPhone 15 Pro, Galaxy S24...)
-  storeName     String?  // Nome da loja de origem (Amazon, Mercado Livre...)
-  platformProductId String? // ID do produto na plataforma original (ASIN, MLB-xxx, ShopeeID)
-  description   String?  // Descrição do produto
-  imageUrl      String   // URL da imagem principal
-  price         Float?
+  id          String   @id @default(cuid())
+  shortId     Int      @unique @default(autoincrement()) // ID numérico curto para URLs
+  name        String
+  category    String
+  description String?  // URLs e textos longos
+  imageUrl    String   // URLs podem ser muito longas
+  price       Float?
   originalPrice Float?
-  status        String   @default("pending") // pending, active, rejected
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relações existentes (mantidas intactas)
-  links         Link?
-  coupons       Coupon[]
-  priceHistory  PriceHistory[]
-  clickLogs     ClickLog[]
-  comments      Comment[]
-  votes         ProductVote[]
-  alerts        ProductAlert[]
-
-  // IA e Analytics
-  aiScore          Float?   // Nota de 0 a 10 dada pela IA
-  aiAnalysis       String?  // Texto/Copy gerado pela IA
-  clicks           Int      @default(0)
-  externalId       String?  @unique // Hash de deduplicação
-  enhancedImageUrl String?  // Imagem aprimorada
-  isFixed          Boolean  @default(false) // Trava dados contra sobrescrita do robô
-
-  // Flags de processamento (evita reprocessar o que já foi feito)
-  aiProcessed        Boolean  @default(false) // true = IA já rodou com sucesso
-  aiProcessedAt      DateTime? // quando a IA processou pela última vez
-  affiliateProcessed Boolean  @default(false) // true = links de afiliado já foram gerados
-
-  // Novas relações
-  images        ProductImage[]
-  productLinks  ProductLink[]
-  favorites     UserFavorite[]
+  status      String   @default("pending") // pending, active, rejected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  links       Link?
+  coupons     Coupon[]
+  priceHistory PriceHistory[]
+  clickLogs   ClickLog[]
+  
+  // Novos campos para IA e Analytics
+  aiScore     Float?   // Nota de 0 a 10 dada pela IA
+  aiAnalysis  String?  // Texto/Copy gerado pela IA
+  clicks      Int      @default(0) // Quantidade de cliques
+  externalId  String?  @unique // Hash ou ID original para deduplicação segura
+  enhancedImageUrl String? // Imagem processada pela IA (Fundo/4K)
+  isFixed     Boolean  @default(false) // Trava a imagem e os links para não serem sobrescritos pelo robô
+  
+  comments    Comment[]
+  votes       ProductVote[]
+  alerts      ProductAlert[]
 
   @@index([category])
-  @@index([subcategory])
-  @@index([brand])
-  @@index([platformProductId])
-  @@index([storeName])
   @@index([createdAt])
   @@index([status])
   @@index([externalId])
   @@index([shortId])
-  @@index([aiProcessed])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -102,14 +81,11 @@ model ClickLog {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔗 LINKS DE AFILIADOS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🔗 LINKS LEGADOS (mantido para compatibilidade — não remover)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Link {
   id           String  @id @default(cuid())
   productId    String  @unique
   product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  amazon       String?
+  amazon       String? // URLs de afiliado podem ser muito longas
   aliexpress   String?
   shopee       String?
   mercadoLivre String?
@@ -117,65 +93,6 @@ model Link {
   netshoes     String?
   magalu       String?
   kabum        String?
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🔗 LINKS EXPANDIDOS (novo modelo — separa original, afiliado e gerado)
-// Critério de remoção do Link legado: após 4 semanas com ProductLink
-// 100% populado para produtos novos + zero erros no admin + backfill completo
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-model ProductLink {
-  id                    String   @id @default(cuid())
-  productId             String
-  product               Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  platform              String   // "amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok", "magalu", "kabum", "netshoes"
-  sourceUrl             String?  @db.Text // URL original da plataforma (ANTES de qualquer tag de afiliado)
-  affiliateUrl          String?  @db.Text // Link enviado pelo bot (pode já ter tag do parceiro)
-  generatedAffiliateUrl String?  @db.Text // Link gerado pelo nosso sistema (com nossa própria tag)
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@unique([productId, platform])
-  @@index([productId])
-  @@index([platform])
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🖼️ GALERIA DE IMAGENS DO PRODUTO
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-model ProductImage {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String   @db.Text // URL da imagem
-  source    String?  // "scraper", "enhanced", "upload", "retailer", "bot"
-  isPrimary Boolean  @default(false) // Imagem principal
-  order     Int      @default(0) // Ordem na galeria
-  createdAt DateTime @default(now())
-
-  @@index([productId])
-  @@index([productId, isPrimary])
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ❤️ FAVORITOS DO USUÁRIO (com snapshot de subcategoria para recomendações)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-model UserFavorite {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  subcategory String?  // snapshot da subcategoria no momento do favorito
-  category    String?  // snapshot da categoria no momento do favorito
-  brand       String?  // snapshot da marca
-  createdAt   DateTime @default(now())
-
-  @@unique([userId, productId])
-  @@index([userId])
-  @@index([userId, subcategory])
-  @@index([userId, category])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -248,13 +165,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  comments     Comment[]
-  votes        ProductVote[]
-  alerts       ProductAlert[]
+  comments  Comment[]
+  votes     ProductVote[]
+  alerts    ProductAlert[]
   activityLogs ActivityLog[]
-  tags         UserTagAssignment[]
-  notes        UserNote[]
-  favorites    UserFavorite[]
+  tags      UserTagAssignment[]
+  notes     UserNote[]
 
   @@index([email])
   @@index([googleId])
@@ -349,31 +265,6 @@ model UserNote {
   createdAt DateTime @default(now())
 
   @@index([userId])
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📢 CAMPANHAS (Push, Telegram, WhatsApp)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-model Campaign {
-  id              String    @id @default(cuid())
-  title           String
-  message         String    @db.Text
-  channel         String    // "push" | "telegram" | "whatsapp"
-  status          String    @default("draft") // "draft" | "scheduled" | "sending" | "sent" | "failed"
-  scheduledAt     DateTime?
-  sentAt          DateTime?
-  totalTargets    Int       @default(0)
-  totalSent       Int       @default(0)
-  totalFailed     Int       @default(0)
-  metadata        String?   @db.Text // JSON com campos extras por canal
-  authorId        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([channel])
-  @@index([status])
-  @@index([scheduledAt])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

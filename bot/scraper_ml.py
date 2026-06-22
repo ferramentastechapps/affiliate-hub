@@ -278,23 +278,31 @@ class MercadoLivreAPIScraper:
             # Imagem — buscar a maior resolução disponível
             # Prioridade 1: campo 'pictures' da API do ML (retorna URLs em alta qualidade)
             pictures = item.get('pictures', [])
-            imagem_url = ''
-            if pictures and isinstance(pictures, list) and len(pictures) > 0:
-                pic = pictures[0]
-                # secure_url já vem em alta resolução (-O.)
-                imagem_url = pic.get('secure_url') or pic.get('url') or ''
+            images = []
+            if pictures and isinstance(pictures, list):
+                for pic in pictures[:8]:
+                    pic_url = pic.get('secure_url') or pic.get('url')
+                    if pic_url:
+                        images.append(pic_url)
+            
+            imagem_url = images[0] if images else ''
 
             # Prioridade 2: thumbnail com substituição para versão original (-O.)
             if not imagem_url:
                 thumbnail = item.get('thumbnail', '')
                 if thumbnail:
                     # Substituir sufixos de baixa/média resolução pelo original (máxima qualidade)
-                    # Padrões conhecidos do ML: -I., -V., -S., -W., -C., -F., -Z., -M., -G., -O.
                     import re as _re
                     imagem_url = _re.sub(r'-[A-Z]\.(jpg|jpeg|png|webp)', r'-O.\1', thumbnail, flags=_re.IGNORECASE)
                     if imagem_url == thumbnail:
-                        # Fallback: substituição simples caso o regex não tenha funcionado
                         imagem_url = thumbnail.replace('-I.', '-O.').replace('-V.', '-O.')
+            
+            # Garantir que a imagem principal esteja na lista de images, se possível
+            if imagem_url and imagem_url not in images:
+                images.insert(0, imagem_url)
+            
+            # Limitar a 8 imagens
+            images = images[:8]
 
             # Categoria
             category_id = item.get('category_id', '')
@@ -315,15 +323,35 @@ class MercadoLivreAPIScraper:
             if desconto >= self.min_desconto and preco_original:
                 descricao += f' • {desconto:.0f}% OFF'
 
+            # Extração de Atributos (Brand, Model)
+            attributes = item.get('attributes', [])
+            brand_api = None
+            model_api = None
+            if isinstance(attributes, list):
+                for attr in attributes:
+                    attr_id = attr.get('id')
+                    if attr_id == 'BRAND':
+                        brand_api = attr.get('value_name')
+                    elif attr_id == 'MODEL':
+                        model_api = attr.get('value_name')
+
+            platform_product_id = item.get('id')
+            external_id = f"mercadolivre_{platform_product_id}" if platform_product_id else None
+
             return {
                 'name': nome,
                 'category': categoria,
                 'description': descricao,
                 'imageUrl': imagem_url,
+                'images': images,
                 'price': preco,
                 'originalPrice': preco_original,
                 'desconto_percent': desconto,
                 'storeName': 'Mercado Livre',
+                'brand': brand_api,
+                'model': model_api,
+                'platformProductId': platform_product_id,
+                'externalId': external_id,
                 'links': {
                     'mercadoLivre': link_afiliado,
                 },

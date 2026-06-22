@@ -10,7 +10,7 @@ export async function PUT(
   try {
     const body = await request.json();
     const { id } = await params;
-    const { name, category, description, imageUrl, price, links, status, isFixed } = body;
+    const { name, category, description, imageUrl, price, links, status, isFixed, brand, subcategory, platformProductId, productLinks, images } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -32,11 +32,42 @@ export async function PUT(
       );
     }
     
+    // Preparar upserts de links
+    let productLinksOps = undefined;
+    if (productLinks) {
+      productLinksOps = {
+        upsert: productLinks.map((link: any) => ({
+          where: {
+            productId_platform: {
+              productId: id,
+              platform: link.platform
+            }
+          },
+          update: {
+            sourceUrl: link.sourceUrl,
+            affiliateUrl: link.affiliateUrl,
+            generatedAffiliateUrl: link.generatedAffiliateUrl,
+            isActive: link.isActive !== undefined ? link.isActive : true
+          },
+          create: {
+            platform: link.platform,
+            sourceUrl: link.sourceUrl,
+            affiliateUrl: link.affiliateUrl,
+            generatedAffiliateUrl: link.generatedAffiliateUrl,
+            isActive: link.isActive !== undefined ? link.isActive : true
+          }
+        }))
+      };
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: {
         name,
         category,
+        brand,
+        subcategory,
+        platformProductId,
         description,
         imageUrl,
         price: price ? parseFloat(price) : null,
@@ -47,12 +78,43 @@ export async function PUT(
             create: links,
             update: links
           }
-        } : undefined
+        } : undefined,
+        productLinks: productLinksOps
       },
       include: {
-        links: true
+        links: true,
+        productLinks: true,
+        images: true
       }
     });
+
+    // Update ProductImages se fornecido
+    if (images && Array.isArray(images)) {
+      const imageIds = images.map((img: any) => img.id).filter(Boolean);
+      // Deletar imagens que não estão no payload (se quiser manter as antigas não passadas no payload, remover isso)
+      // Como a interface substituirá a galeria, vamos deletar as que não vieram
+      await prisma.productImage.deleteMany({
+        where: { productId: id, id: { notIn: imageIds } }
+      });
+      
+      for (const [index, img] of images.entries()) {
+        if (img.id) {
+          await prisma.productImage.update({
+            where: { id: img.id },
+            data: { url: img.url, isPrimary: img.isPrimary || false, order: img.order ?? index }
+          });
+        } else {
+          await prisma.productImage.create({
+            data: {
+              productId: id,
+              url: img.url,
+              isPrimary: img.isPrimary || false,
+              order: img.order ?? index
+            }
+          });
+        }
+      }
+    }
     
     // Tenta registrar o log de atividade se o status mudou
     if (status && status !== existingProduct.status) {
