@@ -51,6 +51,11 @@ model Product {
   aiProcessedAt      DateTime? // quando a IA processou pela última vez
   affiliateProcessed Boolean  @default(false) // true = links de afiliado já foram gerados
 
+  // NOVOS — Reviews
+  reviewScore        Float?   // média de estrelas (ex: 4.5)
+  reviewCount        Int?     // quantidade de avaliações
+  reviews            ProductReview[]
+
   // Novas relações
   images        ProductImage[]
   productLinks  ProductLink[]
@@ -159,6 +164,28 @@ model ProductImage {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💬 AVALIAÇÕES DO PRODUTO (REVIEWS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model ProductReview {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  platform    String   // "mercadolivre", "amazon", "shopee"
+  authorName  String?
+  rating      Float    // 1-5
+  comment     String?  @db.Text
+  helpful     Int      @default(0)  // quantidade de "útil"
+  verified    Boolean  @default(false)
+  externalId  String?  // ID do review na plataforma
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@unique([productId, platform, externalId])
+  @@index([productId])
+  @@index([platform])
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ❤️ FAVORITOS DO USUÁRIO (com snapshot de subcategoria para recomendações)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model UserFavorite {
@@ -226,9 +253,12 @@ model PushSubscription {
   endpoint    String   @unique // URL do endpoint de push
   p256dh      String   // Chave pública do cliente
   auth        String   // Chave de autenticação
+  userId      String?  // NOVO - opcional para associar a um usuário logado
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   
   @@index([endpoint])
+  @@index([userId])
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -245,6 +275,7 @@ model User {
   isActive  Boolean  @default(true)
   lastLoginAt DateTime?
   engagementScore Int @default(0)
+  telegramId String? @unique // NOVO — Telegram ID para alertas
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -255,6 +286,7 @@ model User {
   tags         UserTagAssignment[]
   notes        UserNote[]
   favorites    UserFavorite[]
+  pushSubscriptions PushSubscription[] // NOVO — Push subscriptions do usuário
 
   @@index([email])
   @@index([googleId])
@@ -291,12 +323,16 @@ model ProductVote {
 }
 
 model ProductAlert {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id             String    @id @default(cuid())
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threshold      Float?    // % mínima de queda para notificar (ex: 5.0 = 5%)
+  channel        String    @default("telegram") // "telegram", "push", "both"
+  lastNotifiedAt DateTime? // evita spam — não notifica 2x no mesmo dia
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
 
   @@unique([productId, userId])
   @@index([productId])

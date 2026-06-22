@@ -7,6 +7,9 @@ import { motion } from "framer-motion";
 import { CouponModal } from "./CouponModal";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
+import { PriceHistoryChart } from "./PriceHistoryChart";
+import { AlertButton } from "./AlertButton";
+import { ProductReviews } from "./ProductReviews";
 
 type Product = {
   id: string;
@@ -46,7 +49,6 @@ export function ProductDetail({ product }: { product: Product }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   const [votes, setVotes] = useState({ likes: 0, dislikes: 0, userVote: null as string | null });
-  const [hasAlert, setHasAlert] = useState(false);
   
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -114,18 +116,6 @@ export function ProductDetail({ product }: { product: Product }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user!.id, type: newType })
-      });
-    } catch (e) { console.error(e); }
-  }
-
-  async function handleAlert() {
-    if (!requireAuth()) return;
-    try {
-      setHasAlert(true);
-      await fetch(`/api/products/${product.id}/alert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user!.id })
       });
     } catch (e) { console.error(e); }
   }
@@ -359,11 +349,8 @@ export function ProductDetail({ product }: { product: Product }) {
               <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
             </button>
 
-            {/* Action Bar (Alert, Likes, Share) */}
             <div className="flex justify-between items-center mt-6 px-2">
-              <button onClick={handleAlert} className={`p-3 rounded-2xl transition-all ${hasAlert ? 'text-yellow-400 bg-yellow-400/10' : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10'}`}>
-                <Bell size={24} weight={hasAlert ? "fill" : "regular"} />
-              </button>
+              <AlertButton productId={product.id} />
 
               <div className="flex items-center gap-4 bg-white/5 px-4 py-2.5 rounded-2xl">
                 <button onClick={() => handleVote('LIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'LIKE' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}>
@@ -381,8 +368,13 @@ export function ProductDetail({ product }: { product: Product }) {
                 <WhatsappLogo size={24} weight="fill" />
               </button>
             </div>
+
+            <PriceHistoryChart productId={product.id} />
           </div>
         </div>
+
+        {/* Product Reviews */}
+        <ProductReviews productId={product.id} />
 
         {/* Comments Section */}
         <div ref={commentsRef} className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
