@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const sessionToken = cookies().get('session')?.value;
@@ -15,13 +15,14 @@ export async function POST(
       return NextResponse.json({ error: 'Não Autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { ai, affiliate } = body;
 
     const data: any = {};
     if (ai) {
       data.aiProcessed = false;
-      data.aiProcessedAt = null; // Reseta a data para indicar que não está mais processado
+      data.aiProcessedAt = null;
     }
     if (affiliate) {
       data.affiliateProcessed = false;
@@ -32,7 +33,7 @@ export async function POST(
     }
 
     await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data
     });
 

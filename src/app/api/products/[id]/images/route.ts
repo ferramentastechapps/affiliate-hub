@@ -7,11 +7,12 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const images = await prisma.productImage.findMany({
-      where: { productId: params.id },
+      where: { productId: id },
       orderBy: { order: 'asc' }
     });
     return NextResponse.json(images);
@@ -23,7 +24,7 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const sessionToken = cookies().get('session')?.value;
@@ -31,6 +32,7 @@ export async function POST(
       return NextResponse.json({ error: 'Não Autorizado' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { url, isPrimary } = body;
 
@@ -38,21 +40,18 @@ export async function POST(
       return NextResponse.json({ error: 'URL é obrigatória' }, { status: 400 });
     }
 
-    // Calcular próxima ordem
     const existingImages = await prisma.productImage.findMany({
-      where: { productId: params.id }
+      where: { productId: id }
     });
     const maxOrder = existingImages.reduce((max, img) => Math.max(max, img.order), -1);
 
-    // Se for primary, garantir que as outras não sejam
     if (isPrimary) {
       await prisma.productImage.updateMany({
-        where: { productId: params.id },
+        where: { productId: id },
         data: { isPrimary: false }
       });
-      // Atualizar no produto legado também
       await prisma.product.update({
-        where: { id: params.id },
+        where: { id },
         data: { imageUrl: url }
       });
     }
@@ -62,14 +61,13 @@ export async function POST(
         url,
         isPrimary: isPrimary || existingImages.length === 0,
         order: maxOrder + 1,
-        productId: params.id
+        productId: id
       }
     });
 
-    // Se for a primeira imagem, ela precisa ser primária no produto
     if (existingImages.length === 0) {
       await prisma.product.update({
-        where: { id: params.id },
+        where: { id },
         data: { imageUrl: url }
       });
     }
