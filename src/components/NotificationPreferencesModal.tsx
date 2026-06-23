@@ -146,8 +146,8 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#000000]/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
-      <div className="glass-3d-card rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col max-h-[90vh] shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-[#121214] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col max-h-[90vh] shadow-2xl">
         
         {/* Header */}
         <div className="flex justify-between items-center p-5 border-b border-white/10 shrink-0 bg-white/5">

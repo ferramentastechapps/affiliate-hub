@@ -263,7 +263,7 @@ export function ProductDetail({ product }: { product: Product }) {
                 transition={{ duration: 0.3 }}
                 src={product.images && product.images.length > 0 ? product.images[currentImageIndex].url : product.imageUrl} 
                 alt={product.name}
-                className="w-full h-full object-contain transition-transform hover:scale-105 duration-500 max-h-[350px] drop-shadow-xl"
+                className="w-full h-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-500 max-h-[350px]"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/placeholder.webp";
                 }}

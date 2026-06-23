@@ -479,6 +479,10 @@ class TelegramNotifier:
         if custom_caption:
             legenda_top = custom_caption.strip()
         else:
+            # 1. Tentar pegar legenda do aiAnalysis existente (caso já tenha sido gerada antes)
+            titulo = None
+            subtitulo = None
+            
             ai_analysis_raw = produto.get('aiAnalysis')
             if ai_analysis_raw:
                 import json
@@ -487,16 +491,38 @@ class TelegramNotifier:
                     if isinstance(data, dict):
                         titulo = data.get('titulo')
                         subtitulo = data.get('subtitulo')
-                        if titulo:
-                            legenda_top = f"<b>{titulo.upper()}</b>"
-                            if subtitulo:
-                                legenda_top += f"\n<i>{subtitulo.lower()}</i>"
-                        else:
-                            legenda_top = f"<b>{ai_analysis_raw.strip()}</b>"
-                    else:
-                        legenda_top = f"<b>{ai_analysis_raw.strip()}</b>"
                 except Exception:
-                    legenda_top = f"<b>{ai_analysis_raw.strip()}</b>"
+                    pass
+            
+            # 2. Se não tem título, solicita geração just-in-time
+            if not titulo and produto.get('id'):
+                print(f"🤖 Gerando legenda just-in-time para o produto {produto.get('id')}...")
+                try:
+                    import os
+                    api_key = os.getenv('API_SECRET_KEY') or ''
+                    base_url = AFFILIATE_HUB_URL.rstrip('/')
+                    headers = {'x-api-key': api_key}
+                    
+                    resp = _requests.post(
+                        f"{base_url}/api/products/{produto.get('id')}/generate-caption", 
+                        headers=headers, 
+                        timeout=30
+                    )
+                    
+                    if resp.status_code == 200:
+                        resp_data = resp.json()
+                        titulo = resp_data.get('caption')
+                        print(f"✅ Legenda gerada com sucesso!")
+                    else:
+                        print(f"⚠️ Erro ao gerar legenda. Status: {resp.status_code} - {resp.text}")
+                except Exception as e:
+                    print(f"❌ Falha de comunicação na geração da legenda: {e}")
+                    
+            # 3. Montar legenda_top
+            if titulo:
+                legenda_top = f"<b>{titulo.upper()}</b>"
+                if subtitulo:
+                    legenda_top += f"\n<i>{subtitulo.lower()}</i>"
             else:
                 legenda_top = "<b>🔥 ACHADINHO IMPERDÍVEL!</b>"
 
