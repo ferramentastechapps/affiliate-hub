@@ -498,17 +498,17 @@ export function DailyDeals() {
 
                 {/* Middle (Image + Info) */}
                 <div className="flex flex-row">
-                  <div className="w-[120px] sm:w-[140px] shrink-0 relative bg-white flex items-center justify-center border-r border-white/[0.04] p-2 rounded-l-[14px]">
+                  <div className="w-[110px] sm:w-[130px] shrink-0 relative bg-white flex items-center justify-center m-3 rounded-[16px] p-2 shadow-inner">
                     <img
                       src={product.imageUrl}
                       alt={product.name}
-                      className="w-full aspect-square object-contain transition-transform duration-500 group-hover:scale-105 rounded-md"
+                      className="w-full aspect-square object-contain transition-transform duration-500 group-hover:scale-105 rounded-lg"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.webp";
                       }}
                     />
                     {discount > 0 && (
-                      <span className="absolute top-2 left-2 bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm">
+                      <span className="absolute -top-1 -left-1 bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-md">
                         -{discount}%
                       </span>
                     )}
