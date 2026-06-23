@@ -28,13 +28,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let productCategory: string | null = null;
+    if (productId) {
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { category: true }
+      });
+      if (product) productCategory = product.category;
+    }
+
     // Busca todas as subscriptions ativas
-    const subscriptions = await prisma.pushSubscription.findMany();
+    const allSubscriptions = await prisma.pushSubscription.findMany();
+
+    // Filtra as subscriptions com base nas preferências
+    const subscriptions = allSubscriptions.filter(sub => {
+      // Sem preferências (legado) ou "all: true" -> recebe sempre
+      if (!sub.preferences) return true;
+      
+      const prefs = sub.preferences as { all?: boolean; categories?: string[] };
+      if (prefs.all) return true;
+
+      // Se all = false e temos a categoria do produto, checar se a categoria está no array
+      if (productCategory && prefs.categories && Array.isArray(prefs.categories)) {
+        return prefs.categories.includes(productCategory);
+      }
+
+      // Se all = false e não sabemos a categoria do produto (push genérico),
+      // a regra pode ser não enviar, a menos que seja um alerta geral.
+      // Vamos assumir que push genérico vai pra todo mundo, exceto se a opção for estritamente filtrada.
+      // Neste caso, se for push sem produto associado (ex: mensagem manual do admin), podemos assumir que é importante e enviar.
+      return !productId; 
+    });
 
     if (subscriptions.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'Nenhuma subscription encontrada',
+        message: 'Nenhuma subscription encontrada para este filtro',
         sent: 0,
       });
     }

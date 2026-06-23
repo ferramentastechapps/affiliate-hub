@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Download, ShareNetwork } from '@phosphor-icons/react';
+import { NotificationPreferencesModal } from './NotificationPreferencesModal';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,6 +14,7 @@ export function InstallBanner() {
   const [showBanner, setShowBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
 
   useEffect(() => {
     // Verifica se já foi instalado ou se o usuário já fechou o banner recentemente
@@ -59,8 +61,16 @@ export function InstallBanner() {
 
     window.addEventListener('beforeinstallprompt', handler);
 
+    // Evento de instalação concluída
+    const handleAppInstalled = () => {
+      setShowBanner(false);
+      setShowPreferencesModal(true);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
@@ -88,58 +98,60 @@ export function InstallBanner() {
     localStorage.setItem('installBannerDismissed', Date.now().toString());
   };
 
-  if (!showBanner) return null;
+  if (!showBanner && !showPreferencesModal) return null;
 
   return (
     <>
-      <div
-        className="fixed bottom-20 left-0 right-0 z-50 mx-4 mb-4 animate-slide-up"
-        style={{
-          animation: 'slideUp 0.4s ease-out',
-        }}
-      >
-        <div className="relative bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-2xl p-4 max-w-md mx-auto border border-orange-400/20">
-          <button
-            onClick={handleDismiss}
-            aria-label="Fechar banner de instalação"
-            className="absolute top-2 right-2 p-2 rounded-full hover:bg-white/20 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
-          >
-            <X size={20} weight="bold" className="text-white" />
-          </button>
+      {showBanner && (
+        <div
+          className="fixed bottom-20 left-0 right-0 z-50 mx-4 mb-4 animate-slide-up"
+          style={{
+            animation: 'slideUp 0.4s ease-out',
+          }}
+        >
+          <div className="relative bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-2xl p-4 max-w-md mx-auto border border-orange-400/20">
+            <button
+              onClick={handleDismiss}
+              aria-label="Fechar banner de instalação"
+              className="absolute top-2 right-2 p-2 rounded-full hover:bg-white/20 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+            >
+              <X size={20} weight="bold" className="text-white" />
+            </button>
 
-          <div className="flex items-start gap-3 pr-6">
-            <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <img src="/icons/icon-72x72.png?v=2" alt="Economizei" className="w-10 h-10" />
-            </div>
+            <div className="flex items-start gap-3 pr-6">
+              <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <img src="/icons/icon-72x72.png?v=2" alt="Economizei" className="w-10 h-10" />
+              </div>
 
-            <div className="flex-1">
-              <h3 className="text-white font-bold text-base mb-1">
-                Instale o Economizei
-              </h3>
-              <p className="text-white/90 text-sm mb-3">
-                Receba promoções na hora e acesse offline!
-              </p>
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-base mb-1">
+                  Instale o Economizei
+                </h3>
+                <p className="text-white/90 text-sm mb-3">
+                  Receba promoções na hora e acesse offline!
+                </p>
 
-              <button
-                onClick={handleInstallClick}
-                className="w-full bg-white text-orange-600 font-semibold py-3 px-4 rounded-xl hover:bg-orange-50 transition-colors flex items-center justify-center gap-2 shadow-lg min-h-[48px]"
-              >
-                {isIOS ? (
-                  <>
-                    <ShareNetwork size={20} weight="bold" />
-                    Ver instruções
-                  </>
-                ) : (
-                  <>
-                    <Download size={20} weight="bold" />
-                    Instalar agora
-                  </>
-                )}
-              </button>
+                <button
+                  onClick={handleInstallClick}
+                  className="w-full bg-white text-orange-600 font-semibold py-3 px-4 rounded-xl hover:bg-orange-50 transition-colors flex items-center justify-center gap-2 shadow-lg min-h-[48px]"
+                >
+                  {isIOS ? (
+                    <>
+                      <ShareNetwork size={20} weight="bold" />
+                      Ver instruções
+                    </>
+                  ) : (
+                    <>
+                      <Download size={20} weight="bold" />
+                      Instalar agora
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Modal de instruções para iOS */}
       {showIOSInstructions && (
@@ -209,6 +221,13 @@ export function InstallBanner() {
           </div>
         </div>
       )}
+
+      {/* Modal de Preferências de Notificação após Instalação */}
+      <NotificationPreferencesModal 
+        isOpen={showPreferencesModal} 
+        onClose={() => setShowPreferencesModal(false)}
+        mode="install"
+      />
 
       <style jsx>{`
         @keyframes slideUp {
