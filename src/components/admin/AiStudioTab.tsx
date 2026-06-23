@@ -10,7 +10,7 @@ import {
 type Caption = {
   id: string; productId?: string | null; productName: string; caption: string;
   score?: number | null; rating?: number | null; ratedAt?: string | null;
-  usedAsExample: boolean; createdAt: string;
+  usedAsExample: boolean; createdAt: string; imageUrl?: string | null;
 };
 type BannedWord = { id: string; word: string; reason?: string | null; createdAt: string; };
 type Substitution = { id: string; fromWord: string; toWord: string; createdAt: string; };
@@ -20,14 +20,14 @@ type AiContext = {
 };
 
 type SubTab = 'captions' | 'banned' | 'substitutions' | 'contexts';
-type RatingFilter = 'all' | 'unrated' | '5' | '4' | '3' | '2' | '1' | 'examples';
+type RatingFilter = 'all' | 'unrated' | '10' | '9' | '8' | '7' | '6' | '5' | '4' | '3' | '2' | '1' | 'examples';
 
 // ─── StarRating ────────────────────────────────────────────────────────────────
 function StarRating({ value, onChange }: { value?: number | null; onChange: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
   return (
     <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
         <button
           key={n}
           onClick={() => onChange(n)}
@@ -101,12 +101,17 @@ function CaptionsSection() {
   const ratingFilters: { value: RatingFilter; label: string }[] = [
     { value: 'all', label: `Todas (${total})` },
     { value: 'unrated', label: '⬜ Sem nota' },
-    { value: 'examples', label: '⭐ Exemplos' },
-    { value: '5', label: '★★★★★' },
-    { value: '4', label: '★★★★' },
-    { value: '3', label: '★★★' },
-    { value: '2', label: '★★' },
-    { value: '1', label: '★' },
+    { value: 'examples', label: '✨ Exemplos' },
+    { value: '10', label: '10' },
+    { value: '9', label: '9' },
+    { value: '8', label: '8' },
+    { value: '7', label: '7' },
+    { value: '6', label: '6' },
+    { value: '5', label: '5' },
+    { value: '4', label: '4' },
+    { value: '3', label: '3' },
+    { value: '2', label: '2' },
+    { value: '1', label: '1' },
   ];
 
   return (
@@ -145,11 +150,19 @@ function CaptionsSection() {
             >
               {/* Cabeçalho */}
               <div className="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <div className="text-[10px] text-zinc-500 mb-0.5">{caption.productName}</div>
-                  <div className="font-bold text-lg text-white tracking-wide leading-tight">
-                    {caption.caption}
-                  </div>
+                <div className="flex gap-4 min-w-0 flex-1">
+                  {caption.imageUrl && (
+                    <img 
+                      src={caption.imageUrl} 
+                      alt="Product" 
+                      className="w-16 h-16 object-cover rounded-lg shrink-0 border border-zinc-800"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-zinc-500 mb-0.5 truncate">{caption.productName}</div>
+                    <div className="font-bold text-lg text-white tracking-wide leading-tight break-words">
+                      {caption.caption}
+                    </div>
                   <div className="flex items-center gap-3 mt-1">
                     {caption.score !== null && caption.score !== undefined && (
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
@@ -163,6 +176,7 @@ function CaptionsSection() {
                     <span className="text-[10px] text-zinc-600">
                       {new Date(caption.createdAt).toLocaleDateString('pt-BR')}
                     </span>
+                  </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
