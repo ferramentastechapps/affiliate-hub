@@ -94,179 +94,51 @@ export async function POST(request: Request) {
       );
     }
 
-    // Tenta encontrar por externalId, senão procura por qualquer produto já ATIVO com o mesmo nome (sem limite de tempo)
-    let existingProduct = await prisma.product.findFirst({
-      where: body.externalId ? { externalId: body.externalId } : {
-        name: body.name,
-        status: { in: ['active', 'approved'] }
-      },
-      include: {
-        links: true
-      }
-    });
+    const { name, externalId, source } = body;
 
-    // Se não achou nenhum produto ativo anterior, procura por um PENDENTE criado nas últimas 24 horas
-    if (!existingProduct && !body.externalId) {
-      existingProduct = await prisma.product.findFirst({
-        where: {
-          name: body.name,
-          status: 'pending',
-          createdAt: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas para pendentes
-          }
-        },
-        include: {
-          links: true
-        }
+    // Estágio 1 — chave composta externalId + source (mais preciso):
+    if (externalId && source) {
+      const byCompositeKey = await prisma.product.findFirst({
+        where: { externalId, source }
       });
+      if (byCompositeKey) {
+        return NextResponse.json(
+          { error: 'Duplicate: same externalId+source', id: byCompositeKey.id },
+          { status: 409 }
+        );
+      }
     }
 
-    if (existingProduct) {
-      // Registrar no histórico de preços
-      if (body.price) {
-        await prisma.priceHistory.create({
-          data: {
-            productId: existingProduct.id,
-            price: parseFloat(body.price),
-            originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
-          }
-        });
-        
-        // Verificar se podemos atualizar a imagem do produto existente
-        // Apenas se a atual for do Promobit/Pechinchou ou placeholder/nula, e a nova for uma imagem de varejista real
-        let imageUpdateData = {};
-        const isOldImagePlaceholderOrAggregator = 
-          !existingProduct.imageUrl || 
-          existingProduct.imageUrl === '/placeholder.webp' || 
-          existingProduct.imageUrl.includes('promobit.com.br') || 
-          existingProduct.imageUrl.includes('pechinchou.com.br');
-        
-        const isNewImageBetter = 
-          body.imageUrl && 
-          body.imageUrl !== '/placeholder.webp' && 
-          !body.imageUrl.includes('promobit.com.br') && 
-          !body.imageUrl.includes('pechinchou.com.br');
-
-        if (isOldImagePlaceholderOrAggregator && isNewImageBetter && !existingProduct.isFixed) {
-          imageUpdateData = {
-            imageUrl: body.imageUrl,
-            enhancedImageUrl: body.imageUrl
-          };
-        }
-
-
-        const skipProcessing = existingProduct.aiProcessed && existingProduct.affiliateProcessed;
-        let linksData = undefined;
-        let productLinksDataUpdate: any[] = [];
-        
-        if (!skipProcessing) {
-          const { links: processedLinks, productLinksData } = await processProductAffiliates(body);
-          productLinksDataUpdate = productLinksData;
-          const linksUpdate: Record<string, string> = {};
-          if (processedLinks) {
-            const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-            for (const platform of platforms) {
-              const newLink = processedLinks[platform];
-              const oldLink = existingProduct.links?.[platform as keyof typeof existingProduct.links];
-              if (newLink) {
-                const isOldAggregator = !oldLink || (typeof oldLink === 'string' && (oldLink.includes('promobit.com.br') || oldLink.includes('pechinchou.com.br')));
-                const isNewDirect = !newLink.includes('promobit.com.br') && !newLink.includes('pechinchou.com.br');
-                if (isOldAggregator && isNewDirect) {
-                  linksUpdate[platform] = newLink;
-                }
-              }
-            }
-          }
-          if (Object.keys(linksUpdate).length > 0 && !existingProduct.isFixed) {
-            linksData = existingProduct.links ? { update: linksUpdate } : { create: linksUpdate };
-          }
-        }
-
-        const precoAnterior = existingProduct.price;
-        const precoNovo = parseFloat(body.price);
-
-        // Atualizar preço atual no produto e obter objeto atualizado
-        const updatedProduct = await prisma.product.update({
-          where: { id: existingProduct.id },
-          data: { 
-            price: parseFloat(body.price),
-            originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : existingProduct.originalPrice,
-            subcategory: body.subcategory || existingProduct.subcategory,
-            brand: body.brand || existingProduct.brand,
-            model: body.model || existingProduct.model,
-            platformProductId: body.platformProductId || existingProduct.platformProductId,
-            storeName: body.storeName || existingProduct.storeName,
-            ...imageUpdateData,
-            links: linksData
-          },
-          include: {
-            links: true
-          }
-        });
-        existingProduct = updatedProduct;
-        
-        for (const pl of productLinksDataUpdate) {
-          await prisma.productLink.upsert({
-            where: { productId_platform: { productId: existingProduct.id, platform: pl.platform } },
-            create: { ...pl, productId: existingProduct.id },
-            update: { sourceUrl: pl.sourceUrl, affiliateUrl: pl.affiliateUrl, generatedAffiliateUrl: pl.generatedAffiliateUrl }
-          });
-        }
-
-        if (precoAnterior && precoNovo < precoAnterior) {
-          verificarEDispararAlertas(existingProduct.id, precoAnterior, precoNovo).catch(err => {
-            console.error('[Webhook] Erro ao verificar alertas para produto:', existingProduct?.id, err);
-          });
-        }
-        
-        // Repostagem no Telegram se o produto estiver 'isFixed' e ativo
-        if (existingProduct?.isFixed && existingProduct?.status === 'active') {
-          // Extrair o primeiro link que ele tiver para publicar
-          const existingLinks: any = existingProduct?.links || {};
-          let publishLink = '';
-          const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-          let activePlatform = 'amazon';
-          for (const plat of platforms) {
-            if (existingLinks[plat]) {
-              publishLink = existingLinks[plat];
-              activePlatform = plat;
-              break;
-            }
-          }
-
-          if (publishLink) {
-            // A chamada ao publishToGroup envia o existingProduct com os dados atualizados de preço.
-            publishToGroup(existingProduct, activePlatform, publishLink).then((success) => {
-              if(success) {
-                 console.log(`🚀 [Repost Telegram] Oferta repostada via Webhook (isFixed=true): ${existingProduct?.name}`);
-              }
-            }).catch(e => {
-               console.error(`Falha ao repostar no Telegram para o produto ${existingProduct?.id}:`, e);
-            });
-          }
-        }
+    // Estágio 2 — nome nos últimos 7 dias entre ativos/aprovados (previne duplicata de produto recente de fonte diferente):
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const byNameRecent = await prisma.product.findFirst({
+      where: {
+        name: { equals: name, mode: 'insensitive' },
+        status: { in: ['active', 'approved'] },
+        createdAt: { gte: sevenDaysAgo }
       }
+    });
+    if (byNameRecent) {
+      return NextResponse.json(
+        { error: 'Duplicate: same name in last 7 days', id: byNameRecent.id },
+        { status: 409 }
+      );
+    }
 
-      console.log('ℹ️ Produto duplicado detectado. Histórico de preço atualizado:', body.name);
-      return NextResponse.json({
-        success: true,
-        message: 'Produto já cadastrado, preço atualizado no histórico.',
-        product: {
-          id: existingProduct.id,
-          shortId: existingProduct.shortId,  // ✅ ADICIONAR shortId
-          name: existingProduct.name,
-          category: existingProduct.category,
-          description: existingProduct.description,
-          imageUrl: existingProduct.imageUrl,
-          enhancedImageUrl: existingProduct.enhancedImageUrl,
-          price: existingProduct.price,
-          originalPrice: existingProduct.originalPrice,
-          status: existingProduct.status,
-          createdAt: existingProduct.createdAt,
-          updatedAt: existingProduct.updatedAt,
-          links: existingProduct.links
-        }
-      }, { status: 200 });
+    // Estágio 3 — nome entre pendentes nas últimas 24h (mantém comportamento existente para pendentes):
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const byNamePending = await prisma.product.findFirst({
+      where: {
+        name: { equals: name, mode: 'insensitive' },
+        status: 'pending',
+        createdAt: { gte: oneDayAgo }
+      }
+    });
+    if (byNamePending) {
+      return NextResponse.json(
+        { error: 'Duplicate: pending with same name', id: byNamePending.id },
+        { status: 409 }
+      );
     }
 
     const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(body);
@@ -305,6 +177,7 @@ export async function POST(request: Request) {
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         status: finalStatus,
         externalId: body.externalId || null,
+        source: body.source || null,
         links: processedLinks ? {
           create: {
             amazon: processedLinks.amazon || null,
@@ -510,18 +383,35 @@ export async function PUT(request: Request) {
 
     for (const productData of body.products) {
       try {
-        // Tenta encontrar por externalId, senão por nome recente
-        let existingProduct = await prisma.product.findFirst({
-          where: productData.externalId ? { externalId: productData.externalId } : {
-            name: productData.name,
-            createdAt: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 horas
-            }
-          },
-          include: {
-            links: true
-          }
-        });
+        let existingProduct: any = null;
+
+        if (productData.id) {
+          existingProduct = await prisma.product.findUnique({
+            where: { id: productData.id },
+            include: { links: true }
+          });
+        }
+
+        if (!existingProduct && productData.externalId) {
+          existingProduct = await prisma.product.findFirst({
+            where: productData.source 
+              ? { externalId: productData.externalId, source: productData.source }
+              : { externalId: productData.externalId },
+            include: { links: true }
+          });
+        }
+
+        if (!existingProduct) {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          existingProduct = await prisma.product.findFirst({
+            where: {
+              name: { equals: productData.name, mode: 'insensitive' },
+              status: { in: ['active', 'approved'] },
+              createdAt: { gte: sevenDaysAgo }
+            },
+            include: { links: true }
+          });
+        }
 
         if (existingProduct) {
           // Registrar no histórico de preços se houver preço
@@ -681,6 +571,7 @@ export async function PUT(request: Request) {
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
             status: finalStatus,
             externalId: productData.externalId || null,
+            source: productData.source || null,
             links: processedLinks ? {
               create: {
                 amazon: processedLinks.amazon || null,

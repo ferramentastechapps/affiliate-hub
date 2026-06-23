@@ -42,7 +42,8 @@ model Product {
   aiScore          Float?   // Nota de 0 a 10 dada pela IA
   aiAnalysis       String?  // Texto/Copy gerado pela IA
   clicks           Int      @default(0)
-  externalId       String?  @unique // Hash de deduplicação
+  externalId       String?  // Hash de deduplicação
+  source           String?  // Plataforma de origem (amazon, mercadolivre, shopee, etc.)
   enhancedImageUrl String?  // Imagem aprimorada
   isFixed          Boolean  @default(false) // Trava dados contra sobrescrita do robô
 
@@ -69,6 +70,7 @@ model Product {
   @@index([createdAt])
   @@index([status])
   @@index([externalId])
+  @@index([externalId, source])
   @@index([shortId])
   @@index([aiProcessed])
 }
