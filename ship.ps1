@@ -127,6 +127,7 @@ pm2 delete affiliate-hub-scraper > /dev/null 2>&1 || true
 pm2 delete affiliate-scraper > /dev/null 2>&1 || true
 pm2 delete affiliate-hub-web > /dev/null 2>&1 || true
 pm2 delete nextjs > /dev/null 2>&1 || true
+pm2 delete telegram-bot > /dev/null 2>&1 || true
 
 # Iniciar ou recarregar os bots usando o arquivo de ecossistema
 cd ~/affiliate-hub
