@@ -47,6 +47,10 @@ export function MobileBottomNav() {
       window.dispatchEvent(new CustomEvent("open-categories"));
       return;
     }
+    if (id === "cupons") {
+      window.location.href = "/cupons";
+      return;
+    }
     const el = document.getElementById(id);
     if (el) {
       const y = el.getBoundingClientRect().top + window.scrollY - 80; // 80px offset pro header
@@ -59,7 +63,7 @@ export function MobileBottomNav() {
     if (tab === 'inicio') scrollTo('inicio');
     if (tab === 'categorias') scrollTo('categorias');
     if (tab === 'cupons') {
-      window.dispatchEvent(new CustomEvent("open-coupons"));
+      window.location.href = "/cupons";
     }
     if (tab === 'notificacoes') {
       window.dispatchEvent(new CustomEvent("open-notifications"));

@@ -126,7 +126,7 @@ export function Header() {
               <nav className="flex items-center gap-1">
                 <NavLink href="#inicio" active>Início</NavLink>
                 <NavLink href="#categorias">Categorias</NavLink>
-                <NavLink href="#cupons">Cupons</NavLink>
+                <NavLink href="/cupons">Cupons</NavLink>
                 <NavLink href="#footer">Comunidade</NavLink>
               </nav>
               <div className="flex items-center shrink-0 gap-2">
@@ -147,12 +147,14 @@ export function Header() {
 
 function NavLink({ href, children, active }: { href: string; children: React.ReactNode; active?: boolean }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    if (href === "#categorias") { window.dispatchEvent(new CustomEvent("open-categories")); return; }
-    if (href === "#cupons") {
-      window.dispatchEvent(new CustomEvent("open-coupons"));
+    // Se for link de cupons, redireciona para a página
+    if (href === "#cupons" || href === "/cupons") {
+      window.location.href = "/cupons";
       return;
     }
+    
+    e.preventDefault();
+    if (href === "#categorias") { window.dispatchEvent(new CustomEvent("open-categories")); return; }
     const el = document.getElementById(href.replace("#", ""));
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: "smooth" });
   };
