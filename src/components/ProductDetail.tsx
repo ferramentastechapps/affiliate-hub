@@ -234,7 +234,7 @@ export function ProductDetail({ product }: { product: Product }) {
         <div className="w-full glass-3d-card rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row shadow-2xl">
           
           {/* Image Section */}
-          <div className="relative w-full md:w-5/12 bg-black/40 backdrop-blur-sm border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-8 lg:p-12 min-h-[300px] md:min-h-[450px]">
+          <div className="relative w-full md:w-5/12 bg-white border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-6 lg:p-10 min-h-[300px] md:min-h-[450px] rounded-t-[2.5rem] md:rounded-l-[2.5rem] md:rounded-tr-none">
             {price > 0 && discount > 0 && (
               <motion.div 
                 initial={{ scale: 0, rotate: -10 }} 
@@ -263,7 +263,7 @@ export function ProductDetail({ product }: { product: Product }) {
                 transition={{ duration: 0.3 }}
                 src={product.images && product.images.length > 0 ? product.images[currentImageIndex].url : product.imageUrl} 
                 alt={product.name}
-                className="w-full h-full object-contain filter drop-shadow-2xl transition-transform hover:scale-105 duration-500 max-h-[350px]"
+                className="w-full h-full object-contain transition-transform hover:scale-105 duration-500 max-h-[350px] drop-shadow-xl"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/placeholder.webp";
                 }}
@@ -463,11 +463,11 @@ export function ProductDetail({ product }: { product: Product }) {
                   onClick={() => router.push(`/produto/${relItem.shortId || relItem.id}`)}
                   className="group bg-black/40 border border-white/5 hover:border-accent/30 rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:-translate-y-1 duration-300"
                 >
-                  <div className="w-full aspect-square bg-black/60 flex items-center justify-center overflow-hidden p-4">
+                  <div className="w-full aspect-square bg-white flex items-center justify-center overflow-hidden p-3 rounded-t-2xl">
                     <img 
                       src={relItem.imageUrl} 
                       alt={relItem.name} 
-                      className="w-full h-full object-contain mix-blend-screen opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-all duration-500"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.webp";
                       }}
