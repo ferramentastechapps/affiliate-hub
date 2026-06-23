@@ -1,22 +1,21 @@
 "use client";
 
-import { House, Tag, Ticket, Sparkle, WhatsappLogo } from "@phosphor-icons/react";
+import { House, Tag, Ticket, Bell, WhatsappLogo } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [activeTab, setActiveTab] = useState<'inicio' | 'categorias' | 'cupons' | 'notificacoes'>('inicio');
 
   // Ocultar no scroll down e exibir no scroll up (Comportamento polido de App)
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      // Se rolou pra baixo mais de 10px e não estamos no topo absoluto, esconde.
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
       } else {
-        // Se rolou pra cima, mostra.
         setIsVisible(true);
       }
       setLastScrollY(currentScrollY);
@@ -25,6 +24,21 @@ export function MobileBottomNav() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
+
+  // Escutar eventos de outras partes do app para atualizar a aba ativa
+  useEffect(() => {
+    const handleSetInicio = () => setActiveTab('inicio');
+    const handleSetCategorias = () => setActiveTab('categorias');
+    const handleSetCupons = () => setActiveTab('cupons');
+    
+    window.addEventListener("open-categories", handleSetCategorias);
+    window.addEventListener("open-coupons", handleSetCupons);
+    
+    return () => {
+      window.removeEventListener("open-categories", handleSetCategorias);
+      window.removeEventListener("open-coupons", handleSetCupons);
+    };
+  }, []);
 
   const scrollTo = (id: string) => {
     if (id === "categorias") {
@@ -38,6 +52,18 @@ export function MobileBottomNav() {
     }
   };
 
+  const handleTabClick = (tab: 'inicio' | 'categorias' | 'cupons' | 'notificacoes') => {
+    setActiveTab(tab);
+    if (tab === 'inicio') scrollTo('inicio');
+    if (tab === 'categorias') scrollTo('categorias');
+    if (tab === 'cupons') {
+      window.dispatchEvent(new CustomEvent("open-coupons"));
+    }
+    if (tab === 'notificacoes') {
+      window.dispatchEvent(new CustomEvent("open-notifications"));
+    }
+  };
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -45,55 +71,73 @@ export function MobileBottomNav() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="fixed bottom-4 left-4 right-4 z-50 md:hidden flex items-stretch gap-3"
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          className="fixed bottom-5 left-0 right-0 mx-auto z-50 md:hidden w-[92%] max-w-sm flex items-center justify-between bg-zinc-950/80 backdrop-blur-xl rounded-full border border-white/10 p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
         >
-          {/* Pílula Principal (Navegação Branca) */}
-          <div className="flex-1 bg-white rounded-[1.75rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-black/5 flex items-center justify-between px-1">
-            
-            <button 
-              onClick={() => scrollTo('inicio')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-900 min-h-[56px] py-2"
-              aria-label="Ir para início"
-            >
-              <House size={24} weight="duotone" />
-              <span className="text-[11px] font-bold leading-tight">Início</span>
-            </button>
-            
-            <button 
-              onClick={() => scrollTo('categorias')} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-zinc-500 hover:text-zinc-900 transition-colors min-h-[56px] py-2"
-              aria-label="Ir para categorias"
-            >
-              <Tag size={24} weight="duotone" />
-              <span className="text-[11px] font-bold leading-tight">Categorias</span>
-            </button>
+          {/* Início */}
+          <button 
+            onClick={() => handleTabClick('inicio')} 
+            className={`flex flex-col items-center justify-center flex-1 active:scale-90 transition-all min-h-[48px] rounded-full ${
+              activeTab === 'inicio' 
+                ? 'text-orange-500 bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-white/5' 
+                : 'text-zinc-400 hover:text-white border border-transparent'
+            }`}
+            aria-label="Ir para início"
+          >
+            <House size={22} weight={activeTab === 'inicio' ? "fill" : "duotone"} />
+          </button>
+          
+          {/* Categorias */}
+          <button 
+            onClick={() => handleTabClick('categorias')} 
+            className={`flex flex-col items-center justify-center flex-1 active:scale-90 transition-all min-h-[48px] rounded-full ${
+              activeTab === 'categorias' 
+                ? 'text-orange-500 bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-white/5' 
+                : 'text-zinc-400 hover:text-white border border-transparent'
+            }`}
+            aria-label="Ir para categorias"
+          >
+            <Tag size={22} weight={activeTab === 'categorias' ? "fill" : "duotone"} />
+          </button>
 
-            <button 
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("open-coupons"));
-              }} 
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 text-accent min-h-[56px] py-2"
-              aria-label="Ir para cupons"
-            >
-              <Ticket size={24} weight="duotone" />
-              <span className="text-[11px] font-bold leading-tight">Cupons</span>
-            </button>
-            
-          </div>
+          {/* Cupons */}
+          <button 
+            onClick={() => handleTabClick('cupons')} 
+            className={`flex flex-col items-center justify-center flex-1 active:scale-90 transition-all min-h-[48px] rounded-full ${
+              activeTab === 'cupons' 
+                ? 'text-orange-500 bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-white/5' 
+                : 'text-zinc-400 hover:text-white border border-transparent'
+            }`}
+            aria-label="Ir para cupons"
+          >
+            <Ticket size={22} weight={activeTab === 'cupons' ? "fill" : "duotone"} />
+          </button>
 
+          {/* Alertas / Notificações */}
+          <button 
+            onClick={() => handleTabClick('notificacoes')} 
+            className={`flex flex-col items-center justify-center flex-1 active:scale-90 transition-all min-h-[48px] rounded-full ${
+              activeTab === 'notificacoes' 
+                ? 'text-orange-500 bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] border border-white/5' 
+                : 'text-zinc-400 hover:text-white border border-transparent'
+            }`}
+            aria-label="Abrir preferências de notificações"
+          >
+            <Bell size={22} weight={activeTab === 'notificacoes' ? "fill" : "duotone"} />
+          </button>
+          
+          {/* WhatsApp */}
           <a 
             href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Entrar no grupo do WhatsApp"
-            className="w-[4.5rem] bg-[#25D366] hover:bg-[#20bd5a] rounded-[1.75rem] shadow-[0_8px_30px_rgba(37,211,102,0.4)] flex flex-col items-center justify-center flex-shrink-0 active:scale-95 transition-all min-h-[56px] py-2 border border-white/10"
+            className="flex flex-col items-center justify-center flex-1 active:scale-90 transition-all min-h-[48px] rounded-full border border-transparent hover:bg-white/5 text-zinc-400 hover:text-[#25D366]"
           >
-            <div className="relative">
-               <WhatsappLogo size={26} weight="regular" className="text-white" />
-               <div className="absolute inset-0 rounded-full animate-ping bg-white/30" />
+            <div className="relative flex items-center justify-center">
+              <WhatsappLogo size={22} weight="duotone" className="text-[#25D366] drop-shadow-[0_0_6px_rgba(37,211,102,0.3)]" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#25D366] animate-ping" />
             </div>
-            <span className="text-[11px] font-bold text-white mt-0.5 leading-tight">Grupo</span>
           </a>
 
         </motion.div>
