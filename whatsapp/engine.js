@@ -83,45 +83,61 @@ setInterval(async () => {
         return;
     }
 
+// ── Lógica do Balde (extraída em função reutilizável) ─────────────────────────
+async function flushBucket() {
+    if (!isReady) {
+        console.log('⏳ WhatsApp ainda não está pronto. Pulando verificação do balde...');
+        return { skipped: true, reason: 'not_ready' };
+    }
+
     if (messageQueue.length === 0) {
         console.log('😴 Balde vazio. Nenhuma oferta para enviar agora.');
-        return;
+        return { skipped: true, reason: 'empty' };
     }
 
     if (!GROUP_NAME) {
         console.log(`⚠️ WHATSAPP_GROUP_NAME está vazio no .env. Esvaziando o balde (${messageQueue.length} ofertas) sem enviar.`);
         messageQueue = [];
-        return;
+        return { skipped: true, reason: 'no_group_name' };
     }
 
     console.log(`🔄 Analisando ${messageQueue.length} ofertas no balde...`);
     
-    // Sort by score descending and pick the best one
     messageQueue.sort((a, b) => b.score - a.score);
     const bestOffer = messageQueue[0];
 
     console.log(`🏆 Melhor oferta escolhida! Score: ${bestOffer.score}. Disparando para o grupo '${GROUP_NAME}'...`);
 
     try {
-        // Find the group
         const chats = await client.getChats();
         const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
 
         if (!group) {
             console.error(`❌ Grupo '${GROUP_NAME}' não encontrado! Tem certeza que este WhatsApp está no grupo?`);
+            messageQueue = [];
+            return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
         } else {
             await client.sendMessage(group.id._serialized, bestOffer.message);
             console.log('🚀 Mensagem enviada com sucesso para o grupo!');
+            messageQueue = [];
+            console.log('🗑️ Balde esvaziado para a próxima rodada.');
+            return { success: true };
         }
     } catch (err) {
         console.error('❌ Erro ao enviar mensagem:', err);
-    } finally {
-        // Empty the bucket regardless of success/fail to avoid sending old deals
         messageQueue = [];
-        console.log('🗑️ Balde esvaziado para a próxima rodada.');
+        return { success: false, error: err.message };
     }
+}
 
-}, DELAY_MINUTES * 60 * 1000);
+// Ciclo automático
+setInterval(flushBucket, DELAY_MINUTES * 60 * 1000);
+
+// Flush manual (para testes ou admin)
+app.post('/flush', async (req, res) => {
+    const result = await flushBucket();
+    return res.status(200).json(result);
+});
 
 app.listen(PORT, () => {
     console.log(`🚀 API interna do WhatsApp rodando na porta ${PORT}`);
