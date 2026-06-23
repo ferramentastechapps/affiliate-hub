@@ -1,4 +1,4 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
 const dotenv = require('dotenv');
@@ -58,7 +58,7 @@ app.post('/send', (req, res) => {
         return res.status(400).json({ error: 'Message is required' });
     }
 
-    messageQueue.push({ message, score: score || 0 });
+    messageQueue.push({ message, score: score || 0, imageUrl });
     console.log(`📥 Nova oferta recebida no balde (Score: ${score}). Total no balde: ${messageQueue.length}`);
     
     return res.status(200).json({ success: true, queued: true });
@@ -121,8 +121,21 @@ async function flushBucket() {
             messageQueue = [];
             return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
         } else {
-            await client.sendMessage(group.id._serialized, bestOffer.message);
-            console.log('🚀 Mensagem enviada com sucesso para o grupo!');
+            if (bestOffer.imageUrl) {
+                try {
+                    const media = await MessageMedia.fromUrl(bestOffer.imageUrl, { unsafeMime: true });
+                    await client.sendMessage(group.id._serialized, media, { caption: bestOffer.message });
+                    console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
+                } catch (imgErr) {
+                    console.error('❌ Erro ao enviar imagem via WhatsApp, enviando só texto:', imgErr.message);
+                    await client.sendMessage(group.id._serialized, bestOffer.message);
+                    console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+                }
+            } else {
+                await client.sendMessage(group.id._serialized, bestOffer.message);
+                console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+            }
+            
             messageQueue = [];
             console.log('🗑️ Balde esvaziado para a próxima rodada.');
             return { success: true };
