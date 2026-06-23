@@ -21,6 +21,9 @@ type Product = {
   isFixed?: boolean;
   brand?: string;
   createdAt?: string;
+  dropPercent?: number; // FASE 2
+  lowestPrice30d?: number; // FASE 2
+  highestPrice30d?: number; // FASE 2
   links?: {
     amazon?: string;
     mercadoLivre?: string;
@@ -43,7 +46,7 @@ type Product = {
   _localAffiliateUrl?: string;
 };
 
-type StatusFilter = "all" | "active" | "pending" | "fixed" | "notFixed";
+type StatusFilter = "all" | "active" | "pending" | "fixed" | "notFixed" | "price-drops";
 type SortMode = "date_desc" | "date_asc" | "alpha_asc" | "alpha_desc" | "price_asc" | "price_desc";
 type LayoutMode = "grid" | "list";
 
@@ -208,12 +211,16 @@ export function ProductsTab() {
   useEffect(() => { 
     fetchProducts(); 
     fetchCategories();
-  }, []);
+  }, [statusFilter]); // FASE 2 — Recarregar quando mudar filtro
 
   async function fetchProducts() {
     try {
       setLoading(true);
-      const res = await fetch("/api/products?status=all");
+      // FASE 2 — Se filtro for price-drops, buscar com query param
+      const endpoint = statusFilter === 'price-drops' 
+        ? '/api/products?filter=price-drops'
+        : '/api/products?status=all';
+      const res = await fetch(endpoint);
       const data = await res.json();
       setProducts(data);
     } catch (error) {
@@ -345,7 +352,7 @@ export function ProductsTab() {
 
       {/* ─── Filtros de Status ───────────────────────────────────────────── */}
       <div className="flex gap-2 mb-4 border-b border-zinc-800 pb-4 overflow-x-auto">
-        {(["all", "active", "pending", "fixed", "notFixed"] as const).map((filter) => (
+        {(["all", "active", "pending", "price-drops", "fixed", "notFixed"] as const).map((filter) => (
           <button
             key={filter}
             onClick={() => setStatusFilter(filter)}
@@ -358,6 +365,7 @@ export function ProductsTab() {
             {filter === "all" && `Todos (${products.length})`}
             {filter === "active" && `Ativos (${products.filter(p => p.status === "active" || p.status === "approved").length})`}
             {filter === "pending" && `Pendentes (${products.filter(p => p.status === "pending").length})`}
+            {filter === "price-drops" && `📉 Quedas de Preço`}
             {filter === "fixed" && `🔒 Com Trava (${products.filter(p => p.isFixed).length})`}
             {filter === "notFixed" && `🔓 Sem Trava (${products.filter(p => !p.isFixed).length})`}
           </button>
@@ -467,8 +475,16 @@ export function ProductsTab() {
                   </button>
                   
                   <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <div className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2" title={product.name}>
-                      {product.name}
+                    <div className="flex items-start gap-2">
+                      <div className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2 flex-1" title={product.name}>
+                        {product.name}
+                      </div>
+                      {/* FASE 2 — Badge de Queda de Preço no modo lista */}
+                      {product.dropPercent !== undefined && product.dropPercent > 0 && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80 whitespace-nowrap">
+                          ▼ {product.dropPercent.toFixed(1)}%
+                        </span>
+                      )}
                     </div>
                     {/* ID nativo da plataforma */}
                     <CopyableId product={product} />
@@ -617,6 +633,12 @@ export function ProductsTab() {
                   onClick={() => setGalleryProduct(product)}
                 />
                 <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                  {/* FASE 2 — Badge de Queda de Preço */}
+                  {product.dropPercent !== undefined && product.dropPercent > 0 && (
+                    <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80 shadow-lg backdrop-blur-md">
+                      ▼ {product.dropPercent.toFixed(1)}% vs máximo
+                    </span>
+                  )}
                   <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider border shadow-lg backdrop-blur-md ${
                     product.status === "active" || product.status === "approved" ? "bg-emerald-950/80 text-emerald-400 border-emerald-800/80"
                     : product.status === "pending" ? "bg-amber-950/80 text-amber-400 border-amber-800/80"

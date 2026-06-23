@@ -110,10 +110,94 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, externalId, source } = body;
+    const { name, externalId, source, platformId, platformType } = body;
 
-    // Estágio 1 — chave composta externalId + source (mais preciso):
-    if (externalId && source) {
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // FASE 1 — DEDUPLICAÇÃO POR PLATFORM ID (PRIORIDADE MÁXIMA)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    let existingProduct = null;
+
+    // Estágio 1 — platformId + platformType (mais preciso - ID real da plataforma)
+    if (platformId && platformType) {
+      existingProduct = await prisma.product.findFirst({
+        where: { 
+          platformId,
+          platformType
+        },
+        include: { priceHistory: { orderBy: { createdAt: 'desc' }, take: 1 } }
+      });
+      
+      if (existingProduct) {
+        console.log(`[Webhook] Produto encontrado por platformId+platformType: ${platformId} (${platformType})`);
+        
+        // Atualizar preço se mudou
+        const priceChanged = body.price && body.price !== existingProduct.price;
+        const originalPriceChanged = body.originalPrice && body.originalPrice !== existingProduct.originalPrice;
+        
+        if (priceChanged || originalPriceChanged) {
+          console.log(`[Webhook] Preço mudou! Anterior: ${existingProduct.price} → Novo: ${body.price}`);
+          
+          // Atualizar produto
+          await prisma.product.update({
+            where: { id: existingProduct.id },
+            data: {
+              price: body.price || existingProduct.price,
+              originalPrice: body.originalPrice || existingProduct.originalPrice,
+              updatedAt: new Date()
+            }
+          });
+          
+          // Criar registro de histórico
+          await prisma.priceHistory.create({
+            data: {
+              productId: existingProduct.id,
+              price: body.price || existingProduct.price,
+              originalPrice: body.originalPrice || existingProduct.originalPrice
+            }
+          });
+          
+          // Calcular queda de preço
+          const lastHistory = existingProduct.priceHistory[0];
+          if (lastHistory && body.price < lastHistory.price) {
+            const dropPercent = ((lastHistory.price - body.price) / lastHistory.price) * 100;
+            console.log(`[Webhook] Queda de ${dropPercent.toFixed(1)}% no preço!`);
+            
+            // FASE 2 — Se queda > 15% E produto tem isFixed=true, publicar automaticamente
+            if (dropPercent >= 15 && existingProduct.isFixed) {
+              console.log(`[Webhook] ⚡ Auto-publicando produto com queda significativa de preço`);
+              
+              // Disparar publicação no Telegram (assíncrono, não aguarda)
+              publishToGroup({
+                ...existingProduct,
+                price: body.price,
+                originalPrice: body.originalPrice || existingProduct.originalPrice,
+                dropPercent: Math.round(dropPercent * 10) / 10
+              }).catch(err => {
+                console.error('[Webhook] Erro ao publicar produto com queda de preço:', err);
+              });
+            } else if (dropPercent >= 15 && !existingProduct.isFixed) {
+              console.log(`[Webhook] Produto tem queda de ${dropPercent.toFixed(1)}% mas não está travado (isFixed=false). Movendo para fila de aprovação com prioridade alta.`);
+              // TODO: Sistema de fila com prioridade (Fase 5)
+            }
+          }
+          
+          // Disparar alertas de preço
+          await verificarEDispararAlertas(existingProduct.id);
+        }
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Preço atualizado',
+          product: existingProduct,
+          priceChanged,
+          originalPriceChanged
+        }, { status: 200 });
+      }
+    }
+
+    // Estágio 2 — externalId + source (compatibilidade com sistema antigo)
+    if (!existingProduct && externalId && source) {
       const byCompositeKey = await prisma.product.findFirst({
         where: { externalId, source }
       });
@@ -125,7 +209,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Estágio 2 — nome nos últimos 7 dias entre ativos/aprovados (previne duplicata de produto recente de fonte diferente):
+    // Estágio 3 — nome nos últimos 7 dias entre ativos/aprovados (previne duplicata de produto recente de fonte diferente):
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const byNameRecent = await prisma.product.findFirst({
       where: {
@@ -141,7 +225,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Estágio 3 — nome entre pendentes nas últimas 24h (mantém comportamento existente para pendentes):
+    // Estágio 4 — nome entre pendentes nas últimas 24h (mantém comportamento existente para pendentes):
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const byNamePending = await prisma.product.findFirst({
       where: {
@@ -186,6 +270,8 @@ export async function POST(request: Request) {
         brand: body.brand || null,
         model: body.model || null,
         platformProductId: body.platformProductId || null,
+        platformId: body.platformId || null,
+        platformType: body.platformType || null,
         storeName: body.storeName || null,
         description: body.description || null,
         imageUrl: body.imageUrl,

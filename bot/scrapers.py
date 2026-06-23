@@ -66,30 +66,66 @@ class PromotionScraper:
 
     def extrair_platform_id(self, url: str) -> tuple[str | None, str | None]:
         """
-        Extrai (source, externalId) do link original da loja.
+        Extrai (platformType, platformId) do link original da loja.
         Usado antes de gerar o link de afiliado.
         Retorna (None, None) se não identificar a plataforma.
         """
         if not url:
             return (None, None)
 
+        url_lower = url.lower()
+
         # Amazon — ASIN: 10 chars alfanuméricos após /dp/ ou /gp/product/
-        match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
-        if match:
-            return ('amazon', match.group(1))
+        if 'amazon' in url_lower or 'amzn' in url_lower:
+            match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url, re.IGNORECASE)
+            if match:
+                return ('amazon', match.group(1).upper())
 
         # Mercado Livre — MLB seguido de dígitos (ex: MLB12345678 ou MLB-12345678)
-        match = re.search(r'MLB-?(\d+)', url, re.IGNORECASE)
-        if match:
-            return ('mercadoLivre', f"MLB{match.group(1)}")
+        if 'mercadolivre' in url_lower or 'mercadolibre' in url_lower or 'meli.la' in url_lower:
+            match = re.search(r'(MLB-?\d+)', url, re.IGNORECASE)
+            if match:
+                mlb_id = match.group(1).upper().replace('-', '')
+                return ('mercadolivre', mlb_id)
 
-        # Shopee — item ID e shop ID da URL: shopee.com.br/product/SHOPID/ITEMID
-        match = re.search(r'product/(\d+)/(\d+)', url)
-        if match:
-            return ('shopee', f"{match.group(1)}-{match.group(2)}")
-        match = re.search(r'-i\.(\d+)\.(\d+)', url)
-        if match:
-            return ('shopee', f"{match.group(1)}-{match.group(2)}")
+        # Shopee — item ID e shop ID da URL: shopee.com.br/product/SHOPID/ITEMID ou -i.SHOPID.ITEMID
+        if 'shopee' in url_lower or 'shope.ee' in url_lower:
+            match = re.search(r'product/(\d+)/(\d+)', url)
+            if match:
+                return ('shopee', f"{match.group(1)}-{match.group(2)}")
+            match = re.search(r'-i\.(\d+)\.(\d+)', url)
+            if match:
+                return ('shopee', f"{match.group(1)}-{match.group(2)}")
+
+        # Magalu (Magazine Luiza) — /p/PRODUCTID/
+        if 'magalu' in url_lower or 'magazineluiza' in url_lower or 'magazinevoce' in url_lower:
+            match = re.search(r'/p/([a-z0-9-]+)/', url, re.IGNORECASE)
+            if match:
+                return ('magalu', match.group(1).lower())
+
+        # KaBuM — /produto/PRODUCTID/
+        if 'kabum' in url_lower:
+            match = re.search(r'/produto/(\d+)', url, re.IGNORECASE)
+            if match:
+                return ('kabum', match.group(1))
+
+        # Netshoes — /produto/PRODUCTID
+        if 'netshoes' in url_lower:
+            match = re.search(r'/produto/([a-z0-9-]+)', url, re.IGNORECASE)
+            if match:
+                return ('netshoes', match.group(1).lower())
+
+        # AliExpress — /item/PRODUCTID.html
+        if 'aliexpress' in url_lower:
+            match = re.search(r'/item/(\d+)\.html', url, re.IGNORECASE)
+            if match:
+                return ('aliexpress', match.group(1))
+
+        # TikTok Shop — /product/PRODUCTID
+        if 'tiktok.com' in url_lower:
+            match = re.search(r'/product/(\d+)', url, re.IGNORECASE)
+            if match:
+                return ('tiktok', match.group(1))
 
         return (None, None)
 
@@ -194,7 +230,8 @@ class PromotionScraper:
                     if cupom and str(cupom).strip() and str(cupom).strip().upper() not in _VALORES_INVALIDOS_CUPOM:
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
-                    source, ext_id = self.extrair_platform_id(link_produto)
+                    platform_type, platform_id = self.extrair_platform_id(link_produto)
+                    platform_type, platform_id = self.extrair_platform_id(link_produto)
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
                     produtos.append({
                         'name': nome,
@@ -206,8 +243,10 @@ class PromotionScraper:
                         'links': links,
                         'storeName': loja,
                         'autoApprove': loja in LOJAS_COM_AFILIADO,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobit',
+                        'externalId': ext_id,
+                        'platformType': platform_type,
+                        'platformId': platform_id
                     })
                     print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
@@ -366,7 +405,7 @@ class PromotionScraper:
                             if cupom:
                                 descricao += f"\n🎟️ CUPOM: {cupom}"
 
-                            source, ext_id = self.extrair_platform_id(link)
+                            platform_type, platform_id = self.extrair_platform_id(link)
                             produtos.append({
                                 'name': nome[:200],
                                 'category': categoria,
@@ -376,8 +415,13 @@ class PromotionScraper:
                                 'originalPrice': preco_original,
                                 'links': links,
                                 'storeName': loja,
-                                'source': source,
-                                'externalId': ext_id
+                                'source': 'promobyte',
+
+                                'externalId': ext_id,
+
+                                'platformType': platform_type,
+
+                                'platformId': platform_id
                             })
                             cupom_log = f' 🎟️ {cupom}' if cupom else ''
                             print(f'  ✅ [Promobyte] {nome[:45]}...{cupom_log}')
@@ -486,7 +530,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
 
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -496,8 +540,13 @@ class PromotionScraper:
                         'originalPrice': preco_original,
                         'links': links,
                         'storeName': loja,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Pelando] {nome[:50]}...')
                 except Exception as e:
@@ -567,7 +616,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -576,8 +625,13 @@ class PromotionScraper:
                         'price': preco,
                         'links': links,
                         'storeName': loja,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Gatry] {nome[:50]}...')
                     
@@ -656,7 +710,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -665,8 +719,13 @@ class PromotionScraper:
                         'price': preco,
                         'links': links,
                         'storeName': loja,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Zoom] {nome[:50]}...')
                     
@@ -765,7 +824,7 @@ class PromotionScraper:
                     if cupom:
                         descricao += f"\n🎟️ CUPOM: {cupom}"
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -775,8 +834,13 @@ class PromotionScraper:
                         'originalPrice': preco_original,
                         'links': links,
                         'storeName': loja,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     cupom_log = f' 🎟️ {cupom}' if cupom else ''
                     print(f'  ✅ [Buscapé] {nome[:45]}...{cupom_log}')
@@ -857,7 +921,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -866,8 +930,13 @@ class PromotionScraper:
                         'price': preco,
                         'links': links,
                         'storeName': loja,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Hardmob] {nome[:50]}...')
                     
@@ -1081,7 +1150,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
-                    source, ext_id = self.extrair_platform_id(link_produto)
+                    platform_type, platform_id = self.extrair_platform_id(link_produto)
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
                     produtos.append({
                         'name': nome,
@@ -1093,8 +1162,13 @@ class PromotionScraper:
                         'links': links,
                         'storeName': loja,
                         'autoApprove': loja in LOJAS_COM_AFILIADO,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Pechinchou] {nome[:45]}...')
                 except Exception as e:
@@ -1157,7 +1231,7 @@ class PromotionScraper:
                     
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM', 'Lomadee', 'Shopee', 'Americanas', 'Netshoes'}
                     
-                    source, ext_id = self.extrair_platform_id(link_afiliado)
+                    platform_type, platform_id = self.extrair_platform_id(link_afiliado)
                     if not ext_id and link_afiliado:
                         import urllib.parse
                         parsed = urllib.parse.urlparse(link_afiliado)
@@ -1179,8 +1253,13 @@ class PromotionScraper:
                         'links': links,
                         'storeName': loja,
                         'autoApprove': True,  # Link já é afiliado
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Lomadee] {nome[:45]}...')
                 except Exception as e:
@@ -1266,7 +1345,7 @@ class PromotionScraper:
                     if desconto_texto:
                         descricao += f" - {desconto_texto}"
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -1276,8 +1355,13 @@ class PromotionScraper:
                         'originalPrice': preco_original,
                         'links': links,
                         'storeName': 'Shopee',
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Shopee] {nome[:50]}...')
                     
@@ -1426,7 +1510,7 @@ class PromotionScraper:
                     if cashback_texto:
                         descricao += f" + {cashback_texto} cashback"
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -1435,8 +1519,13 @@ class PromotionScraper:
                         'price': preco,
                         'links': links,
                         'storeName': loja,
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Méliuz] {nome[:50]}...')
                     
@@ -1518,7 +1607,7 @@ class PromotionScraper:
                     if desconto_texto:
                         descricao += f" - {desconto_texto}"
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -1528,8 +1617,13 @@ class PromotionScraper:
                         'originalPrice': preco_original,
                         'links': links,
                         'storeName': 'Amazon',
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Amazon] {nome[:50]}...')
                     
@@ -1614,7 +1708,7 @@ class PromotionScraper:
                     if desconto_texto:
                         descricao += f" - {desconto_texto}"
                     
-                    source, ext_id = self.extrair_platform_id(link)
+                    platform_type, platform_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -1624,8 +1718,13 @@ class PromotionScraper:
                         'originalPrice': preco_original,
                         'links': links,
                         'storeName': 'Mercado Livre',
-                        'source': source,
-                        'externalId': ext_id
+                        'source': 'promobyte',
+
+                        'externalId': ext_id,
+
+                        'platformType': platform_type,
+
+                        'platformId': platform_id
                     })
                     print(f'  ✅ [Mercado Livre] {nome[:50]}...')
                     

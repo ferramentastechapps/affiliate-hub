@@ -47,6 +47,10 @@ model Product {
   enhancedImageUrl String?  // Imagem aprimorada
   isFixed          Boolean  @default(false) // Trava dados contra sobrescrita do robô
 
+  // FASE 1 — IDs ÚNICOS POR PLATAFORMA
+  platformId       String?  // ID real da plataforma: ASIN, MLB123, shopId-productId
+  platformType     String?  // 'amazon', 'mercadolivre', 'shopee', 'aliexpress', 'magalu', 'kabum', 'netshoes'
+
   // Flags de processamento (evita reprocessar o que já foi feito)
   aiProcessed        Boolean  @default(false) // true = IA já rodou com sucesso
   aiProcessedAt      DateTime? // quando a IA processou pela última vez
@@ -73,6 +77,7 @@ model Product {
   @@index([externalId, source])
   @@index([shortId])
   @@index([aiProcessed])
+  @@unique([platformId, platformType], map: "unique_platform_product")
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

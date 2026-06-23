@@ -352,7 +352,9 @@ class MercadoLivreAPIScraper:
                 'model': model_api,
                 'platformProductId': platform_product_id,
                 'externalId': external_id,
-                'source': 'mercadoLivre',
+                'source': 'mercadolivre_api',
+                'platformType': 'mercadolivre',
+                'platformId': platform_product_id,
                 'links': {
                     'mercadoLivre': link_afiliado,
                 },
