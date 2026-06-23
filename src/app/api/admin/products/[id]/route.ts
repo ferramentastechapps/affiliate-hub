@@ -12,7 +12,7 @@ export async function PATCH(
     const body = await request.json();
     
     // Extrait campos permitidos
-    const { category, brand, platformProductId, isFixed, imageUrl } = body;
+    const { category, brand, platformProductId, isFixed, imageUrl, updateSourceUrl, updateAffiliateUrl, platform } = body;
 
     const dataToUpdate: any = {};
     if (category !== undefined) dataToUpdate.category = category;
@@ -21,11 +21,14 @@ export async function PATCH(
     if (isFixed !== undefined) dataToUpdate.isFixed = isFixed;
     if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl;
 
-    if (Object.keys(dataToUpdate).length === 0) {
+    if (Object.keys(dataToUpdate).length === 0 && updateSourceUrl === undefined && updateAffiliateUrl === undefined) {
       return NextResponse.json({ error: 'Nenhum campo válido para atualizar' }, { status: 400 });
     }
 
-    const existing = await prisma.product.findUnique({ where: { id } });
+    const existing = await prisma.product.findUnique({ 
+      where: { id },
+      include: { links: true, productLinks: true }
+    });
     if (!existing) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     }
@@ -43,6 +46,38 @@ export async function PATCH(
         updatedAt: true
       }
     });
+
+    // Atualiza links se fornecidos
+    if ((updateSourceUrl !== undefined || updateAffiliateUrl !== undefined)) {
+      const targetPlatform = platform || existing.source || 'amazon'; // Fallback
+      
+      // Atualiza o novo schema ProductLink
+      await prisma.productLink.upsert({
+        where: { productId_platform: { productId: id, platform: targetPlatform } },
+        create: {
+          productId: id,
+          platform: targetPlatform,
+          sourceUrl: updateSourceUrl !== undefined ? updateSourceUrl : '',
+          affiliateUrl: updateAffiliateUrl !== undefined ? updateAffiliateUrl : '',
+          generatedAffiliateUrl: updateAffiliateUrl !== undefined ? updateAffiliateUrl : ''
+        },
+        update: {
+          sourceUrl: updateSourceUrl !== undefined ? updateSourceUrl : undefined,
+          affiliateUrl: updateAffiliateUrl !== undefined ? updateAffiliateUrl : undefined,
+          generatedAffiliateUrl: updateAffiliateUrl !== undefined ? updateAffiliateUrl : undefined
+        }
+      });
+
+      // Atualiza o schema antigo Link para compatibilidade
+      if (['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'tiktok', 'magalu', 'kabum', 'netshoes'].includes(targetPlatform)) {
+        const linkVal = updateAffiliateUrl || updateSourceUrl || '';
+        await prisma.link.upsert({
+          where: { productId: id },
+          create: { productId: id, [targetPlatform]: linkVal },
+          update: { [targetPlatform]: linkVal }
+        });
+      }
+    }
 
     // Log de atividade
     try {

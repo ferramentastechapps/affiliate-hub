@@ -39,6 +39,8 @@ type Product = {
     url: string;
     isPrimary: boolean;
   }[];
+  _localSourceUrl?: string;
+  _localAffiliateUrl?: string;
 };
 
 type StatusFilter = "all" | "active" | "pending" | "fixed" | "notFixed";
@@ -237,13 +239,22 @@ export function ProductsTab() {
     setSavingFields(prev => ({ ...prev, [trackingKey]: true }));
     
     // Optimistic update
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    if (field !== 'updateSourceUrl' && field !== 'updateAffiliateUrl') {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    }
 
     try {
+      // Pega a plataforma se formos atualizar o link
+      const product = products.find(p => p.id === id);
+      const platform = product?.productLinks?.[0]?.platform || 
+                       ['amazon','mercadoLivre','shopee','aliexpress','tiktok'].find(p => product?.links?.[p as keyof typeof product.links]) || 
+                       product?.source || 
+                       'amazon';
+
       const res = await fetch(`/api/admin/products/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: value }),
+        body: JSON.stringify({ [field]: value, platform }),
       });
       
       if (!res.ok) {
@@ -428,6 +439,10 @@ export function ProductsTab() {
               }
             }
 
+            // Aplicar estado local (edição inline em andamento)
+            if (product._localSourceUrl !== undefined) sourceUrl = product._localSourceUrl;
+            if (product._localAffiliateUrl !== undefined) affiliateUrl = product._localAffiliateUrl;
+
             const hasAffiliate = affiliateUrl && affiliateUrl !== sourceUrl;
 
             return (
@@ -482,10 +497,11 @@ export function ProductsTab() {
                     <span className="text-[10px] uppercase text-zinc-500 w-[70px] shrink-0 font-medium tracking-wide">Loja:</span>
                     <input 
                       type="text" 
-                      readOnly 
                       value={sourceUrl} 
-                      className="flex-1 bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1 text-xs text-zinc-400 outline-none truncate hover:bg-zinc-800 transition-colors" 
-                      placeholder="Sem link original"
+                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localSourceUrl: e.target.value} : p))}
+                      onBlur={(e) => handleAutoSave(product.id, 'updateSourceUrl' as any, e.target.value)}
+                      className={`flex-1 bg-zinc-800/50 border rounded px-2 py-1 text-xs text-zinc-400 outline-none truncate hover:bg-zinc-800 transition-colors ${savingFields[`${product.id}-updateSourceUrl`] ? "border-accent/50" : "border-zinc-700/50"}`} 
+                      placeholder="Colar link original..."
                       title={sourceUrl}
                     />
                     {sourceUrl && (
@@ -498,12 +514,14 @@ export function ProductsTab() {
                     <span className="text-[10px] uppercase text-zinc-500 w-[70px] shrink-0 font-medium tracking-wide">Afiliado:</span>
                     <input 
                       type="text" 
-                      readOnly 
                       value={affiliateUrl} 
+                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localAffiliateUrl: e.target.value} : p))}
+                      onBlur={(e) => handleAutoSave(product.id, 'updateAffiliateUrl' as any, e.target.value)}
                       className={`flex-1 bg-zinc-800/50 border rounded px-2 py-1 text-xs outline-none truncate hover:bg-zinc-800 transition-colors ${
+                        savingFields[`${product.id}-updateAffiliateUrl`] ? "border-accent/50" : 
                         !hasAffiliate && sourceUrl ? "border-red-900/50 text-red-400" : "border-zinc-700/50 text-emerald-400/80"
                       }`} 
-                      placeholder="Sem link de afiliado"
+                      placeholder="Colar link de afiliado..."
                       title={affiliateUrl}
                     />
                     {affiliateUrl && (
