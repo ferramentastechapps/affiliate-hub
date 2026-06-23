@@ -24,6 +24,17 @@ type Product = {
   dropPercent?: number; // FASE 2
   lowestPrice30d?: number; // FASE 2
   highestPrice30d?: number; // FASE 2
+  // FASE 4 - Recomendações
+  totalScore?: number;
+  scoreBreakdown?: {
+    discountScore: number;
+    priceDropScore: number;
+    aiScore: number;
+    freshnessScore: number;
+  };
+  neverPosted?: boolean;
+  lastPostDate?: string | null;
+  daysSinceLastPost?: number | null;
   links?: {
     amazon?: string;
     mercadoLivre?: string;
@@ -46,7 +57,7 @@ type Product = {
   _localAffiliateUrl?: string;
 };
 
-type StatusFilter = "all" | "active" | "pending" | "fixed" | "notFixed" | "price-drops";
+type StatusFilter = "all" | "active" | "pending" | "fixed" | "notFixed" | "price-drops" | "best-to-post";
 type SortMode = "date_desc" | "date_asc" | "alpha_asc" | "alpha_desc" | "price_asc" | "price_desc";
 type LayoutMode = "grid" | "list";
 
@@ -207,6 +218,7 @@ export function ProductsTab() {
   const [loading, setLoading] = useState(true);
   const [savingFields, setSavingFields] = useState<Record<string, boolean>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [postingToTelegram, setPostingToTelegram] = useState<string | null>(null);
 
   useEffect(() => { 
     fetchProducts(); 
@@ -216,10 +228,15 @@ export function ProductsTab() {
   async function fetchProducts() {
     try {
       setLoading(true);
-      // FASE 2 — Se filtro for price-drops, buscar com query param
-      const endpoint = statusFilter === 'price-drops' 
-        ? '/api/products?filter=price-drops'
-        : '/api/products?status=all';
+      // FASE 4 — Se filtro for best-to-post, usar endpoint específico
+      let endpoint = '/api/products?status=all';
+      
+      if (statusFilter === 'price-drops') {
+        endpoint = '/api/products?filter=price-drops';
+      } else if (statusFilter === 'best-to-post') {
+        endpoint = '/api/admin/products/best-to-post';
+      }
+      
       const res = await fetch(endpoint);
       const data = await res.json();
       setProducts(data);
@@ -299,6 +316,28 @@ export function ProductsTab() {
     }
   }
 
+  async function handlePostToTelegram(id: string) {
+    setPostingToTelegram(id);
+    try {
+      const res = await fetch(`/api/products/${id}/telegram`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      
+      if (res.ok) {
+        alert("✅ Produto publicado no Telegram com sucesso!");
+        fetchProducts(); // Recarregar para atualizar lastPostDate
+      } else {
+        const error = await res.json();
+        alert(`❌ Erro ao publicar: ${error.error || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      alert("❌ Erro ao publicar no Telegram");
+    } finally {
+      setPostingToTelegram(null);
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Tem certeza que deseja deletar este produto?")) return;
     try {
@@ -352,7 +391,7 @@ export function ProductsTab() {
 
       {/* ─── Filtros de Status ───────────────────────────────────────────── */}
       <div className="flex gap-2 mb-4 border-b border-zinc-800 pb-4 overflow-x-auto">
-        {(["all", "active", "pending", "price-drops", "fixed", "notFixed"] as const).map((filter) => (
+        {(["all", "active", "pending", "best-to-post", "price-drops", "fixed", "notFixed"] as const).map((filter) => (
           <button
             key={filter}
             onClick={() => setStatusFilter(filter)}
@@ -365,6 +404,7 @@ export function ProductsTab() {
             {filter === "all" && `Todos (${products.length})`}
             {filter === "active" && `Ativos (${products.filter(p => p.status === "active" || p.status === "approved").length})`}
             {filter === "pending" && `Pendentes (${products.filter(p => p.status === "pending").length})`}
+            {filter === "best-to-post" && `🔥 Melhores pra Postar`}
             {filter === "price-drops" && `📉 Quedas de Preço`}
             {filter === "fixed" && `🔒 Com Trava (${products.filter(p => p.isFixed).length})`}
             {filter === "notFixed" && `🔓 Sem Trava (${products.filter(p => !p.isFixed).length})`}
@@ -420,6 +460,134 @@ export function ProductsTab() {
       ) : filteredAndSorted.length === 0 ? (
         <div className="text-center py-16 text-zinc-500">
           Nenhum produto encontrado.
+        </div>
+      ) : statusFilter === "best-to-post" ? (
+        // ═══════════════════════════════════════════
+        //  MODO MELHORES PRA POSTAR (FASE 4)
+        // ═══════════════════════════════════════════
+        <div className="flex flex-col gap-4">
+          {filteredAndSorted.map((product, index) => (
+            <div
+              key={product.id}
+              className="bg-gradient-to-r from-zinc-900/80 to-zinc-900/40 border border-zinc-700/50 rounded-xl p-5 hover:border-accent/30 transition-all"
+            >
+              <div className="flex flex-col lg:flex-row gap-5">
+                {/* Ranking e Imagem */}
+                <div className="flex gap-4 items-start lg:w-1/4 shrink-0">
+                  <div className="flex flex-col items-center gap-2 shrink-0">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg border-2 ${
+                      index === 0 ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' :
+                      index === 1 ? 'bg-zinc-400/20 border-zinc-400 text-zinc-300' :
+                      index === 2 ? 'bg-orange-700/20 border-orange-700 text-orange-500' :
+                      'bg-zinc-800 border-zinc-700 text-zinc-500'
+                    }`}>
+                      #{index + 1}
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-2xl font-black text-accent">{product.totalScore?.toFixed(1)}</span>
+                      <span className="text-[9px] text-zinc-500 font-medium">SCORE</span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => setGalleryProduct(product)}
+                    className="w-20 h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center border border-zinc-700 hover:border-accent transition-colors"
+                  >
+                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
+                  </button>
+                </div>
+
+                {/* Info do Produto */}
+                <div className="flex flex-col gap-3 flex-1">
+                  <div>
+                    <div className="flex items-start gap-3 mb-2">
+                      <h3 className="text-base font-bold text-white flex-1 line-clamp-2">{product.name}</h3>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {product.neverPosted ? (
+                          <span className="px-2 py-1 text-xs font-bold rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
+                            ✅ Nunca postado
+                          </span>
+                        ) : product.daysSinceLastPost !== null && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
+                            🔄 Postado há {product.daysSinceLastPost}d
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="px-2 py-1 bg-zinc-800 rounded text-zinc-400 border border-zinc-700">
+                        {product.category}
+                      </span>
+                      {product.price && (
+                        <span className="px-2 py-1 bg-emerald-950/50 rounded text-emerald-400 border border-emerald-800 font-bold">
+                          R$ {product.price.toFixed(2)}
+                        </span>
+                      )}
+                      <CopyableId product={product} />
+                    </div>
+                  </div>
+
+                  {/* Breakdown do Score */}
+                  {product.scoreBreakdown && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                      <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-2">
+                        <div className="text-[10px] text-zinc-500 mb-0.5">DESCONTO</div>
+                        <div className="text-sm font-bold text-white">{product.scoreBreakdown.discountScore}/40</div>
+                      </div>
+                      <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-2">
+                        <div className="text-[10px] text-zinc-500 mb-0.5">QUEDA PREÇO</div>
+                        <div className="text-sm font-bold text-white">{product.scoreBreakdown.priceDropScore}/30</div>
+                      </div>
+                      <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-2">
+                        <div className="text-[10px] text-zinc-500 mb-0.5">IA</div>
+                        <div className="text-sm font-bold text-white">{product.scoreBreakdown.aiScore.toFixed(1)}/20</div>
+                      </div>
+                      <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-2">
+                        <div className="text-[10px] text-zinc-500 mb-0.5">NOVIDADE</div>
+                        <div className="text-sm font-bold text-white">{product.scoreBreakdown.freshnessScore}/10</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ação */}
+                <div className="flex flex-col gap-2 items-end justify-between lg:w-48 shrink-0">
+                  <button
+                    onClick={() => handlePostToTelegram(product.id)}
+                    disabled={postingToTelegram === product.id}
+                    className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 disabled:cursor-not-allowed text-black disabled:text-zinc-500 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:scale-100"
+                  >
+                    {postingToTelegram === product.id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+                        Postando...
+                      </>
+                    ) : (
+                      <>
+                        📤 Postar no Telegram
+                      </>
+                    )}
+                  </button>
+                  
+                  <div className="flex gap-1 w-full">
+                    <button
+                      onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
+                      className="flex-1 p-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 transition-colors text-sm"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="flex-1 p-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors text-sm"
+                    >
+                      🗑️ Deletar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : layoutMode === "list" ? (
         // ═══════════════════════════════════════════
