@@ -6,12 +6,17 @@ import { AuthPanel } from "./AuthPanel";
 import { useState, useEffect } from "react";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { NotificationPreferencesModal } from "./NotificationPreferencesModal";
+import { usePathname } from "next/navigation";
 
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Esconder no painel admin
+  if (pathname?.startsWith("/admin")) return null;
 
   const handleSearchChange = (val: string) => {
     setSearchVal(val);

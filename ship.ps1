@@ -62,7 +62,7 @@ npx prisma db push --accept-data-loss
 echo "🏗️  Fazendo build do Next.js..."
 rm -rf .next
 rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
-npm run build
+NEXT_TELEMETRY_DISABLED=1 npm run build
 
 echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrome)..."
 if command -v ffmpeg &>/dev/null; then
