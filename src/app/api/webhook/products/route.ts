@@ -37,8 +37,16 @@ async function processProductAffiliates(productData: { links?: Record<string, st
         } else {
           const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
           if (isAggregator) {
-            console.log(`[Webhook] Falha ao resolver link do agregador ${originalUrl}. Produto será descartado.`);
+            console.log(`[Webhook] Falha ao resolver link do agregador ${originalUrl}. Salvando original para edição manual.`);
             isAggregatorFailed = true;
+            // SALVA o link mesmo sendo agregador!
+            generatedLinks[platform] = originalUrl;
+            productLinksData.push({
+              platform,
+              sourceUrl: originalUrl,
+              affiliateUrl: originalUrl,
+              isActive: true
+            });
           } else {
             generatedLinks[platform] = originalUrl;
             productLinksData.push({
@@ -54,6 +62,14 @@ async function processProductAffiliates(productData: { links?: Record<string, st
         const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
         if (isAggregator) {
            isAggregatorFailed = true;
+           // SALVA O LINK
+           generatedLinks[platform] = originalUrl;
+           productLinksData.push({
+             platform,
+             sourceUrl: originalUrl,
+             affiliateUrl: originalUrl,
+             isActive: true
+           });
         } else {
            generatedLinks[platform] = originalUrl;
            productLinksData.push({
