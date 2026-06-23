@@ -29,12 +29,28 @@ export async function POST(request: NextRequest) {
     }
 
     let productCategory: string | null = null;
+    let hasCoupon = false;
+
     if (productId) {
       const product = await prisma.product.findUnique({
         where: { id: productId },
-        select: { category: true }
+        select: { 
+          category: true,
+          coupons: {
+            where: { isActive: true }
+          }
+        }
       });
-      if (product) productCategory = product.category;
+      if (product) {
+        productCategory = product.category;
+        hasCoupon = product.coupons.length > 0;
+      }
+    }
+
+    // Detecção adicional por palavra-chave no texto (caso o admin faça push com cupons sem vincular produto)
+    const textToCheck = `${title} ${body}`.toLowerCase();
+    if (textToCheck.includes('cupom') || textToCheck.includes('🎟️')) {
+      hasCoupon = true;
     }
 
     // Busca todas as subscriptions ativas
@@ -42,10 +58,16 @@ export async function POST(request: NextRequest) {
 
     // Filtra as subscriptions com base nas preferências
     const subscriptions = allSubscriptions.filter(sub => {
-      // Sem preferências (legado) ou "all: true" -> recebe sempre
+      // Sem preferências (legado) -> recebe sempre
       if (!sub.preferences) return true;
       
-      const prefs = sub.preferences as { all?: boolean; categories?: string[] };
+      const prefs = sub.preferences as { all?: boolean; couponsOnly?: boolean; categories?: string[] };
+      
+      // Filtro para quem quer somente cupons
+      if (prefs.couponsOnly) {
+        return hasCoupon;
+      }
+
       if (prefs.all) return true;
 
       // Se all = false e temos a categoria do produto, checar se a categoria está no array
@@ -55,7 +77,6 @@ export async function POST(request: NextRequest) {
 
       // Se all = false e não sabemos a categoria do produto (push genérico),
       // a regra pode ser não enviar, a menos que seja um alerta geral.
-      // Vamos assumir que push genérico vai pra todo mundo, exceto se a opção for estritamente filtrada.
       // Neste caso, se for push sem produto associado (ex: mensagem manual do admin), podemos assumir que é importante e enviar.
       return !productId; 
     });
