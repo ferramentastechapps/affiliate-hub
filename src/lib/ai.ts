@@ -100,10 +100,23 @@ export async function buildDynamicSystemPrompt(): Promise<string> {
       const examplesBlock = examples
         .map(e => `- ${e.productName} → ${e.caption}`)
         .join('\n');
-      prompt = prompt.replace(
-        'EXEMPLOS DO ESTILO ESPERADO (produto → frase):',
-        `EXEMPLOS DO ESTILO APROVADOS PELO ADMIN (produto → frase já usada — NÃO repita, use como referência de estilo e criatividade):\n${examplesBlock}\n\n⚠️ IMPORTANTE: Os exemplos acima são legendas que JÁ FORAM ENVIADAS. Você NUNCA deve repeti-las. Use-as APENAS para entender o TOM, o HUMOR e o ESTILO. Crie sempre algo DIFERENTE e ORIGINAL para o produto atual.\n\nEXEMPLOS BASE DE ESTILO:`
-      );
+
+      // Insere o bloco de exemplos aprovados APÓS os exemplos base do prompt
+      // O marcador é a última linha do BASE_SYSTEM_PROMPT
+      const insertAfterMarker = 'Varie as piadas, não repita os mesmos exemplos. Seja criativo no deboche!';
+      if (prompt.includes(insertAfterMarker)) {
+        prompt = prompt.replace(
+          insertAfterMarker,
+          `${insertAfterMarker}
+
+// ─── EXEMPLOS APROVADOS PELO ADMIN (produto → legenda JÁ ENVIADA) ────────────
+⚠️ ATENÇÃO MÁXIMA: As legendas abaixo JÁ FORAM PUBLICADAS E ENVIADAS. É PROIBIDO repetir qualquer uma delas. Use APENAS como referência de estilo, tom e criatividade. Crie sempre algo 100% DIFERENTE e ORIGINAL.
+
+${examplesBlock}
+
+📌 REGRA CRÍTICA: Gere uma legenda COMPLETAMENTE NOVA que o público ainda não viu.`
+        );
+      }
     }
 
     // Injeta palavras bloqueadas (se existirem)

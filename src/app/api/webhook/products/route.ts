@@ -408,7 +408,8 @@ export async function POST(request: Request) {
       body.name, 
       body.price ? parseFloat(body.price) : 0, 
       body.originalPrice ? parseFloat(body.originalPrice) : null,
-      body.category
+      body.category,
+      product.id  // ← ESSENCIAL para salvar no CaptionHistory
     ).then(async (aiResult) => {
       let newStatus = finalStatus;
 
@@ -764,7 +765,8 @@ export async function PUT(request: Request) {
           productData.name, 
           productData.price ? parseFloat(productData.price) : 0, 
           productData.originalPrice ? parseFloat(productData.originalPrice) : null,
-          productData.category
+          productData.category,
+          product.id  // ← ESSENCIAL para salvar no CaptionHistory
         ).then(async (aiResult) => {
           let newStatus = finalStatus;
 
