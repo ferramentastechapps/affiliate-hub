@@ -76,12 +76,6 @@ app.get('/groups', async (req, res) => {
     }
 });
 
-// The "Balde" Logic - runs every X minutes
-setInterval(async () => {
-    if (!isReady) {
-        console.log('⏳ WhatsApp ainda não está pronto. Pulando verificação do balde...');
-        return;
-    }
 
 // ── Lógica do Balde (extraída em função reutilizável) ─────────────────────────
 async function flushBucket() {
