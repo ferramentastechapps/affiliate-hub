@@ -53,6 +53,14 @@ export async function GET(request: Request) {
       } else {
         whereClause.alerts = { some: {} }; // Fallback
       }
+    } else if (filterParam === 'price-drops') {
+      // FASE 2 — Filtro de produtos com queda de preço
+      // Buscar produtos ativos com histórico de preços
+      whereClause.status = { in: ['active', 'approved'] };
+      whereClause.price = { not: null };
+      whereClause.priceHistory = { some: {} }; // Tem que ter histórico
+      
+      orderByClause = { updatedAt: 'desc' }; // Mais recentes primeiro
     }
 
     const products = await prisma.product.findMany({
@@ -77,6 +85,10 @@ export async function GET(request: Request) {
         votes: {
           select: { type: true, userId: true } // Pegamos o userId para que o front saiba se o usuário já curtiu
         },
+        priceHistory: filterParam === 'price-drops' ? {
+          orderBy: { createdAt: 'desc' },
+          take: 50 // Últimos 50 registros para análise
+        } : undefined,
         _count: {
           select: {
             comments: true
@@ -91,18 +103,56 @@ export async function GET(request: Request) {
       const likes = p.votes.filter(v => v.type === 'LIKE').length;
       const dislikes = p.votes.filter(v => v.type === 'DISLIKE').length;
       
+      // FASE 2 — Calcular dados de queda de preço
+      let dropPercent = 0;
+      let lowestPrice30d = p.price;
+      let highestPrice30d = p.price;
+      
+      if (filterParam === 'price-drops' && p.priceHistory && p.priceHistory.length > 0) {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        // Filtrar histórico dos últimos 30 dias
+        const history30d = p.priceHistory.filter(h => h.createdAt >= thirtyDaysAgo);
+        
+        if (history30d.length > 0) {
+          const prices = history30d.map(h => h.price).filter(Boolean) as number[];
+          lowestPrice30d = Math.min(...prices, p.price || Infinity);
+          highestPrice30d = Math.max(...prices, p.price || 0);
+          
+          // Calcular queda percentual vs preço máximo histórico
+          if (p.price && highestPrice30d > 0) {
+            dropPercent = ((highestPrice30d - p.price) / highestPrice30d) * 100;
+          }
+        }
+      }
+      
       return {
         ...p,
         _count: {
           ...p._count,
           likes,
           dislikes
-        }
+        },
+        // Dados adicionais para price-drops
+        ...(filterParam === 'price-drops' && {
+          dropPercent: Math.round(dropPercent * 10) / 10, // Arredonda para 1 casa decimal
+          lowestPrice30d,
+          highestPrice30d
+        })
         // Mantemos os `votes` no payload para o front-end saber o voto atual do usuário sem fazer fetch extra
       };
     });
 
-    return NextResponse.json(mappedProducts);
+    // Se for price-drops, filtrar apenas produtos com queda real e ordenar por maior queda
+    let finalProducts = mappedProducts;
+    if (filterParam === 'price-drops') {
+      finalProducts = mappedProducts
+        .filter((p: any) => p.dropPercent > 0)
+        .sort((a: any, b: any) => b.dropPercent - a.dropPercent);
+    }
+
+    return NextResponse.json(finalProducts);
   } catch (error) {
     console.error('❌ Erro ao buscar produtos:', error);
     return NextResponse.json(
