@@ -146,11 +146,11 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-[#000000]/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
+      <div className="glass-3d-card rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col max-h-[90vh] shadow-2xl">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-zinc-800 shrink-0">
+        <div className="flex justify-between items-center p-5 border-b border-white/10 shrink-0 bg-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
               <BellRinging size={22} weight="fill" className="text-orange-500" />
