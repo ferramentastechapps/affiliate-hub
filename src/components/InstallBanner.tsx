@@ -20,7 +20,25 @@ export function InstallBanner() {
     // Verifica se já foi instalado ou se o usuário já fechou o banner recentemente
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
     const bannerDismissed = localStorage.getItem('installBannerDismissed');
-    
+    const preferencesPrompted = localStorage.getItem('pushPreferencesPrompted');
+    const showPrefFlag = localStorage.getItem('showPreferencesAfterInstall');
+
+    // Se o PWA está rodando em modo standalone pela primeira vez após instalação
+    if (isInstalled && !preferencesPrompted) {
+      localStorage.setItem('pushPreferencesPrompted', 'true');
+      localStorage.removeItem('showPreferencesAfterInstall');
+      setShowPreferencesModal(true);
+      return;
+    }
+
+    // Se veio de um redirecionamento de instalação direta
+    if (showPrefFlag === 'true') {
+      localStorage.setItem('pushPreferencesPrompted', 'true');
+      localStorage.removeItem('showPreferencesAfterInstall');
+      setShowPreferencesModal(true);
+      return;
+    }
+
     if (isInstalled || bannerDismissed === 'installed') {
       return;
     }
@@ -34,8 +52,8 @@ export function InstallBanner() {
 
       const dismissedTime = parseInt(bannerDismissed, 10);
       if (!isNaN(dismissedTime)) {
-        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-        if (Date.now() - dismissedTime < thirtyDaysInMs) {
+        const tenDaysInMs = 10 * 24 * 60 * 60 * 1000;
+        if (Date.now() - dismissedTime < tenDaysInMs) {
           return;
         }
       }
@@ -64,6 +82,8 @@ export function InstallBanner() {
     // Evento de instalação concluída
     const handleAppInstalled = () => {
       setShowBanner(false);
+      localStorage.setItem('installBannerDismissed', 'installed');
+      localStorage.setItem('showPreferencesAfterInstall', 'true');
       setShowPreferencesModal(true);
     };
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -88,6 +108,7 @@ export function InstallBanner() {
     if (outcome === 'accepted') {
       setShowBanner(false);
       localStorage.setItem('installBannerDismissed', 'installed');
+      localStorage.setItem('showPreferencesAfterInstall', 'true');
     }
 
     setDeferredPrompt(null);
