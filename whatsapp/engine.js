@@ -64,6 +64,18 @@ app.post('/send', (req, res) => {
     return res.status(200).json({ success: true, queued: true });
 });
 
+// Diagnóstico: lista os grupos disponíveis
+app.get('/groups', async (req, res) => {
+    if (!isReady) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
+    try {
+        const chats = await client.getChats();
+        const groups = chats.filter(c => c.isGroup).map(c => c.name);
+        return res.status(200).json({ groups });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 // The "Balde" Logic - runs every X minutes
 setInterval(async () => {
     if (!isReady) {
