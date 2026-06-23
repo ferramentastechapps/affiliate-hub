@@ -205,8 +205,6 @@ class TelegramNotifier:
                 mensagem += f"💸 De: <s>R$ {produto['originalPrice']:.2f}</s> | <b>{desconto:.0f}% OFF</b>\n"
             
             mensagem += f"""
-🏪 <b>{produto.get('storeName', 'Loja')}</b>
-
 ⚡ <b>CORRE! Esta é uma das melhores ofertas encontradas!</b>
 
 🆔 ID: <code>{produto.get('id', 'N/A')}</code>
@@ -337,7 +335,6 @@ class TelegramNotifier:
 📦 <b>{produto['name'][:150]}</b>
 
 🏷️ {produto['category']}
-🏪 <b>{plataforma_nome}</b>
 {preco_texto}{desconto_texto}{cupom_msg}{urgencia}
 
 📊 Qualidade: {score_visual} ({score}/100)
@@ -371,7 +368,7 @@ class TelegramNotifier:
 💳 <code>{cupom['code']}</code>
 📝 {cupom['description']}
 💰 {cupom['discount']}
-🏪 {cupom['platform']}{expira}
+🏷️ {cupom['platform']}{expira}
 
 🌐 Ver mais: {AFFILIATE_HUB_URL}
 """
@@ -535,28 +532,7 @@ class TelegramNotifier:
         linhas.append(f"{emoji} {nome}")
         linhas.append("")
         
-        # Adicionar nome da loja/plataforma
-        PLATAFORMA_EMOJIS = {
-            'amazon':      '🟠 Amazon',
-            'mercadoLivre':'🟡 Mercado Livre',
-            'shopee':      '🟠 Shopee',
-            'aliexpress':  '🔴 AliExpress',
-            'tiktok':      '⚫ TikTok Shop',
-            'netshoes':    '🟣 Netshoes',
-            'magalu':      '🔵 Magalu',
-            'kabum':       '🔵 Kabum',
-        }
-        
-        # Detectar a loja com base nos links do produto
-        loja_detectada = "🏪 Loja"
-        produto_links = produto.get('links', {}) or {}
-        for chave, label in PLATAFORMA_EMOJIS.items():
-            if produto_links.get(chave):
-                loja_detectada = label
-                break
-        
-        linhas.append(f"🏪 Loja: <b>{loja_detectada}</b>")
-        linhas.append("")
+        pass  # loja removida da mensagem
         
         if preco_txt:
             linhas.append(preco_txt)
@@ -650,7 +626,7 @@ class TelegramNotifier:
         mensagem = f"""
 🎫 <b>CUPOM RELÂMPAGO!</b>
 
-🏪 <b>{cupom.get('platform', 'Loja')}</b>
+🏷️ <b>{cupom.get('platform', '')}</b>
 📝 {cupom.get('description', '')}
 💰 <b>{cupom.get('discount', '')}</b>
 
