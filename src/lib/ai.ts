@@ -1,7 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import sharp from 'sharp';
+import { prisma } from '@/lib/prisma';
 
-export const SYSTEM_PROMPT = `Você é um copywriter brasileiro especialista em marketing de afiliados com tom de zoeira autêntica.
+// ─── SYSTEM_PROMPT BASE (estático) ────────────────────────────────────────────
+// Este é o prompt base. Ele é ENRIQUECIDO dinamicamente em buildDynamicSystemPrompt()
+// com: exemplos aprovados, palavras bloqueadas, contextos/eventos ativos.
+export const BASE_SYSTEM_PROMPT = `Você é um copywriter brasileiro especialista em marketing de afiliados com tom de zoeira autêntica.
 
 Seu trabalho é criar UMA frase de legenda para produtos de afiliado no Telegram e avaliar o desconto (score).
 
@@ -10,7 +14,7 @@ REGRAS OBRIGATÓRIAS:
 - Máximo de 8 palavras
 - Tom de zoeira direta, como um amigo falando no grupo
 - A frase NÃO descreve o produto — ela provoca, faz piada ou observação indireta sobre quem vai usar
-- Use gírias brasileiras naturais quando fizer sentido (furico, sanduba, capinado, nenem, paçoca, churras, lote, etc)
+- Use gírias brasileiras naturais quando fizer sentido (furico, sanduba, capinado, paçoca, churras, lote, etc)
 - NUNCA mencione preço, desconto, parcelamento ou afiliado na frase
 - NUNCA use emojis na frase principal
 - O nome do produto já vem pronto do sistema — você NÃO cria o nome, apenas a frase
@@ -33,14 +37,6 @@ CRITÉRIOS DE SCORE (Mantenha a coerência):
 - 5-6: desconto mixuruca.
 - abaixo de 5: preço normal.
 
-REGRAS DE CONTEXTO TEMPORAL:
-- Copa do Mundo (junho/julho 2026): referências como "hexa", "torcida", 
-  "jogo", "manto" só quando o produto tiver conexão óbvia
-- Inverno/frio (junho/julho/agosto): você PODE usar referências 
-  indiretas ao frio como inspiração — agasalho, cobertor, friozinho, 
-  quentinho, sopa, chocolate quente — só se encaixar naturalmente 
-  com o produto. NUNCA force se não tiver conexão óbvia.
-
 FORMATO DE SAÍDA — responda APENAS com JSON válido:
 {
   "titulo": "A FRASE GERADA EM CAIXA ALTA",
@@ -48,6 +44,134 @@ FORMATO DE SAÍDA — responda APENAS com JSON válido:
 }
 
 Varie as piadas, não repita os mesmos exemplos. Seja criativo no deboche!`;
+
+// Mantém compatibilidade com código legado que usa SYSTEM_PROMPT
+export const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT;
+
+// ─── FUNÇÕES DINÂMICAS DE PROMPT ──────────────────────────────────────────────
+
+/**
+ * Constrói o SYSTEM_PROMPT de forma dinâmica, injetando do banco:
+ *  - Exemplos de legendas marcadas como usedAsExample=true (top 12)
+ *  - Palavras bloqueadas
+ *  - Contextos/eventos ativos no período atual
+ */
+export async function buildDynamicSystemPrompt(): Promise<string> {
+  try {
+    const now = new Date();
+
+    // Carrega em paralelo
+    const [examples, bannedWords, contexts] = await Promise.all([
+      prisma.captionHistory.findMany({
+        where: { usedAsExample: true },
+        orderBy: { rating: 'desc' },
+        take: 12,
+        select: { productName: true, caption: true },
+      }),
+      prisma.aiBannedWord.findMany({
+        select: { word: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.aiContext.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { startsAt: null },
+            { startsAt: { lte: now } },
+          ],
+          AND: [
+            {
+              OR: [
+                { endsAt: null },
+                { endsAt: { gte: now } },
+              ],
+            },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { title: true, description: true },
+      }),
+    ]);
+
+    let prompt = BASE_SYSTEM_PROMPT;
+
+    // Injeta exemplos aprendidos (se existirem)
+    if (examples.length > 0) {
+      const examplesBlock = examples
+        .map(e => `- ${e.productName} → ${e.caption}`)
+        .join('\n');
+      prompt = prompt.replace(
+        'EXEMPLOS DO ESTILO ESPERADO (produto → frase):',
+        `EXEMPLOS DO ESTILO ESPERADO (produto → frase) — inclui exemplos aprovados pelo admin:\n${examplesBlock}\n\n(Continue no mesmo tom dos exemplos acima)\n\nEXEMPLOS BASE:`
+      );
+    }
+
+    // Injeta palavras bloqueadas (se existirem)
+    if (bannedWords.length > 0) {
+      const banned = bannedWords.map(w => w.word).join(', ');
+      prompt += `\n\nPALAVRAS PROIBIDAS — NUNCA use estas palavras em nenhuma circunstância:\n${banned}`;
+    }
+
+    // Injeta contextos/eventos ativos (se existirem)
+    if (contexts.length > 0) {
+      const contextBlock = contexts
+        .map(c => `- ${c.title}: ${c.description}`)
+        .join('\n');
+      prompt += `\n\nCONTEXTOS / EVENTOS ATIVOS AGORA:\n${contextBlock}`;
+    }
+
+    return prompt;
+  } catch (error) {
+    console.error('[AI] Erro ao construir prompt dinâmico, usando base:', error);
+    return BASE_SYSTEM_PROMPT;
+  }
+}
+
+/**
+ * Aplica substituições de palavras ao texto gerado pela IA (pós-processamento).
+ * Exemplo: "nenem" → "bebê"
+ */
+export function applyWordSubstitutions(
+  text: string,
+  subs: { fromWord: string; toWord: string }[]
+): string {
+  if (!text || subs.length === 0) return text;
+  let result = text;
+  for (const { fromWord, toWord } of subs) {
+    // Substitui palavra inteira, case-insensitive
+    const regex = new RegExp(`\\b${fromWord}\\b`, 'gi');
+    result = result.replace(regex, (match) => {
+      // Mantém caixa alta se original estava em caixa alta
+      if (match === match.toUpperCase()) return toWord.toUpperCase();
+      return toWord;
+    });
+  }
+  return result;
+}
+
+/**
+ * Salva a legenda gerada no histórico para posterior avaliação no admin.
+ */
+export async function saveCaptionHistory(
+  productId: string,
+  productName: string,
+  caption: string,
+  score: number | null
+): Promise<void> {
+  try {
+    await prisma.captionHistory.create({
+      data: {
+        productId,
+        productName,
+        caption,
+        score: score ?? undefined,
+      },
+    });
+  } catch (error) {
+    // Não deve quebrar o fluxo principal
+    console.error('[AI] Erro ao salvar CaptionHistory:', error);
+  }
+}
 
 /**
  * Extrai o tempo sugerido de retry de uma mensagem de erro do Gemini.
@@ -82,7 +206,6 @@ export async function processProductWithNvidia(
     return null;
   }
 
-  // Garante que o cabeçalho Authorization tenha o prefixo "Bearer " sem duplicar
   let authHeader = apiKey.trim();
   if (!authHeader.startsWith('Bearer ')) {
     authHeader = `Bearer ${authHeader}`;
@@ -91,6 +214,8 @@ export async function processProductWithNvidia(
   try {
     console.log(`[AI-NVIDIA] Acionando fallback do NVIDIA NIM (minimaxai/minimax-m3)...`);
     
+    const dynamicPrompt = await buildDynamicSystemPrompt();
+
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -101,7 +226,7 @@ export async function processProductWithNvidia(
       body: JSON.stringify({
         model: 'minimaxai/minimax-m3',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: dynamicPrompt },
           { role: 'user', content: promptText }
         ],
         max_tokens: 512,
@@ -143,7 +268,8 @@ export async function processProductWithAI(
   productName: string,
   price: number,
   originalPrice?: number | null,
-  category?: string
+  category?: string,
+  productId?: string
 ): Promise<{
   titulo: string | null;
   subtitulo: string | null;
@@ -197,6 +323,12 @@ Contexto atual:
 - Hora: ${timeStr} (horário de Brasília)
 - Fim de semana: ${weekendStr}`;
 
+    // Carrega prompt dinâmico e substituições em paralelo
+    const [dynamicSystemPrompt, substitutions] = await Promise.all([
+      buildDynamicSystemPrompt(),
+      prisma.aiWordSubstitution.findMany(),
+    ]);
+
     // Lista de modelos em ordem de preferência (fallback automático)
     const MODELS = [
       'google/gemini-2.5-pro',
@@ -217,7 +349,7 @@ Contexto atual:
           body: JSON.stringify({
             model,
             messages: [
-              { role: "system", content: SYSTEM_PROMPT },
+              { role: "system", content: dynamicSystemPrompt },
               { role: "user", content: promptText }
             ],
             response_format: { type: "json_object" }
@@ -227,7 +359,7 @@ Contexto atual:
         if (!response.ok) {
           const errorText = await response.text();
           console.warn(`[AI] Modelo ${model} falhou (${response.status}) — tentando próximo. Erro: ${errorText.slice(0, 200)}`);
-          continue; // tenta próximo modelo
+          continue;
         }
 
         const data = await response.json();
@@ -242,11 +374,24 @@ Contexto atual:
         const parsedData = JSON.parse(cleanedText);
         console.log(`[AI] Sucesso com modelo ${model}.`);
 
+        // Aplica substituições de palavras pós-geração
+        let finalTitulo = parsedData.titulo || null;
+        if (finalTitulo && substitutions.length > 0) {
+          finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
+        }
+
+        const finalScore = parsedData.score !== undefined ? Number(parsedData.score) : null;
+
+        // Salva no histórico para avaliação posterior
+        if (finalTitulo && productId) {
+          await saveCaptionHistory(productId, productName, finalTitulo, finalScore);
+        }
+
         return {
-          titulo: parsedData.titulo || null,
+          titulo: finalTitulo,
           subtitulo: null,
-          score: parsedData.score !== undefined ? Number(parsedData.score) : null,
-          rawJson: JSON.stringify(parsedData),
+          score: finalScore,
+          rawJson: JSON.stringify({ ...parsedData, titulo: finalTitulo }),
         };
       } catch (modelError: any) {
         console.warn(`[AI] Erro no modelo ${model}: ${modelError.message || modelError}`);
@@ -270,5 +415,3 @@ export async function enhanceProductImage(
   // Desativado a pedido do usuário (geração de imagem da IA desabilitada)
   return null;
 }
-
-

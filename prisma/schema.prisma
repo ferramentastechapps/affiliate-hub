@@ -443,3 +443,61 @@ model SystemConfig {
 
   @@index([key])
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧠 IA CRIATIVA — Histórico, Feedback e Controle de Prompt
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Histórico de Legendas Geradas pela IA
+model CaptionHistory {
+  id            String    @id @default(cuid())
+  productId     String?   // null se o produto for deletado
+  productName   String    // snapshot do nome do produto
+  caption       String    @db.Text // o texto da legenda gerada
+  score         Float?    // nota do aiScore (0-10)
+  rating        Int?      // sua nota: 1=ruim, 2=ok, 3=boa, 4=ótima, 5=perfeita
+  ratedAt       DateTime?
+  usedAsExample Boolean   @default(false) // se foi aprovado para ser exemplo no prompt
+  createdAt     DateTime  @default(now())
+
+  @@index([productId])
+  @@index([rating])
+  @@index([usedAsExample])
+  @@index([createdAt])
+}
+
+// Palavras Bloqueadas — a IA nunca deve usar
+model AiBannedWord {
+  id        String   @id @default(cuid())
+  word      String   @unique
+  reason    String?  // ex: "errado gramaticalmente", "ofensivo", "já usado demais"
+  createdAt DateTime @default(now())
+
+  @@index([word])
+}
+
+// Substituições de Palavras — pós-processamento após geração
+model AiWordSubstitution {
+  id        String   @id @default(cuid())
+  fromWord  String   @unique // palavra a substituir (ex: "nenem")
+  toWord    String           // palavra substituta (ex: "bebê")
+  createdAt DateTime @default(now())
+
+  @@index([fromWord])
+}
+
+// Contextos / Eventos Temporais — injetados dinamicamente no prompt
+model AiContext {
+  id          String    @id @default(cuid())
+  title       String    // ex: "Copa do Mundo 2026", "Dia dos Pais"
+  description String    @db.Text // o texto que será injetado no prompt
+  isActive    Boolean   @default(true)
+  startsAt    DateTime? // quando começa a valer (null = sempre)
+  endsAt      DateTime? // quando expira (null = sem prazo)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([endsAt])
+}
