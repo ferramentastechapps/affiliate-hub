@@ -191,12 +191,53 @@ class TelegramNotifier:
         try:
             score = produto.get('qualityScore', 0)
             
+            # Detectar loja
+            PLATAFORMA_EMOJIS = {
+                'amazon':      '🟠 Amazon',
+                'mercadoLivre':'🟡 Mercado Livre',
+                'shopee':      '🟠 Shopee',
+                'aliexpress':  '🔴 AliExpress',
+                'tiktok':      '⚫ TikTok Shop',
+                'netshoes':    '🟣 Netshoes',
+                'magalu':      '🔵 Magalu',
+                'kabum':       '🔵 Kabum',
+            }
+            loja_detectada = None
+            produto_links = produto.get('links', {}) or {}
+            for chave, label in PLATAFORMA_EMOJIS.items():
+                if produto_links.get(chave):
+                    loja_detectada = label
+                    break
+            
+            if not loja_detectada and produto.get('storeName'):
+                store_name_lower = produto['storeName'].lower()
+                if 'amazon' in store_name_lower:
+                    loja_detectada = '🟠 Amazon'
+                elif 'mercado' in store_name_lower:
+                    loja_detectada = '🟡 Mercado Livre'
+                elif 'shopee' in store_name_lower:
+                    loja_detectada = '🟠 Shopee'
+                elif 'aliexpress' in store_name_lower:
+                    loja_detectada = '🔴 AliExpress'
+                elif 'tiktok' in store_name_lower:
+                    loja_detectada = '⚫ TikTok Shop'
+                elif 'netshoes' in store_name_lower:
+                    loja_detectada = '🟣 Netshoes'
+                elif 'magalu' in store_name_lower or 'magazine' in store_name_lower:
+                    loja_detectada = '🔵 Magalu'
+                elif 'kabum' in store_name_lower:
+                    loja_detectada = '🔵 Kabum'
+                else:
+                    loja_detectada = produto['storeName']
+
+            loja_txt = f"\n<b>{loja_detectada}</b>\n" if loja_detectada else ""
+
             mensagem = f"""
 🚨🔥 <b>ALERTA DE SUPER OFERTA!</b> 🔥🚨
 ⭐⭐⭐⭐⭐ SCORE: {score}/100
 
 📦 <b>{produto['name'][:150]}</b>
-
+{loja_txt}
 💰 <b>R$ {produto.get('price', 0):.2f}</b>
 """
             
@@ -277,7 +318,27 @@ class TelegramNotifier:
 
         # Se não reconheceu a plataforma mas tem storeName, usa ele
         if plataforma_nome == "Desconhecida" and produto.get('storeName'):
-            plataforma_nome = f"🛒 {produto['storeName']}"
+            store_name_lower = produto['storeName'].lower()
+            if 'amazon' in store_name_lower:
+                plataforma_nome = '🟠 Amazon'
+            elif 'mercado' in store_name_lower:
+                plataforma_nome = '🟡 Mercado Livre'
+            elif 'shopee' in store_name_lower:
+                plataforma_nome = '🟠 Shopee'
+            elif 'aliexpress' in store_name_lower:
+                plataforma_nome = '🔴 AliExpress'
+            elif 'tiktok' in store_name_lower:
+                plataforma_nome = '⚫ TikTok Shop'
+            elif 'netshoes' in store_name_lower:
+                plataforma_nome = '🟣 Netshoes'
+            elif 'magalu' in store_name_lower or 'magazine' in store_name_lower:
+                plataforma_nome = '🔵 Magalu'
+            elif 'kabum' in store_name_lower:
+                plataforma_nome = '🔵 KaBuM'
+            else:
+                plataforma_nome = produto['storeName']
+
+        plataforma_linha = f"{plataforma_nome}\n" if plataforma_nome != "Desconhecida" else ""
 
         link_promobit = ""
         if primeiro_link:
@@ -335,7 +396,7 @@ class TelegramNotifier:
 📦 <b>{produto['name'][:150]}</b>
 
 🏷️ {produto['category']}
-{preco_texto}{desconto_texto}{cupom_msg}{urgencia}
+{plataforma_linha}{preco_texto}{desconto_texto}{cupom_msg}{urgencia}
 
 📊 Qualidade: {score_visual} ({score}/100)
 
@@ -532,7 +593,53 @@ class TelegramNotifier:
         linhas.append(f"{emoji} {nome}")
         linhas.append("")
         
-        pass  # loja removida da mensagem
+        # Adicionar nome da loja/plataforma (apenas a bolinha e o nome)
+        PLATAFORMA_EMOJIS = {
+            'amazon':      '🟠 Amazon',
+            'mercadoLivre':'🟡 Mercado Livre',
+            'shopee':      '🟠 Shopee',
+            'aliexpress':  '🔴 AliExpress',
+            'tiktok':      '⚫ TikTok Shop',
+            'netshoes':    '🟣 Netshoes',
+            'magalu':      '🔵 Magalu',
+            'kabum':       '🔵 Kabum',
+        }
+        
+        loja_detectada = None
+        if platform and platform in PLATAFORMA_EMOJIS:
+            loja_detectada = PLATAFORMA_EMOJIS[platform]
+        
+        if not loja_detectada:
+            produto_links = produto.get('links', {}) or {}
+            for chave, label in PLATAFORMA_EMOJIS.items():
+                if produto_links.get(chave):
+                    loja_detectada = label
+                    break
+        
+        if not loja_detectada and produto.get('storeName'):
+            store_name_lower = produto['storeName'].lower()
+            if 'amazon' in store_name_lower:
+                loja_detectada = '🟠 Amazon'
+            elif 'mercado' in store_name_lower:
+                loja_detectada = '🟡 Mercado Livre'
+            elif 'shopee' in store_name_lower:
+                loja_detectada = '🟠 Shopee'
+            elif 'aliexpress' in store_name_lower:
+                loja_detectada = '🔴 AliExpress'
+            elif 'tiktok' in store_name_lower:
+                loja_detectada = '⚫ TikTok Shop'
+            elif 'netshoes' in store_name_lower:
+                loja_detectada = '🟣 Netshoes'
+            elif 'magalu' in store_name_lower or 'magazine' in store_name_lower:
+                loja_detectada = '🔵 Magalu'
+            elif 'kabum' in store_name_lower:
+                loja_detectada = '🔵 Kabum'
+            else:
+                loja_detectada = produto['storeName']
+                
+        if loja_detectada:
+            linhas.append(f"<b>{loja_detectada}</b>")
+            linhas.append("")
         
         if preco_txt:
             linhas.append(preco_txt)
