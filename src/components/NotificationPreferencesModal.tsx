@@ -14,6 +14,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [receiveAll, setReceiveAll] = useState(true);
+  const [couponsOnly, setCouponsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [subscriptionEndpoint, setSubscriptionEndpoint] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
             const data = await res.json();
             if (data.preferences) {
               setReceiveAll(data.preferences.all);
+              setCouponsOnly(data.preferences.couponsOnly || false);
               setSelectedCategories(data.preferences.categories || []);
             }
           }
@@ -51,18 +53,43 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
     } else {
       setStep(1);
       setReceiveAll(true);
+      setCouponsOnly(false);
       setSelectedCategories([]);
     }
   }, [isOpen, mode]);
 
   const toggleCategory = (category: string) => {
-    if (receiveAll) return; // Se está em "todas", não deixa mexer nas individuais
+    // Se "Todas as promoções" ou "Apenas cupons" estiver ativo, desativa-os ao clicar em categorias específicas
+    if (receiveAll) {
+      setReceiveAll(false);
+    }
+    if (couponsOnly) {
+      setCouponsOnly(false);
+    }
     
     setSelectedCategories(prev => 
       prev.includes(category) 
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
+  };
+
+  const handleToggleReceiveAll = () => {
+    const nextVal = !receiveAll;
+    setReceiveAll(nextVal);
+    if (nextVal) {
+      setCouponsOnly(false);
+      setSelectedCategories([]);
+    }
+  };
+
+  const handleToggleCouponsOnly = () => {
+    const nextVal = !couponsOnly;
+    setCouponsOnly(nextVal);
+    if (nextVal) {
+      setReceiveAll(false);
+      setSelectedCategories([]);
+    }
   };
 
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -82,7 +109,8 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
     try {
       const preferences = {
         all: receiveAll,
-        categories: receiveAll ? [] : selectedCategories
+        couponsOnly: couponsOnly,
+        categories: (receiveAll || couponsOnly) ? [] : selectedCategories
       };
 
       if (mode === 'edit' && subscriptionEndpoint) {
@@ -175,26 +203,43 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
               </p>
             )}
 
-            {/* Toggle Geral */}
-            <div 
-              className={`p-4 rounded-2xl border transition-colors cursor-pointer flex items-center justify-between mb-6 ${
-                receiveAll ? 'bg-orange-500/10 border-orange-500' : 'bg-zinc-800/50 border-zinc-700 hover:border-zinc-600'
-              }`}
-              onClick={() => setReceiveAll(!receiveAll)}
-            >
-              <div>
-                <p className="text-white font-medium">🔔 Todas as promoções</p>
-                <p className="text-zinc-400 text-xs mt-1">Receba tudo e não perca nenhuma oferta</p>
+            {/* Toggle Geral e Apenas Cupons */}
+            <div className="space-y-3 mb-6">
+              <div 
+                className={`p-4 rounded-2xl border transition-colors cursor-pointer flex items-center justify-between ${
+                  receiveAll ? 'bg-orange-500/10 border-orange-500' : 'bg-zinc-800/50 border-zinc-700 hover:border-zinc-600'
+                }`}
+                onClick={handleToggleReceiveAll}
+              >
+                <div>
+                  <p className="text-white font-medium">🔔 Todas as promoções</p>
+                  <p className="text-zinc-400 text-xs mt-1">Receba tudo e não perca nenhuma oferta</p>
+                </div>
+                <div className={`w-12 h-6 rounded-full transition-colors relative ${receiveAll ? 'bg-orange-500' : 'bg-zinc-600'}`}>
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${receiveAll ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </div>
               </div>
-              <div className={`w-12 h-6 rounded-full transition-colors relative ${receiveAll ? 'bg-orange-500' : 'bg-zinc-600'}`}>
-                <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${receiveAll ? 'translate-x-6' : 'translate-x-0.5'}`} />
+
+              <div 
+                className={`p-4 rounded-2xl border transition-colors cursor-pointer flex items-center justify-between ${
+                  couponsOnly ? 'bg-orange-500/10 border-orange-500' : 'bg-zinc-800/50 border-zinc-700 hover:border-zinc-600'
+                }`}
+                onClick={handleToggleCouponsOnly}
+              >
+                <div>
+                  <p className="text-white font-medium">🎟️ Só os cupons</p>
+                  <p className="text-zinc-400 text-xs mt-1">Receba apenas cupons de desconto das lojas</p>
+                </div>
+                <div className={`w-12 h-6 rounded-full transition-colors relative ${couponsOnly ? 'bg-orange-500' : 'bg-zinc-600'}`}>
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${couponsOnly ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </div>
               </div>
             </div>
 
             {/* Lista Dinâmica */}
             <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Categorias Específicas</h3>
             
-            <div className={`space-y-2 transition-opacity ${receiveAll ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+            <div className="space-y-2">
               {allCategories.length === 0 ? (
                 <p className="text-zinc-500 text-sm">Carregando categorias...</p>
               ) : (
@@ -222,7 +267,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
 
             <button
               onClick={handleSave}
-              disabled={isLoading || (!receiveAll && selectedCategories.length === 0)}
+              disabled={isLoading || (!receiveAll && !couponsOnly && selectedCategories.length === 0)}
               className="w-full mt-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {isLoading ? 'Salvando...' : mode === 'install' ? 'Ativar Notificações' : 'Salvar Preferências'}
