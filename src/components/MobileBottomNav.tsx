@@ -3,11 +3,13 @@
 import { House, Tag, Ticket, Bell, WhatsappLogo } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 export function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [activeTab, setActiveTab] = useState<'inicio' | 'categorias' | 'cupons' | 'notificacoes'>('inicio');
+  const pathname = usePathname();
 
   // Ocultar no scroll down e exibir no scroll up (Comportamento polido de App)
   useEffect(() => {
@@ -63,6 +65,9 @@ export function MobileBottomNav() {
       window.dispatchEvent(new CustomEvent("open-notifications"));
     }
   };
+
+  // Esconder no painel admin
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <AnimatePresence>
