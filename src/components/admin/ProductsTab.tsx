@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Plus, Pencil, Trash, GridFour, ListDashes, ArrowSquareOut, Check, SortAscending, X, CheckCircle, Warning
+  Plus, Pencil, Trash, GridFour, ListDashes, ArrowSquareOut, Check, SortAscending, X, CheckCircle, Warning, Copy, CopySimple
 } from "@phosphor-icons/react";
 import { ProductModal } from "./ProductModal";
 import { ProductsGridSkeleton } from "./SkeletonLoader";
 
 type Product = {
   id: string;
+  shortId?: number;
   name: string;
   category: string;
   platformProductId?: string | null;
+  externalId?: string | null;
+  source?: string | null;
   imageUrl: string;
   price?: number;
   status?: string;
@@ -123,6 +126,64 @@ function ImageGalleryOverlay({
         )}
       </div>
     </div>
+  );
+}
+
+// ─── CopyableId ───────────────────────────────────────────────────────────────
+const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
+  amazon:       { label: 'AMAZON',  color: 'text-orange-400 border-orange-800/50 bg-orange-950/30' },
+  mercadolivre: { label: 'ML',      color: 'text-yellow-400 border-yellow-800/50 bg-yellow-950/30' },
+  mercadoLivre: { label: 'ML',      color: 'text-yellow-400 border-yellow-800/50 bg-yellow-950/30' },
+  shopee:       { label: 'SHOPEE',  color: 'text-orange-300 border-orange-800/50 bg-orange-950/20' },
+  aliexpress:   { label: 'ALI',     color: 'text-red-400 border-red-800/50 bg-red-950/30' },
+  magalu:       { label: 'MAGALU',  color: 'text-blue-400 border-blue-800/50 bg-blue-950/30' },
+  kabum:        { label: 'KABUM',   color: 'text-blue-300 border-blue-800/50 bg-blue-950/20' },
+  netshoes:     { label: 'NETSHOES',color: 'text-purple-400 border-purple-800/50 bg-purple-950/30' },
+};
+
+function CopyableId({ product }: { product: Product }) {
+  const [copied, setCopied] = useState(false);
+
+  // Prioridade: platformProductId > externalId > shortId > id (truncado)
+  const nativeId = product.platformProductId || product.externalId;
+  const displayId = nativeId || (product.shortId ? `#${product.shortId}` : product.id.slice(0, 8).toUpperCase());
+  const copyValue = nativeId || product.id;
+
+  const sourceInfo = product.source ? (SOURCE_LABELS[product.source] ?? null) : null;
+  const hasNativeId = !!nativeId;
+
+  function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(copyValue).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      title={`Copiar ID: ${copyValue}`}
+      className="flex items-center gap-1 w-fit group"
+    >
+      {sourceInfo && (
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${sourceInfo.color} tracking-wider`}>
+          {sourceInfo.label}
+        </span>
+      )}
+      <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+        hasNativeId
+          ? 'text-zinc-300 bg-zinc-800/80 border-zinc-700/50 group-hover:border-zinc-500'
+          : 'text-zinc-500 bg-zinc-800/50 border-zinc-700/30 group-hover:border-zinc-600'
+      }`}>
+        {displayId}
+      </span>
+      {copied
+        ? <CheckCircle size={11} weight="fill" className="text-emerald-400 shrink-0" />
+        : <CopySimple size={11} className="text-zinc-600 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity" />
+      }
+      {copied && <span className="text-[10px] text-emerald-400">copiado!</span>}
+    </button>
   );
 }
 
@@ -394,6 +455,8 @@ export function ProductsTab() {
                     <div className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2" title={product.name}>
                       {product.name}
                     </div>
+                    {/* ID nativo da plataforma */}
+                    <CopyableId product={product} />
                     {product.price && (
                       <div className="text-xs font-bold text-emerald-400">R$ {product.price.toFixed(2)}</div>
                     )}
