@@ -278,9 +278,6 @@ export async function POST(request: Request) {
     if (body.autoApprove === true) {
       finalStatus = 'active';
       console.log(`[Webhook] Auto-aprovado por fonte confiável: ${body.name}`);
-    } else if (!body.status) {
-      // Começa como pending até a IA avaliar, a menos que o status tenha sido explicitamente passado
-      finalStatus = 'pending';
     }
 
     // Criar produto
@@ -413,11 +410,6 @@ export async function POST(request: Request) {
       'evaluate'
     ).then(async (aiResult) => {
       let newStatus = finalStatus;
-
-      // Se a IA der nota boa, e não tinha status forçado, atualiza para o status dos links
-      if (finalStatus === 'pending' && !body.status && aiResult.score && aiResult.score >= 8.0) {
-        newStatus = processedStatus;
-      }
 
       // Processamento da imagem se aprovado (obtendo imagem de lifestyle/secundária do varejista)
       let finalEnhancedImageUrl: string | null = null;
@@ -658,14 +650,11 @@ export async function PUT(request: Request) {
         const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(productData);
         
         // isAggregatorFailed removido - mantemos links originais
-
         let finalStatus = productData.status || processedStatus;
 
         if (productData.autoApprove === true) {
           finalStatus = 'active';
-          console.log(`[Webhook] Auto-aprovado por fonte confiável: ${productData.name}`);
-        } else if (!productData.status) {
-          finalStatus = 'pending';
+          console.log(`[Webhook Batch] Auto-aprovado por fonte confiável: ${productData.name}`);
         }
 
         const imagesToCreate = [];
@@ -770,11 +759,7 @@ export async function PUT(request: Request) {
           product.id,
           'evaluate'
         ).then(async (aiResult) => {
-          let newStatus = finalStatus;
-
-          if (finalStatus === 'pending' && !productData.status && aiResult.score && aiResult.score >= 8.0) {
-            newStatus = processedStatus;
-          }
+            let newStatus = finalStatus;
 
           let finalEnhancedImageUrl: string | null = null;
           if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {

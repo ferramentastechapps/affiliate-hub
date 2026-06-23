@@ -13,8 +13,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   
   try {
+    // Buscar pelo shortId (número) ou id (string)
+    const isNumeric = /^\d+$/.test(id);
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: isNumeric ? { shortId: parseInt(id) } : { id },
       include: { links: true }
     });
 
