@@ -3,8 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthButton } from "./AuthButton";
 import { AuthPanel } from "./AuthPanel";
-import { useState } from "react";
-import { MagnifyingGlass, X, BellRinging } from "@phosphor-icons/react";
+import { useState, useEffect } from "react";
+import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { NotificationPreferencesModal } from "./NotificationPreferencesModal";
 
 export function Header() {
@@ -17,6 +17,12 @@ export function Header() {
     setSearchVal(val);
     window.dispatchEvent(new CustomEvent("search-change", { detail: { query: val } }));
   };
+
+  useEffect(() => {
+    const handleOpenNotifs = () => setIsPrefsOpen(true);
+    window.addEventListener('open-notifications', handleOpenNotifs);
+    return () => window.removeEventListener('open-notifications', handleOpenNotifs);
+  }, []);
 
   return (
     <>
@@ -74,13 +80,6 @@ export function Header() {
                   <MagnifyingGlass size={18} weight="bold" />
                 </button>
               )}
-              <button
-                onClick={() => setIsPrefsOpen(true)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 transition-colors"
-                aria-label="Notificações"
-              >
-                <BellRinging size={18} weight="bold" />
-              </button>
               <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
             </div>
           </div>
@@ -126,13 +125,6 @@ export function Header() {
                 <NavLink href="#footer">Comunidade</NavLink>
               </nav>
               <div className="flex items-center shrink-0 gap-2">
-                <button
-                  onClick={() => setIsPrefsOpen(true)}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 hover:bg-orange-500/20 transition-colors"
-                  title="Configurar Notificações"
-                >
-                  <BellRinging size={20} weight="bold" />
-                </button>
                 <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
               </div>
             </div>

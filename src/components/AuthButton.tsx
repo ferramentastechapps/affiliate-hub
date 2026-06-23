@@ -82,7 +82,10 @@ export function AuthButton({ onOpenAuth }: AuthButtonProps) {
                     Produtos Salvos
                   </button>
                   <button 
-                    onClick={() => setShowDropdown(false)}
+                    onClick={() => {
+                      setShowDropdown(false);
+                      window.dispatchEvent(new CustomEvent('open-notifications'));
+                    }}
                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm text-zinc-300"
                   >
                     Notificações

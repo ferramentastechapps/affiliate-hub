@@ -159,6 +159,8 @@ class PromotionBot:
                     time.sleep(1)
                 
                 # Processar produtos normais
+                candidatos_grupo_lote = []  # Candidatos a publicar no grupo DESTE ciclo
+                
                 for produto in produtos_normais:
                     score = produto.get('qualityScore', 0)
                     
@@ -171,11 +173,11 @@ class PromotionBot:
                         produto_retornado = resultado.get('product')
                         if produto_retornado and produto_retornado.get('id'):
                             produto['id'] = produto_retornado['id']
-                            print(f'✅ [Score {score}] ID: {produto["id"]} | {produto["name"][:50]}')
+                            print(f'\u2705 [Score {score}] ID: {produto["id"]} | {produto["name"][:50]}')
                         else:
-                            print(f'⚠️ Produto adicionado mas ID não retornado: {produto["name"][:50]}')
+                            print(f'\u26a0\ufe0f Produto adicionado mas ID n\u00e3o retornado: {produto["name"][:50]}')
                         
-                        # Verifica status para decidir se publica direto ou se envia para moderação
+                        # Verifica status para decidir se coleta para o grupo ou envia para moderação
                         status = produto_retornado.get('status', 'pending')
                         if status in ('active', 'approved'):
                             links = produto_retornado.get('links', {}) or {}
@@ -188,19 +190,16 @@ class PromotionBot:
                                     break
                             
                             if platform and affiliate_link:
-                                print(f'⚡ Link de afiliado auto-gerado com sucesso! Aguardando IA para legenda...')
-                                # Aguarda a IA processar para ter a legenda (aiAnalysis)
-                                produto_com_ia = wait_for_ai_analysis(self.api, produto_retornado['id'])
-                                produto_para_publicar = produto_com_ia if produto_com_ia else produto_retornado
-                                print(f'⚡ Adicionando na fila para publicação no grupo...')
-                                self.fila_grupo.append({
-                                    'produto': produto_para_publicar,
+                                # Coleta como candidato do lote — não publica ainda
+                                candidatos_grupo_lote.append({
+                                    'produto': produto_retornado,
                                     'platform': platform,
-                                    'affiliate_link': affiliate_link
+                                    'affiliate_link': affiliate_link,
+                                    'score': score
                                 })
-                                self._save_state()
+                                print(f'\U0001f4cb Candidato ao grupo coletado (score {score}): {produto["name"][:50]}')
                             else:
-                                print(f'⚠️ Produto ativado mas nenhum link de afiliado correspondente foi encontrado. Enviando para moderação.')
+                                print(f'\u26a0\ufe0f Produto ativado mas nenhum link de afiliado correspondente foi encontrado. Enviando para moderação.')
                                 self.telegram.enviar_sync('produto', produto)
                         else:
                             # Envia para moderação/aprovação manual no Telegram
@@ -210,12 +209,30 @@ class PromotionBot:
                         self.produtos_enviados.add(chave)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
-                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                        print('⚠️ Produto não enviado ao Telegram devido a falha na API. O bot tentará novamente na próxima busca.')
+                        print(f'\u274c Falha ao adicionar "{produto["name"][:40]}": {erro}')
+                        print('\u26a0\ufe0f Produto n\u00e3o enviado ao Telegram devido a falha na API. O bot tentará novamente na próxima busca.')
                         # Não adicionamos aos produtos_enviados para que o bot tente novamente
                     
                     # Pausa de 5 segundos entre cada produto para evitar estourar cota do Gemini (429) e Telegram Flood
                     time.sleep(5)
+                
+                # Escolher o MELHOR do lote e substituir a fila (descartar os outros e os de ciclos anteriores)
+                if candidatos_grupo_lote:
+                    melhor = max(candidatos_grupo_lote, key=lambda x: x['score'])
+                    descartados = len(candidatos_grupo_lote) - 1
+                    print(f'\n\U0001f3c6 Melhor do lote: {melhor["produto"].get("name")[:60]} (score {melhor["score"]})')
+                    if descartados > 0:
+                        print(f'\U0001f5d1\ufe0f {descartados} produto(s) do lote descartado(s) — apenas o melhor vai para o grupo.')
+                    
+                    # Aguarda IA gerar legenda para o melhor produto antes de colocar na fila
+                    produto_com_ia = wait_for_ai_analysis(self.api, melhor['produto']['id'])
+                    if produto_com_ia:
+                        melhor['produto'] = produto_com_ia
+                    
+                    # SUBSTITUI a fila — descarta qualquer produto de ciclos anteriores
+                    self.fila_grupo = [melhor]
+                    self._save_state()
+                    print(f'\U0001f4e5 Fila do grupo atualizada com o melhor produto do ciclo.')
             
             # 5. Adicionar cupons no site
             if cupons_novos:
@@ -311,8 +328,45 @@ class PromotionBot:
         # Ordenar a fila pelas melhores promoções (maior score: desconto + IA)
         self.fila_grupo.sort(key=get_score, reverse=True)
         
-        # Pegar a melhor e remover da fila
-        melhor_item = self.fila_grupo.pop(0)
+        # Tentar pegar o próximo item válido (produto ainda existe e está ativo no banco)
+        melhor_item = None
+        itens_removidos = 0
+        while self.fila_grupo:
+            candidato = self.fila_grupo.pop(0)
+            produto_id = candidato.get('produto', {}).get('id')
+            
+            if not produto_id:
+                print(f'⚠️ Item sem ID na fila — descartando.')
+                itens_removidos += 1
+                continue
+            
+            # Verificar se o produto ainda existe e está ativo no banco
+            resultado = self.api.buscar_produto(produto_id)
+            if resultado and resultado.get('success'):
+                produto_no_banco = resultado.get('product', {})
+                status = produto_no_banco.get('status', '')
+                if status in ('active', 'approved'):
+                    # Produto válido — atualizar com dados frescos do banco (preço, shortId, etc.)
+                    candidato['produto'].update({
+                        k: v for k, v in produto_no_banco.items() if v is not None
+                    })
+                    melhor_item = candidato
+                    print(f'✅ Produto confirmado no banco: {produto_id} (status: {status})')
+                    break
+                else:
+                    print(f'⚠️ Produto {produto_id} com status "{status}" — descartando da fila.')
+                    itens_removidos += 1
+            else:
+                print(f'🗑️ Produto {produto_id} não encontrado no banco (foi deletado) — descartando da fila.')
+                itens_removidos += 1
+        
+        if itens_removidos > 0:
+            print(f'🧹 {itens_removidos} produto(s) removido(s) da fila por não existirem mais no banco.')
+            self._save_state()
+        
+        if not melhor_item:
+            print('📭 Nenhum produto válido na fila para publicar agora.')
+            return
         
         print(f'⭐ Publicando melhor promoção no grupo: {melhor_item["produto"].get("name")[:50]} (Score/Desconto: {get_score(melhor_item):.1f})')
         

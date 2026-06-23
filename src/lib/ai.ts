@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma';
 // ─── SYSTEM_PROMPT BASE (estático) ────────────────────────────────────────────
 // Este é o prompt base. Ele é ENRIQUECIDO dinamicamente em buildDynamicSystemPrompt()
 // com: exemplos aprovados, palavras bloqueadas, contextos/eventos ativos.
+// ─── SYSTEM_PROMPT BASE (estático para Legendas) ──────────────────────────────
 export const BASE_SYSTEM_PROMPT = `Você é um copywriter brasileiro especialista em marketing de afiliados com tom de zoeira autêntica.
 
-Seu trabalho é criar UMA frase de legenda para produtos de afiliado no Telegram e avaliar o desconto (score).
+Seu trabalho é criar UMA frase de legenda para produtos de afiliado no Telegram.
 
 REGRAS OBRIGATÓRIAS:
 - A frase deve estar em CAIXA ALTA
@@ -31,19 +32,28 @@ EXEMPLOS DO ESTILO ESPERADO (produto → frase):
 - Detergente roupa → NADA MELHOR QUE ROUPINHA LIMPINHA E CHEIROSA
 - Conjunto fitness → PRA IR TREINAR A SEMANA TODA
 
-CRITÉRIOS DE SCORE (Mantenha a coerência):
-- 9-10: desconto absurdo (acima de 35%).
-- 7-8: desconto bom (20-35%).
-- 5-6: desconto mixuruca.
-- abaixo de 5: preço normal.
-
 FORMATO DE SAÍDA — responda APENAS com JSON válido:
 {
-  "titulo": "A FRASE GERADA EM CAIXA ALTA",
-  "score": 0-10
+  "titulo": "A FRASE GERADA EM CAIXA ALTA"
 }
 
 Varie as piadas, não repita os mesmos exemplos. Seja criativo no deboche!`;
+
+// ─── SYSTEM_PROMPT AVALIAÇÃO (Rápido/Barato) ──────────────────────────────────
+export const EVALUATION_SYSTEM_PROMPT = `Você é um analista de ofertas e descontos do Brasil.
+Seu trabalho é avaliar rapidamente a qualidade de uma oferta com base no preço, preço original e produto.
+
+CRITÉRIOS DE SCORE:
+- 9-10: desconto absurdo (acima de 35%).
+- 7-8: desconto bom (20-35%).
+- 5-6: desconto mixuruca.
+- abaixo de 5: preço normal ou ruim.
+
+Responda APENAS com JSON válido:
+{
+  "score": numero_de_0_a_10,
+  "analise": "motivo super curto em 1 frase"
+}`;
 
 // Mantém compatibilidade com código legado que usa SYSTEM_PROMPT
 export const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT;
@@ -282,7 +292,8 @@ export async function processProductWithAI(
   price: number,
   originalPrice?: number | null,
   category?: string,
-  productId?: string
+  productId?: string,
+  mode: 'evaluate' | 'caption' = 'evaluate'
 ): Promise<{
   titulo: string | null;
   subtitulo: string | null;
@@ -336,11 +347,18 @@ Contexto atual:
 - Hora: ${timeStr} (horário de Brasília)
 - Fim de semana: ${weekendStr}`;
 
-    // Carrega prompt dinâmico e substituições em paralelo
-    const [dynamicSystemPrompt, substitutions] = await Promise.all([
-      buildDynamicSystemPrompt(),
-      prisma.aiWordSubstitution.findMany(),
-    ]);
+    // Carrega prompt adequado ao modo
+    let systemPrompt = '';
+    let substitutions: {fromWord: string, toWord: string}[] = [];
+    
+    if (mode === 'evaluate') {
+      systemPrompt = EVALUATION_SYSTEM_PROMPT;
+    } else {
+      [systemPrompt, substitutions] = await Promise.all([
+        buildDynamicSystemPrompt(),
+        prisma.aiWordSubstitution.findMany(),
+      ]);
+    }
 
     // Lista de modelos em ordem de preferência (fallback automático)
     const MODELS = [
@@ -362,10 +380,10 @@ Contexto atual:
           body: JSON.stringify({
             model,
             messages: [
-              { role: "system", content: dynamicSystemPrompt },
+              { role: "system", content: systemPrompt },
               { role: "user", content: promptText }
             ],
-            temperature: 1.1,
+            temperature: mode === 'caption' ? 1.1 : 0.3,
             top_p: 0.95,
             response_format: { type: "json_object" }
           })
@@ -387,26 +405,27 @@ Contexto atual:
 
         const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedData = JSON.parse(cleanedText);
-        console.log(`[AI] Sucesso com modelo ${model}.`);
+        console.log(`[AI] Sucesso com modelo ${model} no modo ${mode}.`);
 
-        // Aplica substituições de palavras pós-geração
         let finalTitulo = parsedData.titulo || null;
-        if (finalTitulo && substitutions.length > 0) {
-          finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
-        }
+        let finalScore = parsedData.score !== undefined ? Number(parsedData.score) : null;
 
-        const finalScore = parsedData.score !== undefined ? Number(parsedData.score) : null;
-
-        // Salva no histórico para avaliação posterior
-        if (finalTitulo && productId) {
-          await saveCaptionHistory(productId, productName, finalTitulo, finalScore);
+        if (mode === 'caption') {
+          // Aplica substituições de palavras pós-geração
+          if (finalTitulo && substitutions.length > 0) {
+            finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
+          }
+          // Salva no histórico para avaliação posterior apenas se estiver gerando legenda
+          if (finalTitulo && productId) {
+            await saveCaptionHistory(productId, productName, finalTitulo, finalScore);
+          }
         }
 
         return {
           titulo: finalTitulo,
-          subtitulo: null,
+          subtitulo: parsedData.analise || null, // Reaproveitando subtitulo para retornar a análise no modo evaluate
           score: finalScore,
-          rawJson: JSON.stringify({ ...parsedData, titulo: finalTitulo }),
+          rawJson: JSON.stringify(parsedData),
         };
       } catch (modelError: any) {
         console.warn(`[AI] Erro no modelo ${model}: ${modelError.message || modelError}`);
