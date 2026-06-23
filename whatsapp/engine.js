@@ -15,9 +15,50 @@ const PORT = 3006;
 const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || "";
 const DELAY_MINUTES = parseInt(process.env.WHATSAPP_DELAY_MINUTES || "30", 10);
 
+const fs = require('fs');
+
 // Global State
 let isReady = false;
 let messageQueue = []; // array of { score: number, message: string }
+let lastFlushTime = Date.now();
+
+const STATE_FILE = path.join(__dirname, 'state.json');
+
+// Helper to save state to disk
+function saveState() {
+    try {
+        const state = {
+            messageQueue,
+            lastFlushTime
+        };
+        fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
+    } catch (err) {
+        console.error('❌ Erro ao salvar estado em disco:', err.message);
+    }
+}
+
+// Helper to load state from disk
+function loadState() {
+    try {
+        if (fs.existsSync(STATE_FILE)) {
+            const data = fs.readFileSync(STATE_FILE, 'utf-8');
+            const state = JSON.parse(data);
+            messageQueue = state.messageQueue || [];
+            lastFlushTime = state.lastFlushTime || Date.now();
+            console.log(`📂 Estado carregado do disco: ${messageQueue.length} oferta(s) pendente(s), último disparo há ${Math.round((Date.now() - lastFlushTime) / 60000)} minutos.`);
+        } else {
+            messageQueue = [];
+            lastFlushTime = Date.now();
+        }
+    } catch (err) {
+        console.error('❌ Erro ao carregar estado do disco:', err.message);
+        messageQueue = [];
+        lastFlushTime = Date.now();
+    }
+}
+
+// Carrega o estado salvo imediatamente no início
+loadState();
 
 // Initialize WhatsApp Client
 const client = new Client({
@@ -59,6 +100,7 @@ app.post('/send', (req, res) => {
     }
 
     messageQueue.push({ message, score: score || 0, imageUrl });
+    saveState();
     console.log(`📥 Nova oferta recebida no balde (Score: ${score}). Total no balde: ${messageQueue.length}`);
     
     return res.status(200).json({ success: true, queued: true });
@@ -91,6 +133,7 @@ async function flushBucket() {
     if (currentHour < 7) {
         console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Descartando ${messageQueue.length} oferta(s) do balde.`);
         messageQueue = []; // Esvazia o balde para não acumular velhas
+        saveState();
         return { skipped: true, reason: 'out_of_hours' };
     }
 
@@ -102,6 +145,7 @@ async function flushBucket() {
     if (!GROUP_NAME) {
         console.log(`⚠️ WHATSAPP_GROUP_NAME está vazio no .env. Esvaziando o balde (${messageQueue.length} ofertas) sem enviar.`);
         messageQueue = [];
+        saveState();
         return { skipped: true, reason: 'no_group_name' };
     }
 
@@ -119,6 +163,7 @@ async function flushBucket() {
         if (!group) {
             console.error(`❌ Grupo '${GROUP_NAME}' não encontrado! Tem certeza que este WhatsApp está no grupo?`);
             messageQueue = [];
+            saveState();
             return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
         } else {
             if (bestOffer.imageUrl) {
@@ -137,21 +182,34 @@ async function flushBucket() {
             }
             
             messageQueue = [];
+            saveState();
             console.log('🗑️ Balde esvaziado para a próxima rodada.');
             return { success: true };
         }
     } catch (err) {
         console.error('❌ Erro ao enviar mensagem:', err);
         messageQueue = [];
+        saveState();
         return { success: false, error: err.message };
     }
 }
 
-// Ciclo automático
-setInterval(flushBucket, DELAY_MINUTES * 60 * 1000);
+// Ciclo automático com checagem de estado resiliente a reinicializações
+setInterval(async () => {
+    const elapsed = Date.now() - lastFlushTime;
+    const intervalMs = DELAY_MINUTES * 60 * 1000;
+    if (elapsed >= intervalMs) {
+        console.log(`⏱️ Janela de ${DELAY_MINUTES} minutos atingida. Processando balde...`);
+        lastFlushTime = Date.now();
+        saveState();
+        await flushBucket();
+    }
+}, 20 * 1000); // Checa a cada 20 segundos
 
 // Flush manual (para testes ou admin)
 app.post('/flush', async (req, res) => {
+    lastFlushTime = Date.now();
+    saveState();
     const result = await flushBucket();
     return res.status(200).json(result);
 });
