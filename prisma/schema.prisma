@@ -255,6 +255,7 @@ model PushSubscription {
   auth        String   // Chave de autenticação
   userId      String?  // NOVO - opcional para associar a um usuário logado
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferences Json?    // Preferências de alerta (ex: categorias selecionadas)
   createdAt   DateTime @default(now())
   
   @@index([endpoint])

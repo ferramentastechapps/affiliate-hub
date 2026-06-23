@@ -36,12 +36,14 @@ export async function POST(request: NextRequest) {
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,
         userId: userId || undefined,
+        preferences: subscription.preferences ? subscription.preferences : undefined,
       },
       create: {
         endpoint: subscription.endpoint,
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,
         userId: userId || null,
+        preferences: subscription.preferences ? subscription.preferences : { all: true, categories: [] },
       },
     });
 
