@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "INSIRA_O_PACKAGE_NAME_DO_SEU_APP_AQUI (Ex: com.economizei.twa)",
+      "sha256_cert_fingerprints": [
+        "INSIRA_A_SUA_CHAVE_SHA256_DE_ASSINATURA_AQUI (Ex: A1:B2:C3:D4...)"
+      ]
+    }
+  }
+]
