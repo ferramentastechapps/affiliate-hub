@@ -239,8 +239,8 @@ export function ProductsTab() {
     setSavingFields(prev => ({ ...prev, [trackingKey]: true }));
     
     // Optimistic update
-    if (field !== 'updateSourceUrl' && field !== 'updateAffiliateUrl') {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    if ((field as string) !== 'updateSourceUrl' && (field as string) !== 'updateAffiliateUrl') {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, [field as keyof Product]: value } : p));
     }
 
     try {
