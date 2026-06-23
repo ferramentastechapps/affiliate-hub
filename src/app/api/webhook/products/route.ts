@@ -191,7 +191,11 @@ export async function POST(request: Request) {
           }
           
           // Disparar alertas de preço
-          await verificarEDispararAlertas(existingProduct.id);
+          await verificarEDispararAlertas(
+            existingProduct.id,
+            existingProduct.price || 0,
+            body.price || 0
+          );
         }
         
         return NextResponse.json({
