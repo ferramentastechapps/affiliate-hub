@@ -52,7 +52,7 @@ client.initialize();
 
 // Express Endpoint to receive messages from Python
 app.post('/send', (req, res) => {
-    const { message, score } = req.body;
+    const { message, score, imageUrl } = req.body;
     
     if (!message) {
         return res.status(400).json({ error: 'Message is required' });
