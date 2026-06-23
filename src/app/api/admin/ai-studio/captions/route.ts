@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const where: any = {};
   if (ratingFilter === 'unrated') where.rating = null;
   else if (ratingFilter === 'examples') where.usedAsExample = true;
-  else if (ratingFilter && ['1','2','3','4','5'].includes(ratingFilter)) {
+  else if (ratingFilter && ['1','2','3','4','5','6','7','8','9','10'].includes(ratingFilter)) {
     where.rating = parseInt(ratingFilter);
   }
 
