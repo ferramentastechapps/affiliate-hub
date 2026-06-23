@@ -89,7 +89,8 @@ async function flushBucket() {
     const currentHour = brTime.getHours();
 
     if (currentHour < 7) {
-        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Segurando ${messageQueue.length} oferta(s) no balde até as 07:00.`);
+        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Descartando ${messageQueue.length} oferta(s) do balde.`);
+        messageQueue = []; // Esvazia o balde para não acumular velhas
         return { skipped: true, reason: 'out_of_hours' };
     }
 
