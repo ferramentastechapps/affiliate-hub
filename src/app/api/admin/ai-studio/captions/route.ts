@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     where.rating = parseInt(ratingFilter);
   }
 
-  const [captions, total] = await Promise.all([
+  const [captionsRaw, total] = await Promise.all([
     prisma.captionHistory.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -38,6 +38,19 @@ export async function GET(request: Request) {
     }),
     prisma.captionHistory.count({ where }),
   ]);
+
+  const productIds = captionsRaw.map((c) => c.productId).filter(Boolean) as string[];
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, imageUrl: true }
+  });
+
+  const productMap = Object.fromEntries(products.map(p => [p.id, p.imageUrl]));
+
+  const captions = captionsRaw.map((c) => ({
+    ...c,
+    imageUrl: c.productId ? productMap[c.productId] : null
+  }));
 
   return NextResponse.json({ captions, total, page, limit });
 }
