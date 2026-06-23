@@ -84,6 +84,15 @@ async function flushBucket() {
         return { skipped: true, reason: 'not_ready' };
     }
 
+    // Horário de Brasília
+    const brTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    const currentHour = brTime.getHours();
+
+    if (currentHour < 7) {
+        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Segurando ${messageQueue.length} oferta(s) no balde até as 07:00.`);
+        return { skipped: true, reason: 'out_of_hours' };
+    }
+
     if (messageQueue.length === 0) {
         console.log('😴 Balde vazio. Nenhuma oferta para enviar agora.');
         return { skipped: true, reason: 'empty' };
