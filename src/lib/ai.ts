@@ -102,7 +102,7 @@ export async function buildDynamicSystemPrompt(): Promise<string> {
         .join('\n');
       prompt = prompt.replace(
         'EXEMPLOS DO ESTILO ESPERADO (produto → frase):',
-        `EXEMPLOS DO ESTILO ESPERADO (produto → frase) — inclui exemplos aprovados pelo admin:\n${examplesBlock}\n\n(Continue no mesmo tom dos exemplos acima)\n\nEXEMPLOS BASE:`
+        `EXEMPLOS DO ESTILO APROVADOS PELO ADMIN (produto → frase já usada — NÃO repita, use como referência de estilo e criatividade):\n${examplesBlock}\n\n⚠️ IMPORTANTE: Os exemplos acima são legendas que JÁ FORAM ENVIADAS. Você NUNCA deve repeti-las. Use-as APENAS para entender o TOM, o HUMOR e o ESTILO. Crie sempre algo DIFERENTE e ORIGINAL para o produto atual.\n\nEXEMPLOS BASE DE ESTILO:`
       );
     }
 
@@ -352,6 +352,8 @@ Contexto atual:
               { role: "system", content: dynamicSystemPrompt },
               { role: "user", content: promptText }
             ],
+            temperature: 1.1,
+            top_p: 0.95,
             response_format: { type: "json_object" }
           })
         });
