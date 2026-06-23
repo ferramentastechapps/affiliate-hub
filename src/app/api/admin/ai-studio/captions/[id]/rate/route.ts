@@ -21,8 +21,8 @@ export async function PATCH(
   const { id } = await params;
   const { rating } = await request.json();
 
-  if (!rating || rating < 1 || rating > 5) {
-    return NextResponse.json({ error: 'Rating deve ser entre 1 e 5' }, { status: 400 });
+  if (!rating || rating < 1 || rating > 10) {
+    return NextResponse.json({ error: 'Rating deve ser entre 1 e 10' }, { status: 400 });
   }
 
   const caption = await prisma.captionHistory.update({
