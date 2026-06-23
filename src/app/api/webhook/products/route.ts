@@ -167,13 +167,21 @@ export async function POST(request: Request) {
             if (dropPercent >= 15 && existingProduct.isFixed) {
               console.log(`[Webhook] ⚡ Auto-publicando produto com queda significativa de preço`);
               
+              // Buscar link de afiliado principal para publicação
+              const productLinks = await prisma.productLink.findFirst({
+                where: { productId: existingProduct.id, isActive: true }
+              });
+              
+              const affiliateLink = productLinks?.generatedAffiliateUrl || productLinks?.affiliateUrl || '';
+              const platform = productLinks?.platform || existingProduct.platformType || 'amazon';
+              
               // Disparar publicação no Telegram (assíncrono, não aguarda)
               publishToGroup({
                 ...existingProduct,
                 price: body.price,
                 originalPrice: body.originalPrice || existingProduct.originalPrice,
                 dropPercent: Math.round(dropPercent * 10) / 10
-              }).catch(err => {
+              }, platform, affiliateLink).catch(err => {
                 console.error('[Webhook] Erro ao publicar produto com queda de preço:', err);
               });
             } else if (dropPercent >= 15 && !existingProduct.isFixed) {
