@@ -2,7 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 import re
-from config import CATEGORIES, MIN_DISCOUNT_PERCENT
+import concurrent.futures
+import time
+from difflib import SequenceMatcher
+from config import CATEGORIES, MIN_DISCOUNT_PERCENT, MIN_QUALITY_SCORE
 
 
 def _melhorar_qualidade_imagem(url: str) -> str:
@@ -60,6 +63,35 @@ class PromotionScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
+
+    def extrair_platform_id(self, url: str) -> tuple[str | None, str | None]:
+        """
+        Extrai (source, externalId) do link original da loja.
+        Usado antes de gerar o link de afiliado.
+        Retorna (None, None) se não identificar a plataforma.
+        """
+        if not url:
+            return (None, None)
+
+        # Amazon — ASIN: 10 chars alfanuméricos após /dp/ ou /gp/product/
+        match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
+        if match:
+            return ('amazon', match.group(1))
+
+        # Mercado Livre — MLB seguido de dígitos (ex: MLB12345678 ou MLB-12345678)
+        match = re.search(r'MLB-?(\d+)', url, re.IGNORECASE)
+        if match:
+            return ('mercadoLivre', f"MLB{match.group(1)}")
+
+        # Shopee — item ID e shop ID da URL: shopee.com.br/product/SHOPID/ITEMID
+        match = re.search(r'product/(\d+)/(\d+)', url)
+        if match:
+            return ('shopee', f"{match.group(1)}-{match.group(2)}")
+        match = re.search(r'-i\.(\d+)\.(\d+)', url)
+        if match:
+            return ('shopee', f"{match.group(1)}-{match.group(2)}")
+
+        return (None, None)
 
     def buscar_promocoes_pelando(self, limite: int = 15) -> List[Dict]:
         """Busca as promoções mais recentes do Promobit (ex Pelando)"""
@@ -162,6 +194,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip() and str(cupom).strip().upper() not in _VALORES_INVALIDOS_CUPOM:
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
+                    source, ext_id = self.extrair_platform_id(link_produto)
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
                     produtos.append({
                         'name': nome,
@@ -172,7 +205,9 @@ class PromotionScraper:
                         'originalPrice': float(offer.get('offerOriginalPrice', 0)) if offer.get('offerOriginalPrice') else None,
                         'links': links,
                         'storeName': loja,
-                        'autoApprove': loja in LOJAS_COM_AFILIADO
+                        'autoApprove': loja in LOJAS_COM_AFILIADO,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ {nome[:50]}...')
                 except Exception as e:
@@ -331,6 +366,7 @@ class PromotionScraper:
                             if cupom:
                                 descricao += f"\n🎟️ CUPOM: {cupom}"
 
+                            source, ext_id = self.extrair_platform_id(link)
                             produtos.append({
                                 'name': nome[:200],
                                 'category': categoria,
@@ -339,7 +375,9 @@ class PromotionScraper:
                                 'price': preco,
                                 'originalPrice': preco_original,
                                 'links': links,
-                                'storeName': loja
+                                'storeName': loja,
+                                'source': source,
+                                'externalId': ext_id
                             })
                             cupom_log = f' 🎟️ {cupom}' if cupom else ''
                             print(f'  ✅ [Promobyte] {nome[:45]}...{cupom_log}')
@@ -448,6 +486,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
 
+                    source, ext_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -456,7 +495,9 @@ class PromotionScraper:
                         'price': preco,
                         'originalPrice': preco_original,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ [Pelando] {nome[:50]}...')
                 except Exception as e:
@@ -526,6 +567,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
                     
+                    source, ext_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -533,7 +575,9 @@ class PromotionScraper:
                         'imageUrl': '/placeholder.webp',
                         'price': preco,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ [Gatry] {nome[:50]}...')
                     
@@ -612,6 +656,7 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
                     
+                    source, ext_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -619,7 +664,9 @@ class PromotionScraper:
                         'imageUrl': imagem_url,
                         'price': preco,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ [Zoom] {nome[:50]}...')
                     
@@ -718,6 +765,7 @@ class PromotionScraper:
                     if cupom:
                         descricao += f"\n🎟️ CUPOM: {cupom}"
                     
+                    source, ext_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -726,7 +774,9 @@ class PromotionScraper:
                         'price': preco,
                         'originalPrice': preco_original,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     cupom_log = f' 🎟️ {cupom}' if cupom else ''
                     print(f'  ✅ [Buscapé] {nome[:45]}...{cupom_log}')
@@ -740,29 +790,39 @@ class PromotionScraper:
         print(f'   ✅ Total Buscapé: {len(produtos)} produtos')
         return produtos
 
-    def buscar_promocoes_hardmob(self, limite: int = 15) -> List[Dict]:
-        """Busca promoções do Hardmob (fórum de promoções) - DESABILITADO (403)"""
+    def buscar_promocoes_hardmob_fixed(self, limite: int = 15) -> List[Dict]:
+        """Busca promoções do Hardmob com headers anti-403"""
         produtos = []
         try:
-            print('🔥 Buscando promoções no Hardmob...')
+            print('🔥 Buscando promoções no Hardmob (anti-403)...')
+            headers_hardmob = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Referer': 'https://www.google.com.br/',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
             url = 'https://www.hardmob.com.br/forums/407-Promocoes'
-            response = requests.get(url, headers=self.headers, timeout=15)
+            response = requests.get(url, headers=headers_hardmob, timeout=15)
             print(f'   📡 Status: {response.status_code}')
             
             if response.status_code != 200:
-                print(f'⚠️  Hardmob bloqueado (403) - pulando...')
+                print(f'⚠️  Hardmob ainda bloqueado (status {response.status_code}) - pulando...')
                 return produtos
 
             soup = BeautifulSoup(response.content, 'html.parser')
             
             # Hardmob usa estrutura de fórum - buscar tópicos
-            topicos = soup.select('li.threadbit')
+            topicos = soup.select('li.threadbit, div[class*="thread"], tr[class*="thread"]')
             print(f'   📦 Encontrados {len(topicos)} tópicos')
             
             for topico in topicos[:limite]:
                 try:
                     # Título do tópico
-                    titulo_elem = topico.select_one('a.title')
+                    titulo_elem = topico.select_one('a.title, a[class*="title"], h3 a')
                     if not titulo_elem:
                         continue
                     
@@ -797,14 +857,17 @@ class PromotionScraper:
                     links = self._criar_links(link, loja)
                     categoria = self._detectar_categoria(nome)
                     
+                    source, ext_id = self.extrair_platform_id(link)
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Hardmob via {loja}",
-                        'imageUrl': '/placeholder.webp',
+                        'imageUrl': 'https://via.placeholder.com/800x1000',
                         'price': preco,
                         'links': links,
-                        'storeName': loja
+                        'storeName': loja,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ [Hardmob] {nome[:50]}...')
                     
@@ -1018,6 +1081,7 @@ class PromotionScraper:
                     if cupom and str(cupom).strip():
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
+                    source, ext_id = self.extrair_platform_id(link_produto)
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
                     produtos.append({
                         'name': nome,
@@ -1028,7 +1092,9 @@ class PromotionScraper:
                         'originalPrice': float(promo.get('old_price', 0)) if promo.get('old_price') else None,
                         'links': links,
                         'storeName': loja,
-                        'autoApprove': loja in LOJAS_COM_AFILIADO
+                        'autoApprove': loja in LOJAS_COM_AFILIADO,
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ [Pechinchou] {nome[:45]}...')
                 except Exception as e:
@@ -1091,6 +1157,18 @@ class PromotionScraper:
                     
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM', 'Lomadee', 'Shopee', 'Americanas', 'Netshoes'}
                     
+                    source, ext_id = self.extrair_platform_id(link_afiliado)
+                    if not ext_id and link_afiliado:
+                        import urllib.parse
+                        parsed = urllib.parse.urlparse(link_afiliado)
+                        queries = urllib.parse.parse_qs(parsed.query)
+                        for q_val in queries.values():
+                            for val in q_val:
+                                if val.startswith('http'):
+                                    s_opt, e_opt = self.extrair_platform_id(val)
+                                    if e_opt:
+                                        source, ext_id = s_opt, e_opt
+                                        break
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
@@ -1100,7 +1178,9 @@ class PromotionScraper:
                         'originalPrice': float(preco_original) if preco_original else None,
                         'links': links,
                         'storeName': loja,
-                        'autoApprove': True  # Link já é afiliado
+                        'autoApprove': True,  # Link já é afiliado
+                        'source': source,
+                        'externalId': ext_id
                     })
                     print(f'  ✅ [Lomadee] {nome[:45]}...')
                 except Exception as e:
@@ -1112,46 +1192,685 @@ class PromotionScraper:
         print(f'   ✅ Total Lomadee: {len(produtos)} produtos')
         return produtos
 
-    def buscar_todas_promocoes(self) -> Dict[str, List]:
-        """Busca promoções em todas as plataformas: Promobit, Promobyte, Gatry, Zoom, Buscapé, TikTok e ML API"""
-        print('\n📡 Buscando em múltiplas fontes...')
+    def buscar_promocoes_shopee(self, limite: int = 20) -> List[Dict]:
+        """Busca promoções do Shopee Flash Sale"""
+        produtos = []
+        try:
+            print('🛍️ Buscando promoções no Shopee Flash Sale...')
+            headers_shopee = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'pt-BR,pt;q=0.9',
+                'Referer': 'https://www.google.com.br/'
+            }
+            url = 'https://shopee.com.br/flash_sale'
+            response = requests.get(url, headers=headers_shopee, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Shopee bloqueou (status {response.status_code})')
+                return produtos
 
-        produtos_promobit  = self.buscar_promocoes_pelando()       # Promobit
-        produtos_promobyte = self.buscar_promocoes_promobyte()     # Promobyte (corrigido)
-        produtos_gatry     = self.buscar_promocoes_gatry()         # Gatry
-        produtos_zoom      = self.buscar_promocoes_zoom()          # Zoom (novo)
-        produtos_buscape   = self.buscar_promocoes_buscape()       # Buscapé (novo)
-        produtos_tiktok    = self.buscar_promocoes_tiktok()        # TikTok Shop
-        produtos_pechinchou = self.buscar_promocoes_pechinchou()   # Pechinchou
-        produtos_lomadee   = self.buscar_promocoes_lomadee()       # Lomadee (novo)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Shopee usa estrutura de cards
+            cards = soup.select('div[data-sqe="item"], a[data-sqe="link"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('div[class*="title"], span[class*="title"]')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get_text(strip=True)
+                    if not nome or len(nome) < 10:
+                        continue
+                    
+                    # Link
+                    link_elem = card if card.name == 'a' else card.select_one('a')
+                    link = ''
+                    if link_elem:
+                        link = link_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = 'https://shopee.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('span[class*="price"], div[class*="price"]')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Preço original
+                    preco_original = None
+                    original_elem = card.select_one('span[class*="original"], del, s')
+                    if original_elem:
+                        preco_original = self._extrair_preco(original_elem.get_text())
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                    
+                    # Desconto
+                    desconto_elem = card.select_one('span[class*="discount"], div[class*="discount"]')
+                    desconto_texto = ''
+                    if desconto_elem:
+                        desconto_texto = desconto_elem.get_text(strip=True)
+                    
+                    links = {'shopee': link} if link else {}
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Flash Sale Shopee"
+                    if desconto_texto:
+                        descricao += f" - {desconto_texto}"
+                    
+                    source, ext_id = self.extrair_platform_id(link)
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': preco_original,
+                        'links': links,
+                        'storeName': 'Shopee',
+                        'source': source,
+                        'externalId': ext_id
+                    })
+                    print(f'  ✅ [Shopee] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Shopee: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Shopee: {e}')
+        
+        print(f'   ✅ Total Shopee: {len(produtos)} produtos')
+        return produtos
 
-        # 🆕 Mercado Livre API Oficial (links de afiliado já gerados, sem intermediários!)
-        produtos_ml_api = []
-        if _ml_scraper:
+    def buscar_cupons_cuponomia(self, limite: int = 20) -> List[Dict]:
+        """Busca cupons exclusivos no Cuponomia"""
+        cupons = []
+        try:
+            print('🎫 Buscando cupons no Cuponomia...')
+            headers_cuponomia = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'pt-BR,pt;q=0.9',
+                'Referer': 'https://www.google.com.br/'
+            }
+            url = 'https://www.cuponomia.com.br/cupons'
+            response = requests.get(url, headers=headers_cuponomia, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Cuponomia bloqueou (status {response.status_code})')
+                return cupons
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Cuponomia usa cards de cupom
+            cards = soup.select('div[class*="coupon"], article[class*="coupon"], div[data-coupon]')
+            print(f'   📦 Encontrados {len(cards)} cupons')
+            
+            for card in cards[:limite]:
+                try:
+                    # Código do cupom
+                    codigo_elem = card.select_one('code, span[class*="code"], div[class*="code"]')
+                    if not codigo_elem:
+                        continue
+                    
+                    codigo = codigo_elem.get_text(strip=True).upper()
+                    if not codigo or len(codigo) < 3:
+                        continue
+                    
+                    # Descrição
+                    desc_elem = card.select_one('p, div[class*="description"], span[class*="title"]')
+                    descricao = desc_elem.get_text(strip=True)[:190] if desc_elem else 'Cupom de desconto'
+                    
+                    # Desconto
+                    desconto_elem = card.select_one('span[class*="discount"], div[class*="discount"]')
+                    desconto = desconto_elem.get_text(strip=True) if desconto_elem else 'Oferta'
+                    
+                    # Loja
+                    loja_elem = card.select_one('span[class*="store"], div[class*="store"], a[class*="store"]')
+                    loja = loja_elem.get_text(strip=True) if loja_elem else 'Vários'
+                    
+                    cupons.append({
+                        'code': codigo,
+                        'description': descricao,
+                        'discount': desconto,
+                        'platform': loja
+                    })
+                    print(f'  ✅ Cupom {codigo} - {loja}')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar cupom Cuponomia: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Cuponomia: {e}')
+        
+        print(f'   ✅ Total Cuponomia: {len(cupons)} cupons')
+        return cupons
+
+    def buscar_promocoes_meliuz(self, limite: int = 20) -> List[Dict]:
+        """Busca promoções e cashback no Méliuz"""
+        produtos = []
+        try:
+            print('💰 Buscando promoções no Méliuz...')
+            headers_meliuz = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'pt-BR,pt;q=0.9',
+                'Referer': 'https://www.google.com.br/'
+            }
+            url = 'https://www.meliuz.com.br/oferta'
+            response = requests.get(url, headers=headers_meliuz, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Méliuz bloqueou (status {response.status_code})')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Méliuz usa cards de oferta
+            cards = soup.select('div[class*="offer"], article[class*="offer"], a[class*="offer"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('h2, h3, div[class*="title"], span[class*="title"]')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get_text(strip=True)
+                    if not nome or len(nome) < 10:
+                        continue
+                    
+                    # Link
+                    link_elem = card if card.name == 'a' else card.select_one('a')
+                    link = ''
+                    if link_elem:
+                        link = link_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = 'https://www.meliuz.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('span[class*="price"], div[class*="price"]')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Cashback
+                    cashback_elem = card.select_one('span[class*="cashback"], div[class*="cashback"]')
+                    cashback_texto = ''
+                    if cashback_elem:
+                        cashback_texto = cashback_elem.get_text(strip=True)
+                    
+                    # Loja
+                    loja_elem = card.select_one('span[class*="store"], div[class*="store"]')
+                    loja = loja_elem.get_text(strip=True) if loja_elem else 'Amazon'
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                    
+                    links = self._criar_links(link, loja)
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Oferta Méliuz via {loja}"
+                    if cashback_texto:
+                        descricao += f" + {cashback_texto} cashback"
+                    
+                    source, ext_id = self.extrair_platform_id(link)
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'links': links,
+                        'storeName': loja,
+                        'source': source,
+                        'externalId': ext_id
+                    })
+                    print(f'  ✅ [Méliuz] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Méliuz: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Méliuz: {e}')
+        
+        print(f'   ✅ Total Méliuz: {len(produtos)} produtos')
+        return produtos
+
+    def buscar_promocoes_amazon(self, limite: int = 20) -> List[Dict]:
+        """Busca ofertas do dia na Amazon Brasil"""
+        produtos = []
+        try:
+            print('🛒 Buscando ofertas na Amazon...')
+            url = 'https://www.amazon.com.br/gp/goldbox'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Amazon bloqueou (status {response.status_code})')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Amazon usa estrutura complexa - buscar cards de oferta
+            cards = soup.select('div[data-deal-id], div.DealCard, div[class*="deal"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('a[aria-label], span[class*="title"], div[class*="title"]')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get('aria-label') or nome_elem.get_text(strip=True)
+                    if not nome or len(nome) < 10:
+                        continue
+                    
+                    # Link
+                    link_elem = card.select_one('a[href*="/dp/"], a[href*="/gp/"]')
+                    link = ''
+                    if link_elem:
+                        link = link_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = 'https://www.amazon.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('span[class*="price"], span.a-price span.a-offscreen')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Preço original (desconto)
+                    preco_original = None
+                    original_elem = card.select_one('span[class*="original"], span.a-text-strike')
+                    if original_elem:
+                        preco_original = self._extrair_preco(original_elem.get_text())
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                    
+                    # Desconto percentual
+                    desconto_elem = card.select_one('span[class*="percent"], span[class*="badge"]')
+                    desconto_texto = ''
+                    if desconto_elem:
+                        desconto_texto = desconto_elem.get_text(strip=True)
+                    
+                    links = {'amazon': link} if link else {}
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Oferta do Dia Amazon"
+                    if desconto_texto:
+                        descricao += f" - {desconto_texto}"
+                    
+                    source, ext_id = self.extrair_platform_id(link)
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': preco_original,
+                        'links': links,
+                        'storeName': 'Amazon',
+                        'source': source,
+                        'externalId': ext_id
+                    })
+                    print(f'  ✅ [Amazon] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Amazon: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar na Amazon: {e}')
+        
+        print(f'   ✅ Total Amazon: {len(produtos)} produtos')
+        return produtos
+
+    def buscar_promocoes_mercadolivre(self, limite: int = 20) -> List[Dict]:
+        """Busca ofertas do dia no Mercado Livre"""
+        produtos = []
+        try:
+            print('🛍️ Buscando ofertas no Mercado Livre...')
+            url = 'https://www.mercadolivre.com.br/ofertas'
+            response = requests.get(url, headers=self.headers, timeout=15)
+            print(f'   📡 Status: {response.status_code}')
+            
+            if response.status_code != 200:
+                print(f'⚠️  Mercado Livre bloqueou (status {response.status_code})')
+                return produtos
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Mercado Livre usa estrutura de cards
+            cards = soup.select('li.promotion-item, div.poly-card, a[href*="/p/MLB"]')
+            print(f'   📦 Encontrados {len(cards)} cards')
+            
+            for card in cards[:limite]:
+                try:
+                    # Nome do produto
+                    nome_elem = card.select_one('h2, h3, p.poly-component__title, span.poly-component__title')
+                    if not nome_elem:
+                        continue
+                    
+                    nome = nome_elem.get_text(strip=True)
+                    if not nome or len(nome) < 10:
+                        continue
+                    
+                    # Link
+                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/p/"], a[href*="/MLB"]')
+                    link = ''
+                    if link_elem:
+                        link = link_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = 'https://www.mercadolivre.com.br' + link
+                    
+                    # Preço
+                    preco_elem = card.select_one('span.andes-money-amount__fraction, span[class*="price"]')
+                    preco = None
+                    if preco_elem:
+                        preco = self._extrair_preco(preco_elem.get_text())
+                    
+                    # Preço original
+                    preco_original = None
+                    original_elem = card.select_one('s, del, span[class*="previous"]')
+                    if original_elem:
+                        preco_original = self._extrair_preco(original_elem.get_text())
+                    
+                    # Imagem
+                    img_elem = card.select_one('img')
+                    imagem_url = 'https://via.placeholder.com/800x1000'
+                    if img_elem:
+                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
+                        # Melhorar qualidade da imagem
+                        if imagem_url and 'http' in imagem_url:
+                            imagem_url = imagem_url.replace('-I.jpg', '-O.jpg')
+                    
+                    # Desconto
+                    desconto_elem = card.select_one('span[class*="discount"], span.andes-money-amount__discount')
+                    desconto_texto = ''
+                    if desconto_elem:
+                        desconto_texto = desconto_elem.get_text(strip=True)
+                    
+                    links = {'mercadoLivre': link} if link else {}
+                    categoria = self._detectar_categoria(nome)
+                    
+                    descricao = f"Oferta Mercado Livre"
+                    if desconto_texto:
+                        descricao += f" - {desconto_texto}"
+                    
+                    source, ext_id = self.extrair_platform_id(link)
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': descricao,
+                        'imageUrl': imagem_url,
+                        'price': preco,
+                        'originalPrice': preco_original,
+                        'links': links,
+                        'storeName': 'Mercado Livre',
+                        'source': source,
+                        'externalId': ext_id
+                    })
+                    print(f'  ✅ [Mercado Livre] {nome[:50]}...')
+                    
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar oferta Mercado Livre: {e}')
+            
+        except Exception as e:
+            print(f'❌ Erro ao buscar no Mercado Livre: {e}')
+        
+        print(f'   ✅ Total Mercado Livre: {len(produtos)} produtos')
+        return produtos
+
+    def _calcular_score_promocao(self, produto: Dict) -> int:
+        """
+        Calcula score de qualidade da promoção (0-100)
+        Score alto = promoção melhor
+        """
+        score = 0
+        detalhes = []  # Para logging detalhado
+        
+        # 1. Desconto real (0-35 pontos)
+        if produto.get('originalPrice') and produto.get('price'):
             try:
-                produtos_ml_api = _ml_scraper.buscar_promocoes_mercadolivre(limite_por_categoria=8)
-            except Exception as e:
-                print(f'⚠️ Erro no scraper ML API: {e}')
+                desconto = (1 - produto['price'] / produto['originalPrice']) * 100
+                if desconto >= 60:
+                    score += 35
+                    detalhes.append(f'desconto {desconto:.0f}% (+35pts)')
+                elif desconto >= 50:
+                    score += 30
+                    detalhes.append(f'desconto {desconto:.0f}% (+30pts)')
+                elif desconto >= 40:
+                    score += 25
+                    detalhes.append(f'desconto {desconto:.0f}% (+25pts)')
+                elif desconto >= 30:
+                    score += 20
+                    detalhes.append(f'desconto {desconto:.0f}% (+20pts)')
+                elif desconto >= 20:
+                    score += 15
+                    detalhes.append(f'desconto {desconto:.0f}% (+15pts)')
+                elif desconto >= 10:
+                    score += 10
+                    detalhes.append(f'desconto {desconto:.0f}% (+10pts)')
+                else:
+                    detalhes.append(f'desconto {desconto:.0f}% (+0pts)')
+            except:
+                detalhes.append('sem desconto calculável')
+        else:
+            detalhes.append('sem preço original')
+        
+        # 2. Loja confiável (0-20 pontos)
+        lojas_premium = ['Amazon', 'Mercado Livre', 'Magalu', 'KaBuM']
+        lojas_boas = ['Shopee', 'Americanas', 'Casas Bahia', 'Terabyte']
+        
+        loja = produto.get('storeName', '')
+        if loja in lojas_premium:
+            score += 20
+            detalhes.append(f'loja premium {loja} (+20pts)')
+        elif loja in lojas_boas:
+            score += 15
+            detalhes.append(f'loja boa {loja} (+15pts)')
+        elif loja:
+            score += 10
+            detalhes.append(f'loja {loja} (+10pts)')
+        else:
+            detalhes.append('sem loja (-0pts)')
+        
+        # 3. Tem cupom adicional (0-15 pontos)
+        descricao = produto.get('description', '')
+        if 'CUPOM' in descricao.upper() or 'CÓDIGO' in descricao.upper():
+            score += 15
+            detalhes.append('tem cupom (+15pts)')
+        
+        # 4. Categoria popular (0-10 pontos)
+        categorias_populares = [
+            'Smartphones e TV',
+            'Informática e Games',
+            'Casa e Eletrodomésticos',
+            'Moda e Acessórios'
+        ]
+        if produto.get('category') in categorias_populares:
+            score += 10
+            detalhes.append(f'categoria popular (+10pts)')
+        
+        # 5. Imagem real (0-10 pontos)
+        imagem = produto.get('imageUrl', '')
+        if imagem and 'placeholder' not in imagem:
+            score += 10
+            detalhes.append('imagem real (+10pts)')
+        
+        # 6. Preço razoável (0-10 pontos)
+        preco = produto.get('price')
+        if preco:
+            if 20 <= preco <= 5000:  # Faixa de preço normal
+                score += 10
+                detalhes.append(f'preço R${preco:.2f} (+10pts)')
+            elif 5 <= preco < 20 or 5000 < preco <= 10000:
+                score += 5
+                detalhes.append(f'preço R${preco:.2f} (+5pts)')
+        
+        # Armazenar detalhes no produto para logging
+        produto['_score_detalhes'] = ', '.join(detalhes)
+        
+        return min(score, 100)  # Máximo 100
 
-        # Combinar e deduplicar por nome normalizado
+    def buscar_todas_promocoes(self) -> Dict[str, List]:
+        """Busca promoções em PARALELO em todas as plataformas - 3x mais rápido!"""
+        print('\n📡 Buscando em múltiplas fontes (PARALELO)...')
+
+        # Buscar em paralelo usando ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+            futures = {
+                executor.submit(self.buscar_promocoes_pelando): 'Promobit',
+                executor.submit(self.buscar_promocoes_promobyte): 'Promobyte',
+                executor.submit(self.buscar_promocoes_gatry): 'Gatry',
+                executor.submit(self.buscar_promocoes_zoom): 'Zoom',
+                executor.submit(self.buscar_promocoes_buscape): 'Buscapé',
+                executor.submit(self.buscar_promocoes_amazon): 'Amazon',
+                executor.submit(self.buscar_promocoes_mercadolivre): 'Mercado Livre HTML',
+                executor.submit(self.buscar_promocoes_shopee): 'Shopee Flash Sale',
+                executor.submit(self.buscar_promocoes_meliuz): 'Méliuz',
+                executor.submit(self.buscar_promocoes_hardmob_fixed): 'Hardmob',
+                executor.submit(self.buscar_cupons_pelando): 'Cupons Promobit',
+                executor.submit(self.buscar_cupons_cuponomia): 'Cupons Cuponomia',
+            }
+            
+            # Adicionar a API Oficial do ML se disponível
+            if _ml_scraper:
+                futures[executor.submit(_ml_scraper.buscar_promocoes_mercadolivre, 8)] = 'Mercado Livre API'
+
+            produtos_por_fonte = {}
+            todos_cupons = []
+            metricas_por_fonte = {}  # Para rastrear tempo e quantidade
+            
+            for future in concurrent.futures.as_completed(futures):
+                fonte = futures[future]
+                inicio = time.time()
+                try:
+                    resultado = future.result(timeout=30)
+                    elapsed = time.time() - inicio
+                    
+                    if 'Cupons' in fonte:
+                        todos_cupons.extend(resultado)
+                        metricas_por_fonte[fonte] = {'count': len(resultado), 'time': elapsed}
+                    else:
+                        produtos_por_fonte[fonte] = resultado
+                        metricas_por_fonte[fonte] = {'count': len(resultado), 'time': elapsed}
+                    
+                    print(f'   ✅ {fonte}: {len(resultado)} itens em {elapsed:.1f}s')
+                except Exception as e:
+                    elapsed = time.time() - inicio
+                    print(f'   ❌ Erro em {fonte} após {elapsed:.1f}s: {e}')
+                    if 'Cupons' not in fonte:
+                        produtos_por_fonte[fonte] = []
+                        metricas_por_fonte[fonte] = {'count': 0, 'time': elapsed, 'erro': str(e)}
+
+        # Combinar todos os produtos
         todos_produtos = []
-        nomes_vistos: set = set()
-        # ML API e Lomadee primeiro para garantir que links limpos tenham prioridade
-        for p in produtos_ml_api + produtos_lomadee + produtos_promobit + produtos_promobyte + produtos_gatry + produtos_zoom + produtos_buscape + produtos_tiktok + produtos_pechinchou:
-            chave = self._normalizar(p['name'])[:60]
-            if chave not in nomes_vistos:
-                nomes_vistos.add(chave)
-                todos_produtos.append(p)
+        for produtos in produtos_por_fonte.values():
+            todos_produtos.extend(produtos)
 
-        print(f'📊 Total combinado: {len(todos_produtos)} produtos únicos')
-        print(f'   🛒 ML API: {len(produtos_ml_api)} | Lomadee: {len(produtos_lomadee)} | Promobit: {len(produtos_promobit)} | Promobyte: {len(produtos_promobyte)}')
-        print(f'   🔍 Gatry: {len(produtos_gatry)} | Zoom: {len(produtos_zoom)} | Buscapé: {len(produtos_buscape)} | Pechinchou: {len(produtos_pechinchou)}')
+        # Deduplicação melhorada com chave composta e similaridade de texto
+        produtos_unicos = []
+        chaves_compostas_vistas = set()
+        nomes_vistos: List[str] = []
+        
+        print(f'\n🔍 Deduplicando produtos...')
+        for p in todos_produtos:
+            src = p.get('source')
+            ext_id = p.get('externalId')
+            nome_atual = self._normalizar(p['name'])[:80]
+            
+            if src and ext_id:
+                chave_composta = (src, ext_id)
+                if chave_composta in chaves_compostas_vistas:
+                    continue
+                chaves_compostas_vistas.add(chave_composta)
+                nomes_vistos.append(nome_atual)
+                produtos_unicos.append(p)
+            else:
+                eh_duplicado = False
+                for nome_visto in nomes_vistos:
+                    similaridade = SequenceMatcher(None, nome_atual, nome_visto).ratio()
+                    if similaridade >= 0.85:
+                        eh_duplicado = True
+                        break
+                
+                if not eh_duplicado:
+                    nomes_vistos.append(nome_atual)
+                    produtos_unicos.append(p)
 
-        todos_cupons = self.buscar_cupons_pelando()
+        # Calcular score e filtrar
+        produtos_com_score = []
+        produtos_descartados = []
+        
+        from config import DEBUG_FILTROS, MIN_QUALITY_SCORE
+        
+        for p in produtos_unicos:
+            score = self._calcular_score_promocao(p)
+            p['qualityScore'] = score
+            
+            if DEBUG_FILTROS:
+                produtos_com_score.append(p)
+                print(f'   🐛 DEBUG: {p["name"][:50]} | score={score} | {p.get("_score_detalhes", "")}')
+            elif score >= MIN_QUALITY_SCORE:
+                produtos_com_score.append(p)
+            else:
+                motivo = f'score {score} < mínimo {MIN_QUALITY_SCORE}'
+                produtos_descartados.append({
+                    'nome': p['name'][:60],
+                    'score': score,
+                    'motivo': motivo,
+                    'detalhes': p.get('_score_detalhes', 'sem detalhes')
+                })
 
-        if not todos_produtos:
+        # Ordenar por score (melhores primeiro)
+        produtos_com_score.sort(key=lambda x: x['qualityScore'], reverse=True)
+        
+        if produtos_descartados and not DEBUG_FILTROS:
+            print(f'\n⚠️  Produtos descartados (mostrando primeiros 10 de {len(produtos_descartados)}):')
+            for i, desc in enumerate(produtos_descartados[:10], 1):
+                print(f'   {i}. [{desc["score"]}pts] {desc["nome"]}')
+                print(f'      └─ {desc["detalhes"]}')
+
+        print(f'\n📊 Resultados:')
+        print(f'   🔍 Total encontrado: {len(todos_produtos)} produtos')
+        print(f'   ✨ Únicos: {len(produtos_unicos)} produtos')
+        if DEBUG_FILTROS:
+            print(f'   🐛 MODO DEBUG ATIVO: Todos os {len(produtos_com_score)} produtos serão enviados')
+        else:
+            print(f'   🔥 Qualidade alta (score ≥{MIN_QUALITY_SCORE}): {len(produtos_com_score)} produtos')
+            print(f'   ❌ Descartados: {len(produtos_descartados)} produtos')
+        print(f'   🎫 Cupons: {len(todos_cupons)}')
+        
+        print(f'\n📈 Métricas por fonte:')
+        for fonte, metricas in sorted(metricas_por_fonte.items(), key=lambda x: x[1]['count'], reverse=True):
+            if metricas.get('erro'):
+                print(f'   ❌ {fonte}: ERRO - {metricas["erro"][:50]}')
+            else:
+                print(f'   📦 {fonte}: {metricas["count"]} itens em {metricas["time"]:.1f}s')
+
+        todos_cupons = todos_cupons if todos_cupons else []
+
+        if not produtos_com_score:
             print('⚠️ Usando dados de backup para produtos...')
-            todos_produtos = [{
+            produtos_com_score = [{
                 'name': 'Teclado Mecânico Gamer Redragon Kumara',
                 'category': 'Informática e Games',
                 'description': 'Teclado mecânico compacto de alto desempenho. Oferta imperdível!',
@@ -1170,7 +1889,7 @@ class PromotionScraper:
             }]
 
         return {
-            'produtos': todos_produtos,
+            'produtos': produtos_com_score,
             'cupons': todos_cupons
         }
 

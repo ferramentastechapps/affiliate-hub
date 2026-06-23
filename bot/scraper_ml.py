@@ -336,7 +336,7 @@ class MercadoLivreAPIScraper:
                         model_api = attr.get('value_name')
 
             platform_product_id = item.get('id')
-            external_id = f"mercadolivre_{platform_product_id}" if platform_product_id else None
+            external_id = platform_product_id
 
             return {
                 'name': nome,
@@ -352,6 +352,7 @@ class MercadoLivreAPIScraper:
                 'model': model_api,
                 'platformProductId': platform_product_id,
                 'externalId': external_id,
+                'source': 'mercadoLivre',
                 'links': {
                     'mercadoLivre': link_afiliado,
                 },

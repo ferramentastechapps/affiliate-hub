@@ -145,7 +145,8 @@ class PromotionBot:
                         self.telegram.enviar_sync('produto_urgente', produto)
                         time.sleep(2)  # Pausa menor para urgentes
                         self.telegram.enviar_sync('produto', produto)
-                        self.produtos_enviados.add(produto['name'])
+                        chave = self.scraper._normalizar(produto['name'])[:60]
+                        self.produtos_enviados.add(chave)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
                         print(f'❌ Falha ao adicionar: {erro}')
@@ -154,7 +155,8 @@ class PromotionBot:
                         self.telegram.enviar_sync('produto_urgente', produto)
                         time.sleep(2)
                         self.telegram.enviar_sync('produto', produto)
-                        self.produtos_enviados.add(produto['name'])
+                        chave = self.scraper._normalizar(produto['name'])[:60]
+                        self.produtos_enviados.add(chave)
                     
                     time.sleep(1)
                 
