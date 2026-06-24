@@ -50,10 +50,15 @@ KNOWN_BRANDS: list[str] = [
 
 
 def _normalizar(texto: str) -> str:
-    """Normaliza texto para comparação."""
+    """Normaliza texto para comparação, preservando o 'ç' para evitar colisões (ex: poco vs poço)."""
+    if not texto:
+        return ""
     import unicodedata
-    nfkd = unicodedata.normalize('NFKD', texto.lower())
-    return ''.join(c for c in nfkd if not unicodedata.combining(c))
+    # Substitui temporariamente ç/Ç por tokens seguros
+    texto_temp = texto.replace('ç', '$$C$$').replace('Ç', '$$CC$$')
+    nfkd = unicodedata.normalize('NFKD', texto_temp.lower())
+    norm = ''.join(c for c in nfkd if not unicodedata.combining(c))
+    return norm.replace('$$c$$', 'ç').replace('$$cc$$', 'ç')
 
 
 def extrair_categoria_granular(titulo: str) -> Optional[str]:
@@ -65,7 +70,13 @@ def extrair_categoria_granular(titulo: str) -> Optional[str]:
 
     for cat, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
-            if _normalizar(kw) in titulo_norm:
+            kw_norm = _normalizar(kw)
+            # Usa regex de palavra inteira (\b) para evitar correspondências parciais como "cebola" para "bola"
+            if re.search(r'\b' + re.escape(kw_norm) + r'\b', titulo_norm):
+                # Se o termo detectado for "jogo", ignorar se for utilidades domésticas, cama, banho ou ferramentas
+                if kw_norm == 'jogo':
+                    if re.search(r'\bjogo\s+(de|para)\s+(panelas?|toalhas?|banho|cama|lencol|lençol|copos?|pratos?|facas?|chaves?|ferramentas?|soquetes?|brocas?|xicaras?|chicaras?|jantar|cha|chá|sobremesa|tacas|taças|talheres?|lençois|lencois|quarto|cozinha|potes?)', titulo_norm):
+                        continue
                 return cat
 
     return None
