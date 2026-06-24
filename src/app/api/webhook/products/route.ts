@@ -802,8 +802,8 @@ export async function PUT(request: Request) {
         let finalStatus = productData.status || processedStatus;
 
         if (productData.autoApprove === true) {
-          finalStatus = 'active';
-          console.log(`[Webhook Batch] Auto-aprovado por fonte confiável: ${productData.name}`);
+          finalStatus = 'pending'; // Inicia como pending, será aprovado no background se aiScore >= 6.5
+          console.log(`[Webhook Batch] Iniciando como pending para avaliação por score: ${productData.name}`);
         }
 
         const imagesToCreate = [];
@@ -909,7 +909,18 @@ export async function PUT(request: Request) {
           product.id,
           'evaluate'
         ).then(async (aiResult) => {
-            let newStatus = finalStatus;
+          let newStatus = finalStatus;
+
+          // Se autoApprove for true, definir status com base no aiScore >= 6.5 (65%)
+          if (productData.autoApprove === true) {
+            if (aiResult.score && aiResult.score >= 6.5) {
+              newStatus = 'active';
+              console.log(`[Webhook Batch] Auto-aprovado pela IA (score ${aiResult.score} >= 6.5): ${productData.name}`);
+            } else {
+              newStatus = 'pending';
+              console.log(`[Webhook Batch] Mantido pendente (score ${aiResult.score || 0} < 6.5): ${productData.name}`);
+            }
+          }
 
           let finalEnhancedImageUrl: string | null = null;
           if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
@@ -932,8 +943,8 @@ export async function PUT(request: Request) {
           });
           console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
 
-          if (body.links?.mercadoLivre) {
-            await fetchAndSaveMLReviews(product.id, body.links.mercadoLivre);
+          if (productData.links?.mercadoLivre) {
+            await fetchAndSaveMLReviews(product.id, productData.links.mercadoLivre);
           }
 
           // Se a IA aprovou o produto, disparar notificação push!
