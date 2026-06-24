@@ -12,7 +12,7 @@ export async function PATCH(
     const body = await request.json();
     
     // Extrait campos permitidos
-    const { category, brand, platformProductId, isFixed, imageUrl, updateSourceUrl, updateAffiliateUrl, platform } = body;
+    const { category, brand, platformProductId, isFixed, imageUrl, updateSourceUrl, updateAffiliateUrl, platform, userRating } = body;
 
     const dataToUpdate: any = {};
     if (category !== undefined) dataToUpdate.category = category;
@@ -20,6 +20,10 @@ export async function PATCH(
     if (platformProductId !== undefined) dataToUpdate.platformProductId = platformProductId;
     if (isFixed !== undefined) dataToUpdate.isFixed = isFixed;
     if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl;
+    if (userRating !== undefined) {
+      dataToUpdate.userRating = userRating !== null ? parseInt(userRating) : null;
+      dataToUpdate.ratedAt = userRating !== null ? new Date() : null;
+    }
 
     if (Object.keys(dataToUpdate).length === 0 && updateSourceUrl === undefined && updateAffiliateUrl === undefined) {
       return NextResponse.json({ error: 'Nenhum campo válido para atualizar' }, { status: 400 });

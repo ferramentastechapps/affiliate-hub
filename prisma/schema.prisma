@@ -41,6 +41,8 @@ model Product {
   // IA e Analytics
   aiScore          Float?   // Nota de 0 a 10 dada pela IA
   aiAnalysis       String?  // Texto/Copy gerado pela IA
+  userRating       Int?     // Nota dada pelo administrador: 1=ruim, 2=ok, 3=boa, 4=ótima, 5=perfeita
+  ratedAt          DateTime? // Data da avaliação do admin
   clicks           Int      @default(0)
   externalId       String?  // Hash de deduplicação
   source           String?  // Plataforma de origem (amazon, mercadolivre, shopee, etc.)
