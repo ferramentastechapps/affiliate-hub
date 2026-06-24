@@ -218,7 +218,7 @@ export async function POST(request: Request) {
     }
     
     // Extrair cupom da descrição do produto (se existir)
-    let couponData = null;
+    let couponData: { id: string; code: string; description: string; discount: string; platform: string } | null = null;
     if (product.description && product.description.includes('🎟️ CUPOM:')) {
       const couponMatch = product.description.match(/🎟️ CUPOM:\s*([^\n]+)/);
       if (couponMatch) {
