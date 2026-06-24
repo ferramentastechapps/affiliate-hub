@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Star, Trash, Plus, Copy, Check, ArrowClockwise, Lightning,
-  BookmarksSimple, Prohibit, ArrowsLeftRight, CalendarBlank, Eye
+  BookmarksSimple, Prohibit, ArrowsLeftRight, CalendarBlank, Eye, Package
 } from "@phosphor-icons/react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ type AiContext = {
   startsAt?: string | null; endsAt?: string | null; createdAt: string;
 };
 
-type SubTab = 'captions' | 'banned' | 'substitutions' | 'contexts';
+type SubTab = 'captions' | 'products' | 'banned' | 'substitutions' | 'contexts';
 type RatingFilter = 'all' | 'unrated' | '10' | '9' | '8' | '7' | '6' | '5' | '4' | '3' | '2' | '1' | 'examples';
 
 // ─── StarRating ────────────────────────────────────────────────────────────────
@@ -707,12 +707,219 @@ function ContextsSection() {
   );
 }
 
+// ─── Section E: Products Rating ───────────────────────────────────────────────
+type ScrapedProduct = {
+  id: string;
+  name: string;
+  category: string;
+  imageUrl: string;
+  price: number | null;
+  storeName: string | null;
+  aiScore: number | null;
+  aiAnalysis: string | null;
+  userRating: number | null;
+  createdAt: string;
+};
+
+function ProductsSection() {
+  const [products, setProducts] = useState<ScrapedProduct[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<'all' | 'unrated' | 'rated'>('all');
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/products/scraped?page=${page}&limit=20&rating=${filter}`);
+      const data = await res.json();
+      setProducts(data.products || []);
+      setTotal(data.total || 0);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, filter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  async function handleRate(id: string, rating: number) {
+    setSavingId(id);
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userRating: rating }),
+      });
+      if (res.ok) {
+        setProducts(prev => prev.map(p => p.id === id ? { ...p, userRating: rating } : p));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  const totalPages = Math.ceil(total / 20);
+
+  return (
+    <div className="space-y-6">
+      {/* Filtros */}
+      <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <div className="flex gap-2">
+          {(['all', 'unrated', 'rated'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                filter === f
+                  ? 'bg-zinc-800 text-white border border-zinc-700'
+                  : 'bg-zinc-900/50 text-zinc-400 hover:text-white border border-transparent'
+              }`}
+            >
+              {f === 'all' && 'Todos'}
+              {f === 'unrated' && 'Não avaliados'}
+              {f === 'rated' && 'Avaliados'}
+            </button>
+          ))}
+        </div>
+        <div className="text-xs text-zinc-500 font-medium">
+          {total} produtos encontrados
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent"></div>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
+          Nenhum produto encontrado com este filtro.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {products.map((p) => {
+            let aiCritique = '';
+            if (p.aiAnalysis) {
+              try {
+                const parsed = JSON.parse(p.aiAnalysis);
+                aiCritique = parsed.analise || parsed.critique || p.aiAnalysis;
+              } catch {
+                aiCritique = p.aiAnalysis;
+              }
+            }
+
+            return (
+              <div key={p.id} className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-4 flex gap-4 hover:border-zinc-700/60 transition-colors">
+                {/* Imagem */}
+                <div className="w-20 h-20 bg-zinc-950 rounded-lg overflow-hidden shrink-0 flex items-center justify-center border border-zinc-800">
+                  <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
+                </div>
+
+                {/* Conteúdo */}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <h4 className="font-semibold text-sm text-zinc-200 line-clamp-1" title={p.name}>
+                      {p.name}
+                    </h4>
+                    <span className="text-xs font-mono bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded">
+                      R$ {p.price ? p.price.toFixed(2) : '—'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+                    <span>Loja: <strong className="text-zinc-400">{p.storeName || '—'}</strong></span>
+                    <span>•</span>
+                    <span>Categoria: <strong className="text-zinc-400">{p.category}</strong></span>
+                    <span>•</span>
+                    <span>Achado em: <strong className="text-zinc-400">{new Date(p.createdAt).toLocaleDateString('pt-BR')}</strong></span>
+                  </div>
+
+                  {/* Detalhes da IA */}
+                  <div className="mt-2 bg-zinc-950/50 border border-zinc-800/50 rounded-lg p-2.5 text-xs flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-zinc-400">Pontuação IA:</span>
+                      <span className={`font-extrabold ${
+                        (p.aiScore || 0) >= 8 ? 'text-emerald-400' :
+                        (p.aiScore || 0) >= 6 ? 'text-yellow-400' : 'text-zinc-500'
+                      }`}>
+                        {p.aiScore !== null ? `${p.aiScore.toFixed(1)}/10` : 'Pendente'}
+                      </span>
+                    </div>
+                    {aiCritique && (
+                      <p className="text-zinc-500 italic">
+                        &ldquo;{aiCritique}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Avaliação do Admin */}
+                <div className="flex flex-col items-end justify-center shrink-0 pl-4 border-l border-zinc-800/80 min-w-[160px] gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Sua nota para o produto</span>
+                  <div className="relative">
+                    <StarRating
+                      value={p.userRating}
+                      onChange={(rating) => handleRate(p.id, rating)}
+                    />
+                    {savingId === p.id && (
+                      <div className="absolute inset-0 bg-zinc-900/80 flex items-center justify-center rounded">
+                        <ArrowClockwise size={14} className="animate-spin text-accent" />
+                      </div>
+                    )}
+                  </div>
+                  {p.userRating && (
+                    <span className="text-[10px] text-emerald-400 font-medium">Nota {p.userRating}/10 salva</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-1 mt-6">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs"
+          >
+            Anterior
+          </button>
+          <span className="px-3 py-1.5 text-xs text-zinc-500">
+            Página {page} de {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── AiStudioTab (Main) ────────────────────────────────────────────────────────
 export function AiStudioTab() {
   const [subTab, setSubTab] = useState<SubTab>('captions');
 
   const subTabs: { value: SubTab; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: 'captions', label: '⭐ Legendas', icon: <Star size={16} />, desc: 'Avalie as legendas geradas e ensine a IA' },
+    { value: 'products', label: '🏷️ Produtos', icon: <Package size={16} />, desc: 'Avalie os produtos encontrados e refine o direcionamento da IA' },
     { value: 'banned', label: '🚫 Bloqueadas', icon: <Prohibit size={16} />, desc: 'Palavras que a IA nunca deve usar' },
     { value: 'substitutions', label: '🔄 Substituições', icon: <ArrowsLeftRight size={16} />, desc: 'Corrija palavras no pós-processamento' },
     { value: 'contexts', label: '📅 Contextos', icon: <CalendarBlank size={16} />, desc: 'Eventos e contextos temporais + preview do prompt' },
@@ -755,6 +962,7 @@ export function AiStudioTab() {
 
       {/* Conteúdo */}
       {subTab === 'captions' && <CaptionsSection />}
+      {subTab === 'products' && <ProductsSection />}
       {subTab === 'banned' && <BannedWordsSection />}
       {subTab === 'substitutions' && <SubstitutionsSection />}
       {subTab === 'contexts' && <ContextsSection />}

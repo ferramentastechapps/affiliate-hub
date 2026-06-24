@@ -109,26 +109,18 @@ class PromotionBot:
             
             print(f'✨ Novos: {len(produtos_novos)} produtos e {len(cupons_novos)} cupons')
             
-            # 3. Adicionar produtos no site e enviar para Telegram com ID
+            # 3. Adicionar produtos no site e escolher um para o grupo
             if produtos_novos:
                 print(f'\n📦 Processando {len(produtos_novos)} produtos novos...')
-                print(f'📱 Enviando para Telegram...')
                 print(f'🔗 API URL: {self.api.base_url}')
-                print(f'🔑 API Key: {self.api.headers.get("x-api-key", "NÃO CONFIGURADA")[:15]}...')
                 
-                # Separar produtos por prioridade
-                produtos_urgentes = [p for p in produtos_novos if p.get('qualityScore', 0) >= 70]
-                produtos_normais = [p for p in produtos_novos if p.get('qualityScore', 0) < 70]
-                
-                if produtos_urgentes:
-                    print(f'\n🚨 {len(produtos_urgentes)} PRODUTOS URGENTES (score ≥70)!')
-                
-                # Processar produtos urgentes primeiro
-                for produto in produtos_urgentes:
-                    score = produto.get('qualityScore', 0)
-                    print(f'\n🔥 URGENTE (score {score}): {produto["name"][:50]}...')
+                candidatos_grupo_lote = []  # Candidatos a publicar no grupo DESTE ciclo
+
+                for produto in produtos_novos:
+                    print(f'\n📦 Processando produto: {produto["name"][:60]}...')
                     
                     produto = enriquecer_produto(produto)
+                    produto['autoApprove'] = True  # Força aprovação direta para ir ao site
                     
                     # Adicionar produto na API
                     resultado = self.api.adicionar_produto(produto)
@@ -137,94 +129,60 @@ class PromotionBot:
                         produto_retornado = resultado.get('product')
                         if produto_retornado and produto_retornado.get('id'):
                             produto['id'] = produto_retornado['id']
-                            print(f'✅ Produto adicionado com ID: {produto["id"]}')
+                            print(f'✅ Produto adicionado no site: {produto["id"]}')
                         else:
                             print(f'⚠️ Produto adicionado mas ID não retornado')
                         
-                        # Envia como URGENTE
-                        self.telegram.enviar_sync('produto_urgente', produto)
-                        time.sleep(2)  # Pausa menor para urgentes
-                        self.telegram.enviar_sync('produto', produto)
-                        chave = self.scraper._normalizar(produto['name'])[:60]
-                        self.produtos_enviados.add(chave)
-                    else:
-                        erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
-                        print(f'❌ Falha ao adicionar: {erro}')
-                        if not produto.get('id'):
-                            produto['id'] = f'ERRO-API-{produto["name"][:20].replace(" ", "_")}'
-                        self.telegram.enviar_sync('produto_urgente', produto)
-                        time.sleep(2)
-                        self.telegram.enviar_sync('produto', produto)
-                        chave = self.scraper._normalizar(produto['name'])[:60]
-                        self.produtos_enviados.add(chave)
-                    
-                    time.sleep(1)
-                
-                # Processar produtos normais
-                candidatos_grupo_lote = []  # Candidatos a publicar no grupo DESTE ciclo
-                
-                for produto in produtos_normais:
-                    score = produto.get('qualityScore', 0)
-                    
-                    produto = enriquecer_produto(produto)
-                    
-                    # Adicionar produto na API
-                    resultado = self.api.adicionar_produto(produto)
-                    
-                    if resultado and resultado.get('success'):
-                        produto_retornado = resultado.get('product')
-                        if produto_retornado and produto_retornado.get('id'):
-                            produto['id'] = produto_retornado['id']
-                            print(f'\u2705 [Score {score}] ID: {produto["id"]} | {produto["name"][:50]}')
-                        else:
-                            print(f'\u26a0\ufe0f Produto adicionado mas ID n\u00e3o retornado: {produto["name"][:50]}')
-                        
-                        # Verifica status para decidir se coleta para o grupo ou envia para moderação
-                        status = produto_retornado.get('status', 'pending')
-                        if status in ('active', 'approved'):
-                            links = produto_retornado.get('links', {}) or {}
+                        # Pegamos preço do produto retornado ou original
+                        price_val = produto_retornado.get('price') if produto_retornado else None
+                        if price_val is None:
+                            price_val = produto.get('price')
+                        try:
+                            price_float = float(price_val) if price_val is not None else 0.0
+                        except:
+                            price_float = 0.0
+                            
+                        # Verificar se o produto está abaixo de 300 reais
+                        if 0 < price_float < 300:
+                            # Coletar links de afiliado do produto retornado
+                            links = (produto_retornado.get('links', {}) if produto_retornado else {}) or {}
                             platform = None
                             affiliate_link = None
-                            for p in ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum']:
-                                if links.get(p):
-                                    platform = p
-                                    affiliate_link = links.get(p)
+                            for p_name in ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum']:
+                                if links.get(p_name):
+                                    platform = p_name
+                                    affiliate_link = links.get(p_name)
                                     break
                             
                             if platform and affiliate_link:
-                                # Coleta como candidato do lote — não publica ainda
                                 candidatos_grupo_lote.append({
                                     'produto': produto_retornado,
                                     'platform': platform,
                                     'affiliate_link': affiliate_link,
-                                    'score': score
+                                    'score': produto.get('qualityScore', 0)
                                 })
-                                print(f'\U0001f4cb Candidato ao grupo coletado (score {score}): {produto["name"][:50]}')
+                                print(f'📋 Candidato ao grupo coletado (preço R${price_float:.2f}, score {produto.get("qualityScore", 0)}): {produto["name"][:50]}')
                             else:
-                                print(f'\u26a0\ufe0f Produto ativado mas nenhum link de afiliado correspondente foi encontrado. Enviando para moderação.')
-                                self.telegram.enviar_sync('produto', produto)
+                                print(f'⚠️ Produto sem link de afiliado correspondente para o Telegram.')
                         else:
-                            # Envia para moderação/aprovação manual no Telegram
-                            self.telegram.enviar_sync('produto', produto)
+                            print(f'ℹ️ Produto ignorado para o grupo (preço R${price_float:.2f} não está abaixo de R$ 300).')
                             
                         chave = self.scraper._normalizar(produto['name'])[:60]
                         self.produtos_enviados.add(chave)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
-                        print(f'\u274c Falha ao adicionar "{produto["name"][:40]}": {erro}')
-                        print('\u26a0\ufe0f Produto n\u00e3o enviado ao Telegram devido a falha na API. O bot tentará novamente na próxima busca.')
-                        # Não adicionamos aos produtos_enviados para que o bot tente novamente
+                        print(f'❌ Falha ao adicionar "{produto["name"][:40]}": {erro}')
                     
-                    # Pausa de 5 segundos entre cada produto para evitar estourar cota do Gemini (429) e Telegram Flood
+                    # Pausa de 5 segundos para evitar estourar cota do Gemini (429)
                     time.sleep(5)
                 
-                # Escolher o MELHOR do lote e substituir a fila (descartar os outros e os de ciclos anteriores)
+                # Escolher o MELHOR do lote e substituir a fila (descartar os outros)
                 if candidatos_grupo_lote:
                     melhor = max(candidatos_grupo_lote, key=lambda x: x['score'])
                     descartados = len(candidatos_grupo_lote) - 1
-                    print(f'\n\U0001f3c6 Melhor do lote: {melhor["produto"].get("name")[:60]} (score {melhor["score"]})')
+                    print(f'\n🏆 Melhor do lote para Telegram: {melhor["produto"].get("name")[:60]} (score {melhor["score"]})')
                     if descartados > 0:
-                        print(f'\U0001f5d1\ufe0f {descartados} produto(s) do lote descartado(s) — apenas o melhor vai para o grupo.')
+                        print(f'🗑️ {descartados} produto(s) do lote descartado(s) — apenas o melhor vai para o grupo.')
                     
                     # Aguarda IA gerar legenda para o melhor produto antes de colocar na fila
                     produto_com_ia = wait_for_ai_analysis(self.api, melhor['produto']['id'])
@@ -234,7 +192,11 @@ class PromotionBot:
                     # SUBSTITUI a fila — descarta qualquer produto de ciclos anteriores
                     self.fila_grupo = [melhor]
                     self._save_state()
-                    print(f'\U0001f4e5 Fila do grupo atualizada com o melhor produto do ciclo.')
+                    print(f'📥 Fila do grupo atualizada com o melhor produto do ciclo.')
+                else:
+                    print('\nℹ️ Nenhum produto do ciclo atende aos critérios (< R$ 300 com links). Silenciando Telegram neste ciclo.')
+                    self.fila_grupo = []
+                    self._save_state()
             
             # 5. Adicionar cupons no site
             if cupons_novos:

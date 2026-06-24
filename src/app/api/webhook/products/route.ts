@@ -395,8 +395,7 @@ export async function POST(request: Request) {
     let finalStatus = body.status || processedStatus;
 
     if (body.autoApprove === true) {
-      finalStatus = 'active';
-      console.log(`[Webhook] Auto-aprovado por fonte confiável: ${body.name}`);
+      finalStatus = 'pending'; // Inicia como pending, será aprovado no background se aiScore >= 6.5
     }
 
     // Criar produto
@@ -532,6 +531,17 @@ export async function POST(request: Request) {
       'evaluate'
     ).then(async (aiResult) => {
       let newStatus = finalStatus;
+
+      // Se autoApprove for true, definir status com base no aiScore >= 6.5 (65%)
+      if (body.autoApprove === true) {
+        if (aiResult.score && aiResult.score >= 6.5) {
+          newStatus = 'active';
+          console.log(`[Webhook] Auto-aprovado pela IA (score ${aiResult.score} >= 6.5): ${body.name}`);
+        } else {
+          newStatus = 'pending';
+          console.log(`[Webhook] Mantido pendente (score ${aiResult.score || 0} < 6.5): ${body.name}`);
+        }
+      }
 
       // Processamento da imagem se aprovado (obtendo imagem de lifestyle/secundária do varejista)
       let finalEnhancedImageUrl: string | null = null;

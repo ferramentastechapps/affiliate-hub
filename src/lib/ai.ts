@@ -182,6 +182,48 @@ export function applyWordSubstitutions(
 }
 
 /**
+ * Constrói o prompt de avaliação dinamicamente, injetando as preferências de produtos
+ * avaliados pelo usuário no admin para que a IA aprenda a pontuar melhor.
+ */
+export async function buildDynamicEvaluationPrompt(): Promise<string> {
+  try {
+    const [highlyRated, poorlyRated] = await Promise.all([
+      prisma.product.findMany({
+        where: { userRating: { gte: 7 } },
+        orderBy: { ratedAt: 'desc' },
+        take: 15,
+        select: { name: true, category: true, userRating: true }
+      }),
+      prisma.product.findMany({
+        where: { userRating: { lte: 4, not: null } },
+        orderBy: { ratedAt: 'desc' },
+        take: 15,
+        select: { name: true, category: true, userRating: true }
+      })
+    ]);
+
+    let preferencesText = '';
+    if (highlyRated.length > 0) {
+      preferencesText += '\n\nEXEMPLOS DE PRODUTOS QUE O USUÁRIO GOSTOU E AVALIOU POSITIVAMENTE (Dê notas altas 8-10 para produtos semelhantes em relevância, desconto ou apelo):\n';
+      highlyRated.forEach(p => {
+        preferencesText += `- ${p.name} (Categoria: ${p.category}) -> Nota do usuário: ${p.userRating}/10\n`;
+      });
+    }
+    if (poorlyRated.length > 0) {
+      preferencesText += '\n\nEXEMPLOS DE PRODUTOS QUE O USUÁRIO NÃO GOSTOU OU AVALIOU NEGATIVAMENTE (Dê notas baixas abaixo de 5 para produtos semelhantes, sem utilidade ou com desconto ruim):\n';
+      poorlyRated.forEach(p => {
+        preferencesText += `- ${p.name} (Categoria: ${p.category}) -> Nota do usuário: ${p.userRating}/10\n`;
+      });
+    }
+
+    return EVALUATION_SYSTEM_PROMPT + preferencesText;
+  } catch (e) {
+    console.error('Erro ao construir prompt de avaliação dinâmico:', e);
+    return EVALUATION_SYSTEM_PROMPT;
+  }
+}
+
+/**
  * Salva a legenda gerada no histórico para posterior avaliação no admin.
  */
 export async function saveCaptionHistory(
@@ -325,7 +367,7 @@ export async function processProductWithOpenRouter(
     // Carrega prompt adequado ao modo
     let systemPrompt = '';
     if (mode === 'evaluate') {
-      systemPrompt = EVALUATION_SYSTEM_PROMPT;
+      systemPrompt = await buildDynamicEvaluationPrompt();
     } else {
       systemPrompt = await buildDynamicSystemPrompt();
     }
@@ -443,7 +485,7 @@ Contexto atual:
     let substitutions: {fromWord: string, toWord: string}[] = [];
     
     if (mode === 'evaluate') {
-      systemPrompt = EVALUATION_SYSTEM_PROMPT;
+      systemPrompt = await buildDynamicEvaluationPrompt();
     } else {
       [systemPrompt, substitutions] = await Promise.all([
         buildDynamicSystemPrompt(),
