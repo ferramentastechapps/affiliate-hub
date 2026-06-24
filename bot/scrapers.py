@@ -1886,6 +1886,8 @@ class PromotionScraper:
                 executor.submit(self.buscar_promocoes_shopee): 'Shopee Flash Sale',
                 executor.submit(self.buscar_promocoes_meliuz): 'Méliuz',
                 executor.submit(self.buscar_promocoes_hardmob_fixed): 'Hardmob',
+                executor.submit(self.buscar_promocoes_pechinchou): 'Pechinchou',
+                executor.submit(self.buscar_promocoes_pelando_site): 'Pelando Site',
                 executor.submit(self.buscar_cupons_pelando): 'Cupons Promobit',
                 executor.submit(self.buscar_cupons_cuponomia): 'Cupons Cuponomia',
             }
