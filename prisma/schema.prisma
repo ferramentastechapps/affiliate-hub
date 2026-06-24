@@ -12,62 +12,63 @@ datasource db {
 // 📦 PRODUTO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Product {
-  id            String   @id @default(cuid())
-  shortId       Int      @unique @default(autoincrement()) // ID numérico curto para URLs
-  name          String
-  category      String
-  subcategory   String?  // Subcategoria para recomendações granulares (ex: "Smartphones" dentro de "Smartphones e TV")
-  brand         String?  // Marca do produto (Apple, Samsung, Xiaomi...)
-  model         String?  // Modelo específico (iPhone 15 Pro, Galaxy S24...)
-  storeName     String?  // Nome da loja de origem (Amazon, Mercado Livre...)
+  id                String   @id @default(cuid())
+  shortId           Int      @unique @default(autoincrement()) // ID numérico curto para URLs
+  name              String
+  category          String
+  subcategory       String? // Subcategoria para recomendações granulares (ex: "Smartphones" dentro de "Smartphones e TV")
+  brand             String? // Marca do produto (Apple, Samsung, Xiaomi...)
+  model             String? // Modelo específico (iPhone 15 Pro, Galaxy S24...)
+  storeName         String? // Nome da loja de origem (Amazon, Mercado Livre...)
   platformProductId String? // ID do produto na plataforma original (ASIN, MLB-xxx, ShopeeID)
-  description   String?  // Descrição do produto
-  imageUrl      String   // URL da imagem principal
-  price         Float?
-  originalPrice Float?
-  status        String   @default("pending") // pending, active, rejected
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  description       String? // Descrição do produto
+  imageUrl          String // URL da imagem principal
+  price             Float?
+  originalPrice     Float?
+  status            String   @default("pending") // pending, active, rejected
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relações existentes (mantidas intactas)
-  links         Link?
-  coupons       Coupon[]
-  priceHistory  PriceHistory[]
-  clickLogs     ClickLog[]
-  comments      Comment[]
-  votes         ProductVote[]
-  alerts        ProductAlert[]
+  links        Link?
+  coupons      Coupon[]
+  priceHistory PriceHistory[]
+  clickLogs    ClickLog[]
+  comments     Comment[]
+  votes        ProductVote[]
+  alerts       ProductAlert[]
 
   // IA e Analytics
-  aiScore          Float?   // Nota de 0 a 10 dada pela IA
-  aiAnalysis       String?  // Texto/Copy gerado pela IA
-  userRating       Int?     // Nota dada pelo administrador: 1=ruim, 2=ok, 3=boa, 4=ótima, 5=perfeita
+  aiScore          Float? // Nota de 0 a 10 dada pela IA
+  aiAnalysis       String? // Texto/Copy gerado pela IA
+  userRating       Int? // Nota dada pelo administrador: 1=ruim, 2=ok, 3=boa, 4=ótima, 5=perfeita
   ratedAt          DateTime? // Data da avaliação do admin
-  clicks           Int      @default(0)
-  externalId       String?  // Hash de deduplicação
-  source           String?  // Plataforma de origem (amazon, mercadolivre, shopee, etc.)
-  enhancedImageUrl String?  // Imagem aprimorada
-  isFixed          Boolean  @default(false) // Trava dados contra sobrescrita do robô
+  clicks           Int       @default(0)
+  externalId       String? // Hash de deduplicação
+  source           String? // Plataforma de origem (amazon, mercadolivre, shopee, etc.)
+  enhancedImageUrl String? // Imagem aprimorada
+  isFixed          Boolean   @default(false) // Trava dados contra sobrescrita do robô
 
   // FASE 1 — IDs ÚNICOS POR PLATAFORMA
-  platformId       String?  // ID real da plataforma: ASIN, MLB123, shopId-productId
-  platformType     String?  // 'amazon', 'mercadolivre', 'shopee', 'aliexpress', 'magalu', 'kabum', 'netshoes'
+  platformId   String? // ID real da plataforma: ASIN, MLB123, shopId-productId
+  platformType String? // 'amazon', 'mercadolivre', 'shopee', 'aliexpress', 'magalu', 'kabum', 'netshoes'
 
   // Flags de processamento (evita reprocessar o que já foi feito)
-  aiProcessed        Boolean  @default(false) // true = IA já rodou com sucesso
+  aiProcessed        Boolean   @default(false) // true = IA já rodou com sucesso
   aiProcessedAt      DateTime? // quando a IA processou pela última vez
-  affiliateProcessed Boolean  @default(false) // true = links de afiliado já foram gerados
+  affiliateProcessed Boolean   @default(false) // true = links de afiliado já foram gerados
 
   // NOVOS — Reviews
-  reviewScore        Float?   // média de estrelas (ex: 4.5)
-  reviewCount        Int?     // quantidade de avaliações
-  reviews            ProductReview[]
+  reviewScore Float? // média de estrelas (ex: 4.5)
+  reviewCount Int? // quantidade de avaliações
+  reviews     ProductReview[]
 
   // Novas relações
-  images        ProductImage[]
-  productLinks  ProductLink[]
-  favorites     UserFavorite[]
+  images       ProductImage[]
+  productLinks ProductLink[]
+  favorites    UserFavorite[]
 
+  @@unique([platformId, platformType], map: "unique_platform_product")
   @@index([category])
   @@index([subcategory])
   @@index([brand])
@@ -79,20 +80,19 @@ model Product {
   @@index([externalId, source])
   @@index([shortId])
   @@index([aiProcessed])
-  @@unique([platformId, platformType], map: "unique_platform_product")
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📈 HISTÓRICO DE PREÇOS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model PriceHistory {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  price       Float
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price         Float
   originalPrice Float?
-  createdAt   DateTime @default(now())
-  
+  createdAt     DateTime @default(now())
+
   @@index([productId, createdAt])
 }
 
@@ -100,14 +100,14 @@ model PriceHistory {
 // 🖱️ RASTREAMENTO DE CLIQUES (ANALYTICS)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model ClickLog {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userAgent   String?  // Navegador/Dispositivo do usuário
-  referrer    String?  // De onde veio o clique (Telegram, WhatsApp, Insta)
-  channel     String?  // Canal explícito se passado na URL (ex: ?ch=tg)
-  createdAt   DateTime @default(now())
-  
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userAgent String? // Navegador/Dispositivo do usuário
+  referrer  String? // De onde veio o clique (Telegram, WhatsApp, Insta)
+  channel   String? // Canal explícito se passado na URL (ex: ?ch=tg)
+  createdAt DateTime @default(now())
+
   @@index([productId])
   @@index([channel])
   @@index([createdAt])
@@ -142,7 +142,7 @@ model ProductLink {
   id                    String   @id @default(cuid())
   productId             String
   product               Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  platform              String   // "amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok", "magalu", "kabum", "netshoes"
+  platform              String // "amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok", "magalu", "kabum", "netshoes"
   sourceUrl             String?  @db.Text // URL original da plataforma (ANTES de qualquer tag de afiliado)
   affiliateUrl          String?  @db.Text // Link enviado pelo bot (pode já ter tag do parceiro)
   generatedAffiliateUrl String?  @db.Text // Link gerado pelo nosso sistema (com nossa própria tag)
@@ -163,7 +163,7 @@ model ProductImage {
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String   @db.Text // URL da imagem
-  source    String?  // "scraper", "enhanced", "upload", "retailer", "bot"
+  source    String? // "scraper", "enhanced", "upload", "retailer", "bot"
   isPrimary Boolean  @default(false) // Imagem principal
   order     Int      @default(0) // Ordem na galeria
   createdAt DateTime @default(now())
@@ -176,19 +176,19 @@ model ProductImage {
 // 💬 AVALIAÇÕES DO PRODUTO (REVIEWS)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model ProductReview {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  platform    String   // "mercadolivre", "amazon", "shopee"
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  platform    String // "mercadolivre", "amazon", "shopee"
   authorName  String?
-  rating      Float    // 1-5
-  comment     String?  @db.Text
-  helpful     Int      @default(0)  // quantidade de "útil"
-  verified    Boolean  @default(false)
-  externalId  String?  // ID do review na plataforma
+  rating      Float // 1-5
+  comment     String?   @db.Text
+  helpful     Int       @default(0) // quantidade de "útil"
+  verified    Boolean   @default(false)
+  externalId  String? // ID do review na plataforma
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  
+  createdAt   DateTime  @default(now())
+
   @@unique([productId, platform, externalId])
   @@index([productId])
   @@index([platform])
@@ -203,9 +203,9 @@ model UserFavorite {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  subcategory String?  // snapshot da subcategoria no momento do favorito
-  category    String?  // snapshot da categoria no momento do favorito
-  brand       String?  // snapshot da marca
+  subcategory String? // snapshot da subcategoria no momento do favorito
+  category    String? // snapshot da categoria no momento do favorito
+  brand       String? // snapshot da marca
   createdAt   DateTime @default(now())
 
   @@unique([userId, productId])
@@ -218,18 +218,18 @@ model UserFavorite {
 // 🎫 CUPONS DE DESCONTO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Coupon {
-  id          String   @id @default(cuid())
-  code        String   // Código do cupom (ex: DESCONTO10)
-  description String   // Descrição pode ser longa
-  discount    String   // Valor do desconto (ex: "10% OFF")
-  platform    String   // Plataforma (Amazon, Shopee, etc)
-  productId   String?  // Opcional: cupom específico para um produto
-  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  code        String // Código do cupom (ex: DESCONTO10)
+  description String // Descrição pode ser longa
+  discount    String // Valor do desconto (ex: "10% OFF")
+  platform    String // Plataforma (Amazon, Shopee, etc)
+  productId   String? // Opcional: cupom específico para um produto
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
   expiresAt   DateTime? // Data de expiração (opcional)
-  isActive    Boolean  @default(true) // Ativo/Inativo
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  isActive    Boolean   @default(true) // Ativo/Inativo
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   @@index([platform])
   @@index([isActive])
   @@index([expiresAt])
@@ -242,9 +242,9 @@ model Coupon {
 model Banner {
   id           String   @id @default(cuid())
   title        String
-  imageDesktop String   // URL da imagem para desktop
-  imageMobile  String   // URL da imagem para mobile
-  link         String?  // Link ao clicar no banner
+  imageDesktop String // URL da imagem para desktop
+  imageMobile  String // URL da imagem para mobile
+  link         String? // Link ao clicar no banner
   order        Int      @default(0)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -260,13 +260,13 @@ model Banner {
 model PushSubscription {
   id          String   @id @default(cuid())
   endpoint    String   @unique // URL do endpoint de push
-  p256dh      String   // Chave pública do cliente
-  auth        String   // Chave de autenticação
-  userId      String?  // NOVO - opcional para associar a um usuário logado
+  p256dh      String // Chave pública do cliente
+  auth        String // Chave de autenticação
+  userId      String? // NOVO - opcional para associar a um usuário logado
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  preferences Json?    // Preferências de alerta (ex: categorias selecionadas)
+  preferences Json? // Preferências de alerta (ex: categorias selecionadas)
   createdAt   DateTime @default(now())
-  
+
   @@index([endpoint])
   @@index([userId])
 }
@@ -275,27 +275,27 @@ model PushSubscription {
 // 👤 USUÁRIOS E AUTENTICAÇÃO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String?  // Hashed password (null for Google-only users)
-  image     String?  // URL da imagem de perfil (ex: Google avatar)
-  googleId  String?  @unique // ID do Google para OAuth
-  role      String   @default("user") // "user", "moderator", "admin"
-  isActive  Boolean  @default(true)
-  lastLoginAt DateTime?
-  engagementScore Int @default(0)
-  telegramId String? @unique // NOVO — Telegram ID para alertas
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  password        String? // Hashed password (null for Google-only users)
+  image           String? // URL da imagem de perfil (ex: Google avatar)
+  googleId        String?   @unique // ID do Google para OAuth
+  role            String    @default("user") // "user", "moderator", "admin"
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  engagementScore Int       @default(0)
+  telegramId      String?   @unique // NOVO — Telegram ID para alertas
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  comments     Comment[]
-  votes        ProductVote[]
-  alerts       ProductAlert[]
-  activityLogs ActivityLog[]
-  tags         UserTagAssignment[]
-  notes        UserNote[]
-  favorites    UserFavorite[]
+  comments          Comment[]
+  votes             ProductVote[]
+  alerts            ProductAlert[]
+  activityLogs      ActivityLog[]
+  tags              UserTagAssignment[]
+  notes             UserNote[]
+  favorites         UserFavorite[]
   pushSubscriptions PushSubscription[] // NOVO — Push subscriptions do usuário
 
   @@index([email])
@@ -325,7 +325,7 @@ model ProductVote {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // "LIKE" ou "DISLIKE"
+  type      String // "LIKE" ou "DISLIKE"
   createdAt DateTime @default(now())
 
   @@unique([productId, userId])
@@ -338,7 +338,7 @@ model ProductAlert {
   product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   userId         String
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  threshold      Float?    // % mínima de queda para notificar (ex: 5.0 = 5%)
+  threshold      Float? // % mínima de queda para notificar (ex: 5.0 = 5%)
   channel        String    @default("telegram") // "telegram", "push", "both"
   lastNotifiedAt DateTime? // evita spam — não notifica 2x no mesmo dia
   isActive       Boolean   @default(true)
@@ -353,15 +353,15 @@ model ProductAlert {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 model ActivityLog {
-  id          String   @id @default(cuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  action      String
-  entityType  String
-  entityId    String?
-  details     String?  @db.Text
-  ipAddress   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  details    String?  @db.Text
+  ipAddress  String?
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([entityType, entityId])
@@ -369,9 +369,9 @@ model ActivityLog {
 }
 
 model UserTag {
-  id    String @id @default(cuid())
-  name  String @unique
-  color String @default("#6366f1")
+  id    String              @id @default(cuid())
+  name  String              @unique
+  color String              @default("#6366f1")
   users UserTagAssignment[]
 }
 
@@ -402,20 +402,20 @@ model UserNote {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 model Campaign {
-  id              String    @id @default(cuid())
-  title           String
-  message         String    @db.Text
-  channel         String    // "push" | "telegram" | "whatsapp"
-  status          String    @default("draft") // "draft" | "scheduled" | "sending" | "sent" | "failed"
-  scheduledAt     DateTime?
-  sentAt          DateTime?
-  totalTargets    Int       @default(0)
-  totalSent       Int       @default(0)
-  totalFailed     Int       @default(0)
-  metadata        String?   @db.Text // JSON com campos extras por canal
-  authorId        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  title        String
+  message      String    @db.Text
+  channel      String // "push" | "telegram" | "whatsapp"
+  status       String    @default("draft") // "draft" | "scheduled" | "sending" | "sent" | "failed"
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  totalTargets Int       @default(0)
+  totalSent    Int       @default(0)
+  totalFailed  Int       @default(0)
+  metadata     String?   @db.Text // JSON com campos extras por canal
+  authorId     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([channel])
   @@index([status])
@@ -461,11 +461,11 @@ model SystemConfig {
 // Histórico de Legendas Geradas pela IA
 model CaptionHistory {
   id            String    @id @default(cuid())
-  productId     String?   // null se o produto for deletado
-  productName   String    // snapshot do nome do produto
+  productId     String? // null se o produto for deletado
+  productName   String // snapshot do nome do produto
   caption       String    @db.Text // o texto da legenda gerada
-  score         Float?    // nota do aiScore (0-10)
-  rating        Int?      // sua nota: 1=ruim, 2=ok, 3=boa, 4=ótima, 5=perfeita
+  score         Float? // nota do aiScore (0-10)
+  rating        Int? // sua nota: 1=ruim, 2=ok, 3=boa, 4=ótima, 5=perfeita
   ratedAt       DateTime?
   usedAsExample Boolean   @default(false) // se foi aprovado para ser exemplo no prompt
   createdAt     DateTime  @default(now())
@@ -480,7 +480,7 @@ model CaptionHistory {
 model AiBannedWord {
   id        String   @id @default(cuid())
   word      String   @unique
-  reason    String?  // ex: "errado gramaticalmente", "ofensivo", "já usado demais"
+  reason    String? // ex: "errado gramaticalmente", "ofensivo", "já usado demais"
   createdAt DateTime @default(now())
 
   @@index([word])
@@ -490,7 +490,7 @@ model AiBannedWord {
 model AiWordSubstitution {
   id        String   @id @default(cuid())
   fromWord  String   @unique // palavra a substituir (ex: "nenem")
-  toWord    String           // palavra substituta (ex: "bebê")
+  toWord    String // palavra substituta (ex: "bebê")
   createdAt DateTime @default(now())
 
   @@index([fromWord])
@@ -499,7 +499,7 @@ model AiWordSubstitution {
 // Contextos / Eventos Temporais — injetados dinamicamente no prompt
 model AiContext {
   id          String    @id @default(cuid())
-  title       String    // ex: "Copa do Mundo 2026", "Dia dos Pais"
+  title       String // ex: "Copa do Mundo 2026", "Dia dos Pais"
   description String    @db.Text // o texto que será injetado no prompt
   isActive    Boolean   @default(true)
   startsAt    DateTime? // quando começa a valer (null = sempre)

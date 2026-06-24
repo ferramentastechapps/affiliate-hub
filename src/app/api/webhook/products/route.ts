@@ -523,13 +523,28 @@ export async function POST(request: Request) {
     }, { status: 201 });
 
     // Processar IA em background sem await
+    // Busca sinais reais: menor preço histórico e cupom na descrição
+    const [priceHistoryRecords] = await Promise.all([
+      prisma.priceHistory.findMany({
+        where: { productId: product.id },
+        orderBy: { createdAt: 'asc' },
+        select: { price: true }
+      })
+    ]);
+    const hasCoupon = !!(body.description && body.description.includes('CUPOM'));
+    const historicalPrices = priceHistoryRecords.map((r: { price: number }) => r.price);
+    const isLowestPrice = historicalPrices.length <= 1 || 
+      (product.price !== null && product.price <= Math.min(...historicalPrices));
+
     processProductWithAI(
       body.name, 
       body.price ? parseFloat(body.price) : 0, 
-      body.originalPrice ? parseFloat(body.originalPrice) : null,
+      null,
       body.category,
       product.id,
-      'evaluate'
+      'evaluate',
+      hasCoupon,
+      isLowestPrice
     ).then(async (aiResult) => {
       let newStatus = finalStatus;
 
@@ -912,13 +927,26 @@ export async function PUT(request: Request) {
         results.push(product);
 
         // Processar IA em background sem await
+        // Busca sinais reais: menor preço histórico e cupom na descrição
+        const batchPriceHistory = await prisma.priceHistory.findMany({
+          where: { productId: product.id },
+          orderBy: { createdAt: 'asc' },
+          select: { price: true }
+        });
+        const batchHasCoupon = !!(productData.description && productData.description.includes('CUPOM'));
+        const batchHistoricalPrices = batchPriceHistory.map((r: { price: number }) => r.price);
+        const batchIsLowestPrice = batchHistoricalPrices.length <= 1 ||
+          (product.price !== null && product.price <= Math.min(...batchHistoricalPrices));
+
         processProductWithAI(
           productData.name, 
           productData.price ? parseFloat(productData.price) : 0, 
-          productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+          null,
           productData.category,
           product.id,
-          'evaluate'
+          'evaluate',
+          batchHasCoupon,
+          batchIsLowestPrice
         ).then(async (aiResult) => {
           let newStatus = finalStatus;
 
