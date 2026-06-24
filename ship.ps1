@@ -29,6 +29,23 @@ Write-Host "Atualizacao enviada ao Github com sucesso!" -ForegroundColor Green
 Write-Host "Iniciando Deploy na VPS (root@212.85.10.239)..." -ForegroundColor Cyan
 Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 
+# Carregar valores locais do .env para repassar para o VPS
+$LocalEnv = @{}
+if (Test-Path ".env") {
+    Get-Content ".env" | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith("#")) {
+            $parts = $line.Split("=", 2)
+            if ($parts.Length -eq 2) {
+                $LocalEnv[$parts[0].Trim()] = $parts[1].Trim().Trim('"').Trim("'")
+            }
+        }
+    }
+}
+$SHOPEE_ID = $LocalEnv["SHOPEE_APP_ID"]
+$SHOPEE_SECRET = $LocalEnv["SHOPEE_APP_SECRET"]
+$GEMINI_KEY = $LocalEnv["GEMINI_API_KEY"]
+
 # O comando SSH reformulado e robusto para evitar quebra de linhas e skips.
 $sshCommand = @"
 set -e
@@ -38,19 +55,50 @@ git reset --hard
 git fetch origin
 git reset --hard origin/$Branch
 
-# Sincronizar GEMINI_API_KEY do bot/.env para o root .env
-GEMINI_KEY=`$(grep 'GEMINI_API_KEY=' ~/affiliate-hub/bot/.env | cut -d'=' -f2-)
-if [ -n "`$GEMINI_KEY" ]; then
-  if grep -q 'GEMINI_API_KEY=' ~/affiliate-hub/.env; then
-    # Escapa caracteres especiais para o sed
-    ESCAPED_KEY=`$(echo "`$GEMINI_KEY" | sed 's/[&/]/\\&/g')
-    sed -i "s|GEMINI_API_KEY=.*|GEMINI_API_KEY=`$ESCAPED_KEY|g" ~/affiliate-hub/.env
+# Sincronizar chaves locais para o VPS
+SHOPEE_ID="$SHOPEE_ID"
+SHOPEE_SECRET="$SHOPEE_SECRET"
+GEMINI_KEY_VAL="$GEMINI_KEY"
+
+echo "⚙️ Sincronizando chaves locais para o VPS..."
+
+if [ -n "$SHOPEE_ID" ]; then
+  if grep -q 'SHOPEE_APP_ID=' ~/affiliate-hub/.env; then
+    sed -i "s|SHOPEE_APP_ID=.*|SHOPEE_APP_ID=\"$SHOPEE_ID\"|g" ~/affiliate-hub/.env
   else
-    echo "GEMINI_API_KEY=`$GEMINI_KEY" >> ~/affiliate-hub/.env
+    echo "SHOPEE_APP_ID=\"$SHOPEE_ID\"" >> ~/affiliate-hub/.env
   fi
-  echo "✅ GEMINI_API_KEY sincronizada para o root .env"
-else
-  echo "⚠️ GEMINI_API_KEY não encontrada no bot/.env"
+  if grep -q 'SHOPEE_APP_ID=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|SHOPEE_APP_ID=.*|SHOPEE_APP_ID=\"$SHOPEE_ID\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "SHOPEE_APP_ID=\"$SHOPEE_ID\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
+if [ -n "$SHOPEE_SECRET" ]; then
+  if grep -q 'SHOPEE_APP_SECRET=' ~/affiliate-hub/.env; then
+    sed -i "s|SHOPEE_APP_SECRET=.*|SHOPEE_APP_SECRET=\"$SHOPEE_SECRET\"|g" ~/affiliate-hub/.env
+  else
+    echo "SHOPEE_APP_SECRET=\"$SHOPEE_SECRET\"" >> ~/affiliate-hub/.env
+  fi
+  if grep -q 'SHOPEE_APP_SECRET=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|SHOPEE_APP_SECRET=.*|SHOPEE_APP_SECRET=\"$SHOPEE_SECRET\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "SHOPEE_APP_SECRET=\"$SHOPEE_SECRET\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
+if [ -n "$GEMINI_KEY_VAL" ]; then
+  if grep -q 'GEMINI_API_KEY=' ~/affiliate-hub/.env; then
+    sed -i "s|GEMINI_API_KEY=.*|GEMINI_API_KEY=\"$GEMINI_KEY_VAL\"|g" ~/affiliate-hub/.env
+  else
+    echo "GEMINI_API_KEY=\"$GEMINI_KEY_VAL\"" >> ~/affiliate-hub/.env
+  fi
+  if grep -q 'GEMINI_API_KEY=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|GEMINI_API_KEY=.*|GEMINI_API_KEY=\"$GEMINI_KEY_VAL\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "GEMINI_API_KEY=\"$GEMINI_KEY_VAL\"" >> ~/affiliate-hub/bot/.env
+  fi
 fi
 
 echo "📦 Instalando dependências..."
