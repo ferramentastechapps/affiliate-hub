@@ -236,17 +236,19 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     import requests
     
     try:
-        if not OPENROUTER_API_KEY:
+        has_gemini = GEMINI_API_KEY and GEMINI_API_KEY != "sua_chave_aqui"
+        if not OPENROUTER_API_KEY and not has_gemini:
             await msg_status.edit_text(
-                "❌ <b>OPENROUTER_API_KEY não configurada</b>\n\n"
-                "Para processar produtos encaminhados, você precisa configurar a chave da API OpenRouter no arquivo .env:\n\n"
-                "<code>OPENROUTER_API_KEY=sk-or-v1-...</code>\n\n"
-                "🔗 Obtenha sua chave em: https://openrouter.ai/keys",
+                "❌ <b>Chaves de API não configuradas</b>\n\n"
+                "Para processar produtos encaminhados, você precisa configurar a chave do OpenRouter ou do Gemini no seu arquivo .env:\n\n"
+                "<code>OPENROUTER_API_KEY=sk-or-v1-...</code>\n"
+                "ou\n"
+                "<code>GEMINI_API_KEY=sua_chave...</code>",
                 parse_mode='HTML'
             )
             return
 
-        print(f"🤖 Enviando texto para OpenRouter AI extrair dados...")
+        print(f"🤖 Enviando texto para IA extrair dados...")
         print(f"   Texto: {text[:200]}...")
 
         prompt = (
@@ -263,27 +265,73 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         # Async request run in executor
         loop = asyncio.get_event_loop()
         
-        def call_openrouter():
-            response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "meta-llama/llama-3.1-8b-instruct",
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
-                    "response_format": {"type": "json_object"}
-                },
-                timeout=30
-            )
-            if response.status_code != 200:
-                raise Exception(f"OpenRouter API error: {response.status_code} - {response.text}")
-            return response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
+        def call_ai():
+            errors = []
+            
+            # 1. Tentar OpenRouter (se configurada)
+            if OPENROUTER_API_KEY:
+                print("🤖 Tentando extração via OpenRouter (Llama 3.1 8B)...")
+                try:
+                    response = requests.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "meta-llama/llama-3.1-8b-instruct",
+                            "messages": [
+                                {"role": "user", "content": prompt}
+                            ],
+                            "response_format": {"type": "json_object"}
+                        },
+                        timeout=25
+                    )
+                    if response.status_code == 200:
+                        content = response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                        if content and content.strip():
+                            return content
+                    else:
+                        err_msg = f"OpenRouter status {response.status_code}: {response.text}"
+                        print(f"⚠️ {err_msg}")
+                        errors.append(err_msg)
+                except Exception as e:
+                    err_msg = f"Erro no OpenRouter: {str(e)}"
+                    print(f"⚠️ {err_msg}")
+                    errors.append(err_msg)
 
-        response_text = await loop.run_in_executor(None, call_openrouter)
+            # 2. Tentar Gemini diretamente como fallback
+            if has_gemini:
+                print("🤖 Fallback: Tentando extração via Gemini API diretamente...")
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                    response = requests.post(
+                        url,
+                        headers={"Content-Type": "application/json"},
+                        json={
+                            "contents": [{"parts": [{"text": prompt}]}],
+                            "generationConfig": {"responseMimeType": "application/json"}
+                        },
+                        timeout=25
+                    )
+                    if response.status_code == 200:
+                        text_resp = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                        if text_resp and text_resp.strip():
+                            return text_resp
+                    else:
+                        err_msg = f"Gemini status {response.status_code}: {response.text}"
+                        print(f"⚠️ {err_msg}")
+                        errors.append(err_msg)
+                except Exception as e:
+                    err_msg = f"Erro no Gemini: {str(e)}"
+                    print(f"⚠️ {err_msg}")
+                    errors.append(err_msg)
+            
+            # Se ambos falharem
+            err_summary = " | ".join(errors)
+            raise Exception(f"Ambos OpenRouter e Gemini falharam. Detalhes: {err_summary}")
+
+        response_text = await loop.run_in_executor(None, call_ai)
         
         print(f"✅ Resposta da AI recebida: {response_text[:200]}...")
         
