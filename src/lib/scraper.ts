@@ -17,7 +17,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': getRandomUserAgent(),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
         'Accept-Encoding': 'gzip, deflate, br',
@@ -89,12 +89,32 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     console.log('✅ Dados extraídos:', { name, imageUrl, price, description: description?.substring(0, 50) });
     
     // Validar dados mínimos
-    if (!name || name.length < 3) {
-      throw new Error('Nome do produto não encontrado ou inválido');
+    if (!name || name.length < 3 || name === 'Robot Check' || name.toLowerCase().includes('captcha')) {
+      console.warn('⚠️ Nome não extraído do HTML, tentando extrair do URL slug...');
+      const slugName = extractNameFromUrl(url);
+      if (slugName) {
+        name = slugName;
+        console.log('✅ Nome extraído do URL slug:', name);
+      } else {
+        throw new Error('Nome do produto não encontrado ou inválido');
+      }
     }
     
+    if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp') || imageUrl.includes('placeholder')) {
+      console.warn('⚠️ Imagem não encontrada, tentando buscar no DuckDuckGo para:', name);
+      try {
+        const ddgResults = await searchDuckDuckGoImages(name);
+        if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
+          imageUrl = ddgResults[0].image;
+          console.log('✅ Imagem encontrada no DuckDuckGo:', imageUrl);
+        }
+      } catch (ddgErr) {
+        console.error('❌ Erro ao buscar imagem no DuckDuckGo:', ddgErr);
+      }
+    }
+
     if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp')) {
-      console.warn('⚠️ Imagem não encontrada, usando placeholder');
+      console.warn('⚠️ Imagem ainda não encontrada, usando placeholder');
       imageUrl = '/placeholder.webp';
     }
     
@@ -451,4 +471,65 @@ export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
     console.error('[DDG-Search] Erro ao buscar imagens no DuckDuckGo:', err.message || err);
     return [];
   }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🛠️ AUXILIARES DE RASPAGEM E REDIRECIONAMENTO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0',
+];
+
+function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+function extractNameFromUrl(urlStr: string): string | null {
+  try {
+    const parsed = new URL(urlStr);
+    const pathname = parsed.pathname;
+    if (!pathname || pathname === '/') return null;
+    
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length === 0) return null;
+    
+    const dpIndex = parts.indexOf('dp');
+    if (dpIndex > 0) {
+      return cleanSlug(parts[dpIndex - 1]);
+    }
+    
+    const pIndex = parts.indexOf('p');
+    if (pIndex > 0) {
+      return cleanSlug(parts[pIndex - 1]);
+    }
+    
+    let bestSlug = '';
+    for (const part of parts) {
+      if (part.includes('-') && part.length > bestSlug.length && !['dp', 'p', 's'].includes(part)) {
+        bestSlug = part;
+      }
+    }
+    
+    if (bestSlug) {
+      return cleanSlug(bestSlug);
+    }
+    
+    if (parts[0] && parts[0].length > 4 && !['dp', 'p', 's'].includes(parts[0])) {
+      return cleanSlug(parts[0]);
+    }
+  } catch (err) {
+    console.error('Erro ao extrair nome do URL:', err);
+  }
+  return null;
+}
+
+function cleanSlug(slug: string): string {
+  let clean = decodeURIComponent(slug.replace(/[-_]/g, ' '));
+  clean = clean.replace(/\.(html|php|htm)$/i, '');
+  return clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').trim();
 }
