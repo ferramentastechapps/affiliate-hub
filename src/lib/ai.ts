@@ -301,9 +301,9 @@ export async function processProductWithAI(
   rawJson: string | null;
 }> {
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.warn('[AI] OPENROUTER_API_KEY não configurada no ambiente.');
+      console.warn('[AI] GEMINI_API_KEY não configurada no ambiente.');
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
 
@@ -360,52 +360,39 @@ Contexto atual:
       ]);
     }
 
-    // Lista de modelos em ordem de preferência (fallback automático)
+    // Lista de modelos Gemini para tentar (fallback automático)
     const MODELS = [
-      'google/gemini-2.5-pro',
-      'google/gemini-2.5-flash',
-      'google/gemini-2.0-flash-001',
-      'meta-llama/llama-3.1-8b-instruct:free'
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
     ];
 
-    for (const model of MODELS) {
-      console.log(`[AI] Chamando OpenRouter (${model}) para analisar: "${productName}"`);
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    for (const modelName of MODELS) {
+      console.log(`[AI] Chamando Gemini (${modelName}) diretamente para analisar: "${productName}"`);
       try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: promptText }
-            ],
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: { 
+            responseMimeType: 'application/json',
             temperature: mode === 'caption' ? 1.1 : 0.3,
-            top_p: 0.95,
-            response_format: { type: "json_object" }
-          })
+            topP: 0.95
+          },
+          systemInstruction: systemPrompt
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(`[AI] Modelo ${model} falhou (${response.status}) — tentando próximo. Erro: ${errorText.slice(0, 200)}`);
-          continue;
-        }
-
-        const data = await response.json();
-        const responseText = data?.choices?.[0]?.message?.content;
+        const result = await model.generateContent(promptText);
+        const responseText = result.response.text();
 
         if (!responseText) {
-          console.warn(`[AI] Resposta vazia do modelo ${model} — tentando próximo.`);
+          console.warn(`[AI] Resposta vazia do modelo ${modelName} — tentando próximo.`);
           continue;
         }
 
         const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedData = JSON.parse(cleanedText);
-        console.log(`[AI] Sucesso com modelo ${model} no modo ${mode}.`);
+        console.log(`[AI] Sucesso com modelo ${modelName} no modo ${mode}.`);
 
         let finalTitulo = parsedData.titulo || null;
         let finalScore = parsedData.score !== undefined ? Number(parsedData.score) : null;
@@ -428,15 +415,22 @@ Contexto atual:
           rawJson: JSON.stringify(parsedData),
         };
       } catch (modelError: any) {
-        console.warn(`[AI] Erro no modelo ${model}: ${modelError.message || modelError}`);
+        console.warn(`[AI] Erro no modelo ${modelName}: ${modelError.message || modelError}`);
         continue;
       }
     }
 
-    console.error('[AI] Todos os modelos OpenRouter falharam.');
+    // Se todos falharem, tenta NVIDIA NIM
+    console.warn('[AI] Todos os modelos Gemini falharam. Tentando NVIDIA NIM...');
+    const nvidiaResult = await processProductWithNvidia(promptText);
+    if (nvidiaResult) {
+      return nvidiaResult;
+    }
+
+    console.error('[AI] Todos os modelos de IA falharam.');
     return { titulo: null, subtitulo: null, score: null, rawJson: null };
   } catch (error: any) {
-    console.error('[AI] Erro ao processar produto com OpenRouter:', error.message || error);
+    console.error('[AI] Erro geral ao processar produto:', error.message || error);
     return { titulo: null, subtitulo: null, score: null, rawJson: null };
   }
 }
