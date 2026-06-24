@@ -241,12 +241,12 @@ function extractMercadoLivreImage($: cheerio.CheerioAPI): string {
         images.push(src);
       }
     });
-    // Se tiver mais de uma imagem no carrossel, pegamos a segunda (índice 1) para ser uma imagem de lifestyle
-    if (images.length > 1) {
-      return images[1];
+    // Sempre priorizar a primeira imagem (índice 0) como a imagem principal do produto (capa)
+    if (images.length > 0) {
+      return images[0];
     }
   } catch (e) {
-    console.error('Erro ao extrair imagens secundárias do Mercado Livre:', e);
+    console.error('Erro ao extrair imagem do Mercado Livre:', e);
   }
 
   return $('.ui-pdp-image').first().attr('src') ||
