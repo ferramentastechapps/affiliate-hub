@@ -246,7 +246,18 @@ class PromotionScraper:
                         descricao += f"\n🎟️ CUPOM: {cupom}"
 
                     platform_type, platform_id = self.extrair_platform_id(link_produto)
-                    platform_type, platform_id = self.extrair_platform_id(link_produto)
+
+                    # Capturar o offerId do Promobit para usar como chave de deduplicação
+                    offer_id = str(offer.get('offerId', ''))
+
+                    # Fallback: quando o link_produto é do próprio Promobit (ex: /oferta/...)
+                    # ou de uma loja não reconhecida, usar o offerId como platformId
+                    # para garantir unicidade via @@unique([platformId, platformType])
+                    if not platform_id and offer_id:
+                        platform_id = offer_id
+                        platform_type = 'promobit'
+                        print(f'  ℹ️  [Promobit] Link sem platformId reconhecido — usando offerId como fallback: {offer_id}')
+
                     LOJAS_COM_AFILIADO = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM'}
                     produtos.append({
                         'name': nome,
@@ -259,6 +270,7 @@ class PromotionScraper:
                         'storeName': loja,
                         'autoApprove': loja in LOJAS_COM_AFILIADO,
                         'source': 'promobit',
+                        'externalId': offer_id,        # ID único da oferta no Promobit (garante deduplicação)
                         'platformType': platform_type,
                         'platformId': platform_id
                     })
