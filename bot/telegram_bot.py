@@ -692,25 +692,25 @@ class TelegramNotifier:
                 )
             print(f'📢 Promoção publicada no grupo: {nome[:50]}')
             
-            # --- INTEGRAÇÃO WHATSAPP ---
-            import requests
-            import os
-            
-            whatsapp_url = os.getenv('WHATSAPP_API_URL', 'http://localhost:3006/send')
-            whatsapp_text = html_to_whatsapp_md(mensagem)
-            score_wpp = produto.get('qualityScore') or 0
-            
-            try:
-                # Add image URL to the message so whatsapp-engine could potentially use it
-                payload = {
-                    'message': whatsapp_text,
-                    'score': score_wpp,
-                    'imageUrl': imagem if imagem and 'placeholder' not in imagem else None
-                }
-                requests.post(whatsapp_url, json=payload, timeout=5)
-                print(f'✅ Enviado para fila do WhatsApp (Score: {score_wpp})')
-            except Exception as wpp_err:
-                print(f'⚠️ Aviso: Erro ao enviar para WhatsApp Engine: {wpp_err}')
+            # --- INTEGRAÇÃO WHATSAPP (Desativada temporariamente) ---
+            # import requests
+            # import os
+            # 
+            # whatsapp_url = os.getenv('WHATSAPP_API_URL', 'http://localhost:3006/send')
+            # whatsapp_text = html_to_whatsapp_md(mensagem)
+            # score_wpp = produto.get('qualityScore') or 0
+            # 
+            # try:
+            #     # Add image URL to the message so whatsapp-engine could potentially use it
+            #     payload = {
+            #         'message': whatsapp_text,
+            #         'score': score_wpp,
+            #         'imageUrl': imagem if imagem and 'placeholder' not in imagem else None
+            #     }
+            #     requests.post(whatsapp_url, json=payload, timeout=5)
+            #     print(f'✅ Enviado para fila do WhatsApp (Score: {score_wpp})')
+            # except Exception as wpp_err:
+            #     print(f'⚠️ Aviso: Erro ao enviar para WhatsApp Engine: {wpp_err}')
             # --------------------------
 
         except Exception as e:
