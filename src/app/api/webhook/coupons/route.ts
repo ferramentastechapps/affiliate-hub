@@ -151,7 +151,8 @@ export async function POST(request: Request) {
         );
 
         publishedCount++;
-        console.log(`[Cupom Webhook] ✅ Publicado: ${product.name} (score: ${product.score})`);
+        const scoreInfo = 'score' in product ? ` (score: ${product.score})` : '';
+        console.log(`[Cupom Webhook] ✅ Publicado: ${product.name}${scoreInfo}`);
         
         // Aguardar 2s entre publicações para não fazer spam
         await new Promise(resolve => setTimeout(resolve, 2000));
