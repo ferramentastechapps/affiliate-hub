@@ -236,6 +236,44 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     import requests
     
     try:
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # ETAPA 1: Extrair link por regex (ANTES do Gemini)
+        # Isso evita que o Gemini escolha o link errado quando a
+        # mensagem encaminhada tem múltiplos URLs (produto + termos)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        # Domínios de lojas conhecidas (em ordem de prioridade)
+        LOJAS_DOMINIOS = [
+            'amazon.com.br', 'amzn.to', 'amazon.com',
+            'mercadolivre.com.br', 'mercadolibre.com.br', 'meli.la',
+            'shopee.com.br', 'shope.ee',
+            'aliexpress.com', 's.click.aliexpress',
+            'magazineluiza.com.br', 'magazinevoce.com.br', 'magalu.com', 'influenciadormagalu',
+            'kabum.com.br',
+            'netshoes.com.br',
+            'tiktok.com',
+        ]
+        
+        # Extrair TODOS os links da mensagem
+        todos_links = re.findall(r'https?://[^\s<>"\)]+', text)
+        print(f"🔗 Links encontrados na mensagem: {todos_links}")
+        
+        # Tentar achar link de loja conhecida (prioridade máxima)
+        link_loja_direta = None
+        for url in todos_links:
+            url_lower = url.lower()
+            for dominio in LOJAS_DOMINIOS:
+                if dominio in url_lower:
+                    link_loja_direta = url
+                    break
+            if link_loja_direta:
+                break
+        
+        if link_loja_direta:
+            print(f"✅ Link de loja detectado diretamente (sem Gemini): {link_loja_direta}")
+        else:
+            print(f"ℹ️  Nenhum link de loja direta encontrado. Gemini irá extrair o link.")
+
         has_gemini = GEMINI_API_KEY and GEMINI_API_KEY != "sua_chave_aqui"
         if not has_gemini:
             await msg_status.edit_text(
@@ -249,17 +287,31 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         print(f"🤖 Enviando texto para IA extrair dados...")
         print(f"   Texto: {text[:200]}...")
 
-        prompt = (
-            f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
-            f"{text}\n\n"
-            f"IMPORTANTE: Se a mensagem contiver apenas um link (URL) ou não descrever nenhum produto de forma detalhada e explícita no texto, responda com \"name\": \"Produto Encontrado\" e \"price\": null. NÃO INVENTE nomes de produtos ou preços fictícios.\n\n"
-            f"Responda APENAS em um JSON válido com estas exatas chaves:\n"
-            f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
-            f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
-            f"- link: URL completa para compra do produto (string)\n"
-            f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
-            f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
-        )
+        # Se já temos o link da loja, pedimos só nome/preço/cupom ao Gemini
+        if link_loja_direta:
+            prompt = (
+                f"Extraia as informações desta promoção de afiliado:\n\n"
+                f"{text}\n\n"
+                f"IMPORTANTE: O link do produto já foi identificado como: {link_loja_direta}\n"
+                f"Você NÃO precisa encontrar o link — ele já está definido.\n\n"
+                f"Responda APENAS em um JSON válido com estas exatas chaves:\n"
+                f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
+                f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
+                f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
+                f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
+            )
+        else:
+            prompt = (
+                f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
+                f"{text}\n\n"
+                f"IMPORTANTE: Se a mensagem contiver apenas um link (URL) ou não descrever nenhum produto de forma detalhada e explícita no texto, responda com \"name\": \"Produto Encontrado\" e \"price\": null. NÃO INVENTE nomes de produtos ou preços fictícios.\n\n"
+                f"Responda APENAS em um JSON válido com estas exatas chaves:\n"
+                f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
+                f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
+                f"- link: URL completa para compra do produto — escolha APENAS a URL da loja (Amazon, Mercado Livre, Shopee, etc.), ignorando links de grupos, regras e afiliados (string)\n"
+                f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
+                f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
+            )
         
         # Async request run in executor
         loop = asyncio.get_event_loop()
@@ -363,8 +415,22 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         
         nome = dados.get('name') or 'Produto Encontrado'
         preco = dados.get('price')
-        link = dados.get('link')
         cupom = dados.get('coupon')
+        
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # Definir o link final: regex (loja direta) > Gemini
+        # O link da loja detectado por regex tem prioridade máxima
+        # para evitar que o Gemini pegue o link errado
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        link_gemini = dados.get('link')  # Link que o Gemini extraiu
+        if link_loja_direta:
+            link = link_loja_direta
+            if link_gemini and link_gemini != link_loja_direta:
+                print(f"⚠️  Gemini extraiu link diferente ({link_gemini[:80]}) — usando link da loja ({link_loja_direta[:80]})")
+            else:
+                print(f"✅ Link confirmado via regex: {link}")
+        else:
+            link = link_gemini
         
         if not link:
             await msg_status.edit_text(
