@@ -90,6 +90,61 @@ async function processProductAffiliates(productData: { links?: Record<string, st
   };
 }
 
+function extractPlatformDetailsFromUrl(url: string, platform: string): { platformId: string | null; platformType: string | null } {
+  const urlLower = url.toLowerCase();
+  
+  if (platform === 'amazon' || urlLower.includes('amazon') || urlLower.includes('amzn.to')) {
+    const asinMatch = url.match(/(?:\/dp\/|\/gp\/product\/|\/gp\/aw\/d\/)([A-Z0-9]{10})/i);
+    if (asinMatch) {
+      return { platformId: asinMatch[1].toUpperCase(), platformType: 'amazon' };
+    }
+  }
+  
+  if (platform === 'mercadoLivre' || urlLower.includes('mercadolivre') || urlLower.includes('meli.la') || urlLower.includes('mercadolibre')) {
+    const mlbMatch = url.match(/(MLB-?\d+)/i);
+    if (mlbMatch) {
+      return { platformId: mlbMatch[1].replace('-', '').toUpperCase(), platformType: 'mercadolivre' };
+    }
+  }
+  
+  if (platform === 'shopee' || urlLower.includes('shopee') || urlLower.includes('shope.ee')) {
+    const shopeeMatch = url.match(/i\.(\d+)\.(\d+)/);
+    if (shopeeMatch) {
+      return { platformId: `${shopeeMatch[1]}_${shopeeMatch[2]}`, platformType: 'shopee' };
+    }
+  }
+  
+  if (platform === 'aliexpress' || urlLower.includes('aliexpress')) {
+    const aliMatch = url.match(/\/item\/(\d+)\.html/);
+    if (aliMatch) {
+      return { platformId: aliMatch[1], platformType: 'aliexpress' };
+    }
+  }
+  
+  if (platform === 'magalu' || urlLower.includes('magalu') || urlLower.includes('magazineluiza')) {
+    const magaluMatch = url.match(/\/p\/([a-z0-9]+)/i);
+    if (magaluMatch) {
+      return { platformId: magaluMatch[1], platformType: 'magalu' };
+    }
+  }
+  
+  if (platform === 'kabum' || urlLower.includes('kabum')) {
+    const kabumMatch = url.match(/\/produto\/(\d+)/i);
+    if (kabumMatch) {
+      return { platformId: kabumMatch[1], platformType: 'kabum' };
+    }
+  }
+
+  if (platform === 'netshoes' || urlLower.includes('netshoes')) {
+    const netshoesMatch = url.match(/\/produto\/([a-z0-9-]+)/i);
+    if (netshoesMatch) {
+      return { platformId: netshoesMatch[1], platformType: 'netshoes' };
+    }
+  }
+  
+  return { platformId: null, platformType: null };
+}
+
 export async function POST(request: Request) {
   // Validar assinatura do Webhook
   if (!await validateWebhookSignature(request)) {
@@ -113,23 +168,49 @@ export async function POST(request: Request) {
     const { name, externalId, source, platformId, platformType } = body;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // RESOLUÇÃO DE LINKS E PARSE DE PLATAFORMA (NOVA ORDEM)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(body);
+
+    let finalPlatformId = platformId;
+    let finalPlatformType = platformType;
+
+    if (!finalPlatformId || !finalPlatformType) {
+      const targetLinks = processedLinks || body.links || {};
+      const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+      
+      for (const p of platforms) {
+        const urlToParse = targetLinks[p];
+        if (urlToParse) {
+          const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+          if (extracted.platformId && extracted.platformType) {
+            finalPlatformId = extracted.platformId;
+            finalPlatformType = extracted.platformType;
+            console.log(`[Webhook] Mapeado platformId/Type da URL resolvida: ${finalPlatformId} (${finalPlatformType})`);
+            break;
+          }
+        }
+      }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // FASE 1 — DEDUPLICAÇÃO POR PLATFORM ID (PRIORIDADE MÁXIMA)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     let existingProduct = null;
 
     // Estágio 1 — platformId + platformType (mais preciso - ID real da plataforma)
-    if (platformId && platformType) {
+    if (finalPlatformId && finalPlatformType) {
       existingProduct = await prisma.product.findFirst({
         where: { 
-          platformId,
-          platformType
+          platformId: finalPlatformId,
+          platformType: finalPlatformType
         },
         include: { priceHistory: { orderBy: { createdAt: 'desc' }, take: 1 } }
       });
       
       if (existingProduct) {
-        console.log(`[Webhook] Produto encontrado por platformId+platformType: ${platformId} (${platformType})`);
+        console.log(`[Webhook] Produto encontrado por platformId+platformType: ${finalPlatformId} (${finalPlatformType})`);
         
         // Atualizar preço se mudou
         const priceChanged = body.price && body.price !== existingProduct.price;
@@ -308,8 +389,6 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
-
-    const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(body);
     
     // isAggregatorFailed removido - agora mantemos o link original para aprovação manual
 
@@ -338,8 +417,8 @@ export async function POST(request: Request) {
         brand: body.brand || null,
         model: body.model || null,
         platformProductId: body.platformProductId || null,
-        platformId: body.platformId || null,
-        platformType: body.platformType || null,
+        platformId: finalPlatformId || null,
+        platformType: finalPlatformType || null,
         storeName: body.storeName || null,
         description: body.description || null,
         imageUrl: body.imageUrl,
