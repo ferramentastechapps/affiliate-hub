@@ -641,14 +641,22 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
     }
     if (magaluShop) {
       // 1. Se a URL contém 'divulgador' no path (links de parceiro/oferta de divulgador)
+      // Extrair o ID do produto (SKU) se for uma oferta (/divulgador/oferta/ID) para evitar erro 404
       if (details.path.includes('/divulgador/')) {
+        const ofertaMatch = details.path.match(/\/divulgador\/oferta\/([a-z0-9]+)/i);
+        if (ofertaMatch) {
+          const sku = ofertaMatch[1];
+          console.log(`[Affiliate] Magalu: convertido link de divulgador para produto canônico → /p/${sku}/`);
+          return `https://www.magazinevoce.com.br/${magaluShop}/p/${sku}/`;
+        }
+
         const pathParts = details.path.split('/').filter(Boolean);
         const divulgadorIndex = pathParts.findIndex(p => p.toLowerCase() === 'divulgador');
         if (divulgadorIndex !== -1) {
-          // Manter apenas do 'divulgador' em diante, e prependar o nosso shop
+          // Manter apenas do 'divulgador' em diante, e prependar o nosso shop (fallback)
           const cleanParts = pathParts.slice(divulgadorIndex);
           const newPath = `/${magaluShop}/${cleanParts.join('/')}`;
-          console.log(`[Affiliate] Magalu: formatado link de divulgador → ${newPath}`);
+          console.log(`[Affiliate] Magalu: formatado link de divulgador (fallback) → ${newPath}`);
           return `https://www.magazinevoce.com.br${newPath}`;
         }
       }
