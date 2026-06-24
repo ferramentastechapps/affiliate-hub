@@ -1097,6 +1097,24 @@ class PromotionScraper:
                     foto = promo.get('image')
                     imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
 
+                    # Tenta buscar a página de detalhes para pegar a imagem real (lifestyle) do Pechinchou se existir
+                    image_real = None
+                    try:
+                        detail_res = requests.get(link_oferta, headers=self.headers, timeout=5)
+                        if detail_res.status_code == 200:
+                            detail_soup = BeautifulSoup(detail_res.content, 'html.parser')
+                            detail_script = detail_soup.find('script', id='__NEXT_DATA__')
+                            if detail_script:
+                                detail_data = json.loads(detail_script.string)
+                                promo_detail = detail_data.get('props', {}).get('pageProps', {}).get('promo', {})
+                                image_real = promo_detail.get('image_real') or promo_detail.get('image_social')
+                    except Exception as img_err:
+                        print(f"  ⚠️ Erro ao buscar imagem real de Pechinchou: {img_err}")
+
+                    if image_real and str(image_real).strip() and not str(image_real).startswith('/'):
+                        imagem_url = image_real
+                        print(f"  📸 [Pechinchou] Encontrada foto real/lifestyle: {imagem_url}")
+
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
                     

@@ -48,3 +48,8 @@ next-env.d.ts
 *-output.txt
 *.log
 
+# custom ignores
+corrigir-ia-vps.ps1
+/scratch/
+/bot/venv/
+
