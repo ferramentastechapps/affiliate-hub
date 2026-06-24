@@ -141,6 +141,8 @@ npm install
 echo "🗄️  Sincronizando schema do banco de dados..."
 npx prisma migrate deploy
 
+echo "🔄 Executando script de swap de imagens no banco..."
+node swap_images.js
 
 echo "🏗️  Fazendo build do Next.js..."
 rm -rf .next
