@@ -268,10 +268,11 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             errors = []
             
             # Tentar Gemini diretamente com fallback de modelos
+            # Nota: gemini-2.0-flash foi descontinuado pelo Google (retorna 404)
             if has_gemini:
-                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+                models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash"]
                 for model in models_to_try:
-                    print(f"🤖 Tentando extração via Gemini API ({model})...")
+                    print(f"Tentando extracao via Gemini API ({model})...")
                     try:
                         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
                         response = requests.post(
@@ -287,18 +288,69 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                             text_resp = response.json()["candidates"][0]["content"]["parts"][0]["text"]
                             if text_resp and text_resp.strip():
                                 return text_resp
+                        elif response.status_code == 429:
+                            # Cota esgotada — nao adianta tentar outros modelos Gemini
+                            err_msg = f"Gemini quota esgotada (429) para {model}"
+                            print(f"AVISO: {err_msg} — tentando OpenRouter...")
+                            errors.append(err_msg)
+                            break  # Sai do loop e vai direto pro OpenRouter
+                        elif response.status_code == 404:
+                            err_msg = f"Gemini ({model}) nao encontrado (404) — modelo descontinuado?"
+                            print(f"AVISO: {err_msg}")
+                            errors.append(err_msg)
                         else:
-                            err_msg = f"Gemini ({model}) status {response.status_code}: {response.text}"
-                            print(f"⚠️ {err_msg}")
+                            err_msg = f"Gemini ({model}) status {response.status_code}"
+                            print(f"AVISO: {err_msg}")
                             errors.append(err_msg)
                     except Exception as e:
                         err_msg = f"Erro no Gemini ({model}): {str(e)}"
-                        print(f"⚠️ {err_msg}")
+                        print(f"AVISO: {err_msg}")
                         errors.append(err_msg)
             
-            # Se falhar
+            # Fallback: OpenRouter (usa saldo proprio, nao depende da cota Gemini)
+            has_openrouter = OPENROUTER_API_KEY and len(OPENROUTER_API_KEY) > 10
+            if has_openrouter:
+                print(f"Tentando extracao via OpenRouter (google/gemini-2.5-flash)...")
+                try:
+                    openrouter_resp = requests.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://economizei.ftech-apps.com.br",
+                            "X-Title": "Affiliate Hub Bot"
+                        },
+                        json={
+                            "model": "google/gemini-2.5-flash",
+                            "messages": [
+                                {"role": "user", "content": prompt}
+                            ],
+                            "response_format": {"type": "json_object"}
+                        },
+                        timeout=30
+                    )
+                    if openrouter_resp.status_code == 200:
+                        content = openrouter_resp.json()["choices"][0]["message"]["content"]
+                        if content and content.strip():
+                            print(f"Sucesso via OpenRouter!")
+                            return content
+                        else:
+                            errors.append("OpenRouter retornou resposta vazia")
+                    else:
+                        err_msg = f"OpenRouter status {openrouter_resp.status_code}: {openrouter_resp.text[:80]}"
+                        print(f"AVISO: {err_msg}")
+                        errors.append(err_msg)
+                except Exception as e:
+                    err_msg = f"Erro no OpenRouter: {str(e)}"
+                    print(f"AVISO: {err_msg}")
+                    errors.append(err_msg)
+            else:
+                errors.append("OPENROUTER_API_KEY nao configurada")
+            
+            # Todos os fallbacks falharam
             err_summary = " | ".join(errors)
-            raise Exception(f"A API do Gemini falhou. Detalhes: {err_summary}")
+            raise Exception(f"Todas as APIs de IA falharam. Detalhes: {err_summary}")
+
 
         response_text = await loop.run_in_executor(None, call_ai)
         

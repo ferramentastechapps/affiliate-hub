@@ -60,13 +60,27 @@ export const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT;
 
 // ─── FUNÇÕES DINÂMICAS DE PROMPT ──────────────────────────────────────────────
 
+// ─── CACHE DO PROMPT DINÂMICO (evita recarregar do banco a cada produto) ──────
+// O prompt dinâmico pode ter >2KB de exemplos. Sem cache, cada produto
+// envia esses tokens extras desnecessariamente (custo alto!).
+let _dynamicPromptCache: { prompt: string; expiresAt: number } | null = null;
+const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
 /**
  * Constrói o SYSTEM_PROMPT de forma dinâmica, injetando do banco:
  *  - Exemplos de legendas marcadas como usedAsExample=true (top 12)
  *  - Palavras bloqueadas
  *  - Contextos/eventos ativos no período atual
+ *
+ * Resultado fica em cache por 5 minutos para reduzir chamadas ao banco
+ * e principalmente para não reenviar os mesmos tokens em toda chamada.
  */
 export async function buildDynamicSystemPrompt(): Promise<string> {
+  // Retorna do cache se ainda válido
+  if (_dynamicPromptCache && Date.now() < _dynamicPromptCache.expiresAt) {
+    return _dynamicPromptCache.prompt;
+  }
+
   try {
     const now = new Date();
 
@@ -111,20 +125,11 @@ export async function buildDynamicSystemPrompt(): Promise<string> {
         .map(e => `- ${e.productName} → ${e.caption}`)
         .join('\n');
 
-      // Insere o bloco de exemplos aprovados APÓS os exemplos base do prompt
-      // O marcador é a última linha do BASE_SYSTEM_PROMPT
       const insertAfterMarker = 'Varie as piadas, não repita os mesmos exemplos. Seja criativo no deboche!';
       if (prompt.includes(insertAfterMarker)) {
         prompt = prompt.replace(
           insertAfterMarker,
-          `${insertAfterMarker}
-
-// ─── EXEMPLOS APROVADOS PELO ADMIN (produto → legenda JÁ ENVIADA) ────────────
-⚠️ ATENÇÃO MÁXIMA: As legendas abaixo JÁ FORAM PUBLICADAS E ENVIADAS. É PROIBIDO repetir qualquer uma delas. Use APENAS como referência de estilo, tom e criatividade. Crie sempre algo 100% DIFERENTE e ORIGINAL.
-
-${examplesBlock}
-
-📌 REGRA CRÍTICA: Gere uma legenda COMPLETAMENTE NOVA que o público ainda não viu.`
+          `${insertAfterMarker}\n\n// ─── EXEMPLOS APROVADOS PELO ADMIN (produto → legenda JÁ ENVIADA) ────────────\n⚠️ ATENÇÃO MÁXIMA: As legendas abaixo JÁ FORAM PUBLICADAS E ENVIADAS. É PROIBIDO repetir qualquer uma delas. Use APENAS como referência de estilo, tom e criatividade. Crie sempre algo 100% DIFERENTE e ORIGINAL.\n\n${examplesBlock}\n\n📌 REGRA CRÍTICA: Gere uma legenda COMPLETAMENTE NOVA que o público ainda não viu.`
         );
       }
     }
@@ -142,6 +147,10 @@ ${examplesBlock}
         .join('\n');
       prompt += `\n\nCONTEXTOS / EVENTOS ATIVOS AGORA:\n${contextBlock}`;
     }
+
+    // Salva no cache
+    _dynamicPromptCache = { prompt, expiresAt: Date.now() + PROMPT_CACHE_TTL_MS };
+    console.log(`[AI] Prompt dinâmico construído e cacheado (${prompt.length} chars, ~${Math.round(prompt.length/4)} tokens).`);
 
     return prompt;
   } catch (error) {
@@ -443,9 +452,9 @@ Contexto atual:
     }
 
     // Lista de modelos Gemini para tentar (fallback automático)
+    // Nota: gemini-2.0-flash foi descontinuado e removido pela Google (HTTP 404)
     const MODELS = [
       'gemini-2.5-flash',
-      'gemini-2.0-flash',
       'gemini-1.5-flash'
     ];
 
@@ -502,18 +511,18 @@ Contexto atual:
       }
     }
 
-    // Se todos falharem, tenta NVIDIA NIM
-    console.warn('[AI] Todos os modelos Gemini falharam. Tentando NVIDIA NIM...');
-    const nvidiaResult = await processProductWithNvidia(promptText);
-    if (nvidiaResult) {
-      return nvidiaResult;
-    }
-
-    // Se NVIDIA falhar, tenta OpenRouter como 3º Fallback
-    console.warn('[AI] NVIDIA NIM falhou. Tentando OpenRouter...');
+    // Se Gemini direto falhar → tenta OpenRouter (mesmo modelo, menor custo por token)
+    console.warn('[AI] Modelos Gemini direto falharam. Tentando OpenRouter...');
     const openRouterResult = await processProductWithOpenRouter(promptText, mode);
     if (openRouterResult) {
       return openRouterResult;
+    }
+
+    // Último recurso: NVIDIA NIM
+    console.warn('[AI] OpenRouter falhou. Tentando NVIDIA NIM como último recurso...');
+    const nvidiaResult = await processProductWithNvidia(promptText);
+    if (nvidiaResult) {
+      return nvidiaResult;
     }
 
     console.error('[AI] Todos os modelos de IA falharam.');
