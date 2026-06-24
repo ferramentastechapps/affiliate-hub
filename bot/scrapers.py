@@ -1146,9 +1146,10 @@ class PromotionScraper:
                     slug = promo.get('slug', '')
                     image_real = imagens_reais.get(slug)
 
+                    enhanced_image_url = None
                     if image_real and str(image_real).strip() and not str(image_real).startswith('/'):
-                        imagem_url = image_real
-                        print(f"  📸 [Pechinchou] Encontrada foto real/lifestyle (paralelo): {imagem_url}")
+                        enhanced_image_url = image_real
+                        print(f"  📸 [Pechinchou] Encontrada foto real/lifestyle (paralelo): {enhanced_image_url}")
 
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
@@ -1203,6 +1204,7 @@ class PromotionScraper:
                         'category': categoria,
                         'description': descricao,
                         'imageUrl': imagem_url,
+                        'enhancedImageUrl': enhanced_image_url,
                         'price': preco,
                         'originalPrice': float(promo.get('old_price', 0)) if promo.get('old_price') else None,
                         'links': links,
