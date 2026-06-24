@@ -264,10 +264,11 @@ export async function POST(request: Request) {
                 code: couponCode,
                 platform: platformNames[targetPlatform] || targetPlatform,
                 discount: 'Desconto aplicado',
-                description: `Cupom de desconto para ${product.name}`
+                description: `Cupom de desconto para ${product.name}`,
+                productId: productId // Cupom específico deste produto
               })
             });
-            console.log(`🔔 Webhook de cupom disparado para ${couponCode}`);
+            console.log(`🔔 Webhook de cupom disparado para ${couponCode} (produto específico: ${productId})`);
           } catch (webhookError) {
             console.error('Erro ao disparar webhook de cupom:', webhookError);
             // Não falha a aprovação se o webhook der erro
