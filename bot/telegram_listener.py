@@ -271,7 +271,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "meta-llama/llama-3.2-3b-instruct:free",
+                    "model": "meta-llama/llama-3.1-8b-instruct",
                     "messages": [
                         {"role": "user", "content": prompt}
                     ],
