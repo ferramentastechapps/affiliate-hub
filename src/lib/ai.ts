@@ -15,7 +15,7 @@ REGRAS OBRIGATÓRIAS:
 - Máximo de 8 palavras
 - Tom de zoeira direta, como um amigo falando no grupo
 - A frase NÃO descreve o produto — ela provoca, faz piada ou observação indireta sobre quem vai usar
-- Use gírias brasileiras naturais quando fizer sentido (furico, sanduba, capinado, paçoca, churras, lote, etc)
+- Use gírias brasileiras naturais quando fizer sentido
 - NUNCA mencione preço, desconto, parcelamento ou afiliado na frase
 - NUNCA use emojis na frase principal
 - O nome do produto já vem pronto do sistema — você NÃO cria o nome, apenas a frase
@@ -40,20 +40,27 @@ FORMATO DE SAÍDA — responda APENAS com JSON válido:
 Varie as piadas, não repita os mesmos exemplos. Seja criativo no deboche!`;
 
 // ─── SYSTEM_PROMPT AVALIAÇÃO (Rápido/Barato) ──────────────────────────────────
-export const EVALUATION_SYSTEM_PROMPT = `Você é um analista de ofertas e descontos do Brasil.
-Seu trabalho é avaliar rapidamente a qualidade de uma oferta com base no preço, preço original e produto.
+export const EVALUATION_SYSTEM_PROMPT = `Você é um analista de ofertas do Brasil especializado em identificar boas oportunidades reais para o consumidor.
+Seu trabalho é avaliar a qualidade de uma oferta com base nos sinais abaixo. IGNORE qualquer % de desconto informado na página da loja — esses valores costumam ser inflados artificialmente e NÃO devem ser usados como critério.
 
-CRITÉRIOS DE SCORE:
-- 9-10: desconto absurdo (acima de 35%).
-- 7-8: desconto bom (20-35%).
-- 5-6: desconto mixuruca.
-- abaixo de 5: preço normal ou ruim.
+SINAIS QUE IMPORTAM (use para calcular o score):
+1. CUPOM DE DESCONTO ATIVO (+2 pontos extras): Se o campo "Tem cupom" for "sim", a oferta tem desconto real aplicável.
+2. MENOR PREÇO HISTÓRICO (+2 pontos extras): Se o campo "Menor preço histórico" for "sim", o preço atual é o mais baixo já registrado para este produto no sistema — isso é um forte indicador de boa oferta.
+3. CATEGORIA E PRODUTO: Eletrônicos, games, eletrodomésticos e itens de alto valor percebido pontuam melhor na mesma faixa de preço.
+4. PREÇO ABSOLUTO: Produtos abaixo de R$ 100 são mais fáceis de vender; produtos acima de R$ 200 precisam de mais contexto favorável para pontuação alta.
+
+ESCALA:
+- 9-10: Cupom ativo E menor preço histórico juntos, ou produto muito relevante com grande apelo.
+- 7-8: Menor preço histórico OU cupom ativo, produto de boa categoria.
+- 5-6: Produto ok, preço razoável, mas sem diferencial claro.
+- abaixo de 5: Sem cupom, sem menor preço, sem apelo especial.
 
 Responda APENAS com JSON válido:
 {
   "score": numero_de_0_a_10,
   "analise": "motivo super curto em 1 frase"
 }`;
+
 
 // Mantém compatibilidade com código legado que usa SYSTEM_PROMPT
 export const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT;
@@ -150,7 +157,7 @@ export async function buildDynamicSystemPrompt(): Promise<string> {
 
     // Salva no cache
     _dynamicPromptCache = { prompt, expiresAt: Date.now() + PROMPT_CACHE_TTL_MS };
-    console.log(`[AI] Prompt dinâmico construído e cacheado (${prompt.length} chars, ~${Math.round(prompt.length/4)} tokens).`);
+    console.log(`[AI] Prompt dinâmico construído e cacheado (${prompt.length} chars, ~${Math.round(prompt.length / 4)} tokens).`);
 
     return prompt;
   } catch (error) {
@@ -253,10 +260,10 @@ export async function saveCaptionHistory(
  */
 function extractRetryDelay(errorMessage: string): number {
   const match = errorMessage.match(/retry\s+in\s+(\d+)\s*s/i) ||
-                errorMessage.match(/retry\s+in\s+(\d+)\s*seconds/i) ||
-                errorMessage.match(/retry\s+after\s+(\d+)\s*s/i) ||
-                errorMessage.match(/retry\s+after\s+(\d+)\s*seconds/i) ||
-                errorMessage.match(/after\s+(\d+)\s*s/i);
+    errorMessage.match(/retry\s+in\s+(\d+)\s*seconds/i) ||
+    errorMessage.match(/retry\s+after\s+(\d+)\s*s/i) ||
+    errorMessage.match(/retry\s+after\s+(\d+)\s*seconds/i) ||
+    errorMessage.match(/after\s+(\d+)\s*s/i);
   if (match && match[1]) {
     return parseInt(match[1], 10);
   }
@@ -287,7 +294,7 @@ export async function processProductWithNvidia(
 
   try {
     console.log(`[AI-NVIDIA] Acionando fallback do NVIDIA NIM (minimaxai/minimax-m3)...`);
-    
+
     const dynamicPrompt = await buildDynamicSystemPrompt();
 
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
@@ -363,7 +370,7 @@ export async function processProductWithOpenRouter(
 
   try {
     console.log(`[AI-OpenRouter] Acionando fallback do OpenRouter (google/gemini-2.5-flash)...`);
-    
+
     // Carrega prompt adequado ao modo
     let systemPrompt = '';
     if (mode === 'evaluate') {
@@ -426,7 +433,9 @@ export async function processProductWithAI(
   originalPrice?: number | null,
   category?: string,
   productId?: string,
-  mode: 'evaluate' | 'caption' = 'evaluate'
+  mode: 'evaluate' | 'caption' = 'evaluate',
+  hasCoupon: boolean = false,
+  isLowestPrice: boolean = false
 ): Promise<{
   titulo: string | null;
   subtitulo: string | null;
@@ -462,17 +471,18 @@ export async function processProductWithAI(
     const timeStr = `${partMap.hour}:${partMap.minute}`;
 
     const hourNum = parseInt(partMap.hour || '0', 10);
-    const isWeekend = 
-      weekdayStr.toLowerCase().includes('sábado') || 
-      weekdayStr.toLowerCase().includes('domingo') || 
+    const isWeekend =
+      weekdayStr.toLowerCase().includes('sábado') ||
+      weekdayStr.toLowerCase().includes('domingo') ||
       (weekdayStr.toLowerCase().includes('sexta') && hourNum >= 17);
 
     const weekendStr = isWeekend ? 'sim' : 'não';
 
     const promptText = `Nome do produto: ${productName}
 Preço atual: R$ ${price}
-${originalPrice ? `Preço original: R$ ${originalPrice}` : ''}
 Categoria: ${category || 'Diversos'}
+Tem cupom: ${hasCoupon ? 'sim' : 'não'}
+Menor preço histórico: ${isLowestPrice ? 'sim' : 'não'}
 
 Contexto atual:
 - Dia: ${weekdayStr}
@@ -482,8 +492,8 @@ Contexto atual:
 
     // Carrega prompt adequado ao modo
     let systemPrompt = '';
-    let substitutions: {fromWord: string, toWord: string}[] = [];
-    
+    let substitutions: { fromWord: string, toWord: string }[] = [];
+
     if (mode === 'evaluate') {
       systemPrompt = await buildDynamicEvaluationPrompt();
     } else {
@@ -507,7 +517,7 @@ Contexto atual:
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { 
+          generationConfig: {
             responseMimeType: 'application/json',
             temperature: mode === 'caption' ? 1.1 : 0.3,
             topP: 0.95
