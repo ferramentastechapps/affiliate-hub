@@ -545,11 +545,19 @@ export async function POST(request: Request) {
       }
 
       // Processamento da imagem se aprovado (obtendo imagem de lifestyle/secundária do varejista)
-      let finalEnhancedImageUrl: string | null = null;
-      if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+      let finalEnhancedImageUrl: string | null = product.enhancedImageUrl;
+      let finalImageUrl: string = product.imageUrl;
+      if (!finalEnhancedImageUrl && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
         const rawEnhancedUrl = await getSecondaryLifestyleImage(body.links || {});
         if (rawEnhancedUrl) {
-          finalEnhancedImageUrl = await saveEnhancedImage(rawEnhancedUrl, false);
+          const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
+          if (savedRetailImage) {
+            // A imagem do varejista (fundo branco) vai para imageUrl (site).
+            // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
+            finalImageUrl = savedRetailImage;
+            finalEnhancedImageUrl = product.imageUrl;
+            console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
+          }
         }
       }
 
@@ -558,6 +566,7 @@ export async function POST(request: Request) {
             data: {
               aiScore: aiResult.score,
               aiAnalysis: aiResult.rawJson,
+              imageUrl: finalImageUrl,
               enhancedImageUrl: finalEnhancedImageUrl || undefined,
               status: newStatus,
               aiProcessed: true,
@@ -924,11 +933,19 @@ export async function PUT(request: Request) {
             }
           }
 
-          let finalEnhancedImageUrl: string | null = null;
-          if (newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+          let finalEnhancedImageUrl: string | null = product.enhancedImageUrl;
+          let finalImageUrl: string = product.imageUrl;
+          if (!finalEnhancedImageUrl && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
             const rawEnhancedUrl = await getSecondaryLifestyleImage(productData.links || {});
             if (rawEnhancedUrl) {
-              finalEnhancedImageUrl = await saveEnhancedImage(rawEnhancedUrl, false);
+              const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
+              if (savedRetailImage) {
+                // A imagem do varejista (fundo branco) vai para imageUrl (site).
+                // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
+                finalImageUrl = savedRetailImage;
+                finalEnhancedImageUrl = product.imageUrl;
+                console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
+              }
             }
           }
 
@@ -937,6 +954,7 @@ export async function PUT(request: Request) {
             data: {
               aiScore: aiResult.score,
               aiAnalysis: aiResult.rawJson,
+              imageUrl: finalImageUrl,
               enhancedImageUrl: finalEnhancedImageUrl || undefined,
               status: newStatus,
               aiProcessed: true,

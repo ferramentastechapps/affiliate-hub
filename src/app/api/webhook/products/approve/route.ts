@@ -155,8 +155,8 @@ export async function POST(request: Request) {
     }
     
     // Atualizar status do produto para active + imageUrl se fornecida
-    const updateData: { status: string; imageUrl?: string; enhancedImageUrl?: string } = { status: 'active' };
-    let finalEnhancedImageUrl = product.enhancedImageUrl;
+    const updateData: { status: string; imageUrl?: string; enhancedImageUrl?: string | null } = { status: 'active' };
+    let finalEnhancedImageUrl: string | null | undefined = product.enhancedImageUrl;
 
     if (body.imageUrl) {
       if (body.imageUrl.startsWith('http')) {
@@ -164,9 +164,11 @@ export async function POST(request: Request) {
           console.log(`[Approve] Salvando imagem fornecida pelo Telegram localmente: ${body.imageUrl}`);
           const savedUrl = await saveEnhancedImage(body.imageUrl, false);
           if (savedUrl) {
+            // Se o usuário forneceu imagem customizada, usamos ela como principal (site/fundo branco)
+            // e preservamos a original como enhancedImageUrl (lifestyle/grupo)
             updateData.imageUrl = savedUrl;
-            updateData.enhancedImageUrl = savedUrl;
-            finalEnhancedImageUrl = savedUrl;
+            updateData.enhancedImageUrl = product.imageUrl || null;
+            finalEnhancedImageUrl = product.imageUrl || null;
             console.log(`[Approve] Imagem do Telegram salva com sucesso: ${savedUrl}`);
           } else {
             updateData.imageUrl = body.imageUrl;
@@ -180,15 +182,18 @@ export async function POST(request: Request) {
       }
     }
     
+    // Se ainda não temos enhancedImageUrl (lifestyle), buscamos a imagem do varejista (fundo branco)
     if (!finalEnhancedImageUrl) {
-      console.log(`[Approve] Tentando obter imagem secundária/lifestyle do produto...`);
+      console.log(`[Approve] Tentando obter imagem secundária (fundo branco) do varejista...`);
       const rawEnhancedUrl = await getSecondaryLifestyleImage((product.links || {}) as any);
       if (rawEnhancedUrl) {
         const savedEnhanced = await saveEnhancedImage(rawEnhancedUrl, false);
         if (savedEnhanced) {
-          finalEnhancedImageUrl = savedEnhanced;
-          updateData.enhancedImageUrl = savedEnhanced;
-          console.log(`[Approve] Imagem secundária salva com sucesso: ${savedEnhanced}`);
+          // A imagem do varejista (fundo branco) vai para imageUrl (site)
+          // A imagem original (lifestyle) vai para enhancedImageUrl (grupo)
+          updateData.imageUrl = savedEnhanced;
+          updateData.enhancedImageUrl = product.imageUrl || null;
+          console.log(`[Approve] Imagem do varejista (fundo branco) salva em imageUrl, original salva em enhancedImageUrl: ${savedEnhanced}`);
         }
       }
     }
