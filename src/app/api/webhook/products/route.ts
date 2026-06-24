@@ -421,6 +421,7 @@ export async function POST(request: Request) {
         storeName: body.storeName || null,
         description: body.description || null,
         imageUrl: body.imageUrl,
+        enhancedImageUrl: body.enhancedImageUrl || null,
         price: body.price ? parseFloat(body.price) : null,
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         status: finalStatus,
@@ -557,7 +558,7 @@ export async function POST(request: Request) {
             data: {
               aiScore: aiResult.score,
               aiAnalysis: aiResult.rawJson,
-              enhancedImageUrl: finalEnhancedImageUrl,
+              enhancedImageUrl: finalEnhancedImageUrl || undefined,
               status: newStatus,
               aiProcessed: true,
               aiProcessedAt: new Date()
@@ -826,6 +827,7 @@ export async function PUT(request: Request) {
             storeName: productData.storeName || null,
             description: productData.description || null,
             imageUrl: productData.imageUrl,
+            enhancedImageUrl: productData.enhancedImageUrl || null,
             price: productData.price ? parseFloat(productData.price) : null,
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
             status: finalStatus,
@@ -935,7 +937,7 @@ export async function PUT(request: Request) {
             data: {
               aiScore: aiResult.score,
               aiAnalysis: aiResult.rawJson,
-              enhancedImageUrl: finalEnhancedImageUrl,
+              enhancedImageUrl: finalEnhancedImageUrl || undefined,
               status: newStatus,
               aiProcessed: true,
               aiProcessedAt: new Date()
