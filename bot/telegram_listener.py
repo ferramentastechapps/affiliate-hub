@@ -427,13 +427,8 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 print(f"⚠️ Erro ao buscar imagem no DuckDuckGo: {e}")
             
         # Determinar categoria
-        from config import CATEGORY_KEYWORDS
-        categoria = 'Diversos'
-        nome_lower = nome.lower()
-        for cat, keywords in CATEGORY_KEYWORDS.items():
-            if any(k in nome_lower for k in keywords):
-                categoria = cat
-                break
+        from metadata_utils import extrair_categoria_granular
+        categoria = extrair_categoria_granular(nome) or 'Diversos'
         
         print(f"📂 Categoria detectada: {categoria}")
                 
