@@ -244,7 +244,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'autoApprove': loja in LOJAS_COM_AFILIADO,
                         'source': 'promobit',
-                        'externalId': ext_id,
                         'platformType': platform_type,
                         'platformId': platform_id
                     })
@@ -417,7 +416,6 @@ class PromotionScraper:
                                 'storeName': loja,
                                 'source': 'promobyte',
 
-                                'externalId': ext_id,
 
                                 'platformType': platform_type,
 
@@ -542,7 +540,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -627,7 +624,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -721,7 +717,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -836,7 +831,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -932,7 +926,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -1164,7 +1157,6 @@ class PromotionScraper:
                         'autoApprove': loja in LOJAS_COM_AFILIADO,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -1255,7 +1247,6 @@ class PromotionScraper:
                         'autoApprove': True,  # Link já é afiliado
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -1357,7 +1348,6 @@ class PromotionScraper:
                         'storeName': 'Shopee',
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -1521,7 +1511,6 @@ class PromotionScraper:
                         'storeName': loja,
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -1619,7 +1608,6 @@ class PromotionScraper:
                         'storeName': 'Amazon',
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
@@ -1720,7 +1708,6 @@ class PromotionScraper:
                         'storeName': 'Mercado Livre',
                         'source': 'promobyte',
 
-                        'externalId': ext_id,
 
                         'platformType': platform_type,
 
