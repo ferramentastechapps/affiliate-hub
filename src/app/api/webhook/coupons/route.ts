@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, platform, discount, description } = body;
+    const { code, platform, discount, description, productId } = body;
 
     if (!code || !platform) {
       return NextResponse.json(
@@ -24,11 +24,18 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`[Cupom Webhook] Novo cupom cadastrado: ${code} para ${platform}`);
+    console.log(`[Cupom Webhook] Novo cupom cadastrado: ${code} para ${platform}${productId ? ` (produto específico: ${productId})` : ' (cupom genérico)'}`);
 
-    // Buscar produtos ativos da mesma plataforma
+    // Se cupom é específico para um produto, buscar só aquele produto
+    // Se cupom é genérico (sem productId), buscar produtos da plataforma
     const products = await prisma.product.findMany({
-      where: {
+      where: productId ? {
+        // Cupom específico: só o produto vinculado
+        id: productId,
+        status: { in: ['active', 'approved'] },
+        price: { not: null }
+      } : {
+        // Cupom genérico: produtos da plataforma
         status: { in: ['active', 'approved'] },
         OR: [
           { platformType: platform },
@@ -46,7 +53,7 @@ export async function POST(request: Request) {
           take: 10
         }
       },
-      take: 100 // Pegar mais produtos para ranquear
+      take: productId ? 1 : 100 // Se específico pega 1, senão pega 100 para ranquear
     });
 
     console.log(`[Cupom Webhook] Encontrados ${products.length} produtos compatíveis`);
@@ -54,12 +61,17 @@ export async function POST(request: Request) {
     if (products.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'Cupom cadastrado mas nenhum produto compatível encontrado'
+        message: productId 
+          ? 'Cupom cadastrado mas produto não encontrado ou inativo'
+          : 'Cupom cadastrado mas nenhum produto compatível encontrado'
       });
     }
 
-    // Calcular score de cada produto
-    const productsWithScore = products.map(product => {
+    // Se cupom é específico, publicar só aquele produto (score não importa)
+    // Se cupom é genérico, calcular score e pegar top 5
+    const topProducts = productId ? products : (() => {
+      // Calcular score de cada produto
+      const productsWithScore = products.map(product => {
       let score = 0;
 
       // 1. Desconto base (0-40 pts)
@@ -103,11 +115,12 @@ export async function POST(request: Request) {
     });
 
     // Ordenar por score e pegar top 5
-    const topProducts = productsWithScore
+    return productsWithScore
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
+    })();
 
-    console.log(`[Cupom Webhook] Top 5 produtos selecionados para publicação`);
+    console.log(`[Cupom Webhook] ${productId ? 'Produto específico selecionado' : `Top ${topProducts.length} produtos selecionados`} para publicação`);
 
     // Publicar cada produto com o cupom
     let publishedCount = 0;
