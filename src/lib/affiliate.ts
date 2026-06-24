@@ -270,6 +270,9 @@ export async function resolveRedirect(url: string): Promise<string> {
     'meli.la',
     'mercadolivre.com/sec',
     'magalu.at',
+    'magalu.me',
+    'mgl.li',
+    'maga.lu',
     'tidd.ly',
     'bit.ly',
     'tinyurl.com',
@@ -350,7 +353,14 @@ export function detectPlatform(url: string): string | null {
   if (urlLower.includes('mercadolivre') || urlLower.includes('mercadofree') || urlLower.includes('meli.la')) return 'mercadoLivre';
   if (urlLower.includes('tiktok.com')) return 'tiktok';
   if (urlLower.includes('netshoes')) return 'netshoes';
-  if (urlLower.includes('magazineluiza') || urlLower.includes('magalu') || urlLower.includes('magazinevoce') || urlLower.includes('influenciadormagalu')) return 'magalu';
+  if (
+    urlLower.includes('magazineluiza') || 
+    urlLower.includes('magalu') || 
+    urlLower.includes('magazinevoce') || 
+    urlLower.includes('influenciadormagalu') ||
+    urlLower.includes('mgl.li') ||
+    urlLower.includes('maga.lu')
+  ) return 'magalu';
   if (urlLower.includes('kabum')) return 'kabum';
   
   return null;
@@ -403,7 +413,14 @@ export function extractUrlDetails(urlStr: string): UrlDetails {
       }
     }
 
-    if (urlLower.includes('magazineluiza') || urlLower.includes('magalu')) {
+    if (
+      urlLower.includes('magazineluiza') || 
+      urlLower.includes('magalu') || 
+      urlLower.includes('magazinevoce') || 
+      urlLower.includes('influenciadormagalu') ||
+      urlLower.includes('mgl.li') ||
+      urlLower.includes('maga.lu')
+    ) {
       // Magalu IDs costumam ser a primeira parte depois de /p/
       const magaluMatch = urlStr.match(/\/p\/([a-z0-9]+)/i);
       if (magaluMatch) {
@@ -623,7 +640,20 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
       return applyTemplate(templateEnv, details, undefined, magaluShop);
     }
     if (magaluShop) {
-      // Se a URL já é magazinevoce.com.br ou influenciadormagalu.com.br (ex: link de afiliado do Promobit com outro shop),
+      // 1. Se a URL contém 'divulgador' no path (links de parceiro/oferta de divulgador)
+      if (details.path.includes('/divulgador/')) {
+        const pathParts = details.path.split('/').filter(Boolean);
+        const divulgadorIndex = pathParts.findIndex(p => p.toLowerCase() === 'divulgador');
+        if (divulgadorIndex !== -1) {
+          // Manter apenas do 'divulgador' em diante, e prependar o nosso shop
+          const cleanParts = pathParts.slice(divulgadorIndex);
+          const newPath = `/${magaluShop}/${cleanParts.join('/')}`;
+          console.log(`[Affiliate] Magalu: formatado link de divulgador → ${newPath}`);
+          return `https://www.magazinevoce.com.br${newPath}`;
+        }
+      }
+
+      // 2. Se a URL já é magazinevoce.com.br ou influenciadormagalu.com.br (ex: link de afiliado do Promobit com outro shop),
       // substituir o primeiro segmento do path pelo nosso shop em vez de prependar.
       // Exemplo errado: magazinevoce.com.br/shopPromobit/p/123 → não virar /nossoshop/shopPromobit/p/123
       if (details.hostname.includes('magazinevoce') || details.hostname.includes('influenciadormagalu')) {
@@ -646,7 +676,7 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
         return `https://www.magazinevoce.com.br/${magaluShop}${pathClean}`;
       }
 
-      // URL é magazineluiza.com.br ou magalu.com.br: construir link de afiliado normalmente
+      // 3. URL é magazineluiza.com.br ou magalu.com.br: construir link de afiliado normalmente
       const pathClean = details.path.startsWith('/') ? details.path : `/${details.path}`;
       return `https://www.magazinevoce.com.br/${magaluShop}${pathClean}`;
     }
