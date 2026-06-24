@@ -252,6 +252,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         prompt = (
             f"Extraia as informações desta promoção de afiliado. Pode ser uma mensagem mal formatada ou de WhatsApp:\n\n"
             f"{text}\n\n"
+            f"IMPORTANTE: Se a mensagem contiver apenas um link (URL) ou não descrever nenhum produto de forma detalhada e explícita no texto, responda com \"name\": \"Produto Encontrado\" e \"price\": null. NÃO INVENTE nomes de produtos ou preços fictícios.\n\n"
             f"Responda APENAS em um JSON válido com estas exatas chaves:\n"
             f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
             f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
@@ -341,6 +342,14 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         except Exception as e:
             print(f"⚠️ Erro no scraper de fallback: {e}")
 
+        # Se o Gemini não achou nome ou preço, usa o do scraper
+        if nome == 'Produto Encontrado' and scraped_data.get('name'):
+            nome = scraped_data.get('name')
+            print(f"📝 Nome atualizado do scraper: {nome}")
+        if not preco and scraped_data.get('price'):
+            preco = scraped_data.get('price')
+            print(f"💰 Preço atualizado do scraper: R$ {preco}")
+
         # Pegar a foto original se a mensagem tiver foto, senão usa a do scraper
         foto_url = None
         if update.message.photo:
@@ -351,13 +360,19 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             foto_url = scraped_data.get('imageUrl')
             print(f"📸 Foto do scraper: {foto_url}")
 
-        # Se o Gemini não achou nome ou preço, usa o do scraper
-        if nome == 'Produto Encontrado' and scraped_data.get('name'):
-            nome = scraped_data.get('name')
-            print(f"📝 Nome atualizado do scraper: {nome}")
-        if not preco and scraped_data.get('price'):
-            preco = scraped_data.get('price')
-            print(f"💰 Preço atualizado do scraper: R$ {preco}")
+        # Se ainda não temos imagem, tenta buscar no DuckDuckGo pelo nome do produto
+        if not foto_url and nome and nome != 'Produto Encontrado':
+            try:
+                print(f"🔍 Imagem não encontrada no scraper/mensagem, buscando no DuckDuckGo para: {nome}")
+                import urllib.parse
+                images_resp = requests.get(f"http://127.0.0.1:3005/api/scrape/images?q={urllib.parse.quote(nome)}", timeout=15)
+                if images_resp.status_code == 200:
+                    images_data = images_resp.json()
+                    if images_data and len(images_data) > 0:
+                        foto_url = images_data[0].get('image')
+                        print(f"✅ Foto encontrada via DuckDuckGo: {foto_url}")
+            except Exception as e:
+                print(f"⚠️ Erro ao buscar imagem no DuckDuckGo: {e}")
             
         # Determinar categoria
         from config import CATEGORY_KEYWORDS
