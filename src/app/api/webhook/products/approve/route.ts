@@ -272,6 +272,7 @@ export async function POST(request: Request) {
             console.error('Erro ao disparar webhook de cupom:', webhookError);
             // Não falha a aprovação se o webhook der erro
           }
+        } else {
           couponData = existingCoupon;
           console.log(`ℹ️ Cupom já existe: ${couponCode}`);
         }

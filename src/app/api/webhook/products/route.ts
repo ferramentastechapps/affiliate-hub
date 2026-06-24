@@ -171,13 +171,19 @@ export async function POST(request: Request) {
             const activeCoupons = await prisma.coupon.findMany({
               where: {
                 isActive: true,
-                OR: [
-                  { productId: existingProduct.id },
-                  { platform: existingProduct.platformType || existingProduct.source || '' }
-                ],
-                OR: [
-                  { expiresAt: null },
-                  { expiresAt: { gte: new Date() } }
+                AND: [
+                  {
+                    OR: [
+                      { productId: existingProduct.id },
+                      { platform: existingProduct.platformType || existingProduct.source || '' }
+                    ]
+                  },
+                  {
+                    OR: [
+                      { expiresAt: null },
+                      { expiresAt: { gte: new Date() } }
+                    ]
+                  }
                 ]
               }
             });
@@ -210,13 +216,19 @@ export async function POST(request: Request) {
             const coupons = await prisma.coupon.findMany({
               where: {
                 isActive: true,
-                OR: [
-                  { productId: existingProduct.id },
-                  { platform: platform }
-                ],
-                OR: [
-                  { expiresAt: null },
-                  { expiresAt: { gte: new Date() } }
+                AND: [
+                  {
+                    OR: [
+                      { productId: existingProduct.id },
+                      { platform: platform }
+                    ]
+                  },
+                  {
+                    OR: [
+                      { expiresAt: null },
+                      { expiresAt: { gte: new Date() } }
+                    ]
+                  }
                 ]
               },
               take: 3
