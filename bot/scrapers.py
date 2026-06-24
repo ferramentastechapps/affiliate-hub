@@ -59,10 +59,25 @@ except Exception as _e:
 class PromotionScraper:
     """Busca promoções em diferentes sites"""
 
-    def __init__(self):
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    @property
+    def headers(self) -> Dict[str, str]:
+        import random
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
+        ]
+        return {
+            'User-Agent': random.choice(user_agents),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Connection': 'keep-alive'
         }
+
+    def __init__(self):
+        pass
 
     def extrair_platform_id(self, url: str) -> tuple[str | None, str | None]:
         """
@@ -1088,6 +1103,37 @@ class PromotionScraper:
             data = json.loads(script.string)
             results = data.get('props', {}).get('pageProps', {}).get('promos', {}).get('results', [])
 
+            # Buscar as imagens reais (lifestyle) em paralelo
+            slugs = [promo.get('slug') for promo in results[:limite] if promo.get('slug')]
+            
+            def _buscar_imagem_real_detalhes(slug):
+                if not slug:
+                    return slug, None
+                link_oferta = f"https://pechinchou.com.br/oferta/{slug}"
+                try:
+                    detail_res = requests.get(link_oferta, headers=self.headers, timeout=5)
+                    if detail_res.status_code == 200:
+                        detail_soup = BeautifulSoup(detail_res.content, 'html.parser')
+                        detail_script = detail_soup.find('script', id='__NEXT_DATA__')
+                        if detail_script:
+                            detail_data = json.loads(detail_script.string)
+                            promo_detail = detail_data.get('props', {}).get('pageProps', {}).get('promo', {})
+                            return slug, (promo_detail.get('image_real') or promo_detail.get('image_social'))
+                except Exception:
+                    pass
+                return slug, None
+
+            imagens_reais = {}
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [executor.submit(_buscar_imagem_real_detalhes, slug) for slug in slugs]
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        slug_res, img_url = future.result()
+                        if img_url:
+                            imagens_reais[slug_res] = img_url
+                    except Exception:
+                        pass
+
             for promo in results[:limite]:
                 try:
                     nome = promo.get('title', 'Sem título')
@@ -1097,23 +1143,12 @@ class PromotionScraper:
                     foto = promo.get('image')
                     imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
 
-                    # Tenta buscar a página de detalhes para pegar a imagem real (lifestyle) do Pechinchou se existir
-                    image_real = None
-                    try:
-                        detail_res = requests.get(link_oferta, headers=self.headers, timeout=5)
-                        if detail_res.status_code == 200:
-                            detail_soup = BeautifulSoup(detail_res.content, 'html.parser')
-                            detail_script = detail_soup.find('script', id='__NEXT_DATA__')
-                            if detail_script:
-                                detail_data = json.loads(detail_script.string)
-                                promo_detail = detail_data.get('props', {}).get('pageProps', {}).get('promo', {})
-                                image_real = promo_detail.get('image_real') or promo_detail.get('image_social')
-                    except Exception as img_err:
-                        print(f"  ⚠️ Erro ao buscar imagem real de Pechinchou: {img_err}")
+                    slug = promo.get('slug', '')
+                    image_real = imagens_reais.get(slug)
 
                     if image_real and str(image_real).strip() and not str(image_real).startswith('/'):
                         imagem_url = image_real
-                        print(f"  📸 [Pechinchou] Encontrada foto real/lifestyle: {imagem_url}")
+                        print(f"  📸 [Pechinchou] Encontrada foto real/lifestyle (paralelo): {imagem_url}")
 
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')

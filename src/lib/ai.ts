@@ -287,6 +287,88 @@ export async function processProductWithNvidia(
   }
 }
 
+/**
+ * Executa a chamada para o OpenRouter (google/gemini-2.5-flash) como 3º fallback.
+ */
+export async function processProductWithOpenRouter(
+  promptText: string,
+  mode: 'evaluate' | 'caption' = 'evaluate'
+): Promise<{
+  titulo: string | null;
+  subtitulo: string | null;
+  score: number | null;
+  rawJson: string | null;
+} | null> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    console.warn('[AI-OpenRouter] OPENROUTER_API_KEY não configurada no ambiente.');
+    return null;
+  }
+
+  let authHeader = apiKey.trim();
+  if (!authHeader.startsWith('Bearer ')) {
+    authHeader = `Bearer ${authHeader}`;
+  }
+
+  try {
+    console.log(`[AI-OpenRouter] Acionando fallback do OpenRouter (google/gemini-2.5-flash)...`);
+    
+    // Carrega prompt adequado ao modo
+    let systemPrompt = '';
+    if (mode === 'evaluate') {
+      systemPrompt = EVALUATION_SYSTEM_PROMPT;
+    } else {
+      systemPrompt = await buildDynamicSystemPrompt();
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://economizei.ftech-apps.com.br',
+        'X-Title': 'Affiliate Hub Bot'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: promptText }
+        ],
+        temperature: mode === 'caption' ? 1.1 : 0.3,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[AI-OpenRouter] OpenRouter falhou com status ${response.status}: ${errorText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const responseText = data.choices?.[0]?.message?.content;
+    if (!responseText) {
+      console.warn('[AI-OpenRouter] Resposta vazia do OpenRouter.');
+      return null;
+    }
+
+    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanedText);
+
+    return {
+      titulo: parsedData.titulo || null,
+      subtitulo: parsedData.analise || null,
+      score: parsedData.score !== undefined ? Number(parsedData.score) : null,
+      rawJson: JSON.stringify(parsedData),
+    };
+  } catch (error: any) {
+    console.error('[AI-OpenRouter] Erro durante o processamento do OpenRouter:', error.message || error);
+    return null;
+  }
+}
+
+
 export async function processProductWithAI(
   productName: string,
   price: number,
@@ -425,6 +507,13 @@ Contexto atual:
     const nvidiaResult = await processProductWithNvidia(promptText);
     if (nvidiaResult) {
       return nvidiaResult;
+    }
+
+    // Se NVIDIA falhar, tenta OpenRouter como 3º Fallback
+    console.warn('[AI] NVIDIA NIM falhou. Tentando OpenRouter...');
+    const openRouterResult = await processProductWithOpenRouter(promptText, mode);
+    if (openRouterResult) {
+      return openRouterResult;
     }
 
     console.error('[AI] Todos os modelos de IA falharam.');

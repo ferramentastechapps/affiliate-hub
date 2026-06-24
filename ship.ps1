@@ -50,6 +50,7 @@ $SHOPEE_ID = $LocalEnv["SHOPEE_APP_ID"]
 $SHOPEE_SECRET = $LocalEnv["SHOPEE_APP_SECRET"]
 $GEMINI_KEY = $LocalEnv["GEMINI_API_KEY"]
 $NVIDIA_KEY = $LocalEnv["NVIDIA_API_KEY"]
+$OPENROUTER_KEY = $LocalEnv["OPENROUTER_API_KEY"]
 
 # O comando SSH reformulado e robusto para evitar quebra de linhas e skips.
 $sshCommand = @"
@@ -65,6 +66,7 @@ SHOPEE_ID="$SHOPEE_ID"
 SHOPEE_SECRET="$SHOPEE_SECRET"
 GEMINI_KEY_VAL="$GEMINI_KEY"
 NVIDIA_KEY_VAL="$NVIDIA_KEY"
+OPENROUTER_KEY_VAL="$OPENROUTER_KEY"
 
 echo "⚙️ Sincronizando chaves locais para o VPS..."
 
@@ -117,6 +119,19 @@ if [ -n "$NVIDIA_KEY_VAL" ]; then
     sed -i "s|NVIDIA_API_KEY=.*|NVIDIA_API_KEY=\"$NVIDIA_KEY_VAL\"|g" ~/affiliate-hub/bot/.env
   else
     echo "NVIDIA_API_KEY=\"$NVIDIA_KEY_VAL\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
+if [ -n "$OPENROUTER_KEY_VAL" ]; then
+  if grep -q 'OPENROUTER_API_KEY=' ~/affiliate-hub/.env; then
+    sed -i "s|OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=\"$OPENROUTER_KEY_VAL\"|g" ~/affiliate-hub/.env
+  else
+    echo "OPENROUTER_API_KEY=\"$OPENROUTER_KEY_VAL\"" >> ~/affiliate-hub/.env
+  fi
+  if grep -q 'OPENROUTER_API_KEY=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=\"$OPENROUTER_KEY_VAL\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "OPENROUTER_API_KEY=\"$OPENROUTER_KEY_VAL\"" >> ~/affiliate-hub/bot/.env
   fi
 fi
 
