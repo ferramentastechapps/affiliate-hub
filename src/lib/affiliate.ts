@@ -1,5 +1,6 @@
 import { URL } from 'url';
 import * as cheerio from 'cheerio';
+import crypto from 'crypto';
 
 /**
  * Interface para representar os detalhes extraídos de uma URL de produto
@@ -502,6 +503,69 @@ export function cleanTrackingParams(urlStr: string): string {
 }
 
 /**
+ * Gera um link de afiliado oficial da Shopee usando a API GraphQL
+ */
+export async function generateShopeeApiLink(originUrl: string, appId: string, appSecret: string): Promise<string | null> {
+  const endpoint = 'https://open-api.affiliate.shopee.com.br/graphql';
+  const timestamp = Math.floor(Date.now() / 1000);
+  
+  // O payload GraphQL precisa ser exatamente o mesmo na assinatura e no corpo
+  const payload = JSON.stringify({
+    query: `mutation {
+  generateShortLink(input: {
+    originUrl: "${originUrl}",
+    subIds: ["telegram"]
+  }) {
+    shortLink
+  }
+}`.trim()
+  });
+
+  // Assinatura: SHA256(AppId + Timestamp + Payload + Secret)
+  const baseString = appId + timestamp + payload + appSecret;
+  const signature = crypto.createHash('sha256').update(baseString).digest('hex');
+
+  const authorizationHeader = `SHA256 Credential=${appId}, Timestamp=${timestamp}, Signature=${signature}`;
+
+  try {
+    console.log(`[Shopee API] Enviando requisição GraphQL para o link: ${originUrl}`);
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authorizationHeader
+      },
+      body: payload
+    });
+
+    if (!response.ok) {
+      console.error(`[Shopee API] HTTP erro! Status: ${response.status}`);
+      const text = await response.text();
+      console.error(`[Shopee API] Detalhes do erro HTTP: ${text}`);
+      return null;
+    }
+
+    const result = await response.json();
+    if (result.errors) {
+      console.error('[Shopee API] Erros no GraphQL:', result.errors);
+      return null;
+    }
+
+    const shortLink = result.data?.generateShortLink?.shortLink;
+    if (shortLink) {
+      console.log(`[Shopee API] Link curto gerado com sucesso: ${shortLink}`);
+      return shortLink;
+    } else {
+      console.error('[Shopee API] Resposta inesperada ou vazia do GraphQL:', JSON.stringify(result));
+    }
+  } catch (error) {
+    console.error('[Shopee API] Falha na comunicação com a API da Shopee:', error);
+  }
+
+  return null;
+}
+
+/**
  * Gera um link de afiliado para uma URL original com base no arquivo .env
  */
 export async function generateAffiliateLink(originalUrl: string): Promise<string | null> {
@@ -608,6 +672,23 @@ export async function generateAffiliateLink(originalUrl: string): Promise<string
       }
     } else if (templateEnv) {
       return applyTemplate(templateEnv, details, mlTag);
+    }
+  }
+
+  // --- SHOPEE ---
+  if (platform === 'shopee') {
+    const shopeeAppId = process.env.SHOPEE_APP_ID;
+    const shopeeAppSecret = process.env.SHOPEE_APP_SECRET;
+    
+    if (shopeeAppId && shopeeAppSecret) {
+      try {
+        const apiLink = await generateShopeeApiLink(cleanedUrl, shopeeAppId, shopeeAppSecret);
+        if (apiLink) {
+          return apiLink;
+        }
+      } catch (err) {
+        console.error('[Affiliate] Falha na geração do link de afiliado da Shopee via API:', err);
+      }
     }
   }
 

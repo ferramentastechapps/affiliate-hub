@@ -271,7 +271,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "meta-llama/llama-3.1-8b-instruct:free",
+                    "model": "meta-llama/llama-3.2-3b-instruct:free",
                     "messages": [
                         {"role": "user", "content": prompt}
                     ],
@@ -369,6 +369,8 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             'imageUrl': foto_url or '/placeholder.webp',
             'price': preco,
             'originalPrice': None,
+            'status': 'active',
+            'autoApprove': True,
             'links': {
                 platform: link
             },
@@ -377,32 +379,40 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         
         produto_data = enriquecer_produto(produto_data)
         
-        print(f"📦 Enviando produto encaminhado para API: {produto_data}")
-        resultado = api.adicionar_produto(produto_data)
+        print(f"📦 Enviando produto encaminhado diretamente (auto-aprovar) para API: {produto_data}")
+        resultado = api.adicionar_produto_direto(produto_data)
         
         if resultado and resultado.get('success'):
-            produto_id = resultado.get('product', {}).get('id', 'N/A')
-            produto_data['id'] = produto_id
+            produto_info = resultado.get('product', {})
+            produto_id = produto_info.get('id', 'N/A')
             
-            print(f"✅ Produto adicionado com sucesso! ID: {produto_id}")
+            print(f"✅ Produto adicionado e auto-aprovado! ID: {produto_id}")
             
-            # Notifica os administradores para aprovação usando o notifier padrão
+            # Obter link final gerado (de afiliado)
+            final_links = produto_info.get('links', {}) or {}
+            final_affiliate_link = final_links.get(platform) or link
+            
+            # Publicar diretamente no canal/grupo do Telegram
             try:
-                notifier = TelegramNotifier()
-                await notifier.enviar_produto(produto_data)
-                print(f"📱 Notificação de aprovação enviada!")
+                await publicar_no_grupo(
+                    context, 
+                    produto_info, 
+                    platform, 
+                    final_affiliate_link, 
+                    update.message.photo[-1].file_id if update.message.photo else None
+                )
+                print(f"📢 Publicado automaticamente no grupo do Telegram!")
             except Exception as e:
-                print(f"⚠️ Erro ao enviar notificação de aprovação: {e}")
+                print(f"⚠️ Erro ao publicar automaticamente no grupo: {e}")
                 
             await msg_status.edit_text(
-                f"✅ <b>Oferta capturada com sucesso!</b>\n\n"
-                f"📦 {nome[:100]}\n"
+                f"✅ <b>Oferta publicada com sucesso!</b>\n\n"
+                f"📦 <b>{nome[:100]}</b>\n"
                 f"💰 Preço: R$ {preco if preco else 'N/A'}\n"
                 f"📂 Categoria: {categoria}\n"
-                f"🏪 Plataforma: {platform.capitalize()}\n\n"
-                f"🆔 ID: <code>{produto_id}</code>\n\n"
-                f"O produto foi enviado como <b>Pendente</b> para aprovação.\n"
-                f"Use <code>/aprovar {produto_id}</code> para publicar!",
+                f"🏪 Loja: <b>{platform.capitalize()}</b>\n"
+                f"🔗 Link de Afiliado: {final_affiliate_link}\n\n"
+                f"🚀 Publicado no grupo e cadastrado no site como ativo!",
                 parse_mode='HTML'
             )
         else:
