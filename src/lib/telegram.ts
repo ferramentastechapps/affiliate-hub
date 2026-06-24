@@ -198,22 +198,52 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
 
   const emoji = CATEGORY_EMOJIS[product.category] || '🔖';
   
-  // Formatação de preços
+  // Buscar cupons do produto (podem vir do webhook ou do banco)
+  const coupons = product.coupons || [];
+  const hasCoupons = coupons.length > 0;
+  
+  // Formatação de preços com cupom
   let precoTxt = "";
+  let cupomMsg = "";
+  
   if (product.originalPrice && product.price && Number(product.originalPrice) > Number(product.price)) {
-    precoTxt = `🔥 DE R$ <s>${formatBrCurrency(product.originalPrice)}</s> | POR R$ <b>${formatBrCurrency(product.price)}</b>`;
+    const discountPercent = ((product.originalPrice - product.price) / product.originalPrice) * 100;
+    precoTxt = `~~De R$ ${formatBrCurrency(product.originalPrice)}~~\nPor R$ <b>${formatBrCurrency(product.price)}</b> (-${discountPercent.toFixed(0)}%)`;
   } else if (product.price) {
     precoTxt = `🔥 POR R$ <b>${formatBrCurrency(product.price)}</b>`;
   }
-
-  // Cupom
-  const desc = product.description || '';
-  let cupomMsg = "";
-  if (desc.includes('🎟️ CUPOM:')) {
-    const cupomExtraido = desc.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
-    if (cupomExtraido && !['NORMAL', 'NONE', 'NULL', 'N/A', 'NA'].includes(cupomExtraido.toUpperCase())) {
-      cupomMsg = `🎟️ CUPOM: <code>${cupomExtraido}</code>`;
+  
+  // Se tem cupom, calcular preço final
+  if (hasCoupons && product.price) {
+    const coupon = coupons[0];
+    cupomMsg = `🎟️ CUPOM: <code>${coupon.code}</code>`;
+    
+    // Tentar calcular preço com cupom (estimativa)
+    if (product.priceWithCoupon) {
+      const totalSavings = product.originalPrice ? product.originalPrice - product.priceWithCoupon : product.price - product.priceWithCoupon;
+      const totalSavingsPercent = product.originalPrice 
+        ? ((product.originalPrice - product.priceWithCoupon) / product.originalPrice) * 100
+        : ((product.price - product.priceWithCoupon) / product.price) * 100;
+      
+      cupomMsg += ` → R$ <b>${formatBrCurrency(product.priceWithCoupon)}</b> (economia total ${totalSavingsPercent.toFixed(0)}%)`;
+    } else if (coupon.discount) {
+      cupomMsg += ` → ${coupon.discount}`;
     }
+  } else {
+    // Fallback: buscar cupom na descrição (compatibilidade com sistema antigo)
+    const desc = product.description || '';
+    if (desc.includes('🎟️ CUPOM:')) {
+      const cupomExtraido = desc.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
+      if (cupomExtraido && !['NORMAL', 'NONE', 'NULL', 'N/A', 'NA'].includes(cupomExtraido.toUpperCase())) {
+        cupomMsg = `🎟️ CUPOM: <code>${cupomExtraido}</code>`;
+      }
+    }
+  }
+  
+  // Badge de queda de preço
+  let dropBadge = "";
+  if (product.dropPercent && product.dropPercent > 0) {
+    dropBadge = `⚡ PREÇO CAIU ${product.dropPercent}%!`;
   }
 
   // Legenda da IA
@@ -246,6 +276,11 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   const lines = [];
   if (legendaTop) {
     lines.push(legendaTop);
+    lines.push("");
+  }
+  
+  if (dropBadge) {
+    lines.push(dropBadge);
     lines.push("");
   }
   

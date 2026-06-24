@@ -157,37 +157,81 @@ export async function POST(request: Request) {
             }
           });
           
-          // Calcular queda de preço
+          // NOVA LÓGICA — Calcular queda de preço e verificar cupons
           const lastHistory = existingProduct.priceHistory[0];
+          let shouldPublish = false;
+          let publishReason = '';
+          let dropPercent = 0;
+          
           if (lastHistory && body.price < lastHistory.price) {
-            const dropPercent = ((lastHistory.price - body.price) / lastHistory.price) * 100;
+            dropPercent = ((lastHistory.price - body.price) / lastHistory.price) * 100;
             console.log(`[Webhook] Queda de ${dropPercent.toFixed(1)}% no preço!`);
             
-            // FASE 2 — Se queda > 15% E produto tem isFixed=true, publicar automaticamente
-            if (dropPercent >= 15 && existingProduct.isFixed) {
-              console.log(`[Webhook] ⚡ Auto-publicando produto com queda significativa de preço`);
-              
-              // Buscar link de afiliado principal para publicação
-              const productLinks = await prisma.productLink.findFirst({
-                where: { productId: existingProduct.id, isActive: true }
-              });
-              
-              const affiliateLink = productLinks?.generatedAffiliateUrl || productLinks?.affiliateUrl || '';
-              const platform = productLinks?.platform || existingProduct.platformType || 'amazon';
-              
-              // Disparar publicação no Telegram (assíncrono, não aguarda)
-              publishToGroup({
-                ...existingProduct,
-                price: body.price,
-                originalPrice: body.originalPrice || existingProduct.originalPrice,
-                dropPercent: Math.round(dropPercent * 10) / 10
-              }, platform, affiliateLink).catch(err => {
-                console.error('[Webhook] Erro ao publicar produto com queda de preço:', err);
-              });
-            } else if (dropPercent >= 15 && !existingProduct.isFixed) {
-              console.log(`[Webhook] Produto tem queda de ${dropPercent.toFixed(1)}% mas não está travado (isFixed=false). Movendo para fila de aprovação com prioridade alta.`);
-              // TODO: Sistema de fila com prioridade (Fase 5)
+            // Buscar cupons ativos para este produto
+            const activeCoupons = await prisma.coupon.findMany({
+              where: {
+                isActive: true,
+                OR: [
+                  { productId: existingProduct.id },
+                  { platform: existingProduct.platformType || existingProduct.source || '' }
+                ],
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gte: new Date() } }
+                ]
+              }
+            });
+            
+            // CONDIÇÃO 1: Queda ≥ 5% + tem cupom ativo
+            if (dropPercent >= 5 && activeCoupons.length > 0) {
+              shouldPublish = true;
+              publishReason = `Queda de ${dropPercent.toFixed(1)}% + ${activeCoupons.length} cupom(ns) ativo(s)`;
             }
+            // CONDIÇÃO 2: Queda ≥ 10% mesmo sem cupom
+            else if (dropPercent >= 10) {
+              shouldPublish = true;
+              publishReason = `Queda significativa de ${dropPercent.toFixed(1)}%`;
+            }
+          }
+          
+          // Publicar se atender as condições
+          if (shouldPublish && existingProduct.status === 'active') {
+            console.log(`[Webhook] ⚡ Auto-publicando: ${publishReason}`);
+            
+            // Buscar link de afiliado principal para publicação
+            const productLinks = await prisma.productLink.findFirst({
+              where: { productId: existingProduct.id, isActive: true }
+            });
+            
+            const affiliateLink = productLinks?.generatedAffiliateUrl || productLinks?.affiliateUrl || '';
+            const platform = productLinks?.platform || existingProduct.platformType || 'amazon';
+            
+            // Buscar cupons para incluir na mensagem
+            const coupons = await prisma.coupon.findMany({
+              where: {
+                isActive: true,
+                OR: [
+                  { productId: existingProduct.id },
+                  { platform: platform }
+                ],
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gte: new Date() } }
+                ]
+              },
+              take: 3
+            });
+            
+            // Disparar publicação no Telegram (assíncrono, não aguarda)
+            publishToGroup({
+              ...existingProduct,
+              price: body.price,
+              originalPrice: body.originalPrice || existingProduct.originalPrice,
+              dropPercent: Math.round(dropPercent * 10) / 10,
+              coupons: coupons.map(c => ({ code: c.code, discount: c.discount }))
+            }, platform, affiliateLink).catch(err => {
+              console.error('[Webhook] Erro ao publicar produto:', err);
+            });
           }
           
           // Disparar alertas de preço

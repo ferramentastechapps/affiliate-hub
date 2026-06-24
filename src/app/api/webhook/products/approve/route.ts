@@ -254,7 +254,24 @@ export async function POST(request: Request) {
           });
           
           console.log(`✅ Cupom criado: ${couponCode} para produto ${productId}`);
-        } else {
+          
+          // NOVO: Disparar webhook de cupom novo para publicar produtos relacionados
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhook/coupons`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                code: couponCode,
+                platform: platformNames[targetPlatform] || targetPlatform,
+                discount: 'Desconto aplicado',
+                description: `Cupom de desconto para ${product.name}`
+              })
+            });
+            console.log(`🔔 Webhook de cupom disparado para ${couponCode}`);
+          } catch (webhookError) {
+            console.error('Erro ao disparar webhook de cupom:', webhookError);
+            // Não falha a aprovação se o webhook der erro
+          }
           couponData = existingCoupon;
           console.log(`ℹ️ Cupom já existe: ${couponCode}`);
         }
