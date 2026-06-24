@@ -53,10 +53,10 @@ export function SplashScreen() {
             onClick={handleClose}
             className="w-full h-full object-cover sm:object-contain"
           >
-            {/* MP4: maior compatibilidade — Android, Chrome, Firefox */}
-            <source src="/Video de entrada.mp4" type="video/mp4" />
-            {/* MOV / QuickTime: fallback para Safari/iOS */}
-            <source src="/Video de entrada.mov" type="video/quicktime" />
+            {/* MOV / QuickTime: Safari e iOS (arquivo principal) */}
+            <source src="/abertura.MOV" type="video/quicktime" />
+            {/* MP4: fallback para Android, Chrome, Firefox */}
+            <source src="/abertura.mp4" type="video/mp4" />
           </video>
           <button 
             onClick={handleClose}
