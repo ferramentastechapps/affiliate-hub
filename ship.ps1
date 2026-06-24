@@ -167,11 +167,6 @@ else
 fi
 
 
-echo "📦 Instalando dependências do WhatsApp..."
-cd ~/affiliate-hub/whatsapp
-npm install
-cd ~/affiliate-hub
-
 echo "🤖 Configurando bot..."
 cd bot
 sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=https://economizei.ftech-apps.com.br|g' ~/affiliate-hub/bot/.env
@@ -183,12 +178,6 @@ grep -q 'LOMADEE_APP_TOKEN' ~/affiliate-hub/bot/.env || echo 'LOMADEE_APP_TOKEN=
 sed -i 's|LOMADEE_APP_TOKEN=.*|LOMADEE_APP_TOKEN=lmd_dev_9GWWVA5hbj_0LovGyptGY0L0QyYxZeR0QWwcnFI6k3u|g' ~/affiliate-hub/bot/.env
 grep -q 'LOMADEE_SOURCE_ID' ~/affiliate-hub/bot/.env || echo 'LOMADEE_SOURCE_ID=2324685' >> ~/affiliate-hub/bot/.env
 sed -i 's|LOMADEE_SOURCE_ID=.*|LOMADEE_SOURCE_ID=2324685|g' ~/affiliate-hub/bot/.env
-
-# WhatsApp Env Vars
-grep -q 'WHATSAPP_GROUP_NAME' ~/affiliate-hub/.env || echo 'WHATSAPP_GROUP_NAME=""' >> ~/affiliate-hub/.env
-grep -q 'WHATSAPP_DELAY_MINUTES' ~/affiliate-hub/.env || echo 'WHATSAPP_DELAY_MINUTES=30' >> ~/affiliate-hub/.env
-grep -q 'WHATSAPP_API_URL' ~/affiliate-hub/.env || echo 'WHATSAPP_API_URL="http://localhost:3006/send"' >> ~/affiliate-hub/.env
-sed -i 's|WHATSAPP_API_URL=.*|WHATSAPP_API_URL="http://localhost:3006/send"|g' ~/affiliate-hub/.env
 
 pip3 install -r requirements.txt --break-system-packages
 
@@ -210,6 +199,7 @@ pm2 delete affiliate-scraper > /dev/null 2>&1 || true
 pm2 delete affiliate-hub-web > /dev/null 2>&1 || true
 pm2 delete nextjs > /dev/null 2>&1 || true
 pm2 delete telegram-bot > /dev/null 2>&1 || true
+pm2 delete whatsapp-engine > /dev/null 2>&1 || true
 
 # Iniciar ou recarregar os bots usando o arquivo de ecossistema
 cd ~/affiliate-hub
