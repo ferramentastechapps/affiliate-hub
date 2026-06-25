@@ -540,6 +540,7 @@ class TelegramNotifier:
             # 1. Tentar pegar legenda do aiAnalysis existente (caso já tenha sido gerada antes)
             titulo = None
             subtitulo = None
+            analise = None
             
             ai_analysis_raw = produto.get('aiAnalysis')
             if ai_analysis_raw:
@@ -549,6 +550,7 @@ class TelegramNotifier:
                     if isinstance(data, dict):
                         titulo = data.get('titulo')
                         subtitulo = data.get('subtitulo')
+                        analise = data.get('analise') or data.get('critique')
                 except Exception:
                     pass
             
@@ -581,6 +583,8 @@ class TelegramNotifier:
                 legenda_top = f"<b>{titulo.upper()}</b>"
                 if subtitulo:
                     legenda_top += f"\n<i>{subtitulo.lower()}</i>"
+            elif analise:
+                legenda_top = f"<b>🔥 AVALIAÇÃO DA IA:</b>\n<i>{analise}</i>"
             else:
                 legenda_top = "<b>🔥 ACHADINHO IMPERDÍVEL!</b>"
 
