@@ -810,11 +810,11 @@ export async function generateShopeeApiLink(originUrl: string, appId: string, ap
 /**
  * Gera um link de afiliado para uma URL original com base no arquivo .env
  */
-export async function generateAffiliateLink(originalUrl: string): Promise<string | null> {
+export async function generateAffiliateLink(originalUrl: string, preResolvedUrl?: string): Promise<string | null> {
   if (!originalUrl) return null;
 
   // 1. Resolver redirecionamentos de URLs curtas
-  const resolvedUrl = await resolveRedirect(originalUrl);
+  const resolvedUrl = preResolvedUrl || await resolveRedirect(originalUrl);
   
   // Se o link levou a uma vitrine de ML que não pôde ser resolvida, descartar
   if (resolvedUrl === 'VITRINE_INVALIDA') {

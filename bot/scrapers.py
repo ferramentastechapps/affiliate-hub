@@ -79,15 +79,61 @@ class PromotionScraper:
     def __init__(self):
         pass
 
-    def extrair_platform_id(self, url: str) -> tuple[str | None, str | None]:
+    def _resolver_url_intermediaria(self, url: str) -> str:
         """
-        Extrai (platformType, platformId) do link original da loja.
-        Usado antes de gerar o link de afiliado.
-        Retorna (None, None) se não identificar a plataforma.
+        Resolve redirecionamentos de URLs curtas ou de agregadores.
         """
         if not url:
-            return (None, None)
+            return url
 
+        dominios_resolver = [
+            'promobit.com.br', 'promobyte.site', 'pelando.com.br', 'gatry.com', 
+            'zoom.com.br', 'buscape.com.br', 'pechinchou.com.br', 'amzn.to',
+            'shope.ee', 'meli.la'
+        ]
+        
+        url_lower = url.lower()
+        deve_resolver = any(d in url_lower for d in dominios_resolver)
+        
+        if not deve_resolver:
+            return url
+            
+        try:
+            # Usar HEAD primeiro (rápido e econômico)
+            print(f"[Scraper] Resolvendo redirecionamento (HEAD) para: {url}")
+            response = requests.head(
+                url, 
+                headers=self.headers, 
+                allow_redirects=True, 
+                timeout=10,
+                verify=False
+            )
+            final_url = response.url
+            
+            # Se for a mesma URL e o status foi erro de HEAD (405/404/403/501), tentamos GET leve
+            if final_url == url and response.status_code in [403, 404, 405, 501]:
+                print(f"[Scraper] HEAD falhou com status {response.status_code}. Tentando GET leve...")
+                response_get = requests.get(
+                    url,
+                    headers=self.headers,
+                    allow_redirects=True,
+                    timeout=10,
+                    stream=True,
+                    verify=False
+                )
+                final_url = response_get.url
+                response_get.close()
+                
+            print(f"[Scraper] URL resolvida: {url} -> {final_url}")
+            return final_url
+        except Exception as e:
+            print(f"[Scraper] Erro ao resolver URL {url}: {e}")
+            return url
+
+    def _extrair_platform_id_regex(self, url: str) -> tuple[str | None, str | None]:
+        """
+        Executa a extração por Expressões Regulares de (platformType, platformId) de uma URL direta da loja.
+        """
         url_lower = url.lower()
 
         # Amazon — ASIN: 10 chars alfanuméricos após /dp/ ou /gp/product/
@@ -142,6 +188,32 @@ class PromotionScraper:
             if match:
                 return ('tiktok', match.group(1))
 
+        return (None, None)
+
+    def extrair_platform_id(self, url: str) -> tuple[str | None, str | None]:
+        """
+        Extrai (platformType, platformId) do link original da loja.
+        Retorna (None, None) se não identificar a plataforma.
+        """
+        if not url:
+            print(f"[PLATFORM_ID] URL: {url} → ID: None")
+            return (None, None)
+
+        # 1. Tentar extrair diretamente para evitar HTTP requests desnecessários
+        plat_type, plat_id = self._extrair_platform_id_regex(url)
+        if plat_type and plat_id:
+            print(f"[PLATFORM_ID] URL: {url} → ID: {plat_id}")
+            return (plat_type, plat_id)
+
+        # 2. Se não identificar, e for um link de redirecionamento ou agregador, resolve a URL
+        resolved_url = self._resolver_url_intermediaria(url)
+        if resolved_url != url:
+            plat_type, plat_id = self._extrair_platform_id_regex(resolved_url)
+            if plat_type and plat_id:
+                print(f"[PLATFORM_ID] URL: {url} → ID: {plat_id}")
+                return (plat_type, plat_id)
+
+        print(f"[PLATFORM_ID] URL: {url} → ID: None")
         return (None, None)
 
     def buscar_promocoes_pelando(self, limite: int = 15) -> List[Dict]:
