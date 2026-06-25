@@ -30,5 +30,16 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "test_*.ts",
+    "fetch_*.ts",
+    "inspect_*.ts",
+    "print_*.ts",
+    "verificar-*.ts",
+    "adicionar-cupons-teste.ts",
+    "test-cupons-db.ts",
+    "resolve.ts",
+    "extract_json_data.ts"
+  ]
 }
