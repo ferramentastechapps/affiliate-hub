@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
-import { generateAffiliateLink } from '@/lib/affiliate';
+import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
 import { getSecondaryLifestyleImage } from '@/lib/scraper';
@@ -12,6 +12,7 @@ import { fetchAndSaveMLReviews } from '@/lib/reviews';
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
   const generatedLinks: Record<string, string> = {};
+  const resolvedUrls: Record<string, string> = {};
   const productLinksData: Array<{ platform: string, sourceUrl?: string, affiliateUrl?: string, generatedAffiliateUrl?: string, isActive: boolean }> = [];
   let hasAffiliate = false;
   let isAggregatorFailed = false;
@@ -23,7 +24,13 @@ async function processProductAffiliates(productData: { links?: Record<string, st
     if (originalUrl) {
       try {
         console.log(`[Webhook] Auto-gerando link de afiliado para ${platform}: ${originalUrl}`);
-        const generated = await generateAffiliateLink(originalUrl);
+        const resolved = await resolveRedirect(originalUrl);
+        if (resolved && resolved !== 'VITRINE_INVALIDA') {
+          resolvedUrls[platform] = resolved;
+          console.log(`[Webhook] URL de ${platform} resolvida com sucesso: ${originalUrl} -> ${resolved}`);
+        }
+
+        const generated = await generateAffiliateLink(originalUrl, resolved);
         if (generated) {
           generatedLinks[platform] = generated;
           productLinksData.push({
@@ -86,7 +93,8 @@ async function processProductAffiliates(productData: { links?: Record<string, st
   return {
     links: Object.keys(generatedLinks).length > 0 ? generatedLinks : null,
     productLinksData,
-    status: hasAffiliate ? 'active' : 'pending'
+    status: hasAffiliate ? 'active' : 'pending',
+    resolvedUrls
   };
 }
 
@@ -170,24 +178,41 @@ export async function POST(request: Request) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // RESOLUÇÃO DE LINKS E PARSE DE PLATAFORMA (NOVA ORDEM)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(body);
+    const { links: processedLinks, productLinksData, status: processedStatus, resolvedUrls } = await processProductAffiliates(body);
 
     let finalPlatformId = platformId;
     let finalPlatformType = platformType;
 
     if (!finalPlatformId || !finalPlatformType) {
-      const targetLinks = processedLinks || body.links || {};
       const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
       
+      // 1. Tentar extrair das URLs resolvidas pelo webhook
       for (const p of platforms) {
-        const urlToParse = targetLinks[p];
+        const urlToParse = resolvedUrls?.[p];
         if (urlToParse) {
           const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
           if (extracted.platformId && extracted.platformType) {
             finalPlatformId = extracted.platformId;
             finalPlatformType = extracted.platformType;
-            console.log(`[Webhook] Mapeado platformId/Type da URL resolvida: ${finalPlatformId} (${finalPlatformType})`);
+            console.log(`[Webhook] [PLATFORM_RESOLVED] Mapeado platformId/Type da URL resolvida (${p}): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
             break;
+          }
+        }
+      }
+
+      // 2. Fallback: tentar extrair das URLs processadas ou originais
+      if (!finalPlatformId || !finalPlatformType) {
+        const targetLinks = processedLinks || body.links || {};
+        for (const p of platforms) {
+          const urlToParse = targetLinks[p];
+          if (urlToParse) {
+            const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+            if (extracted.platformId && extracted.platformType) {
+              finalPlatformId = extracted.platformId;
+              finalPlatformType = extracted.platformType;
+              console.log(`[Webhook] [PLATFORM_FALLBACK] Mapeado platformId/Type da URL (fallback): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
+              break;
+            }
           }
         }
       }
@@ -860,7 +885,7 @@ export async function PUT(request: Request) {
           continue;
         }
 
-        const { links: processedLinks, productLinksData, status: processedStatus } = await processProductAffiliates(productData);
+        const { links: processedLinks, productLinksData, status: processedStatus, resolvedUrls } = await processProductAffiliates(productData);
         
         // isAggregatorFailed removido - mantemos links originais
         let finalStatus = productData.status || processedStatus;
@@ -868,6 +893,44 @@ export async function PUT(request: Request) {
         if (productData.autoApprove === true) {
           finalStatus = 'pending'; // Inicia como pending, será aprovado no background se aiScore >= 6.5
           console.log(`[Webhook Batch] Iniciando como pending para avaliação por score: ${productData.name}`);
+        }
+
+        let finalPlatformId = productData.platformId;
+        let finalPlatformType = productData.platformType;
+
+        if (!finalPlatformId || !finalPlatformType) {
+          const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+          
+          // 1. Tentar extrair das URLs resolvidas pelo webhook
+          for (const p of platforms) {
+            const urlToParse = resolvedUrls?.[p];
+            if (urlToParse) {
+              const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+              if (extracted.platformId && extracted.platformType) {
+                finalPlatformId = extracted.platformId;
+                finalPlatformType = extracted.platformType;
+                console.log(`[Webhook Batch] [PLATFORM_RESOLVED] Mapeado platformId/Type da URL resolvida (${p}): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
+                break;
+              }
+            }
+          }
+
+          // 2. Fallback: tentar extrair das URLs processadas ou originais
+          if (!finalPlatformId || !finalPlatformType) {
+            const targetLinks = processedLinks || productData.links || {};
+            for (const p of platforms) {
+              const urlToParse = targetLinks[p];
+              if (urlToParse) {
+                const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+                if (extracted.platformId && extracted.platformType) {
+                  finalPlatformId = extracted.platformId;
+                  finalPlatformType = extracted.platformType;
+                  console.log(`[Webhook Batch] [PLATFORM_FALLBACK] Mapeado platformId/Type da URL (fallback): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
+                  break;
+                }
+              }
+            }
+          }
         }
 
         const imagesToCreate = [];
@@ -896,6 +959,8 @@ export async function PUT(request: Request) {
             status: finalStatus,
             externalId: productData.externalId || null,
             source: productData.source || null,
+            platformId: finalPlatformId || null,
+            platformType: finalPlatformType || null,
             links: processedLinks ? {
               create: {
                 amazon: processedLinks.amazon || null,
