@@ -641,7 +641,7 @@ export function ProductsTab() {
                 {/* Imagem */}
                 <button
                   onClick={() => setGalleryProduct(product)}
-                  className="w-14 h-14 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
+                  className="w-16 h-16 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
                   title="Ver fotos"
                 >
                   <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
@@ -650,180 +650,183 @@ export function ProductsTab() {
                   </div>
                 </button>
 
-                {/* Info + Campos */}
-                <div className="flex-1 min-w-0 flex flex-col gap-2">
-                  {/* Nome + Badges */}
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2" title={product.name}>
-                        {product.name}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] mt-1">
-                        {product.dropPercent !== undefined && product.dropPercent > 0 && (
-                          <span className="px-1.5 py-0.5 font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80">
-                            ▼ {product.dropPercent.toFixed(1)}%
-                          </span>
-                        )}
-                        {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
-                          <span className="px-1.5 py-0.5 font-bold rounded-full bg-orange-950/90 text-orange-400 border border-orange-800/80 flex items-center gap-1">
-                            <Warning size={10} weight="fill" />
-                            AGREGADOR
-                          </span>
-                        )}
-                        <CopyableId product={product} />
-                      </div>
-                    </div>
+                {/* Info Principal */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                  <div className="text-sm font-medium text-zinc-100 leading-tight line-clamp-1" title={product.name}>
+                    {product.name}
                   </div>
-
-                  {/* Campos em Grid */}
-                  <div className="grid grid-cols-5 gap-2 text-xs">
-                    {/* Preço */}
-                    <div>
-                      <label className="text-[9px] uppercase text-zinc-500 mb-0.5 block">Preço</label>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        value={product.price || ''} 
-                        onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, price: parseFloat(e.target.value) || 0} : p))}
-                        onBlur={(e) => handleAutoSave(product.id, 'price', parseFloat(e.target.value) || 0)}
-                        className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1 text-emerald-400 font-bold outline-none focus:border-accent"
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    {/* Categoria */}
-                    <div>
-                      <label className="text-[9px] uppercase text-zinc-500 mb-0.5 block">Categoria</label>
-                      <select
-                        value={product.category}
-                        onChange={(e) => {
-                          if (e.target.value === "__NEW__") {
-                            const newCat = prompt("Digite o nome da nova categoria:");
-                            if (newCat && newCat.trim()) {
-                              handleAutoSave(product.id, 'category', newCat.trim());
-                              if (!categories.includes(newCat.trim())) {
-                                setCategories(prev => [...prev, newCat.trim()].sort());
-                              }
-                            }
-                          } else {
-                            handleAutoSave(product.id, 'category', e.target.value);
+                  <div className="flex items-center gap-2">
+                    <CopyableId product={product} />
+                    {product.dropPercent !== undefined && product.dropPercent > 0 && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-950/90 text-red-400 border border-red-800/80">
+                        ▼ {product.dropPercent.toFixed(1)}%
+                      </span>
+                    )}
+                    {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-orange-950/90 text-orange-400 border border-orange-800/80 flex items-center gap-1">
+                        <Warning size={10} weight="fill" />
+                        AGREGADOR
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-lg font-bold text-emerald-400">
+                    R$ {product.price ? product.price.toFixed(2) : '0,00'}
+                  </div>
+                  <select
+                    value={product.category}
+                    onChange={(e) => {
+                      if (e.target.value === "__NEW__") {
+                        const newCat = prompt("Digite o nome da nova categoria:");
+                        if (newCat && newCat.trim()) {
+                          handleAutoSave(product.id, 'category', newCat.trim());
+                          if (!categories.includes(newCat.trim())) {
+                            setCategories(prev => [...prev, newCat.trim()].sort());
                           }
-                        }}
-                        className={`w-full text-xs bg-zinc-800 border rounded px-2 py-1 text-zinc-300 focus:border-accent outline-none ${
-                          savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700"
-                        }`}
-                      >
-                        <option value="">Sem categoria...</option>
-                        {categories.sort().map(c => <option key={c} value={c}>{c}</option>)}
-                        {product.category && !categories.includes(product.category) && <option value={product.category}>{product.category}</option>}
-                        <option value="__NEW__" className="text-accent font-semibold">➕ Nova Categoria</option>
-                      </select>
-                    </div>
+                        }
+                      } else {
+                        handleAutoSave(product.id, 'category', e.target.value);
+                      }
+                    }}
+                    className={`w-full text-xs bg-zinc-800/50 border rounded px-2 py-1.5 text-zinc-300 focus:border-accent outline-none ${
+                      savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700/50"
+                    }`}
+                  >
+                    <option value="">Sem categoria...</option>
+                    {categories.sort().map(c => <option key={c} value={c}>{c}</option>)}
+                    {product.category && !categories.includes(product.category) && <option value={product.category}>{product.category}</option>}
+                    <option value="__NEW__" className="text-accent font-semibold">➕ Nova Categoria</option>
+                  </select>
+                </div>
 
-                    {/* ID Plataforma */}
-                    <div>
-                      <label className="text-[9px] uppercase text-zinc-500 mb-0.5 block">ID</label>
-                      <input 
-                        type="text" 
-                        value={product.platformProductId || ''} 
-                        onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, platformProductId: e.target.value} : p))}
-                        onBlur={(e) => handleAutoSave(product.id, 'platformProductId', e.target.value)}
-                        className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1 text-zinc-300 outline-none focus:border-accent"
-                        placeholder="MLB123..."
-                      />
-                    </div>
-
-                    {/* Link da Loja */}
-                    <div>
-                      <label className="text-[9px] uppercase text-zinc-500 mb-0.5 block flex items-center justify-between">
-                        <span>Link Loja</span>
-                        {sourceUrl && (
-                          <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white">
-                            <ArrowSquareOut size={10} />
-                          </a>
-                        )}
-                      </label>
+                {/* Links */}
+                <div className="flex flex-col gap-2 min-w-0 w-72">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] uppercase text-zinc-500 font-medium">Loja</label>
+                    <div className="flex gap-1">
                       <input 
                         type="text" 
                         value={sourceUrl} 
                         onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localSourceUrl: e.target.value} : p))}
                         onBlur={(e) => handleAutoSave(product.id, 'updateSourceUrl' as any, e.target.value)}
-                        className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1 text-zinc-400 text-[11px] outline-none focus:border-accent truncate"
+                        className="flex-1 bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1.5 text-zinc-400 text-xs outline-none focus:border-accent"
                         placeholder="https://..."
                       />
+                      {sourceUrl && (
+                        <a 
+                          href={sourceUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="shrink-0 flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded text-zinc-400 hover:text-white transition-colors"
+                        >
+                          <ArrowSquareOut size={14} />
+                        </a>
+                      )}
                     </div>
-
-                    {/* Link Afiliado */}
-                    <div>
-                      <label className="text-[9px] uppercase text-zinc-500 mb-0.5 block flex items-center justify-between">
-                        <span>Link Afiliado</span>
-                        {affiliateUrl && (
-                          <a href={affiliateUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white">
-                            <ArrowSquareOut size={10} />
-                          </a>
-                        )}
-                      </label>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] uppercase text-zinc-500 font-medium">Afiliado</label>
+                    <div className="flex gap-1">
                       <input 
                         type="text" 
                         value={affiliateUrl} 
                         onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localAffiliateUrl: e.target.value} : p))}
                         onBlur={(e) => handleAutoSave(product.id, 'updateAffiliateUrl' as any, e.target.value)}
-                        className={`w-full bg-zinc-800/50 border rounded px-2 py-1 text-[11px] outline-none focus:border-accent truncate ${
-                          !hasAffiliate && sourceUrl ? "border-red-900/50 text-red-400" : "border-zinc-700/50 text-emerald-400/80"
+                        className={`flex-1 border rounded px-2 py-1.5 text-xs outline-none focus:border-accent ${
+                          !hasAffiliate && sourceUrl 
+                            ? "bg-red-950/20 border-red-900/50 text-red-400" 
+                            : "bg-zinc-800/50 border-zinc-700/50 text-emerald-400"
                         }`}
                         placeholder="https://..."
                       />
+                      {affiliateUrl && (
+                        <a 
+                          href={affiliateUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="shrink-0 flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded text-zinc-400 hover:text-white transition-colors"
+                        >
+                          <ArrowSquareOut size={14} />
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
 
+                {/* Marca/ID */}
+                <div className="flex flex-col gap-2 min-w-0 w-40">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] uppercase text-zinc-500 font-medium">Marca</label>
+                    <input 
+                      type="text" 
+                      value={product.brand || ''} 
+                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, brand: e.target.value} : p))}
+                      onBlur={(e) => handleAutoSave(product.id, 'brand' as any, e.target.value)}
+                      className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1.5 text-zinc-300 text-xs outline-none focus:border-accent"
+                      placeholder="Marca"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] uppercase text-zinc-500 font-medium">ID Plataforma</label>
+                    <input 
+                      type="text" 
+                      value={product.platformProductId || ''} 
+                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, platformProductId: e.target.value} : p))}
+                      onBlur={(e) => handleAutoSave(product.id, 'platformProductId', e.target.value)}
+                      className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded px-2 py-1.5 text-zinc-300 text-xs outline-none focus:border-accent"
+                      placeholder="MLB123..."
+                    />
+                  </div>
+                </div>
+
                 {/* Ações */}
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <label className="flex items-center gap-1.5 cursor-pointer group px-2 py-1.5 rounded hover:bg-zinc-800/50 transition-colors" title="Travar repostagem">
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="flex items-center gap-1.5 cursor-pointer group" title="Travar repostagem">
                     <input 
                       type="checkbox" 
                       checked={!!product.isFixed} 
                       onChange={(e) => handleAutoSave(product.id, 'isFixed', e.target.checked)}
                       className="w-4 h-4 accent-accent rounded"
                     />
-                    <span className="text-[10px] text-zinc-400 group-hover:text-zinc-200 whitespace-nowrap">Trava</span>
+                    <span className="text-[10px] text-zinc-400 group-hover:text-zinc-200 whitespace-nowrap">Travar Repostagem</span>
                   </label>
 
                   {isPending && (
                     <button
                       onClick={() => handleQuickApprove(product.id)}
                       disabled={approvingId === product.id}
-                      className="flex items-center justify-center gap-1 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-2 py-1.5 rounded transition-colors disabled:opacity-50"
+                      className="p-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 rounded transition-colors disabled:opacity-50"
                       title="Aprovar"
                     >
-                      {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={14} weight="bold" />}
+                      {approvingId === product.id ? <span className="animate-pulse text-xs">...</span> : <Check size={16} weight="bold" />}
                     </button>
                   )}
 
                   {isActive && (
                     <button
                       onClick={() => handleAutoSave(product.id, 'status', 'expired')}
-                      className="flex items-center justify-center gap-1 bg-orange-950/20 hover:bg-orange-900/40 border border-orange-900/30 text-orange-400 px-2 py-1.5 rounded transition-colors"
+                      className="p-2 bg-orange-950/20 hover:bg-orange-900/40 border border-orange-900/30 text-orange-400 rounded transition-colors"
                       title="Encerrar Promoção"
                     >
-                      <X size={14} weight="bold" />
+                      <X size={16} weight="bold" />
                     </button>
                   )}
                   
                   <button
                     onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                    className="flex items-center justify-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded transition-colors"
+                    className="p-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 rounded transition-colors"
                     title="Editar"
                   >
-                    <Pencil size={14} />
+                    <Pencil size={16} />
                   </button>
                   
                   <button
                     onClick={() => handleDelete(product.id)}
-                    className="flex items-center justify-center gap-1 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 px-2 py-1.5 rounded transition-colors"
+                    className="p-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded transition-colors"
                     title="Deletar"
                   >
-                    <Trash size={14} />
+                    <Trash size={16} />
                   </button>
                 </div>
               </div>
