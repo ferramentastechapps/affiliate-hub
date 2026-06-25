@@ -90,12 +90,22 @@ export function CouponModal({
               <span className="text-xs text-zinc-500 uppercase tracking-wider font-bold block mb-2">
                 Código do Cupom
               </span>
-              <code className="text-3xl font-mono font-black text-white tracking-wider block mb-4">
+              <code className={`font-mono font-black text-white block mb-4 break-all select-all text-center leading-none ${
+                couponCode.length > 20 
+                  ? 'text-base sm:text-lg tracking-normal' 
+                  : couponCode.length > 15 
+                    ? 'text-lg sm:text-xl tracking-normal' 
+                    : couponCode.length > 12 
+                      ? 'text-xl sm:text-2xl tracking-normal' 
+                      : couponCode.length > 8 
+                        ? 'text-2xl sm:text-3xl tracking-wide' 
+                        : 'text-3xl sm:text-4xl tracking-wider'
+              }`}>
                 {couponCode}
               </code>
               
               <button
-                onClick={() => { handleCopy(); handleGoToStore(); }}
+                onClick={handleCopy}
                 className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold transition-all ${
                   copied 
                     ? "bg-emerald-500 text-white" 
@@ -120,8 +130,7 @@ export function CouponModal({
             <div className="w-full bg-accent/10 border border-accent/20 rounded-xl p-4 mb-6 text-left">
               <h3 className="text-white font-bold text-sm mb-2">📋 Como usar:</h3>
               <ol className="text-zinc-300 text-xs space-y-1.5 list-decimal list-inside">
-                <li>Copie o cupom acima</li>
-                <li>Clique em "Ir para a Loja"</li>
+                <li>Clique em "Copiar e Ir para a Loja"</li>
                 <li>Adicione o produto ao carrinho</li>
                 <li>Cole o cupom no campo de desconto</li>
               </ol>
@@ -132,7 +141,7 @@ export function CouponModal({
               onClick={() => { handleCopy(); handleGoToStore(); }}
               className="w-full flex items-center justify-center gap-2 btn-3d text-white font-bold text-base sm:text-lg py-4 sm:py-5 rounded-[20px] min-h-[56px]"
             >
-              Copiar e Ir para {platformName}
+              Copiar e Ir para a Loja
               <ArrowRight size={22} weight="bold" />
             </button>
 
