@@ -672,30 +672,78 @@ export function ProductsTab() {
                   <div className="text-lg font-bold text-emerald-400">
                     R$ {product.price ? product.price.toFixed(2) : '0,00'}
                   </div>
-                  <select
-                    value={product.category}
-                    onChange={(e) => {
-                      if (e.target.value === "__NEW__") {
-                        const newCat = prompt("Digite o nome da nova categoria:");
-                        if (newCat && newCat.trim()) {
-                          handleAutoSave(product.id, 'category', newCat.trim());
-                          if (!categories.includes(newCat.trim())) {
-                            setCategories(prev => [...prev, newCat.trim()].sort());
+                  <div className="flex gap-1.5 items-center">
+                    <select
+                      value={product.category}
+                      onChange={(e) => {
+                        if (e.target.value === "__NEW__") {
+                          const newCat = prompt("Digite o nome da nova categoria:");
+                          if (newCat && newCat.trim()) {
+                            handleAutoSave(product.id, 'category', newCat.trim());
+                            if (!categories.includes(newCat.trim())) {
+                              setCategories(prev => [...prev, newCat.trim()].sort());
+                            }
                           }
+                        } else if (e.target.value === "__DELETE__") {
+                          // Resetar o select para a categoria atual após clicar em deletar
+                          e.target.value = product.category;
+                          if (!product.category) {
+                            alert("Nenhuma categoria selecionada para apagar.");
+                            return;
+                          }
+                          const confirma = confirm(`Tem certeza que deseja apagar a categoria "${product.category}"?\n\nTodos os produtos desta categoria ficarão sem categoria.`);
+                          if (confirma) {
+                            // Apagar categoria de todos os produtos
+                            const produtosComEssaCat = products.filter(p => p.category === product.category);
+                            Promise.all(
+                              produtosComEssaCat.map(p => 
+                                handleAutoSave(p.id, 'category', '')
+                              )
+                            ).then(() => {
+                              // Remover da lista de categorias
+                              setCategories(prev => prev.filter(c => c !== product.category));
+                              alert(`Categoria "${product.category}" apagada com sucesso!`);
+                            });
+                          }
+                        } else {
+                          handleAutoSave(product.id, 'category', e.target.value);
                         }
-                      } else {
-                        handleAutoSave(product.id, 'category', e.target.value);
-                      }
-                    }}
-                    className={`w-full text-xs bg-zinc-800/50 border rounded px-2 py-1.5 text-zinc-300 focus:border-accent outline-none ${
-                      savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700/50"
-                    }`}
-                  >
-                    <option value="">Sem categoria...</option>
-                    {categories.sort().map(c => <option key={c} value={c}>{c}</option>)}
-                    {product.category && !categories.includes(product.category) && <option value={product.category}>{product.category}</option>}
-                    <option value="__NEW__" className="text-accent font-semibold">➕ Nova Categoria</option>
-                  </select>
+                      }}
+                      className={`flex-1 text-xs bg-zinc-800/50 border rounded px-2 py-1.5 text-zinc-300 focus:border-accent outline-none [&>option]:bg-zinc-900 [&>option]:text-zinc-100 ${
+                        savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700/50"
+                      }`}
+                    >
+                      <option value="">Sem categoria...</option>
+                      {categories.sort().map(c => <option key={c} value={c}>{c}</option>)}
+                      {product.category && !categories.includes(product.category) && <option value={product.category}>{product.category}</option>}
+                      <option value="__NEW__" className="text-accent font-semibold">➕ Nova Categoria</option>
+                      {product.category && <option value="__DELETE__" className="text-red-400 font-semibold">🗑️ Apagar Categoria</option>}
+                    </select>
+                    {product.category && (
+                      <button
+                        onClick={() => {
+                          const confirma = confirm(`Tem certeza que deseja apagar a categoria "${product.category}"?\n\nTodos os produtos desta categoria ficarão sem categoria.`);
+                          if (confirma) {
+                            // Apagar categoria de todos os produtos
+                            const produtosComEssaCat = products.filter(p => p.category === product.category);
+                            Promise.all(
+                              produtosComEssaCat.map(p => 
+                                handleAutoSave(p.id, 'category', '')
+                              )
+                            ).then(() => {
+                              // Remover da lista de categorias
+                              setCategories(prev => prev.filter(c => c !== product.category));
+                              alert(`Categoria "${product.category}" apagada com sucesso!`);
+                            });
+                          }
+                        }}
+                        className="shrink-0 p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded text-red-400 hover:text-red-300 transition-colors"
+                        title={`Apagar categoria "${product.category}"`}
+                      >
+                        <Trash size={14} weight="bold" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Links */}
