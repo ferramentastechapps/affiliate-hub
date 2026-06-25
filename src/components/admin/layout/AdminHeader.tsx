@@ -1,29 +1,55 @@
 'use client';
 
 import { useAuth } from '@/components/AuthProvider';
-import { SignOut, UserCircle } from '@phosphor-icons/react';
+import { SignOut, UserCircle, List, X } from '@phosphor-icons/react';
 
-export function AdminHeader() {
+interface AdminHeaderProps {
+  onMenuClick?: () => void;
+  mobileSidebarOpen?: boolean;
+}
+
+export function AdminHeader({ onMenuClick, mobileSidebarOpen }: AdminHeaderProps = {}) {
   const { user, logout } = useAuth();
 
   return (
-    <header className="h-20 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10">
-      <div className="flex-1"></div>
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-3 bg-zinc-900/50 px-4 py-2 rounded-full border border-zinc-800">
-          {user?.image ? (
-            <img src={user.image} alt={user.name} className="w-8 h-8 rounded-full" />
+    <header className="h-16 lg:h-20 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
+      {/* Mobile: Botão Menu Hambúrguer */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+          aria-label={mobileSidebarOpen ? "Fechar menu" : "Abrir menu"}
+        >
+          {mobileSidebarOpen ? (
+            <X size={24} weight="bold" />
           ) : (
-            <UserCircle className="w-8 h-8 text-zinc-400" />
+            <List size={24} weight="bold" />
           )}
-          <div className="flex flex-col">
+        </button>
+        
+        {/* Mobile: Título/Logo simplificado */}
+        <h1 className="lg:hidden text-sm font-bold text-accent">Admin</h1>
+      </div>
+
+      {/* Desktop: Espaçador */}
+      <div className="hidden lg:block flex-1"></div>
+
+      {/* User Info & Logout */}
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-3 bg-zinc-900/50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-zinc-800">
+          {user?.image ? (
+            <img src={user.image} alt={user.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" />
+          ) : (
+            <UserCircle className="w-7 h-7 sm:w-8 sm:h-8 text-zinc-400" />
+          )}
+          <div className="hidden sm:flex flex-col">
             <span className="text-sm font-medium text-zinc-200 leading-none">{user?.name}</span>
             <span className="text-xs text-zinc-500 mt-1">{user?.role === 'admin' ? 'Administrador' : 'Moderador'}</span>
           </div>
         </div>
         <button 
           onClick={logout}
-          className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-colors"
+          className="p-1.5 sm:p-2 text-zinc-400 hover:text-red-400 hover:bg-red-400/10 rounded-full transition-colors"
           title="Sair"
         >
           <SignOut weight="bold" className="w-5 h-5" />
