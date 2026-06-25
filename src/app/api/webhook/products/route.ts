@@ -626,39 +626,43 @@ export async function POST(request: Request) {
           console.error(`Erro ao enviar push notification para produto ${product.id}:`, pushErr);
         }
 
-        // Publicar no Telegram de forma assíncrona
-        try {
-          const existingLinks: any = product.links || {};
-          let publishLink = '';
-          const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-          let activePlatform = 'amazon';
-          for (const plat of platforms) {
-            if (existingLinks[plat]) {
-              publishLink = existingLinks[plat];
-              activePlatform = plat;
-              break;
-            }
-          }
-
-          if (publishLink) {
-            const tempProduct = {
-              ...product,
-              imageUrl: finalImageUrl,
-              enhancedImageUrl: finalEnhancedImageUrl || undefined,
-              status: newStatus,
-              aiScore: aiResult.score,
-              aiAnalysis: aiResult.rawJson
-            };
-            publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
-              if (success) {
-                console.log(`🚀 [Telegram Auto-Aprovar] Oferta publicada no grupo: ${product.name}`);
+        // Publicar no Telegram de forma assíncrona apenas se NÃO for auto-aprovado automaticamente pelo robô
+        if (body.autoApprove !== true) {
+          try {
+            const existingLinks: any = product.links || {};
+            let publishLink = '';
+            const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+            let activePlatform = 'amazon';
+            for (const plat of platforms) {
+              if (existingLinks[plat]) {
+                publishLink = existingLinks[plat];
+                activePlatform = plat;
+                break;
               }
-            }).catch(e => {
-              console.error(`Falha ao publicar automaticamente no Telegram para o produto ${product.id}:`, e);
-            });
+            }
+
+            if (publishLink) {
+              const tempProduct = {
+                ...product,
+                imageUrl: finalImageUrl,
+                enhancedImageUrl: finalEnhancedImageUrl || undefined,
+                status: newStatus,
+                aiScore: aiResult.score,
+                aiAnalysis: aiResult.rawJson
+              };
+              publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
+                if (success) {
+                  console.log(`🚀 [Telegram Auto-Aprovar] Oferta publicada no grupo: ${product.name}`);
+                }
+              }).catch(e => {
+                console.error(`Falha ao publicar automaticamente no Telegram para o produto ${product.id}:`, e);
+              });
+            }
+          } catch (tgErr) {
+            console.error('[Webhook] Falha ao extrair links para publicação no Telegram:', tgErr);
           }
-        } catch (tgErr) {
-          console.error('[Webhook] Falha ao extrair links para publicação no Telegram:', tgErr);
+        } else {
+          console.log(`ℹ️ [Webhook] Auto-aprovado com autoApprove=true. Ignorando publicação automática no Telegram (o robô gerencia a publicação).`);
         }
       }
 
@@ -1062,39 +1066,43 @@ export async function PUT(request: Request) {
               console.error(`Erro ao enviar push notification para produto ${product.id}:`, pushErr);
             }
 
-            // Publicar no Telegram de forma assíncrona
-            try {
-              const existingLinks: any = product.links || {};
-              let publishLink = '';
-              const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-              let activePlatform = 'amazon';
-              for (const plat of platforms) {
-                if (existingLinks[plat]) {
-                  publishLink = existingLinks[plat];
-                  activePlatform = plat;
-                  break;
-                }
-              }
-
-              if (publishLink) {
-                const tempProduct = {
-                  ...product,
-                  imageUrl: finalImageUrl,
-                  enhancedImageUrl: finalEnhancedImageUrl || undefined,
-                  status: newStatus,
-                  aiScore: aiResult.score,
-                  aiAnalysis: aiResult.rawJson
-                };
-                publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
-                  if (success) {
-                    console.log(`🚀 [Telegram Auto-Aprovar Lote] Oferta publicada no grupo: ${product.name}`);
+            // Publicar no Telegram de forma assíncrona apenas se NÃO for auto-aprovado automaticamente pelo robô
+            if (productData.autoApprove !== true) {
+              try {
+                const existingLinks: any = product.links || {};
+                let publishLink = '';
+                const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+                let activePlatform = 'amazon';
+                for (const plat of platforms) {
+                  if (existingLinks[plat]) {
+                    publishLink = existingLinks[plat];
+                    activePlatform = plat;
+                    break;
                   }
-                }).catch(e => {
-                  console.error(`Falha ao publicar automaticamente no Telegram em lote para o produto ${product.id}:`, e);
-                });
+                }
+
+                if (publishLink) {
+                  const tempProduct = {
+                    ...product,
+                    imageUrl: finalImageUrl,
+                    enhancedImageUrl: finalEnhancedImageUrl || undefined,
+                    status: newStatus,
+                    aiScore: aiResult.score,
+                    aiAnalysis: aiResult.rawJson
+                  };
+                  publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
+                    if (success) {
+                      console.log(`🚀 [Telegram Auto-Aprovar Lote] Oferta publicada no grupo: ${product.name}`);
+                    }
+                  }).catch(e => {
+                    console.error(`Falha ao publicar automaticamente no Telegram em lote para o produto ${product.id}:`, e);
+                  });
+                }
+              } catch (tgErr) {
+                console.error('[Webhook Batch] Falha ao extrair links para publicação no Telegram:', tgErr);
               }
-            } catch (tgErr) {
-              console.error('[Webhook Batch] Falha ao extrair links para publicação no Telegram:', tgErr);
+            } else {
+              console.log(`ℹ️ [Webhook Batch] Auto-aprovado com autoApprove=true. Ignorando publicação automática no Telegram (o robô gerencia a publicação).`);
             }
           }
 
