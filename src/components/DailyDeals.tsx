@@ -364,6 +364,19 @@ export function DailyDeals() {
 
             const userVote = user ? product.votes?.find(v => v.userId === user.id)?.type : null;
 
+            let displayCoupon = "";
+            if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
+              const firstCoupon = product.coupons[0];
+              if (firstCoupon.code && firstCoupon.code.toUpperCase() !== "NORMAL") {
+                displayCoupon = firstCoupon.code;
+              }
+            } else if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
+              const extracted = product.description.split('🎟️ CUPOM:')[1].trim();
+              if (extracted && extracted.toUpperCase() !== "NORMAL") {
+                displayCoupon = extracted.split('\n')[0].trim();
+              }
+            }
+
             async function handleVote(type: 'LIKE' | 'DISLIKE') {
               if (!user) {
                 setShowAuthModal(true);
@@ -526,16 +539,11 @@ export function DailyDeals() {
                       {product.name}
                     </h3>
 
-                    {/* Coupons and Free Shipping Badges */}
+                    {/* Coupons Badge (Replacing Free Shipping) */}
                     <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                      {product.coupons && product.coupons.length > 0 && product.coupons[0].code.toUpperCase() !== "NORMAL" ? (
-                         <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={product.coupons[0].code}>
-                           <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">CUPOM: {product.coupons[0].code}</span>
-                         </span>
-                      ) : (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1" title="Frete Grátis">
-                          <Truck size={10} weight="fill" />
-                          <span>FRETE GRÁTIS*</span>
+                      {displayCoupon && (
+                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={displayCoupon}>
+                          <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">CUPOM: {displayCoupon}</span>
                         </span>
                       )}
                     </div>
@@ -543,7 +551,7 @@ export function DailyDeals() {
                     <div className="mt-auto flex items-end gap-2">
                       {price > 0 ? (
                         <>
-                          <span className="text-base sm:text-lg font-black text-[#ff334b] leading-none">
+                          <span className="text-base sm:text-lg font-black text-white leading-none">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                           </span>
                           {discount > 0 && (
@@ -553,7 +561,7 @@ export function DailyDeals() {
                           )}
                         </>
                       ) : (
-                        <span className="text-xs font-bold text-[#ff334b]">Ver detalhes</span>
+                        <span className="text-xs font-bold text-white">Ver detalhes</span>
                       )}
                     </div>
                   </div>
