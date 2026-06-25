@@ -255,11 +255,15 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
       if (data && typeof data === 'object') {
         const titulo = data.titulo;
         const subtitulo = data.subtitulo;
+        const analise = data.analise || data.critique;
+        
         if (titulo) {
           legendaTop = `<b>${titulo.toUpperCase()}</b>`;
           if (subtitulo) {
             legendaTop += `\n<i>${subtitulo.toLowerCase()}</i>`;
           }
+        } else if (analise) {
+          legendaTop = `<b>🔥 AVALIAÇÃO DA IA:</b>\n<i>${analise}</i>`;
         } else {
           legendaTop = `<b>${aiAnalysisRaw.trim()}</b>`;
         }
