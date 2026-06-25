@@ -19,6 +19,19 @@ interface UrlDetails {
  * para obter a URL final real da loja.
  */
 export async function resolveRedirect(url: string): Promise<string> {
+  // 0. Verificar se a URL contém outra URL embutida em parâmetros de redirecionamento/afiliados comuns (ex: ued= para Awin)
+  try {
+    const parsed = new URL(url);
+    const params = ['ued', 'url', 'dest', 'destination', 'u', 'dl_target_url'];
+    for (const p of params) {
+      const val = parsed.searchParams.get(p);
+      if (val && (val.startsWith('http://') || val.startsWith('https://'))) {
+        console.log(`[Affiliate] URL aninhada extraída de parâmetro '${p}': ${val}`);
+        return resolveRedirect(val); // Resolve recursivamente a URL interna
+      }
+    }
+  } catch {}
+
   // Caso especial: Mercado Livre Social Links (/social/)
   // Promobit/Pechinchou usam isso. O conteúdo é renderizado por JS, mas o ML
   // tem um endpoint interno (/api/social-profile) que retorna os itens em JSON.
