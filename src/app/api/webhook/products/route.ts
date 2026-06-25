@@ -198,39 +198,53 @@ export async function POST(request: Request) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     const { links: processedLinks, productLinksData, status: processedStatus, resolvedUrls } = await processProductAffiliates(body);
 
-    let finalPlatformId = platformId;
-    let finalPlatformType = platformType;
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // IMPORTANTE: SEMPRE extrair platformId/Type das URLs, IGNORANDO o que o scraper enviou
+    // O scraper pode enviar IDs de agregadores (Promobit/Pechinchou) que não são IDs reais
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let finalPlatformId = null;
+    let finalPlatformType = null;
 
-    if (!finalPlatformId || !finalPlatformType) {
-      const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
-      
-      // 1. Tentar extrair das URLs resolvidas pelo webhook
+    const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+    
+    // 1. Tentar extrair das URLs resolvidas pelo webhook
+    for (const p of platforms) {
+      const urlToParse = resolvedUrls?.[p];
+      if (urlToParse) {
+        const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+        if (extracted.platformId && extracted.platformType) {
+          finalPlatformId = extracted.platformId;
+          finalPlatformType = extracted.platformType;
+          console.log(`[Webhook] [PLATFORM_RESOLVED] Mapeado platformId/Type da URL resolvida (${p}): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
+          break;
+        }
+        // Se detectou agregador mas não tem ID real, salvar o tipo mesmo sem ID
+        if (extracted.platformType && !extracted.platformId) {
+          finalPlatformType = extracted.platformType;
+          console.log(`[Webhook] [AGGREGATOR_DETECTED] Agregador detectado (${p}): ${urlToParse} -> platformType: ${finalPlatformType}, platformId: null`);
+          break;
+        }
+      }
+    }
+
+    // 2. Fallback: tentar extrair das URLs processadas ou originais
+    if (!finalPlatformId && !finalPlatformType) {
+      const targetLinks = processedLinks || body.links || {};
       for (const p of platforms) {
-        const urlToParse = resolvedUrls?.[p];
+        const urlToParse = targetLinks[p];
         if (urlToParse) {
           const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
           if (extracted.platformId && extracted.platformType) {
             finalPlatformId = extracted.platformId;
             finalPlatformType = extracted.platformType;
-            console.log(`[Webhook] [PLATFORM_RESOLVED] Mapeado platformId/Type da URL resolvida (${p}): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
+            console.log(`[Webhook] [PLATFORM_FALLBACK] Mapeado platformId/Type da URL (fallback): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
             break;
           }
-        }
-      }
-
-      // 2. Fallback: tentar extrair das URLs processadas ou originais
-      if (!finalPlatformId || !finalPlatformType) {
-        const targetLinks = processedLinks || body.links || {};
-        for (const p of platforms) {
-          const urlToParse = targetLinks[p];
-          if (urlToParse) {
-            const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
-            if (extracted.platformId && extracted.platformType) {
-              finalPlatformId = extracted.platformId;
-              finalPlatformType = extracted.platformType;
-              console.log(`[Webhook] [PLATFORM_FALLBACK] Mapeado platformId/Type da URL (fallback): ${urlToParse} -> ${finalPlatformId} (${finalPlatformType})`);
-              break;
-            }
+          // Se detectou agregador mas não tem ID real, salvar o tipo mesmo sem ID
+          if (extracted.platformType && !extracted.platformId) {
+            finalPlatformType = extracted.platformType;
+            console.log(`[Webhook] [AGGREGATOR_DETECTED_FALLBACK] Agregador detectado (fallback): ${urlToParse} -> platformType: ${finalPlatformType}, platformId: null`);
+            break;
           }
         }
       }
