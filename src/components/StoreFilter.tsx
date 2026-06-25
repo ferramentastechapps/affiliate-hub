@@ -378,12 +378,12 @@ export function StoreFilter() {
                                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                                   </span>
                                 )}
-                                <span className="text-base font-black text-[#ff334b]">
+                                <span className="text-base font-black text-white">
                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                                 </span>
                               </>
                             ) : (
-                              <span className="text-sm font-bold text-[#ff334b]">Ver detalhes</span>
+                              <span className="text-sm font-bold text-white">Ver detalhes</span>
                             )}
                           </div>
                         </div>

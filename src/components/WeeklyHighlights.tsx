@@ -154,7 +154,7 @@ export function WeeklyHighlights() {
                       }).format(originalPrice)}
                     </span>
                   )}
-                  <span className="text-base sm:text-lg font-black text-[#ff334b] transition-colors">
+                  <span className="text-base sm:text-lg font-black text-white transition-colors">
                     {price > 0
                       ? new Intl.NumberFormat("pt-BR", {
                           style: "currency",

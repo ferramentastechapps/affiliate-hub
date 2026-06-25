@@ -311,7 +311,7 @@ export function ProductDetail({ product }: { product: Product }) {
             
             {price > 0 ? (
               <div className="flex flex-row items-center gap-4 mb-8">
-                <span className="text-4xl md:text-5xl font-normal text-red-600 tracking-tighter leading-none">
+                <span className="text-4xl md:text-5xl font-normal text-white tracking-tighter leading-none">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
                 </span>
                 {discount > 0 && (
