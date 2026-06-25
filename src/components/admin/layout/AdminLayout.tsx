@@ -69,36 +69,30 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      {/* Mobile: Overlay quando sidebar está aberta */}
+      {/* Overlay quando sidebar está aberta */}
       {mobileSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
           onClick={() => setMobileSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - SEMPRE escondida por padrão, aparece só ao clicar */}
       <div className={`
         fixed top-0 left-0 h-full z-50 transition-transform duration-300 ease-in-out
-        lg:translate-x-0
         ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <AdminSidebar />
       </div>
 
-      {/* Conteúdo Principal */}
-      <div className="flex flex-col min-h-screen">
+      {/* Conteúdo Principal - SEM margin-left, ocupa tela toda */}
+      <div className="flex flex-col min-h-screen w-full">
         <AdminHeader 
           onMenuClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           mobileSidebarOpen={mobileSidebarOpen}
         />
         <main 
-          className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden transition-all duration-300"
-          style={{ 
-            marginLeft: typeof window !== 'undefined' && window.innerWidth >= 1024 
-              ? (sidebarCollapsed ? '60px' : '256px') 
-              : '0' 
-          }}
+          className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden"
         >
           {children}
         </main>
