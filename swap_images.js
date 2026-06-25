@@ -49,10 +49,9 @@ async function main() {
     console.log("🔍 Buscando produtos com ambos imageUrl e enhancedImageUrl preenchidos...");
     const products = await prisma.product.findMany({
       where: {
-        AND: [
-          { enhancedImageUrl: { not: null } },
-          { imageUrl: { not: null } }
-        ]
+        enhancedImageUrl: {
+          not: null
+        }
       }
     });
 
