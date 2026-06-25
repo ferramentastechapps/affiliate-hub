@@ -683,11 +683,36 @@ class PromotionScraper:
                     nome = titulo_elem.get_text(strip=True)
                     
                     # Buscar link
-                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/deal/"]')
+                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/deal/"], a')
                     link = link_elem.get('href', '') if link_elem else ''
+                    
+                    if not link:
+                        print(f'  ⚠️  [Gatry] Card sem link - pulando')
+                        continue
                     
                     if not link.startswith('http'):
                         link = 'https://gatry.com' + link
+                    
+                    # CORREÇÃO 1: Resolver link do agregador para obter a URL real da loja
+                    print(f'  🔗 [Gatry] Resolvendo link: {link[:60]}...')
+                    link_resolvido = self._resolver_url_intermediaria(link)
+                    
+                    # Buscar imagem ANTES de resolver o link (pode estar no card)
+                    img_elem = card.select_one('img[src], img[data-src]')
+                    imagem_url = '/placeholder.webp'
+                    if img_elem:
+                        imagem_src = img_elem.get('src') or img_elem.get('data-src') or ''
+                        if imagem_src and not imagem_src.endswith('.svg') and 'placeholder' not in imagem_src.lower():
+                            # Garantir URL completa
+                            if imagem_src.startswith('//'):
+                                imagem_url = 'https:' + imagem_src
+                            elif imagem_src.startswith('/'):
+                                imagem_url = 'https://gatry.com' + imagem_src
+                            elif imagem_src.startswith('http'):
+                                imagem_url = imagem_src
+                            # Melhorar qualidade da imagem
+                            imagem_url = _melhorar_qualidade_imagem(imagem_url)
+                            print(f'  🖼️  [Gatry] Imagem encontrada: {imagem_url[:60]}...')
                     
                     # Buscar preço
                     preco_elem = card.select_one('.price, .deal-price, [class*="price"]')
@@ -695,8 +720,8 @@ class PromotionScraper:
                     if preco_elem:
                         preco = self._extrair_preco(preco_elem.get_text())
                     
-                    # Detectar loja do texto
-                    texto_lower = nome.lower()
+                    # Detectar loja do link resolvido E do texto
+                    texto_lower = nome.lower() + ' ' + link_resolvido.lower()
                     loja = 'Amazon'
                     if 'mercado livre' in texto_lower or 'mercadolivre' in texto_lower:
                         loja = 'Mercado Livre'
@@ -704,31 +729,33 @@ class PromotionScraper:
                         loja = 'Shopee'
                     elif 'kabum' in texto_lower:
                         loja = 'KaBuM'
-                    elif 'magalu' in texto_lower:
+                    elif 'magalu' in texto_lower or 'magazine' in texto_lower:
                         loja = 'Magalu'
                     elif 'aliexpress' in texto_lower:
                         loja = 'AliExpress'
+                    elif 'netshoes' in texto_lower:
+                        loja = 'Netshoes'
                     
-                    links = self._criar_links(link, loja)
+                    # CORREÇÃO 2: Usar o link resolvido ao invés do link do Gatry
+                    links = self._criar_links(link_resolvido, loja)
                     categoria = self._detectar_categoria(nome)
                     
-                    platform_type, platform_id = self.extrair_platform_id(link)
+                    # CORREÇÃO 3: Extrair platformId da URL resolvida (real da loja)
+                    platform_type, platform_id = self.extrair_platform_id(link_resolvido)
+                    
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
                         'description': f"Oferta no Gatry via {loja}",
-                        'imageUrl': '/placeholder.webp',
+                        'imageUrl': imagem_url,  # CORREÇÃO 4: Usar imagem real ao invés de placeholder
                         'price': preco,
                         'links': links,
                         'storeName': loja,
-                        'source': 'promobyte',
-
-
+                        'source': 'gatry',  # CORREÇÃO 5: Source correto
                         'platformType': platform_type,
-
                         'platformId': platform_id
                     })
-                    print(f'  ✅ [Gatry] {nome[:50]}...')
+                    print(f'  ✅ [Gatry] {nome[:50]}... (loja: {loja}, platformId: {platform_id or "N/A"})')
                     
                 except Exception as e:
                     print(f'  ⚠️  Erro ao processar card Gatry: {e}')
