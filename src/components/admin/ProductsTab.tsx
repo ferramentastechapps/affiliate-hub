@@ -377,14 +377,14 @@ export function ProductsTab() {
   return (
     <div>
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Gerenciar Produtos</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <h2 className="text-xl sm:text-2xl font-semibold">Gerenciar Produtos</h2>
         <button
           onClick={() => {
             setEditingProduct(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-black px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-black px-4 py-3 sm:py-2 rounded-lg font-medium transition-colors text-sm"
         >
           <Plus size={18} weight="bold" />
           Adicionar Produto
@@ -392,12 +392,12 @@ export function ProductsTab() {
       </div>
 
       {/* ─── Filtros de Status ───────────────────────────────────────────── */}
-      <div className="flex gap-2 mb-4 border-b border-zinc-800 pb-4 overflow-x-auto">
+      <div className="flex gap-2 mb-4 border-b border-zinc-800 pb-4 overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
         {(["all", "active", "pending", "best-to-post", "price-drops", "fixed", "notFixed"] as const).map((filter) => (
           <button
             key={filter}
             onClick={() => setStatusFilter(filter)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors whitespace-nowrap ${
+            className={`px-3 py-2 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
               statusFilter === filter
                 ? "bg-zinc-800 text-accent border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
@@ -406,22 +406,22 @@ export function ProductsTab() {
             {filter === "all" && `Todos (${products.length})`}
             {filter === "active" && `Ativos (${products.filter(p => p.status === "active" || p.status === "approved").length})`}
             {filter === "pending" && `Pendentes (${products.filter(p => p.status === "pending").length})`}
-            {filter === "best-to-post" && `🔥 Melhores pra Postar`}
-            {filter === "price-drops" && `📉 Quedas de Preço`}
-            {filter === "fixed" && `🔒 Com Trava (${products.filter(p => p.isFixed).length})`}
+            {filter === "best-to-post" && `🔥 Melhores`}
+            {filter === "price-drops" && `📉 Quedas`}
+            {filter === "fixed" && `🔒 Trava (${products.filter(p => p.isFixed).length})`}
             {filter === "notFixed" && `🔓 Sem Trava (${products.filter(p => !p.isFixed).length})`}
           </button>
         ))}
       </div>
 
       {/* ─── Toolbar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-5 gap-3">
-        <div className="flex items-center gap-2">
-          <SortAscending size={16} className="text-zinc-400 shrink-0" />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-5 gap-3">
+        <div className="flex items-center gap-2 flex-1">
+          <SortAscending size={16} className="text-zinc-400 shrink-0 hidden sm:block" />
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+            className="flex-1 sm:flex-none bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
           >
             <option value="date_desc">📅 Mais Recentes</option>
             <option value="date_asc">📅 Mais Antigos</option>
@@ -430,28 +430,30 @@ export function ProductsTab() {
             <option value="price_asc">💰 Menor Preço</option>
             <option value="price_desc">💰 Maior Preço</option>
           </select>
-          <span className="text-xs text-zinc-500 ml-1">
+          <span className="text-xs text-zinc-500 ml-1 hidden sm:inline">
             {filteredAndSorted.length} produto{filteredAndSorted.length !== 1 ? "s" : ""}
           </span>
         </div>
-        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1 self-end sm:self-auto">
           <button
             onClick={() => setLayoutMode("list")}
             title="Modo Lista"
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-2 sm:p-1.5 rounded-md transition-colors ${
               layoutMode === "list" ? "bg-zinc-700 text-accent" : "text-zinc-500 hover:text-white"
             }`}
           >
-            <ListDashes size={18} />
+            <ListDashes size={20} className="sm:hidden" />
+            <ListDashes size={18} className="hidden sm:block" />
           </button>
           <button
             onClick={() => setLayoutMode("grid")}
             title="Modo Grade"
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-2 sm:p-1.5 rounded-md transition-colors ${
               layoutMode === "grid" ? "bg-zinc-700 text-accent" : "text-zinc-500 hover:text-white"
             }`}
           >
-            <GridFour size={18} />
+            <GridFour size={20} className="sm:hidden" />
+            <GridFour size={18} className="hidden sm:block" />
           </button>
         </div>
       </div>
@@ -600,7 +602,7 @@ export function ProductsTab() {
         </div>
       ) : layoutMode === "list" ? (
         // ═══════════════════════════════════════════
-        //  MODO LISTA (Edição Inline)
+        //  MODO LISTA (Edição Inline) - MOBILE OPTIMIZED
         // ═══════════════════════════════════════════
         <div className="flex flex-col gap-3">
           {filteredAndSorted.map((product) => {
@@ -633,36 +635,38 @@ export function ProductsTab() {
             return (
               <div
                 key={product.id}
-                className={`flex flex-col lg:flex-row gap-4 p-4 rounded-xl border transition-colors ${
-                  isPending ? "bg-amber-950/10 border-amber-900/20 hover:border-amber-800/40"
-                            : "bg-zinc-900/60 border-zinc-800/50 hover:border-zinc-700/70"
+                className={`flex flex-col gap-4 p-4 rounded-xl border transition-colors ${
+                  isPending ? "bg-amber-950/10 border-amber-900/20"
+                            : "bg-zinc-900/60 border-zinc-800/50"
                 }`}
               >
-                {/* 1. Imagem e Info Principal (Esquerda) */}
-                <div className="flex gap-4 lg:w-1/3 shrink-0">
+                {/* ═══ MOBILE: Layout Vertical Otimizado ═══ */}
+                
+                {/* 1. Cabeçalho: Imagem + Info Básica */}
+                <div className="flex gap-3">
                   <button
                     onClick={() => setGalleryProduct(product)}
-                    className="w-20 h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
-                    title="Ver todas as fotos"
+                    className="w-24 h-24 md:w-20 md:h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
+                    title="Ver fotos"
                   >
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform" />
+                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
                       {(product.images?.length || 0) + 1} 📸
                     </div>
                   </button>
                   
                   <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <div className="flex items-start gap-2">
-                      <div className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2 flex-1" title={product.name}>
-                        {product.name}
-                      </div>
-                      {/* FASE 2 — Badge de Queda de Preço no modo lista */}
+                    <div className="text-sm md:text-base font-medium text-zinc-100 leading-tight line-clamp-3" title={product.name}>
+                      {product.name}
+                    </div>
+                    
+                    {/* Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {product.dropPercent !== undefined && product.dropPercent > 0 && (
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80 whitespace-nowrap">
                           ▼ {product.dropPercent.toFixed(1)}%
                         </span>
                       )}
-                      {/* Badge de aviso para agregadores */}
                       {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-orange-950/90 text-orange-400 border border-orange-800/80 whitespace-nowrap flex items-center gap-1">
                           <Warning size={10} weight="fill" />
@@ -670,132 +674,150 @@ export function ProductsTab() {
                         </span>
                       )}
                     </div>
-                    {/* ID nativo da plataforma */}
-                    <CopyableId product={product} />
-                    {product.price && (
-                      <div className="text-xs font-bold text-emerald-400">R$ {product.price.toFixed(2)}</div>
-                    )}
-                    <div className="relative">
-                      <select
-                        value={product.category}
-                        onChange={(e) => handleAutoSave(product.id, 'category', e.target.value)}
-                        className={`text-xs bg-zinc-800 border rounded px-2 py-1 w-full text-zinc-300 focus:border-accent outline-none ${
-                          savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700"
-                        }`}
-                      >
-                        <option value="">Sem categoria...</option>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                        {!categories.includes(product.category) && <option value={product.category}>{product.category}</option>}
-                      </select>
+                    
+                    <div className="flex items-center gap-2">
+                      <CopyableId product={product} />
+                      {product.price && (
+                        <div className="text-sm font-bold text-emerald-400">R$ {product.price.toFixed(2)}</div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Links Completos (Centro) */}
-                <div className="flex flex-col gap-2 lg:w-1/3 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase text-zinc-500 w-[70px] shrink-0 font-medium tracking-wide">Loja:</span>
+                {/* 2. Categoria (Mobile: Select maior e mais fácil de clicar) */}
+                <div className="w-full">
+                  <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide mb-1 block">Categoria</label>
+                  <select
+                    value={product.category}
+                    onChange={(e) => handleAutoSave(product.id, 'category', e.target.value)}
+                    className={`w-full text-sm md:text-xs bg-zinc-800 border rounded-lg px-3 py-2.5 md:py-2 text-zinc-300 focus:border-accent outline-none ${
+                      savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700"
+                    }`}
+                  >
+                    <option value="">Sem categoria...</option>
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {!categories.includes(product.category) && <option value={product.category}>{product.category}</option>}
+                  </select>
+                </div>
+
+                {/* 3. Links (Mobile: Inputs maiores, empilhados, com labels claros) */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Link da Loja</label>
+                      {sourceUrl && (
+                        <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
+                          <ArrowSquareOut size={16} />
+                        </a>
+                      )}
+                    </div>
                     <input 
                       type="text" 
                       value={sourceUrl} 
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localSourceUrl: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'updateSourceUrl' as any, e.target.value)}
-                      className={`flex-1 bg-zinc-800/50 border rounded px-2 py-1 text-xs text-zinc-400 outline-none truncate hover:bg-zinc-800 transition-colors ${savingFields[`${product.id}-updateSourceUrl`] ? "border-accent/50" : "border-zinc-700/50"}`} 
-                      placeholder="Colar link original..."
-                      title={sourceUrl}
+                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs text-zinc-400 outline-none hover:bg-zinc-800 transition-colors ${
+                        savingFields[`${product.id}-updateSourceUrl`] ? "border-accent/50" : "border-zinc-700/50"
+                      }`} 
+                      placeholder="Cole o link original aqui..."
                     />
-                    {sourceUrl && (
-                      <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-400 hover:text-white bg-zinc-800 rounded">
-                        <ArrowSquareOut size={14} />
-                      </a>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase text-zinc-500 w-[70px] shrink-0 font-medium tracking-wide">Afiliado:</span>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Link Afiliado</label>
+                      {affiliateUrl && (
+                        <a href={affiliateUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
+                          <ArrowSquareOut size={16} />
+                        </a>
+                      )}
+                    </div>
                     <input 
                       type="text" 
                       value={affiliateUrl} 
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localAffiliateUrl: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'updateAffiliateUrl' as any, e.target.value)}
-                      className={`flex-1 bg-zinc-800/50 border rounded px-2 py-1 text-xs outline-none truncate hover:bg-zinc-800 transition-colors ${
+                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs outline-none hover:bg-zinc-800 transition-colors ${
                         savingFields[`${product.id}-updateAffiliateUrl`] ? "border-accent/50" : 
                         !hasAffiliate && sourceUrl ? "border-red-900/50 text-red-400" : "border-zinc-700/50 text-emerald-400/80"
                       }`} 
-                      placeholder="Colar link de afiliado..."
-                      title={affiliateUrl}
+                      placeholder="Cole o link de afiliado aqui..."
                     />
-                    {affiliateUrl && (
-                      <a href={affiliateUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-400 hover:text-white bg-zinc-800 rounded">
-                        <ArrowSquareOut size={14} />
-                      </a>
+                    {!hasAffiliate && sourceUrl && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-red-400 bg-red-950/30 px-2 py-1.5 rounded-lg border border-red-900/30">
+                        <Warning size={12} /> Link de afiliado pendente ou igual ao original
+                      </div>
                     )}
                   </div>
-                  {!hasAffiliate && sourceUrl && (
-                    <div className="flex items-center gap-1 text-[10px] text-red-400 bg-red-950/30 px-2 py-0.5 rounded w-max border border-red-900/30">
-                      <Warning size={12} /> Link de afiliado pendente ou igual ao original
-                    </div>
-                  )}
                 </div>
 
-                {/* 3. Atributos Secundários e Trava (Direita) */}
-                <div className="flex flex-col gap-2 lg:flex-1 shrink-0">
-                  <div className="flex gap-2">
+                {/* 4. Campos Extras (Mobile: Grid responsivo) */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Marca</label>
                     <input 
                       type="text" 
-                      placeholder="Marca"
+                      placeholder="Ex: Samsung"
                       value={product.brand || ''}
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, brand: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'brand', e.target.value)}
-                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 outline-none focus:border-accent"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs text-zinc-200 outline-none focus:border-accent"
                     />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">ID Plataforma</label>
                     <input 
                       type="text" 
-                      placeholder="ID Plataforma"
+                      placeholder="Ex: MLB123..."
                       value={product.platformProductId || ''}
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, platformProductId: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'platformProductId', e.target.value)}
-                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 outline-none focus:border-accent"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs text-zinc-200 outline-none focus:border-accent"
                     />
                   </div>
-                  <div className="flex items-center justify-between mt-auto">
-                    <label className="flex items-center gap-1.5 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        checked={!!product.isFixed} 
-                        onChange={(e) => handleAutoSave(product.id, 'isFixed', e.target.checked)}
-                        className="w-3.5 h-3.5 accent-accent rounded"
-                      />
-                      <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">Travar Repostagem</span>
-                    </label>
+                </div>
 
-                    {/* Ações */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isPending && (
-                        <button
-                          onClick={() => handleQuickApprove(product.id)}
-                          disabled={approvingId === product.id}
-                          title="Aprovar sem enviar pro telegram"
-                          className="flex items-center gap-1 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-2 py-1.5 rounded-lg transition-colors text-xs font-medium disabled:opacity-50"
-                        >
-                          {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={14} weight="bold" />}
-                          <span className="hidden xl:inline">Aprovar</span>
-                        </button>
-                      )}
+                {/* 5. Ações (Mobile: Botões maiores e mais espaçados) */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800">
+                  <label className="flex items-center gap-2 cursor-pointer group p-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={!!product.isFixed} 
+                      onChange={(e) => handleAutoSave(product.id, 'isFixed', e.target.checked)}
+                      className="w-5 h-5 md:w-4 md:h-4 accent-accent rounded"
+                    />
+                    <span className="text-sm md:text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors font-medium">Travar Repostagem</span>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {isPending && (
                       <button
-                        onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                        title="Abrir Modal Completo"
-                        className="p-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors"
+                        onClick={() => handleQuickApprove(product.id)}
+                        disabled={approvingId === product.id}
+                        className="col-span-2 flex items-center justify-center gap-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-4 py-3 md:py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                       >
-                        <Pencil size={14} />
+                        {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={18} weight="bold" />}
+                        Aprovar Produto
                       </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        title="Deletar produto"
-                        className="p-1.5 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors"
-                      >
-                        <Trash size={14} />
-                      </button>
-                    </div>
+                    )}
+                    
+                    <button
+                      onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
+                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors px-4 py-3 md:py-2 text-sm"
+                    >
+                      <Pencil size={16} />
+                      <span className="md:hidden">Editar</span>
+                      <span className="hidden md:inline">Abrir Modal</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors px-4 py-3 md:py-2 text-sm"
+                    >
+                      <Trash size={16} />
+                      <span>Deletar</span>
+                    </button>
                   </div>
                 </div>
 
