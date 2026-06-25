@@ -105,14 +105,21 @@ function extractPlatformDetailsFromUrl(url: string, platform: string): { platfor
   // VALIDAÇÃO CRÍTICA: Detectar URLs de agregadores (Promobit, Pechinchou)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // Se a URL ainda é de agregador, NÃO extrair IDs pois não são IDs reais de loja
+  // IMPORTANTE: Esta validação deve acontecer ANTES de qualquer tentativa de regex para extrair IDs
   if (urlLower.includes('promobit.com.br')) {
-    console.log(`[Webhook] URL de agregador Promobit detectada. Não extraindo platformId: ${url}`);
+    console.log(`[Webhook] ⚠️ URL de agregador Promobit detectada. Não extraindo platformId: ${url}`);
     return { platformId: null, platformType: 'promobit' };
   }
   
   if (urlLower.includes('pechinchou.com.br')) {
-    console.log(`[Webhook] URL de agregador Pechinchou detectada. Não extraindo platformId: ${url}`);
+    console.log(`[Webhook] ⚠️ URL de agregador Pechinchou detectada. Não extraindo platformId: ${url}`);
     return { platformId: null, platformType: 'pechinchou' };
+  }
+  
+  // Outros agregadores conhecidos
+  if (urlLower.includes('pelando.com.br') || urlLower.includes('hardmob.com.br')) {
+    console.log(`[Webhook] ⚠️ URL de agregador detectada. Não extraindo platformId: ${url}`);
+    return { platformId: null, platformType: 'agregador' };
   }
   
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -127,7 +134,9 @@ function extractPlatformDetailsFromUrl(url: string, platform: string): { platfor
   }
   
   if (platform === 'mercadoLivre' || urlLower.includes('mercadolivre') || urlLower.includes('meli.la') || urlLower.includes('mercadolibre')) {
-    const mlbMatch = url.match(/(MLB-?\d+)/i);
+    // IDs MLB reais têm 10-13 dígitos (ex: MLB4214670787, MLB18522997)
+    // Isso previne que IDs de agregadores (ex: 2887743) sejam tratados como MLB
+    const mlbMatch = url.match(/(MLB-?\d{10,13})/i);
     if (mlbMatch) {
       return { platformId: mlbMatch[1].replace('-', '').toUpperCase(), platformType: 'mercadolivre' };
     }
