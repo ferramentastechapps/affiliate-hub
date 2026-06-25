@@ -377,14 +377,14 @@ export function ProductsTab() {
   return (
     <div>
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex justify-between items-center gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6">
         <h2 className="text-2xl font-semibold">Gerenciar Produtos</h2>
         <button
           onClick={() => {
             setEditingProduct(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-black px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+          className="flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-black px-4 py-2.5 sm:py-2 rounded-lg font-medium transition-colors text-sm"
         >
           <Plus size={18} weight="bold" />
           Adicionar Produto
@@ -415,13 +415,13 @@ export function ProductsTab() {
       </div>
 
       {/* ─── Toolbar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-5 gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-5 gap-3">
         <div className="flex items-center gap-2">
           <SortAscending size={16} className="text-zinc-400 shrink-0" />
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+            className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 sm:py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer flex-1 sm:flex-initial"
           >
             <option value="date_desc">📅 Mais Recentes</option>
             <option value="date_asc">📅 Mais Antigos</option>
@@ -430,7 +430,7 @@ export function ProductsTab() {
             <option value="price_asc">💰 Menor Preço</option>
             <option value="price_desc">💰 Maior Preço</option>
           </select>
-          <span className="text-xs text-zinc-500 ml-1">
+          <span className="text-xs text-zinc-500 ml-1 hidden sm:inline">
             {filteredAndSorted.length} produto{filteredAndSorted.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -438,7 +438,7 @@ export function ProductsTab() {
           <button
             onClick={() => setLayoutMode("list")}
             title="Modo Lista"
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-2 sm:p-1.5 rounded-md transition-colors ${
               layoutMode === "list" ? "bg-zinc-700 text-accent" : "text-zinc-500 hover:text-white"
             }`}
           >
@@ -447,7 +447,7 @@ export function ProductsTab() {
           <button
             onClick={() => setLayoutMode("grid")}
             title="Modo Grade"
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-2 sm:p-1.5 rounded-md transition-colors ${
               layoutMode === "grid" ? "bg-zinc-700 text-accent" : "text-zinc-500 hover:text-white"
             }`}
           >
@@ -475,9 +475,9 @@ export function ProductsTab() {
             >
               <div className="flex flex-col lg:flex-row gap-5">
                 {/* Ranking e Imagem */}
-                <div className="flex gap-4 items-start lg:w-1/4 shrink-0">
+                <div className="flex gap-4 items-start w-full sm:w-auto sm:flex-shrink-0">
                   <div className="flex flex-col items-center gap-2 shrink-0">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg border-2 ${
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-base sm:text-lg border-2 ${
                       index === 0 ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' :
                       index === 1 ? 'bg-zinc-400/20 border-zinc-400 text-zinc-300' :
                       index === 2 ? 'bg-orange-700/20 border-orange-700 text-orange-500' :
@@ -486,24 +486,24 @@ export function ProductsTab() {
                       #{index + 1}
                     </div>
                     <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-2xl font-black text-accent">{product.totalScore?.toFixed(1)}</span>
+                      <span className="text-xl sm:text-2xl font-black text-accent">{product.totalScore?.toFixed(1)}</span>
                       <span className="text-[9px] text-zinc-500 font-medium">SCORE</span>
                     </div>
                   </div>
                   
                   <button
                     onClick={() => setGalleryProduct(product)}
-                    className="w-20 h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center border border-zinc-700 hover:border-accent transition-colors"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-white flex items-center justify-center border border-zinc-700 hover:border-accent transition-colors"
                   >
                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
                   </button>
                 </div>
 
                 {/* Info do Produto */}
-                <div className="flex flex-col gap-3 flex-1">
+                <div className="flex flex-col gap-3 flex-1 min-w-0">
                   <div>
-                    <div className="flex items-start gap-3 mb-2">
-                      <h3 className="text-base font-bold text-white flex-1 line-clamp-2">{product.name}</h3>
+                    <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 mb-2">
+                      <h3 className="text-sm sm:text-base font-bold text-white flex-1 line-clamp-2">{product.name}</h3>
                       <div className="flex items-center gap-2 shrink-0">
                         {product.neverPosted ? (
                           <span className="px-2 py-1 text-xs font-bold rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
@@ -539,7 +539,7 @@ export function ProductsTab() {
 
                   {/* Breakdown do Score */}
                   {product.scoreBreakdown && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-2">
                         <div className="text-[10px] text-zinc-500 mb-0.5">DESCONTO</div>
                         <div className="text-sm font-bold text-white">{product.scoreBreakdown.discountScore}/40</div>
@@ -561,11 +561,11 @@ export function ProductsTab() {
                 </div>
 
                 {/* Ação */}
-                <div className="flex flex-col gap-2 items-end justify-between lg:w-48 shrink-0">
+                <div className="flex flex-col gap-2 items-stretch sm:items-end justify-between w-full sm:w-48 shrink-0">
                   <button
                     onClick={() => handlePostToTelegram(product.id)}
                     disabled={postingToTelegram === product.id}
-                    className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 disabled:cursor-not-allowed text-black disabled:text-zinc-500 px-4 py-3 rounded-lg font-bold transition-all hover:scale-105 disabled:scale-100"
+                    className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 disabled:bg-zinc-700 disabled:cursor-not-allowed text-black disabled:text-zinc-500 px-4 py-3 sm:py-2.5 rounded-lg font-bold transition-all hover:scale-105 disabled:scale-100"
                   >
                     {postingToTelegram === product.id ? (
                       <>
@@ -582,13 +582,13 @@ export function ProductsTab() {
                   <div className="flex gap-1 w-full">
                     <button
                       onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                      className="flex-1 p-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 transition-colors text-sm"
+                      className="flex-1 p-2.5 sm:p-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 transition-colors text-sm"
                     >
                       ✏️ Editar
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex-1 p-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors text-sm"
+                      className="flex-1 p-2.5 sm:p-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors text-sm"
                     >
                       🗑️ Deletar
                     </button>
@@ -641,10 +641,10 @@ export function ProductsTab() {
                 {/* ═══ MOBILE: Layout Vertical Otimizado ═══ */}
                 
                 {/* 1. Cabeçalho: Imagem + Info Básica */}
-                <div className="flex gap-3">
+                <div className="flex gap-3 sm:gap-4">
                   <button
                     onClick={() => setGalleryProduct(product)}
-                    className="w-20 h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
+                    className="w-24 h-24 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
                     title="Ver fotos"
                   >
                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
@@ -654,7 +654,7 @@ export function ProductsTab() {
                   </button>
                   
                   <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <div className="text-base font-medium text-zinc-100 leading-tight line-clamp-3" title={product.name}>
+                    <div className="text-sm sm:text-base font-medium text-zinc-100 leading-tight line-clamp-3" title={product.name}>
                       {product.name}
                     </div>
                     
@@ -783,7 +783,7 @@ export function ProductsTab() {
                       type="checkbox" 
                       checked={!!product.isFixed} 
                       onChange={(e) => handleAutoSave(product.id, 'isFixed', e.target.checked)}
-                      className="w-4 h-4 accent-accent rounded"
+                      className="w-5 h-5 sm:w-4 sm:h-4 accent-accent rounded"
                     />
                     <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors font-medium">Travar Repostagem</span>
                   </label>
@@ -793,7 +793,7 @@ export function ProductsTab() {
                       <button
                         onClick={() => handleQuickApprove(product.id)}
                         disabled={approvingId === product.id}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                        className="col-span-2 flex items-center justify-center gap-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-4 py-2.5 sm:py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                       >
                         {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={18} weight="bold" />}
                         Aprovar Produto
@@ -802,7 +802,7 @@ export function ProductsTab() {
                     
                     <button
                       onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors px-4 py-2 text-sm"
+                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors px-4 py-2.5 sm:py-2 text-sm"
                     >
                       <Pencil size={16} />
                       Abrir Modal
@@ -810,7 +810,7 @@ export function ProductsTab() {
                     
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors px-4 py-2 text-sm"
+                      className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors px-4 py-2.5 sm:py-2 text-sm"
                     >
                       <Trash size={16} />
                       Deletar
