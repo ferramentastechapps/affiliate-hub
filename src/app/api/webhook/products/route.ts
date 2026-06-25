@@ -101,6 +101,24 @@ async function processProductAffiliates(productData: { links?: Record<string, st
 function extractPlatformDetailsFromUrl(url: string, platform: string): { platformId: string | null; platformType: string | null } {
   const urlLower = url.toLowerCase();
   
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // VALIDAÇÃO CRÍTICA: Detectar URLs de agregadores (Promobit, Pechinchou)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Se a URL ainda é de agregador, NÃO extrair IDs pois não são IDs reais de loja
+  if (urlLower.includes('promobit.com.br')) {
+    console.log(`[Webhook] URL de agregador Promobit detectada. Não extraindo platformId: ${url}`);
+    return { platformId: null, platformType: 'promobit' };
+  }
+  
+  if (urlLower.includes('pechinchou.com.br')) {
+    console.log(`[Webhook] URL de agregador Pechinchou detectada. Não extraindo platformId: ${url}`);
+    return { platformId: null, platformType: 'pechinchou' };
+  }
+  
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Extração de IDs reais de lojas (só para URLs de varejistas)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
   if (platform === 'amazon' || urlLower.includes('amazon') || urlLower.includes('amzn.to')) {
     const asinMatch = url.match(/(?:\/dp\/|\/gp\/product\/|\/gp\/aw\/d\/)([A-Z0-9]{10})/i);
     if (asinMatch) {
@@ -415,12 +433,23 @@ export async function POST(request: Request) {
       );
     }
     
-    // isAggregatorFailed removido - agora mantemos o link original para aprovação manual
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // VALIDAÇÃO CRÍTICA: Forçar pending se platformType for de agregador
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Agregadores (Promobit, Pechinchou) não têm platformId real de loja
+    // Estes produtos devem ir para aprovação manual para verificação de link
+    const isAggregatorPlatform = finalPlatformType === 'promobit' || finalPlatformType === 'pechinchou';
 
     let finalStatus = body.status || processedStatus;
 
     if (body.autoApprove === true) {
       finalStatus = 'pending'; // Inicia como pending, será aprovado no background se aiScore >= 6.5
+    }
+    
+    // Se for agregador e não tem platformId real, forçar pending para revisão manual
+    if (isAggregatorPlatform && !finalPlatformId) {
+      console.log(`[Webhook] ⚠️ Produto de agregador sem platformId real. Forçando status=pending para aprovação manual: ${finalPlatformType}`);
+      finalStatus = 'pending';
     }
 
     // Criar produto
