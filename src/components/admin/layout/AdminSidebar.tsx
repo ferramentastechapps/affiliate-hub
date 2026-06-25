@@ -17,28 +17,12 @@ import {
   Megaphone,
   Handshake,
   GearSix,
-  Brain,
-  CaretLeft,
-  CaretRight
+  Brain
 } from '@phosphor-icons/react';
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const [counts, setCounts] = useState({ pendingProducts: 0, totalComments: 0 });
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('admin-sidebar-collapsed');
-    if (saved === 'true') setCollapsed(true);
-  }, []);
-
-  function toggleCollapsed() {
-    setCollapsed(prev => {
-      const next = !prev;
-      localStorage.setItem('admin-sidebar-collapsed', String(next));
-      return next;
-    });
-  }
 
   useEffect(() => {
     fetch('/api/admin/dashboard')
@@ -91,26 +75,15 @@ export function AdminSidebar() {
     }
   ];
 
-  const sidebarWidth = collapsed ? 'w-[60px]' : 'w-64';
-
   return (
     <aside
-      className={`${sidebarWidth} bg-zinc-900 border-r border-zinc-800 flex flex-col h-screen fixed top-0 left-0 z-20 transition-all duration-300`}
+      className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col h-screen transition-all duration-300"
     >
       {/* Header */}
-      <div className={`flex items-center border-b border-zinc-800 h-[65px] ${collapsed ? 'justify-center px-0' : 'px-5 justify-between'}`}>
-        {!collapsed && (
-          <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 whitespace-nowrap overflow-hidden">
-            Admin Economizei
-          </h1>
-        )}
-        <button
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors shrink-0"
-        >
-          {collapsed ? <CaretRight size={16} /> : <CaretLeft size={16} />}
-        </button>
+      <div className="flex items-center border-b border-zinc-800 h-[65px] px-5">
+        <h1 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 whitespace-nowrap overflow-hidden">
+          Admin Economizei
+        </h1>
       </div>
 
       {/* Nav */}
@@ -123,25 +96,18 @@ export function AdminSidebar() {
                 <Link
                   key={item.path}
                   href={item.path}
-                  title={collapsed ? item.name : undefined}
-                  className={`flex items-center rounded-xl transition-colors h-10 ${
-                    collapsed ? 'justify-center px-0' : 'justify-between px-3'
-                  } ${
+                  className={`flex items-center rounded-xl transition-colors h-10 justify-between px-3 ${
                     isActive
                       ? 'bg-indigo-500/10 text-indigo-400 font-medium'
                       : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
                   }`}
                 >
-                  <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
+                  <div className="flex items-center gap-3">
                     <item.icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
-                    {!collapsed && <span className="text-sm whitespace-nowrap">{item.name}</span>}
+                    <span className="text-sm whitespace-nowrap">{item.name}</span>
                   </div>
-                  {!collapsed && item.badge ? (
+                  {item.badge ? (
                     <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                      {item.badge}
-                    </span>
-                  ) : collapsed && item.badge ? (
-                    <span className="absolute ml-7 mb-4 bg-indigo-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
                       {item.badge}
                     </span>
                   ) : null}
@@ -149,7 +115,7 @@ export function AdminSidebar() {
               );
             })}
             {idx < menuSections.length - 1 && (
-              <div className={`h-px bg-zinc-800/50 my-1 ${collapsed ? 'mx-2' : 'mx-3'}`} />
+              <div className="h-px bg-zinc-800/50 my-1 mx-3" />
             )}
           </div>
         ))}

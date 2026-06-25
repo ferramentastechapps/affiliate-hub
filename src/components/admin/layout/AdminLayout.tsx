@@ -10,7 +10,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -18,22 +17,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       router.push('/admin/login');
     }
   }, [user, loading, router, pathname]);
-
-  // Sincroniza com o estado do sidebar (salvo no localStorage) - APENAS DESKTOP
-  useEffect(() => {
-    const check = () => {
-      const saved = localStorage.getItem('admin-sidebar-collapsed');
-      setSidebarCollapsed(saved === 'true');
-    };
-    check();
-    window.addEventListener('storage', check);
-    // Polling leve para pegar mudanças do mesmo tab
-    const interval = setInterval(check, 150);
-    return () => {
-      window.removeEventListener('storage', check);
-      clearInterval(interval);
-    };
-  }, []);
 
   // Fechar sidebar mobile ao mudar de página
   useEffect(() => {
