@@ -60,6 +60,30 @@ export async function PUT(
       };
     }
 
+    // Se platformProductId foi alterado, atualizar também platformId para manter consistência
+    let platformIdUpdate = undefined;
+    let platformTypeUpdate = undefined;
+    if (platformProductId !== undefined) {
+      platformIdUpdate = platformProductId;
+      if (platformProductId) {
+        if (existingProduct.platformType) {
+          platformTypeUpdate = existingProduct.platformType;
+        } else {
+          const storeLower = (existingProduct.storeName || '').toLowerCase();
+          if (storeLower.includes('amazon')) platformTypeUpdate = 'amazon';
+          else if (storeLower.includes('mercado') || storeLower.includes('livre')) platformTypeUpdate = 'mercadolivre';
+          else if (storeLower.includes('shopee')) platformTypeUpdate = 'shopee';
+          else if (storeLower.includes('aliexpress')) platformTypeUpdate = 'aliexpress';
+          else if (storeLower.includes('magalu') || storeLower.includes('magazine')) platformTypeUpdate = 'magalu';
+          else if (storeLower.includes('kabum')) platformTypeUpdate = 'kabum';
+          else if (storeLower.includes('netshoes')) platformTypeUpdate = 'netshoes';
+        }
+      } else {
+        platformIdUpdate = null;
+        platformTypeUpdate = null;
+      }
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: {
@@ -68,6 +92,8 @@ export async function PUT(
         brand,
         subcategory,
         platformProductId,
+        platformId: platformIdUpdate,
+        platformType: platformTypeUpdate,
         description,
         imageUrl,
         price: price ? parseFloat(price) : null,

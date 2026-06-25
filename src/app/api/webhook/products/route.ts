@@ -440,7 +440,7 @@ export async function POST(request: Request) {
         subcategory: body.subcategory || null,
         brand: body.brand || null,
         model: body.model || null,
-        platformProductId: body.platformProductId || null,
+        platformProductId: body.platformProductId || finalPlatformId || null,
         platformId: finalPlatformId || null,
         platformType: finalPlatformType || null,
         storeName: body.storeName || null,
@@ -797,9 +797,11 @@ export async function PUT(request: Request) {
             const skipProcessing = existingProduct.aiProcessed && existingProduct.affiliateProcessed;
             let linksData = undefined;
             let productLinksDataUpdate: any[] = [];
+            let resolvedUrls: Record<string, string> | undefined = undefined;
             
             if (!skipProcessing) {
-              const { links: processedLinks, productLinksData } = await processProductAffiliates(productData);
+              const { links: processedLinks, productLinksData, resolvedUrls: resUrls } = await processProductAffiliates(productData);
+              resolvedUrls = resUrls;
               productLinksDataUpdate = productLinksData;
               const linksUpdate: Record<string, string> = {};
               if (processedLinks) {
@@ -821,6 +823,44 @@ export async function PUT(request: Request) {
               }
             }
 
+            let finalPlatformId = existingProduct.platformId;
+            let finalPlatformType = existingProduct.platformType;
+
+            if (!finalPlatformId || !finalPlatformType) {
+              const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
+              
+              // 1. Tentar das URLs resolvidas pelo webhook
+              if (resolvedUrls) {
+                for (const p of platforms) {
+                  const urlToParse = resolvedUrls[p];
+                  if (urlToParse) {
+                    const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+                    if (extracted.platformId && extracted.platformType) {
+                      finalPlatformId = extracted.platformId;
+                      finalPlatformType = extracted.platformType;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // 2. Fallback: tentar das URLs originais/fornecidas
+              if (!finalPlatformId || !finalPlatformType) {
+                const targetLinks = productData.links || {};
+                for (const p of platforms) {
+                  const urlToParse = targetLinks[p];
+                  if (urlToParse) {
+                    const extracted = extractPlatformDetailsFromUrl(urlToParse, p);
+                    if (extracted.platformId && extracted.platformType) {
+                      finalPlatformId = extracted.platformId;
+                      finalPlatformType = extracted.platformType;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+
             const precoAnterior = existingProduct.price;
             const precoNovo = parseFloat(productData.price);
 
@@ -833,7 +873,9 @@ export async function PUT(request: Request) {
                 subcategory: productData.subcategory || existingProduct.subcategory,
                 brand: productData.brand || existingProduct.brand,
                 model: productData.model || existingProduct.model,
-                platformProductId: productData.platformProductId || existingProduct.platformProductId,
+                platformProductId: productData.platformProductId || finalPlatformId || existingProduct.platformProductId,
+                platformId: finalPlatformId || existingProduct.platformId,
+                platformType: finalPlatformType || existingProduct.platformType,
                 storeName: productData.storeName || existingProduct.storeName,
                 ...imageUpdateData,
                 links: linksData
@@ -949,7 +991,7 @@ export async function PUT(request: Request) {
             subcategory: productData.subcategory || null,
             brand: productData.brand || null,
             model: productData.model || null,
-            platformProductId: productData.platformProductId || null,
+            platformProductId: productData.platformProductId || finalPlatformId || null,
             storeName: productData.storeName || null,
             description: productData.description || null,
             imageUrl: productData.imageUrl,
