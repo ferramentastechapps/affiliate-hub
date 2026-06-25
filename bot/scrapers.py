@@ -1180,8 +1180,8 @@ class PromotionScraper:
                         print(f'  🔍 [Pechinchou] Link vitrine ML detectado → tentando resolver para produto real...')
                         link_resolvido = self._resolver_link_meli_la(link_direto)
                         
-                        # Apenas usa o resolvido se ele for um link direto de produto (não for outra vitrine)
-                        if link_resolvido and not any(x in link_resolvido for x in ['meli.la', '/sec/', '/social/']):
+                        # Apenas usa o resolvido se ele for um link direto de produto (não for outra vitrine ou inválido)
+                        if link_resolvido and link_resolvido != 'VITRINE_INVALIDA' and not any(x in link_resolvido for x in ['meli.la', '/sec/', '/social/']):
                             link_produto = link_resolvido
                         else:
                             print(f'  [Pechinchou] ⚠️ Produto não extraído da vitrine. Ignorando oferta (sem fallback Pechinchou).')

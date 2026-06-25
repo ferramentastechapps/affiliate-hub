@@ -15,10 +15,85 @@ interface UrlDetails {
 }
 
 /**
+ * Funções auxiliares para limpeza e comparação de títulos de ofertas
+ */
+function cleanTitle(title: string): string[] {
+  const stopWords = new Set(['de', 'para', 'com', 'o', 'a', 'os', 'as', 'um', 'uma', 'em', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas']);
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^\w\s-]/g, '') // remove pontuação
+    .split(/[\s-]+/)
+    .filter(w => w.length > 1 && !stopWords.has(w));
+}
+
+function isTitleMatch(title1: string, title2: string): boolean {
+  const words1 = cleanTitle(title1);
+  const words2 = cleanTitle(title2);
+  
+  if (words1.length === 0 || words2.length === 0) {
+    console.warn('[Affiliate] Título ausente — descartando como inválido');
+    return false;
+  }
+  
+  const set2 = new Set(words2);
+  let overlap = 0;
+  for (const w of words1) {
+    if (set2.has(w)) overlap++;
+  }
+  
+  const score = overlap / Math.min(words1.length, words2.length);
+  return score >= 0.65;
+}
+
+function isUrlTitleMatch(originalTitle: string, urlStr: string): boolean {
+  try {
+    const titleFromUrl = urlStr.replace(/[/-]/g, ' ');
+    return isTitleMatch(originalTitle, titleFromUrl);
+  } catch {
+    return false; // Fallback se falhar
+  }
+}
+
+function hasSlug(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    const path = url.pathname;
+    const cleanPath = path.replace(/MLB-?\d+/gi, '').replace(/[^a-zA-Z]/g, '');
+    return cleanPath.length > 3;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveUrlSlug(urlStr: string): Promise<string> {
+  if (!hasSlug(urlStr)) {
+    try {
+      console.log(`[Affiliate] Resolvendo slug para URL sem slug: ${urlStr}`);
+      const headResp = await fetch(urlStr, {
+        method: 'HEAD',
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      if (headResp.url && headResp.url !== urlStr) {
+        console.log(`[Affiliate] URL com slug resolvida: ${headResp.url}`);
+        return headResp.url;
+      }
+    } catch (e) {
+      console.warn('[Affiliate] Falha ao resolver redirecionamento de slug:', e);
+    }
+  }
+  return urlStr;
+}
+
+/**
  * Resolve encurtadores de links seguindo redirecionamentos HTTP
  * para obter a URL final real da loja.
  */
-export async function resolveRedirect(url: string): Promise<string> {
+export async function resolveRedirect(url: string, originalTitle?: string): Promise<string> {
   // 0. Verificar se a URL contém outra URL embutida em parâmetros de redirecionamento/afiliados comuns (ex: ued= para Awin)
   try {
     const parsed = new URL(url);
@@ -27,7 +102,7 @@ export async function resolveRedirect(url: string): Promise<string> {
       const val = parsed.searchParams.get(p);
       if (val && (val.startsWith('http://') || val.startsWith('https://'))) {
         console.log(`[Affiliate] URL aninhada extraída de parâmetro '${p}': ${val}`);
-        return resolveRedirect(val); // Resolve recursivamente a URL interna
+        return resolveRedirect(val, originalTitle); // Resolve recursivamente a URL interna
       }
     }
   } catch {}
@@ -37,7 +112,7 @@ export async function resolveRedirect(url: string): Promise<string> {
   // tem um endpoint interno (/api/social-profile) que retorna os itens em JSON.
   if (url.toLowerCase().includes('mercadolivre.com.br/social/')) {
     try {
-      console.log(`[Affiliate] Resolvendo link social do ML: ${url}`);
+      console.log(`[Affiliate] Resolvendo link social do ML: ${url} (Título Original: ${originalTitle || 'N/A'})`);
 
       // Extrair o nome do perfil da URL (ex: "promobit" de /social/promobit)
       const profileMatch = url.match(/mercadolivre\.com\.br\/social\/([^/?&]+)/i);
@@ -73,13 +148,27 @@ export async function resolveRedirect(url: string): Promise<string> {
           if (mlProductMatch?.[1]) {
             const extracted = mlProductMatch[1];
             if (extracted.startsWith('http')) {
-              const cleanExtracted = extracted.split('?')[0];
+              let cleanExtracted = extracted.split('?')[0];
+              if (originalTitle) {
+                cleanExtracted = await resolveUrlSlug(cleanExtracted);
+                if (!isUrlTitleMatch(originalTitle, cleanExtracted)) {
+                  console.warn(`[Affiliate] Descartando produto decodificado do ref= por incompatibilidade de título: ${cleanExtracted} vs original ${originalTitle}`);
+                  return 'VITRINE_INVALIDA';
+                }
+              }
               console.log(`[Affiliate] 🔓 ref= decodificado → URL direta: ${cleanExtracted}`);
               return cleanExtracted;
             } else {
               // É um MLB ID, montar URL canônica
               const mlbId = extracted.replace('-', '');
-              const productUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
+              let productUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
+              if (originalTitle) {
+                productUrl = await resolveUrlSlug(productUrl);
+                if (!isUrlTitleMatch(originalTitle, productUrl)) {
+                  console.warn(`[Affiliate] Descartando produto decodificado do ref= por incompatibilidade de título: ${productUrl} vs original ${originalTitle}`);
+                  return 'VITRINE_INVALIDA';
+                }
+              }
               console.log(`[Affiliate] 🔓 ref= decodificado → MLB ID: ${productUrl}`);
               return productUrl;
             }
@@ -97,7 +186,14 @@ export async function resolveRedirect(url: string): Promise<string> {
               const jwtData = JSON.parse(payload);
               const jwtUrl = jwtData?.permalink || jwtData?.url || jwtData?.item_url || jwtData?.product_url;
               if (jwtUrl && (jwtUrl.includes('mercadolivre') || jwtUrl.includes('MLB'))) {
-                const cleanJwtUrl = jwtUrl.split('?')[0];
+                let cleanJwtUrl = jwtUrl.split('?')[0];
+                if (originalTitle) {
+                  cleanJwtUrl = await resolveUrlSlug(cleanJwtUrl);
+                  if (!isUrlTitleMatch(originalTitle, cleanJwtUrl)) {
+                    console.warn(`[Affiliate] Descartando produto decodificado do JWT por incompatibilidade de título: ${cleanJwtUrl} vs original ${originalTitle}`);
+                    return 'VITRINE_INVALIDA';
+                  }
+                }
                 console.log(`[Affiliate] 🔓 JWT ref= decodificado → URL: ${cleanJwtUrl}`);
                 return cleanJwtUrl;
               }
@@ -130,8 +226,16 @@ export async function resolveRedirect(url: string): Promise<string> {
               ? json
               : (json?.items?.[0] || json?.results?.[0] || json?.[0]);
             const permalink = item?.permalink || item?.url || item?.item_url || item?.product_url || item?.link;
+            const title = item?.title;
             if (permalink && (permalink.includes('mercadolivre') || permalink.includes('MLB'))) {
-              const cleanPermalink = permalink.split('?')[0];
+              let cleanPermalink = permalink.split('?')[0];
+              if (originalTitle) {
+                cleanPermalink = await resolveUrlSlug(cleanPermalink);
+                if (title && !isTitleMatch(originalTitle, title) && !isUrlTitleMatch(originalTitle, cleanPermalink)) {
+                  console.warn(`[Affiliate] Descartando produto da API ML por incompatibilidade de título: "${title}" vs original "${originalTitle}"`);
+                  return 'VITRINE_INVALIDA';
+                }
+              }
               console.log(`[Affiliate] 💥 Vitrine destruída via API ML (ref=${refId ?? 'n/a'})! Produto: ${cleanPermalink}`);
               return cleanPermalink;
             }
@@ -139,8 +243,16 @@ export async function resolveRedirect(url: string): Promise<string> {
             if (Array.isArray(json) && json.length > 0) {
               const firstItem = json[0];
               const firstPermalink = firstItem?.permalink || firstItem?.url || firstItem?.item_url;
+              const firstTitle = firstItem?.title;
               if (firstPermalink) {
-                const cleanFirst = firstPermalink.split('?')[0];
+                let cleanFirst = firstPermalink.split('?')[0];
+                if (originalTitle) {
+                  cleanFirst = await resolveUrlSlug(cleanFirst);
+                  if (firstTitle && !isTitleMatch(originalTitle, firstTitle) && !isUrlTitleMatch(originalTitle, cleanFirst)) {
+                    console.warn(`[Affiliate] Descartando produto da API ML (array) por incompatibilidade de título: "${firstTitle}" vs original "${originalTitle}"`);
+                    return 'VITRINE_INVALIDA';
+                  }
+                }
                 console.log(`[Affiliate] 💥 Vitrine destruída via API ML (array, ref=${refId ?? 'n/a'})! Produto: ${cleanFirst}`);
                 return cleanFirst;
               }
@@ -163,7 +275,91 @@ export async function resolveRedirect(url: string): Promise<string> {
       });
       const html = await htmlResp.text();
 
-      // Tentar extrair permalink de JSON embutido na página
+      // Estratégia 2.1: Tentar extrair e parsear o estado do Nordic framework para ser preciso
+      const stateMatch = html.match(/_n\.ctx\.r\s*=\s*(\{[\s\S]+?\});/);
+      if (stateMatch) {
+        try {
+          const state = JSON.parse(stateMatch[1]);
+          const components = state?.appProps?.pageProps?.data?.components || [];
+          const featuredComponent = components.find((c: any) => c.id === 'card-featured');
+          if (featuredComponent) {
+            const polycards = featuredComponent?.polycards || 
+                              featuredComponent?.recommendation_data?.polycards || 
+                              featuredComponent?.recommendation_data?.recommendation_info?.polycards || 
+                              [];
+            if (polycards.length > 0) {
+              const firstPolycard = polycards[0];
+              const mlbId = firstPolycard?.metadata?.id;
+              const title = firstPolycard?.components?.find((comp: any) => comp.type === 'title')?.title?.text;
+              
+              if (mlbId) {
+                // Preferir sempre a URL direta com o ID MLB real para consistência e deduplicação no banco de dados
+                let mlbUrl = `https://produto.mercadolivre.com.br/${mlbId.replace('-', '')}`;
+                
+                if (originalTitle) {
+                  let matched = false;
+                  if (title && isTitleMatch(originalTitle, title)) {
+                    matched = true;
+                  } else {
+                    // Fallback: resolver slug se o título do polycard não bateu ou está ausente
+                    mlbUrl = await resolveUrlSlug(mlbUrl);
+                    if (isUrlTitleMatch(originalTitle, mlbUrl)) {
+                      matched = true;
+                    }
+                  }
+                  
+                  if (!matched) {
+                    console.warn(`[Affiliate] Descartando produto destacado da vitrine por incompatibilidade de título: "${title || 'N/A'}" / URL: ${mlbUrl} vs original "${originalTitle}"`);
+                    return 'VITRINE_INVALIDA';
+                  }
+                }
+                
+                console.log(`[Affiliate] 💥 Vitrine destruída com precisão via card-featured! Produto: ${mlbUrl}`);
+                return mlbUrl;
+              }
+            } else {
+              console.warn('[Affiliate] _n.ctx.r encontrado mas polycards está vazio em card-featured');
+            }
+          } else {
+            console.warn('[Affiliate] _n.ctx.r encontrado mas card-featured não encontrado no JSON');
+          }
+        } catch (e) {
+          console.warn('[Affiliate] Falha ao parsear _n.ctx.r:', e);
+        }
+      } else {
+        console.warn('[Affiliate] _n.ctx.r não encontrado — usando fallback');
+      }
+
+      // Estratégia 2.2: Regex fallback do HTML
+      const idMatch = html.match(/"metadata"\s*:\s*\{[^}]*?"id"\s*:\s*"(MLB\d+)"/i);
+      if (idMatch?.[1]) {
+        let mlbUrl = `https://produto.mercadolivre.com.br/${idMatch[1]}`;
+        if (originalTitle) {
+          mlbUrl = await resolveUrlSlug(mlbUrl);
+          if (!isUrlTitleMatch(originalTitle, mlbUrl)) {
+            console.warn(`[Affiliate] Descartando produto do HTML por incompatibilidade de título (idMatch): ${mlbUrl} vs original ${originalTitle}`);
+            return 'VITRINE_INVALIDA';
+          }
+        }
+        console.log(`[Affiliate] 💥 Vitrine destruída via MLB ID do perfil social! Produto: ${mlbUrl}`);
+        return mlbUrl;
+      }
+
+      const socialUrlMatch = html.match(/"url"\s*:\s*"(www\.mercadolivre\.com\.br\\[u002F]+[^"]+)"/i);
+      if (socialUrlMatch?.[1]) {
+        let decodedUrl = 'https://' + socialUrlMatch[1].replace(/\\u002F/g, '/').split('?')[0];
+        if (originalTitle) {
+          decodedUrl = await resolveUrlSlug(decodedUrl);
+          if (!isUrlTitleMatch(originalTitle, decodedUrl)) {
+            console.warn(`[Affiliate] Descartando produto do HTML por incompatibilidade de título (socialUrlMatch): ${decodedUrl} vs original ${originalTitle}`);
+            return 'VITRINE_INVALIDA';
+          }
+        }
+        console.log(`[Affiliate] 💥 Vitrine destruída via URL do perfil social! Produto: ${decodedUrl}`);
+        return decodedUrl;
+      }
+
+      // Tentar extrair permalink de JSON embutido na página (fallback)
       const jsonMatches = [
         html.match(/"permalink"\s*:\s*"(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/[^"]+)"/i),
         html.match(/"item_url"\s*:\s*"(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/[^"]+)"/i),
@@ -172,7 +368,14 @@ export async function resolveRedirect(url: string): Promise<string> {
 
       for (const jsonMatch of jsonMatches) {
         if (jsonMatch?.[1]) {
-          const productUrl = jsonMatch[1].replace(/\\/g, '').split('?')[0];
+          let productUrl = jsonMatch[1].replace(/\\/g, '').split('?')[0];
+          if (originalTitle) {
+            productUrl = await resolveUrlSlug(productUrl);
+            if (!isUrlTitleMatch(originalTitle, productUrl)) {
+              console.warn(`[Affiliate] Descartando produto do HTML por incompatibilidade de título (jsonMatches): ${productUrl} vs original ${originalTitle}`);
+              continue;
+            }
+          }
           console.log(`[Affiliate] 💥 Vitrine destruída via JSON embutido! Produto: ${productUrl}`);
           return productUrl;
         }
@@ -181,13 +384,20 @@ export async function resolveRedirect(url: string): Promise<string> {
       // Estratégia 3: regex direto no HTML (funciona se o ML não bloquear)
       const regexMatch = html.match(/(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/(?:p\/MLB-?\d+|MLB-?\d+)[^"'\s\\<>]*)/i);
       if (regexMatch?.[1]) {
-        const productUrl = regexMatch[1].replace(/&amp;/g, '&').split('?')[0];
+        let productUrl = regexMatch[1].replace(/&amp;/g, '&').split('?')[0];
+        if (originalTitle) {
+          productUrl = await resolveUrlSlug(productUrl);
+          if (!isUrlTitleMatch(originalTitle, productUrl)) {
+            console.warn(`[Affiliate] Descartando produto do HTML por incompatibilidade de título (regexMatch): ${productUrl} vs original ${originalTitle}`);
+            return 'VITRINE_INVALIDA';
+          }
+        }
         console.log(`[Affiliate] 💥 Vitrine destruída via regex! Produto: ${productUrl}`);
         return productUrl;
       }
 
       console.warn(`[Affiliate] Todas as estratégias falharam para a vitrine ML. HTML length: ${html.length}. Descartando link de vitrine.`);
-      return 'VITRINE_INVALIDA'; // Sinal especial para descartar este link
+      return 'VITRINE_INVALIDA'; ///Sinal especial para descartar este link
     } catch (err) {
       console.warn(`[Affiliate] Erro ao extrair produto do ML Social:`, err instanceof Error ? err.message : err);
     }
@@ -213,11 +423,12 @@ export async function resolveRedirect(url: string): Promise<string> {
         // O caminho dos dados pode variar, tentando algumas opções comuns no Promobit
         const serverOffer = data.props?.pageProps?.serverOffer || data.props?.pageProps?.offer || {};
         const outboundUrl = serverOffer.offerUrl;
+        const offerTitle = serverOffer.offerTitle || originalTitle;
         
         if (outboundUrl) {
-          console.log(`[Affiliate] Link real extraído do Promobit: ${outboundUrl}`);
+          console.log(`[Affiliate] Link real extraído do Promobit: ${outboundUrl} (Título: ${offerTitle || 'N/A'})`);
           // Resolve recursivamente o link real encontrado (que pode ser amzn.to ou redirecionar mais)
-          return resolveRedirect(outboundUrl);
+          return resolveRedirect(outboundUrl, offerTitle);
         }
 
         // Se não encontrou o link de saída, tenta extrair pelo endpoint de redirecionamento
@@ -235,8 +446,8 @@ export async function resolveRedirect(url: string): Promise<string> {
           
           if (match && match[1]) {
             const resolvedOutboundUrl = match[1];
-            console.log(`[Affiliate] Link real extraído do Promobit via endpoint: ${resolvedOutboundUrl}`);
-            return resolveRedirect(resolvedOutboundUrl);
+            console.log(`[Affiliate] Link real extraído do Promobit via endpoint: ${resolvedOutboundUrl} (Título: ${offerTitle || 'N/A'})`);
+            return resolveRedirect(resolvedOutboundUrl, offerTitle);
           }
         }
       }
@@ -262,11 +473,12 @@ export async function resolveRedirect(url: string): Promise<string> {
         const data = JSON.parse(scriptText);
         const promo = data.props?.pageProps?.promo || {};
         const outboundUrl = promo.long_url || promo.short_url;
+        const promoTitle = promo.title || originalTitle;
         
         if (outboundUrl) {
-          console.log(`[Affiliate] Link real extraído do Pechinchou: ${outboundUrl}`);
+          console.log(`[Affiliate] Link real extraído do Pechinchou: ${outboundUrl} (Título: ${promoTitle || 'N/A'})`);
           // Resolve recursivamente o link real encontrado
-          return resolveRedirect(outboundUrl);
+          return resolveRedirect(outboundUrl, promoTitle);
         }
       }
     } catch (err) {
@@ -317,7 +529,7 @@ export async function resolveRedirect(url: string): Promise<string> {
     if (response.url && response.url !== url) {
       console.log(`[Affiliate] URL final resolvida (HEAD): ${response.url}`);
       if (response.url.toLowerCase().includes('mercadolivre.com.br/social/')) {
-        return resolveRedirect(response.url);
+        return resolveRedirect(response.url, originalTitle);
       }
       return response.url;
     }
@@ -341,7 +553,7 @@ export async function resolveRedirect(url: string): Promise<string> {
       let finalUrl = getResponse.url;
       
       if (finalUrl.toLowerCase().includes('mercadolivre.com.br/social/')) {
-        return resolveRedirect(finalUrl);
+        return resolveRedirect(finalUrl, originalTitle);
       }
       
       console.log(`[Affiliate] URL final resolvida (GET): ${finalUrl}`);
