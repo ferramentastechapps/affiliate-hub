@@ -600,9 +600,9 @@ export function ProductsTab() {
         </div>
       ) : layoutMode === "list" ? (
         // ═══════════════════════════════════════════
-        //  MODO LISTA (Edição Inline) - MOBILE OPTIMIZED
+        //  MODO LISTA (Edição Inline)
         // ═══════════════════════════════════════════
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {filteredAndSorted.map((product) => {
             const isPending = product.status === "pending";
             const isActive = product.status === "active" || product.status === "approved";
@@ -633,62 +633,59 @@ export function ProductsTab() {
             return (
               <div
                 key={product.id}
-                className={`flex flex-col gap-4 p-4 rounded-xl border transition-colors ${
+                className={`flex flex-col sm:flex-row gap-3 p-3 rounded-lg border transition-colors ${
                   isPending ? "bg-amber-950/10 border-amber-900/20"
                             : "bg-zinc-900/60 border-zinc-800/50"
                 }`}
               >
-                {/* ═══ MOBILE: Layout Vertical Otimizado ═══ */}
+                {/* Desktop: Layout Horizontal Compacto */}
                 
-                {/* 1. Cabeçalho: Imagem + Info Básica */}
-                <div className="flex gap-3 sm:gap-4">
+                {/* 1. Imagem + Info Básica - Desktop: Horizontal | Mobile: Vertical */}
+                <div className="flex gap-3 flex-1 min-w-0">
                   <button
                     onClick={() => setGalleryProduct(product)}
-                    className="w-24 h-24 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
+                    className="w-16 h-16 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
                     title="Ver fotos"
                   >
                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
                       {(product.images?.length || 0) + 1} 📸
                     </div>
                   </button>
                   
-                  <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <div className="text-sm sm:text-base font-medium text-zinc-100 leading-tight line-clamp-3" title={product.name}>
+                  <div className="flex flex-col gap-1 flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm font-medium text-zinc-100 leading-tight line-clamp-2" title={product.name}>
                       {product.name}
                     </div>
                     
-                    {/* Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    {/* Badges e Preço */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
                       {product.dropPercent !== undefined && product.dropPercent > 0 && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80 whitespace-nowrap">
+                        <span className="px-1.5 py-0.5 font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80">
                           ▼ {product.dropPercent.toFixed(1)}%
                         </span>
                       )}
                       {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-orange-950/90 text-orange-400 border border-orange-800/80 whitespace-nowrap flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 font-bold rounded-full bg-orange-950/90 text-orange-400 border border-orange-800/80 flex items-center gap-1">
                           <Warning size={10} weight="fill" />
                           AGREGADOR
                         </span>
                       )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
                       <CopyableId product={product} />
                       {product.price && (
-                        <div className="text-sm font-bold text-emerald-400">R$ {product.price.toFixed(2)}</div>
+                        <span className="text-xs font-bold text-emerald-400">R$ {product.price.toFixed(2)}</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Categoria */}
-                <div className="w-full">
-                  <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide mb-1 block">Categoria</label>
+                {/* 2. Categoria - Desktop: ao lado | Mobile: abaixo */}
+                <div className="w-full sm:w-48 shrink-0">
+                  <label className="text-[9px] uppercase text-zinc-500 font-medium mb-1 block hidden sm:block">Categoria</label>
                   <select
                     value={product.category}
                     onChange={(e) => handleAutoSave(product.id, 'category', e.target.value)}
-                    className={`w-full text-xs bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-300 focus:border-accent outline-none ${
+                    className={`w-full text-xs bg-zinc-800 border rounded px-2 py-1.5 text-zinc-300 focus:border-accent outline-none ${
                       savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700"
                     }`}
                   >
@@ -698,126 +695,45 @@ export function ProductsTab() {
                   </select>
                 </div>
 
-                {/* 3. Links */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Link da Loja</label>
-                      {sourceUrl && (
-                        <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
-                          <ArrowSquareOut size={16} />
-                        </a>
-                      )}
-                    </div>
-                    <input 
-                      type="text" 
-                      value={sourceUrl} 
-                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localSourceUrl: e.target.value} : p))}
-                      onBlur={(e) => handleAutoSave(product.id, 'updateSourceUrl' as any, e.target.value)}
-                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2 text-xs text-zinc-400 outline-none hover:bg-zinc-800 transition-colors ${
-                        savingFields[`${product.id}-updateSourceUrl`] ? "border-accent/50" : "border-zinc-700/50"
-                      }`} 
-                      placeholder="Cole o link original aqui..."
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Link Afiliado</label>
-                      {affiliateUrl && (
-                        <a href={affiliateUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-md">
-                          <ArrowSquareOut size={16} />
-                        </a>
-                      )}
-                    </div>
-                    <input 
-                      type="text" 
-                      value={affiliateUrl} 
-                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localAffiliateUrl: e.target.value} : p))}
-                      onBlur={(e) => handleAutoSave(product.id, 'updateAffiliateUrl' as any, e.target.value)}
-                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2 text-xs outline-none hover:bg-zinc-800 transition-colors ${
-                        savingFields[`${product.id}-updateAffiliateUrl`] ? "border-accent/50" : 
-                        !hasAffiliate && sourceUrl ? "border-red-900/50 text-red-400" : "border-zinc-700/50 text-emerald-400/80"
-                      }`} 
-                      placeholder="Cole o link de afiliado aqui..."
-                    />
-                    {!hasAffiliate && sourceUrl && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-red-400 bg-red-950/30 px-2 py-1.5 rounded-lg border border-red-900/30">
-                        <Warning size={12} /> Link de afiliado pendente ou igual ao original
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 4. Campos Extras */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Marca</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: Samsung"
-                      value={product.brand || ''}
-                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, brand: e.target.value} : p))}
-                      onBlur={(e) => handleAutoSave(product.id, 'brand', e.target.value)}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none focus:border-accent"
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">ID Plataforma</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: MLB123..."
-                      value={product.platformProductId || ''}
-                      onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, platformProductId: e.target.value} : p))}
-                      onBlur={(e) => handleAutoSave(product.id, 'platformProductId', e.target.value)}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none focus:border-accent"
-                    />
-                  </div>
-                </div>
-
-                {/* 5. Ações */}
-                <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800">
-                  <label className="flex items-center gap-2 cursor-pointer group p-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
+                {/* 3. Ações - Desktop: ao lado | Mobile: abaixo */}
+                <div className="flex gap-1.5 shrink-0">
+                  <label className="flex items-center gap-1.5 cursor-pointer group px-2 py-1.5 rounded hover:bg-zinc-800/50 transition-colors">
                     <input 
                       type="checkbox" 
                       checked={!!product.isFixed} 
                       onChange={(e) => handleAutoSave(product.id, 'isFixed', e.target.checked)}
-                      className="w-5 h-5 sm:w-4 sm:h-4 accent-accent rounded"
+                      className="w-4 h-4 accent-accent rounded"
                     />
-                    <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors font-medium">Travar Repostagem</span>
+                    <span className="text-[10px] text-zinc-400 group-hover:text-zinc-200 hidden sm:inline">Trava</span>
                   </label>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {isPending && (
-                      <button
-                        onClick={() => handleQuickApprove(product.id)}
-                        disabled={approvingId === product.id}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-4 py-2.5 sm:py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
-                      >
-                        {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={18} weight="bold" />}
-                        Aprovar Produto
-                      </button>
-                    )}
-                    
+                  {isPending && (
                     <button
-                      onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors px-4 py-2.5 sm:py-2 text-sm"
+                      onClick={() => handleQuickApprove(product.id)}
+                      disabled={approvingId === product.id}
+                      className="flex items-center gap-1 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-2 py-1.5 rounded transition-colors disabled:opacity-50"
+                      title="Aprovar"
                     >
-                      <Pencil size={16} />
-                      Abrir Modal
+                      {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={14} weight="bold" />}
                     </button>
-                    
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors px-4 py-2.5 sm:py-2 text-sm"
-                    >
-                      <Trash size={16} />
-                      Deletar
-                    </button>
-                  </div>
+                  )}
+                  
+                  <button
+                    onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
+                    className="flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 px-2 py-1.5 rounded transition-colors"
+                    title="Abrir Modal"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    className="flex items-center gap-1 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 px-2 py-1.5 rounded transition-colors"
+                    title="Deletar"
+                  >
+                    <Trash size={14} />
+                  </button>
                 </div>
-
               </div>
             );
           })}
