@@ -13,6 +13,8 @@ type Product = {
   name: string;
   category: string;
   platformProductId?: string | null;
+  platformId?: string | null;
+  platformType?: string | null;
   externalId?: string | null;
   source?: string | null;
   imageUrl: string;
@@ -524,6 +526,13 @@ export function ProductsTab() {
                           R$ {product.price.toFixed(2)}
                         </span>
                       )}
+                      {/* Badge de aviso para agregadores */}
+                      {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
+                        <span className="px-2 py-1 bg-orange-950/50 rounded text-orange-400 border border-orange-800 font-bold flex items-center gap-1">
+                          <Warning size={12} weight="fill" />
+                          AGREGADOR - Revisar Link
+                        </span>
+                      )}
                       <CopyableId product={product} />
                     </div>
                   </div>
@@ -651,6 +660,13 @@ export function ProductsTab() {
                       {product.dropPercent !== undefined && product.dropPercent > 0 && (
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80 whitespace-nowrap">
                           ▼ {product.dropPercent.toFixed(1)}%
+                        </span>
+                      )}
+                      {/* Badge de aviso para agregadores */}
+                      {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-orange-950/90 text-orange-400 border border-orange-800/80 whitespace-nowrap flex items-center gap-1">
+                          <Warning size={10} weight="fill" />
+                          AGREGADOR
                         </span>
                       )}
                     </div>
@@ -805,6 +821,13 @@ export function ProductsTab() {
                   {product.dropPercent !== undefined && product.dropPercent > 0 && (
                     <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-red-950/90 text-red-400 border border-red-800/80 shadow-lg backdrop-blur-md">
                       ▼ {product.dropPercent.toFixed(1)}% vs máximo
+                    </span>
+                  )}
+                  {/* Badge de aviso para agregadores */}
+                  {(product.platformType === 'promobit' || product.platformType === 'pechinchou') && (
+                    <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-orange-950/90 text-orange-400 border border-orange-800/80 shadow-lg backdrop-blur-md flex items-center gap-1">
+                      <Warning size={12} weight="fill" />
+                      AGREGADOR
                     </span>
                   )}
                   <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider border shadow-lg backdrop-blur-md ${
