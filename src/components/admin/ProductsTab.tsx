@@ -377,14 +377,14 @@ export function ProductsTab() {
   return (
     <div>
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-        <h2 className="text-xl sm:text-2xl font-semibold">Gerenciar Produtos</h2>
+      <div className="flex justify-between items-center gap-3 mb-6">
+        <h2 className="text-2xl font-semibold">Gerenciar Produtos</h2>
         <button
           onClick={() => {
             setEditingProduct(null);
             setIsModalOpen(true);
           }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-black px-4 py-3 sm:py-2 rounded-lg font-medium transition-colors text-sm"
+          className="flex items-center gap-2 bg-accent hover:bg-accent/90 text-black px-4 py-2 rounded-lg font-medium transition-colors text-sm"
         >
           <Plus size={18} weight="bold" />
           Adicionar Produto
@@ -397,7 +397,7 @@ export function ProductsTab() {
           <button
             key={filter}
             onClick={() => setStatusFilter(filter)}
-            className={`px-3 py-2 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+            className={`px-4 rounded-lg font-medium text-sm transition-colors whitespace-nowrap ${
               statusFilter === filter
                 ? "bg-zinc-800 text-accent border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
@@ -415,13 +415,13 @@ export function ProductsTab() {
       </div>
 
       {/* ─── Toolbar ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-5 gap-3">
-        <div className="flex items-center gap-2 flex-1">
-          <SortAscending size={16} className="text-zinc-400 shrink-0 hidden sm:block" />
+      <div className="flex items-center justify-between mb-5 gap-3">
+        <div className="flex items-center gap-2">
+          <SortAscending size={16} className="text-zinc-400 shrink-0" />
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="flex-1 sm:flex-none bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 sm:py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+            className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
           >
             <option value="date_desc">📅 Mais Recentes</option>
             <option value="date_asc">📅 Mais Antigos</option>
@@ -430,30 +430,28 @@ export function ProductsTab() {
             <option value="price_asc">💰 Menor Preço</option>
             <option value="price_desc">💰 Maior Preço</option>
           </select>
-          <span className="text-xs text-zinc-500 ml-1 hidden sm:inline">
+          <span className="text-xs text-zinc-500 ml-1">
             {filteredAndSorted.length} produto{filteredAndSorted.length !== 1 ? "s" : ""}
           </span>
         </div>
-        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1 self-end sm:self-auto">
+        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1">
           <button
             onClick={() => setLayoutMode("list")}
             title="Modo Lista"
-            className={`p-2 sm:p-1.5 rounded-md transition-colors ${
+            className={`p-1.5 rounded-md transition-colors ${
               layoutMode === "list" ? "bg-zinc-700 text-accent" : "text-zinc-500 hover:text-white"
             }`}
           >
-            <ListDashes size={20} className="sm:hidden" />
-            <ListDashes size={18} className="hidden sm:block" />
+            <ListDashes size={18} />
           </button>
           <button
             onClick={() => setLayoutMode("grid")}
             title="Modo Grade"
-            className={`p-2 sm:p-1.5 rounded-md transition-colors ${
+            className={`p-1.5 rounded-md transition-colors ${
               layoutMode === "grid" ? "bg-zinc-700 text-accent" : "text-zinc-500 hover:text-white"
             }`}
           >
-            <GridFour size={20} className="sm:hidden" />
-            <GridFour size={18} className="hidden sm:block" />
+            <GridFour size={18} />
           </button>
         </div>
       </div>
@@ -646,7 +644,7 @@ export function ProductsTab() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setGalleryProduct(product)}
-                    className="w-24 h-24 md:w-20 md:h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
+                    className="w-20 h-20 rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0 border border-zinc-700 hover:border-accent transition-colors relative group"
                     title="Ver fotos"
                   >
                     <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
@@ -656,7 +654,7 @@ export function ProductsTab() {
                   </button>
                   
                   <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <div className="text-sm md:text-base font-medium text-zinc-100 leading-tight line-clamp-3" title={product.name}>
+                    <div className="text-base font-medium text-zinc-100 leading-tight line-clamp-3" title={product.name}>
                       {product.name}
                     </div>
                     
@@ -684,13 +682,13 @@ export function ProductsTab() {
                   </div>
                 </div>
 
-                {/* 2. Categoria (Mobile: Select maior e mais fácil de clicar) */}
+                {/* 2. Categoria */}
                 <div className="w-full">
                   <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide mb-1 block">Categoria</label>
                   <select
                     value={product.category}
                     onChange={(e) => handleAutoSave(product.id, 'category', e.target.value)}
-                    className={`w-full text-sm md:text-xs bg-zinc-800 border rounded-lg px-3 py-2.5 md:py-2 text-zinc-300 focus:border-accent outline-none ${
+                    className={`w-full text-xs bg-zinc-800 border rounded-lg px-3 py-2 text-zinc-300 focus:border-accent outline-none ${
                       savingFields[`${product.id}-category`] ? "border-accent/50 opacity-70" : "border-zinc-700"
                     }`}
                   >
@@ -700,7 +698,7 @@ export function ProductsTab() {
                   </select>
                 </div>
 
-                {/* 3. Links (Mobile: Inputs maiores, empilhados, com labels claros) */}
+                {/* 3. Links */}
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
@@ -716,7 +714,7 @@ export function ProductsTab() {
                       value={sourceUrl} 
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localSourceUrl: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'updateSourceUrl' as any, e.target.value)}
-                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs text-zinc-400 outline-none hover:bg-zinc-800 transition-colors ${
+                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2 text-xs text-zinc-400 outline-none hover:bg-zinc-800 transition-colors ${
                         savingFields[`${product.id}-updateSourceUrl`] ? "border-accent/50" : "border-zinc-700/50"
                       }`} 
                       placeholder="Cole o link original aqui..."
@@ -737,7 +735,7 @@ export function ProductsTab() {
                       value={affiliateUrl} 
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, _localAffiliateUrl: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'updateAffiliateUrl' as any, e.target.value)}
-                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs outline-none hover:bg-zinc-800 transition-colors ${
+                      className={`w-full bg-zinc-800/50 border rounded-lg px-3 py-2 text-xs outline-none hover:bg-zinc-800 transition-colors ${
                         savingFields[`${product.id}-updateAffiliateUrl`] ? "border-accent/50" : 
                         !hasAffiliate && sourceUrl ? "border-red-900/50 text-red-400" : "border-zinc-700/50 text-emerald-400/80"
                       }`} 
@@ -751,7 +749,7 @@ export function ProductsTab() {
                   </div>
                 </div>
 
-                {/* 4. Campos Extras (Mobile: Grid responsivo) */}
+                {/* 4. Campos Extras */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] uppercase text-zinc-500 font-medium tracking-wide">Marca</label>
@@ -761,7 +759,7 @@ export function ProductsTab() {
                       value={product.brand || ''}
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, brand: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'brand', e.target.value)}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs text-zinc-200 outline-none focus:border-accent"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none focus:border-accent"
                     />
                   </div>
                   
@@ -773,21 +771,21 @@ export function ProductsTab() {
                       value={product.platformProductId || ''}
                       onChange={(e) => setProducts(prev => prev.map(p => p.id === product.id ? {...p, platformProductId: e.target.value} : p))}
                       onBlur={(e) => handleAutoSave(product.id, 'platformProductId', e.target.value)}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 md:py-2 text-sm md:text-xs text-zinc-200 outline-none focus:border-accent"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 outline-none focus:border-accent"
                     />
                   </div>
                 </div>
 
-                {/* 5. Ações (Mobile: Botões maiores e mais espaçados) */}
+                {/* 5. Ações */}
                 <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800">
                   <label className="flex items-center gap-2 cursor-pointer group p-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
                     <input 
                       type="checkbox" 
                       checked={!!product.isFixed} 
                       onChange={(e) => handleAutoSave(product.id, 'isFixed', e.target.checked)}
-                      className="w-5 h-5 md:w-4 md:h-4 accent-accent rounded"
+                      className="w-4 h-4 accent-accent rounded"
                     />
-                    <span className="text-sm md:text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors font-medium">Travar Repostagem</span>
+                    <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors font-medium">Travar Repostagem</span>
                   </label>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -795,7 +793,7 @@ export function ProductsTab() {
                       <button
                         onClick={() => handleQuickApprove(product.id)}
                         disabled={approvingId === product.id}
-                        className="col-span-2 flex items-center justify-center gap-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-4 py-3 md:py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                        className="col-span-2 flex items-center justify-center gap-2 bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-400 px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                       >
                         {approvingId === product.id ? <span className="animate-pulse">...</span> : <Check size={18} weight="bold" />}
                         Aprovar Produto
@@ -804,19 +802,18 @@ export function ProductsTab() {
                     
                     <button
                       onClick={() => { setEditingProduct(product); setIsModalOpen(true); }}
-                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors px-4 py-3 md:py-2 text-sm"
+                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-zinc-300 transition-colors px-4 py-2 text-sm"
                     >
                       <Pencil size={16} />
-                      <span className="md:hidden">Editar</span>
-                      <span className="hidden md:inline">Abrir Modal</span>
+                      Abrir Modal
                     </button>
                     
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors px-4 py-3 md:py-2 text-sm"
+                      className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 rounded-lg transition-colors px-4 py-2 text-sm"
                     >
                       <Trash size={16} />
-                      <span>Deletar</span>
+                      Deletar
                     </button>
                   </div>
                 </div>

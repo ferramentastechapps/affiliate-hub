@@ -5,6 +5,7 @@ export type ScrapedProduct = {
   imageUrl: string;
   price?: number;
   description?: string;
+  category?: string;
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -48,6 +49,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
     let imageUrl = '';
     let price: number | undefined = undefined;
     let description = '';
+    let category = '';
     
     switch (platform) {
       case 'amazon':
@@ -55,6 +57,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
         imageUrl = extractAmazonImage($);
         price = extractAmazonPrice($);
         description = extractAmazonDescription($);
+        category = extractAmazonCategory($);
         break;
         
       case 'mercadolivre':
@@ -62,6 +65,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
         imageUrl = extractMercadoLivreImage($);
         price = extractMercadoLivrePrice($);
         description = extractMercadoLivreDescription($);
+        category = extractMercadoLivreCategory($);
         break;
         
       case 'shopee':
@@ -69,6 +73,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
         imageUrl = extractShopeeImage($);
         price = extractShopeePrice($);
         description = extractShopeeDescription($);
+        category = extractShopeeCategory($);
         break;
         
       case 'aliexpress':
@@ -76,6 +81,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
         imageUrl = extractAliExpressImage($);
         price = extractAliExpressPrice($);
         description = extractAliExpressDescription($);
+        category = extractAliExpressCategory($);
         break;
         
       default:
@@ -84,9 +90,10 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
         imageUrl = extractGenericImage($);
         price = extractGenericPrice($);
         description = extractGenericDescription($);
+        category = extractGenericCategory($);
     }
     
-    console.log('✅ Dados extraídos:', { name, imageUrl, price, description: description?.substring(0, 50) });
+    console.log('✅ Dados extraídos:', { name, imageUrl, price, category, description: description?.substring(0, 50) });
     
     // Validar dados mínimos
     if (!name || name.length < 3 || name === 'Robot Check' || name.toLowerCase().includes('captcha')) {
@@ -123,6 +130,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
       imageUrl: cleanUrl(imageUrl),
       price: price ?? undefined,
       description: description ? cleanText(description).substring(0, 500) : undefined,
+      category: category ? mapToInternalCategory(cleanText(category)) : undefined,
     };
     
   } catch (error) {
@@ -221,6 +229,20 @@ function extractAmazonDescription($: cheerio.CheerioAPI): string {
          '';
 }
 
+function extractAmazonCategory($: cheerio.CheerioAPI): string {
+  // Breadcrumb da Amazon
+  const breadcrumb = $('#wayfinding-breadcrumbs_feature_div a').map((_, el) => $(el).text().trim()).get().join(' > ') ||
+                     $('.a-breadcrumb a').map((_, el) => $(el).text().trim()).get().join(' > ');
+  
+  if (breadcrumb) return breadcrumb;
+  
+  // Department meta tag
+  const dept = $('meta[name="keywords"]').attr('content') || '';
+  if (dept) return dept.split(',')[0].trim();
+  
+  return '';
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🛍️ MERCADO LIVRE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -268,6 +290,26 @@ function extractMercadoLivreDescription($: cheerio.CheerioAPI): string {
          '';
 }
 
+function extractMercadoLivreCategory($: cheerio.CheerioAPI): string {
+  // Breadcrumb do Mercado Livre
+  const breadcrumb = $('.andes-breadcrumb__item a').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ') ||
+                     $('.ui-breadcrumb a').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ');
+  
+  if (breadcrumb) return breadcrumb;
+  
+  // Tentar pelo script JSON-LD
+  const scripts = $('script[type="application/ld+json"]').map((_, el) => $(el).html()).get();
+  for (const script of scripts) {
+    try {
+      const data = JSON.parse(script || '{}');
+      if (data.category) return data.category;
+      if (data['@type'] === 'Product' && data.category) return data.category;
+    } catch {}
+  }
+  
+  return '';
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🛒 SHOPEE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -296,6 +338,14 @@ function extractShopeeDescription($: cheerio.CheerioAPI): string {
   return $('div[class*="description"]').first().text().trim() ||
          $('.product-detail').first().text().trim() ||
          '';
+}
+
+function extractShopeeCategory($: cheerio.CheerioAPI): string {
+  // Breadcrumb da Shopee
+  const breadcrumb = $('.breadcrumb a').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ') ||
+                     $('a[data-sqe="link"]').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ');
+  
+  return breadcrumb;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -328,6 +378,14 @@ function extractAliExpressDescription($: cheerio.CheerioAPI): string {
          '';
 }
 
+function extractAliExpressCategory($: cheerio.CheerioAPI): string {
+  // Breadcrumb do AliExpress
+  const breadcrumb = $('.breadcrumb a').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ') ||
+                     $('[class*="breadcrumb"] a').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ');
+  
+  return breadcrumb;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🌐 GENÉRICO (FALLBACK)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -357,6 +415,20 @@ function extractGenericDescription($: cheerio.CheerioAPI): string {
          $('meta[property="og:description"]').attr('content') ||
          $('p').first().text().trim() ||
          '';
+}
+
+function extractGenericCategory($: cheerio.CheerioAPI): string {
+  // Tentar breadcrumb genérico
+  const breadcrumb = $('.breadcrumb a, [class*="breadcrumb"] a, nav a').map((_, el) => $(el).text().trim()).get().filter(Boolean).join(' > ');
+  
+  if (breadcrumb) return breadcrumb;
+  
+  // Tentar categoria de meta tags
+  const category = $('meta[property="product:category"]').attr('content') ||
+                   $('meta[name="category"]').attr('content') ||
+                   '';
+  
+  return category;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -532,4 +604,69 @@ function cleanSlug(slug: string): string {
   let clean = decodeURIComponent(slug.replace(/[-_]/g, ' '));
   clean = clean.replace(/\.(html|php|htm)$/i, '');
   return clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').trim();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🗺️ MAPEAMENTO DE CATEGORIAS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function mapToInternalCategory(rawCategory: string): string {
+  if (!rawCategory) return 'Diversos';
+  
+  const normalized = rawCategory.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Smartphones e eletrônicos
+  if (/(celular|smartphone|iphone|galaxy|xiaomi|telefone|mobile|android)/i.test(normalized)) return 'Smartphones';
+  if (/(smart tv|televisao|televisor|tv |led tv|oled|qled)/i.test(normalized)) return 'Smart TVs';
+  if (/(fone|headphone|earphone|earbud|airpod|headset|auricular)/i.test(normalized)) return 'Fones de Ouvido';
+  if (/(caixa de som|speaker|alto-falante|soundbar|home theater)/i.test(normalized)) return 'Caixas de Som';
+  if (/(smartwatch|relogio inteligente|apple watch|galaxy watch)/i.test(normalized)) return 'Smartwatches';
+  if (/(camera|filmadora|gopro|webcam)/i.test(normalized)) return 'Câmeras';
+  if (/(tablet|ipad)/i.test(normalized)) return 'Tablets';
+  
+  // Informática
+  if (/(notebook|laptop|macbook|ultrabook)/i.test(normalized)) return 'Notebooks';
+  if (/(computador|desktop|pc gamer|gabinete)/i.test(normalized)) return 'PCs e Desktops';
+  if (/(monitor|display)/i.test(normalized)) return 'Monitores';
+  if (/(teclado|mouse|mousepad|webcam|microfone|periferico)/i.test(normalized)) return 'Periféricos';
+  if (/(ssd|hd|memoria|ram|pendrive)/i.test(normalized)) return 'SSD, HDs e Memória';
+  if (/(console|playstation|xbox|nintendo|game|jogo|ps4|ps5)/i.test(normalized)) return 'Consoles e Games';
+  
+  // Casa
+  if (/(air fryer|fritadeira|airfryer)/i.test(normalized)) return 'Air Fryers';
+  if (/(cafeteira|nespresso|expresso)/i.test(normalized)) return 'Cafeteiras';
+  if (/(geladeira|refrigerador|freezer)/i.test(normalized)) return 'Geladeiras e Freezers';
+  if (/(lavadora|lava e seca|maquina de lavar)/i.test(normalized)) return 'Lavadoras';
+  if (/(micro-ondas|microondas)/i.test(normalized)) return 'Micro-ondas';
+  if (/(aspirador|roomba|vassoura)/i.test(normalized)) return 'Aspiradores';
+  if (/(ar condicionado|ar-condicionado|split|climatizador)/i.test(normalized)) return 'Ar Condicionado';
+  
+  // Moda
+  if (/(tenis|sapato|calcado|bota|sandalia|chinelo|sapatenis)/i.test(normalized)) return 'Tênis e Calçados';
+  if (/(roupa|camiseta|camisa|calca|shorts|vestido|blusa|moda)/i.test(normalized)) return 'Roupas e Moda';
+  if (/(bolsa|mochila|carteira|acessorio)/i.test(normalized)) return 'Bolsas e Acessórios';
+  
+  // Beleza
+  if (/(perfume|fragancia|colonia)/i.test(normalized)) return 'Perfumes';
+  if (/(maquiagem|batom|base|rimel|cosmetico)/i.test(normalized)) return 'Maquiagem e Pele';
+  if (/(shampoo|condicionador|mascara capilar|cabelo)/i.test(normalized)) return 'Shampoo e Cabelo';
+  
+  // Esporte
+  if (/(whey|protein|creatina|suplemento|bcaa)/i.test(normalized)) return 'Whey e Suplementos';
+  if (/(bicicleta|bike|ciclismo|esporte|fitness|academia)/i.test(normalized)) return 'Bicicletas e Esporte';
+  
+  // Alimentos
+  if (/(chocolate|doce|bombom|trufa)/i.test(normalized)) return 'Chocolates e Doces';
+  if (/(cafe|cha|bebida)/i.test(normalized)) return 'Café e Bebidas';
+  if (/(cerveja|vinho|whisky|vodka|alcool)/i.test(normalized)) return 'Cervejas e Vinhos';
+  
+  // Outros
+  if (/(livro|ebook|kindle|e-reader)/i.test(normalized)) return 'Livros e eReaders';
+  if (/(bebe|infantil|crianca|fralda|brinquedo)/i.test(normalized)) return 'Bebês e Crianças';
+  if (/(pet|racao|animal|cachorro|gato)/i.test(normalized)) return 'Pet';
+  if (/(ferramenta|furadeira|parafusadeira|martelo)/i.test(normalized)) return 'Ferramentas';
+  if (/(automotivo|carro|moto|pneu)/i.test(normalized)) return 'Automotivo';
+  if (/(viagem|mala|bagagem|hotel)/i.test(normalized)) return 'Viagem';
+  
+  return 'Diversos';
 }

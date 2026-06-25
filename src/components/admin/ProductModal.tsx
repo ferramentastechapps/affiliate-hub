@@ -36,6 +36,8 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showAlternativeImages, setShowAlternativeImages] = useState(true);
   const [reprocessStatus, setReprocessStatus] = useState({ aiProcessed: false, affiliateProcessed: false, aiProcessedAt: null as string | null });
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [detectingCategory, setDetectingCategory] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -87,6 +89,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
 
       setSearchQuery(product.name || "");
       handleSearchImages(product.name || "");
+      setShowNewCategoryInput(false);
     } else {
       setFormData({
         name: "",
@@ -103,6 +106,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       setImages([]);
       setAlternativeImages([]);
       setSearchQuery("");
+      setShowNewCategoryInput(false);
     }
   }, [product, isOpen]);
 
@@ -125,6 +129,40 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     }
   }
 
+  async function handleDetectCategory() {
+    if (!formData.name) {
+      alert("Digite o nome do produto primeiro para detectar a categoria.");
+      return;
+    }
+
+    setDetectingCategory(true);
+    try {
+      const res = await fetch("/api/admin/detect-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          productName: formData.name,
+          description: formData.description,
+          url: scrapeUrl || productLinks[0]?.sourceUrl || ""
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.category) {
+          setFormData({ ...formData, category: data.category });
+        }
+      } else {
+        alert("Não foi possível detectar a categoria automaticamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao detectar categoria:", error);
+      alert("Erro ao detectar categoria.");
+    } finally {
+      setDetectingCategory(false);
+    }
+  }
+
   async function handleScrape() {
     if (!scrapeUrl) return;
 
@@ -144,6 +182,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         imageUrl: data.imageUrl || prev.imageUrl,
         price: data.price?.toString() || prev.price,
         description: data.description || prev.description,
+        category: data.category || prev.category, // Usa categoria extraída
       }));
 
       if (data.name) {
@@ -428,23 +467,80 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
 
             <div>
               <label className="block text-sm font-medium mb-2">Categoria *</label>
-              <select required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm">
-                <option value="">Selecione...</option>
-                <option value="Smartphones e TV">Smartphones e TV</option>
-                <option value="Informática e Games">Informática e Games</option>
-                <option value="Casa e Eletrodomésticos">Casa e Eletrodomésticos</option>
-                <option value="Moda e Acessórios">Moda e Acessórios</option>
-                <option value="Saúde e Beleza">Saúde e Beleza</option>
-                <option value="Esporte e Suplementos">Esporte e Suplementos</option>
-                <option value="Supermercado e Delivery">Supermercado e Delivery</option>
-                <option value="Bebês e Crianças">Bebês e Crianças</option>
-                <option value="Livros, eBooks e eReaders">Livros, eBooks e eReaders</option>
-                <option value="Ferramentas e Jardim">Ferramentas e Jardim</option>
-                <option value="Automotivo">Automotivo</option>
-                <option value="Pet">Pet</option>
-                <option value="Viagem">Viagem</option>
-                <option value="Diversos">Diversos</option>
-              </select>
+              {!showNewCategoryInput ? (
+                <div className="flex gap-2">
+                  <select required value={formData.category} onChange={(e) => {
+                    if (e.target.value === "__NEW__") {
+                      setShowNewCategoryInput(true);
+                      setFormData({ ...formData, category: "" });
+                    } else {
+                      setFormData({ ...formData, category: e.target.value });
+                    }
+                  }} className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm">
+                    <option value="">Selecione...</option>
+                    <option value="Air Fryers">Air Fryers</option>
+                    <option value="Ar Condicionado">Ar Condicionado</option>
+                    <option value="Aspiradores">Aspiradores</option>
+                    <option value="Automotivo">Automotivo</option>
+                    <option value="Bebês e Crianças">Bebês e Crianças</option>
+                    <option value="Bicicletas e Esporte">Bicicletas e Esporte</option>
+                    <option value="Bolsas e Acessórios">Bolsas e Acessórios</option>
+                    <option value="Cafeteiras">Cafeteiras</option>
+                    <option value="Café e Bebidas">Café e Bebidas</option>
+                    <option value="Caixas de Som">Caixas de Som</option>
+                    <option value="Câmeras">Câmeras</option>
+                    <option value="Casa e Eletrodomésticos">Casa e Eletrodomésticos</option>
+                    <option value="Cervejas e Vinhos">Cervejas e Vinhos</option>
+                    <option value="Chocolates e Doces">Chocolates e Doces</option>
+                    <option value="Consoles e Games">Consoles e Games</option>
+                    <option value="Diversos">Diversos</option>
+                    <option value="Esporte e Suplementos">Esporte e Suplementos</option>
+                    <option value="Ferramentas">Ferramentas</option>
+                    <option value="Ferramentas e Jardim">Ferramentas e Jardim</option>
+                    <option value="Fones de Ouvido">Fones de Ouvido</option>
+                    <option value="Geladeiras e Freezers">Geladeiras e Freezers</option>
+                    <option value="Informática e Games">Informática e Games</option>
+                    <option value="Lavadoras">Lavadoras</option>
+                    <option value="Livros e eReaders">Livros e eReaders</option>
+                    <option value="Livros, eBooks e eReaders">Livros, eBooks e eReaders</option>
+                    <option value="Maquiagem e Pele">Maquiagem e Pele</option>
+                    <option value="Micro-ondas">Micro-ondas</option>
+                    <option value="Moda e Acessórios">Moda e Acessórios</option>
+                    <option value="Monitores">Monitores</option>
+                    <option value="Notebooks">Notebooks</option>
+                    <option value="PCs e Desktops">PCs e Desktops</option>
+                    <option value="Perfumes">Perfumes</option>
+                    <option value="Periféricos">Periféricos</option>
+                    <option value="Pet">Pet</option>
+                    <option value="Roupas e Moda">Roupas e Moda</option>
+                    <option value="Saúde e Beleza">Saúde e Beleza</option>
+                    <option value="Shampoo e Cabelo">Shampoo e Cabelo</option>
+                    <option value="Smart TVs">Smart TVs</option>
+                    <option value="Smartphones">Smartphones</option>
+                    <option value="Smartphones e TV">Smartphones e TV</option>
+                    <option value="Smartwatches">Smartwatches</option>
+                    <option value="SSD, HDs e Memória">SSD, HDs e Memória</option>
+                    <option value="Supermercado e Delivery">Supermercado e Delivery</option>
+                    <option value="Tablets">Tablets</option>
+                    <option value="Tênis e Calçados">Tênis e Calçados</option>
+                    <option value="Viagem">Viagem</option>
+                    <option value="Whey e Suplementos">Whey e Suplementos</option>
+                    <option value="__NEW__" className="text-accent font-semibold">➕ Nova Categoria</option>
+                  </select>
+                  {formData.category && formData.category !== "Diversos" && (
+                    <button type="button" onClick={handleDetectCategory} disabled={detectingCategory} className="bg-accent/20 hover:bg-accent/30 border border-accent/40 text-accent px-3 py-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap" title="Detectar categoria automaticamente">
+                      <MagicWand size={16} weight="bold" /> {detectingCategory ? "Detectando..." : "IA"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input type="text" required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} placeholder="Digite o nome da nova categoria..." className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" />
+                  <button type="button" onClick={() => { setShowNewCategoryInput(false); setFormData({ ...formData, category: "" }); }} className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg transition-colors text-xs">
+                    Cancelar
+                  </button>
+                </div>
+              )}
             </div>
             
             <div>
