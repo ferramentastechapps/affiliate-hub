@@ -189,23 +189,35 @@ class PromotionBot:
                     # Pausa de 5 segundos para evitar estourar cota do Gemini (429)
                     time.sleep(5)
                 
-                # Escolher o MELHOR do lote e ADICIONAR à fila (mantém produtos anteriores)
+                # Escolher os TOP 3 do lote e ADICIONAR à fila (mantém produtos anteriores)
                 if candidatos_grupo_lote:
-                    melhor = max(candidatos_grupo_lote, key=lambda x: x['score'])
-                    descartados = len(candidatos_grupo_lote) - 1
-                    print(f'\n🏆 Melhor do lote para Telegram: {melhor["produto"].get("name")[:60]} (score {melhor["score"]})')
+                    # Ordenar por score (melhor primeiro)
+                    candidatos_grupo_lote.sort(key=lambda x: x['score'], reverse=True)
+                    
+                    # Pegar os 3 melhores (ou menos se houver menos de 3)
+                    top3 = candidatos_grupo_lote[:3]
+                    descartados = len(candidatos_grupo_lote) - len(top3)
+                    
+                    print(f'\n🏆 Top {len(top3)} produtos para Telegram:')
+                    for i, candidato in enumerate(top3, 1):
+                        print(f'   {i}. {candidato["produto"].get("name")[:50]}... (score {candidato["score"]})')
+                    
                     if descartados > 0:
-                        print(f'🗑️ {descartados} produto(s) do lote descartado(s) — apenas o melhor vai para o grupo.')
+                        print(f'🗑️ {descartados} produto(s) descartado(s).')
                     
-                    # Aguarda IA gerar legenda para o melhor produto antes de colocar na fila
-                    produto_com_ia = wait_for_ai_analysis(self.api, melhor['produto']['id'])
-                    if produto_com_ia:
-                        melhor['produto'] = produto_com_ia
+                    # Aguardar IA gerar legenda para cada produto antes de colocar na fila
+                    produtos_adicionados = 0
+                    for candidato in top3:
+                        produto_com_ia = wait_for_ai_analysis(self.api, candidato['produto']['id'])
+                        if produto_com_ia:
+                            candidato['produto'] = produto_com_ia
+                        
+                        # ADICIONA à fila — mantém produtos de ciclos anteriores (publicação a cada 5 min)
+                        self.fila_grupo.append(candidato)
+                        produtos_adicionados += 1
                     
-                    # ADICIONA à fila — mantém produtos de ciclos anteriores (publicação a cada 5 min)
-                    self.fila_grupo.append(melhor)
                     self._save_state()
-                    print(f'📥 Produto adicionado à fila do grupo. Total na fila: {len(self.fila_grupo)} produto(s).')
+                    print(f'📥 {produtos_adicionados} produto(s) adicionado(s) à fila. Total na fila: {len(self.fila_grupo)} produto(s).')
                 else:
                     print('\nℹ️ Nenhum produto do ciclo atende aos critérios (< R$ 300 com links). Silenciando Telegram neste ciclo.')
             
