@@ -301,14 +301,27 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   lines.push("");
   
   const shortId = product.shortId;
+  let linkProduto = "";
   if (shortId) {
-    const linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${shortId}`;
-    lines.push(`🔗 ${linkProduto}`);
+    linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${shortId}`;
   } else if (product.id) {
-    const linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${product.id}`;
-    lines.push(`🔗 ${linkProduto}`);
+    linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${product.id}`;
+  }
+
+  const couponLink = product.couponLink;
+  if (couponLink) {
+    if (linkProduto) {
+      lines.push(`🔗 Ver no site: ${linkProduto}`);
+      lines.push("");
+    }
+    lines.push(`🎟️ Resgate o cupom antes: ${couponLink}`);
+    lines.push(`🛒 Depois acesse o produto: ${affiliateLink}`);
   } else {
-    lines.push(`🔗 ${affiliateLink}`);
+    if (linkProduto) {
+      lines.push(`🔗 ${linkProduto}`);
+    } else {
+      lines.push(`🔗 ${affiliateLink}`);
+    }
   }
 
   const text = lines.join('\n');

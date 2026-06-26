@@ -36,6 +36,7 @@ export async function GET(
         enhancedImageUrl: product.enhancedImageUrl,
         price: product.price,
         originalPrice: product.originalPrice,
+        couponLink: product.couponLink,
         status: product.status,
         aiScore: product.aiScore,
         aiAnalysis: product.aiAnalysis,

@@ -10,7 +10,7 @@ export async function PUT(
   try {
     const body = await request.json();
     const { id } = await params;
-    const { name, category, description, imageUrl, price, links, status, isFixed, brand, subcategory, platformProductId, productLinks, images } = body;
+    const { name, category, description, imageUrl, price, links, status, isFixed, brand, subcategory, platformProductId, productLinks, images, couponLink } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -96,6 +96,7 @@ export async function PUT(
         platformType: platformTypeUpdate,
         description,
         imageUrl,
+        couponLink: couponLink !== undefined ? couponLink : undefined,
         price: price ? parseFloat(price) : null,
         status: status || undefined,
         isFixed: isFixed !== undefined ? isFixed : undefined,

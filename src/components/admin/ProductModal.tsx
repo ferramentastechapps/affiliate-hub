@@ -19,6 +19,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     description: "",
     imageUrl: "",
     price: "",
+    couponLink: "",
     isFixed: false,
   });
 
@@ -50,6 +51,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         description: product.description || "",
         imageUrl: product.imageUrl || "",
         price: product.price?.toString() || "",
+        couponLink: product.couponLink || "",
         isFixed: product.isFixed || false,
       });
 
@@ -100,6 +102,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         description: "",
         imageUrl: "",
         price: "",
+        couponLink: "",
         isFixed: false,
       });
       setProductLinks([]);
@@ -296,6 +299,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       description: formData.description,
       imageUrl: primaryImage,
       price: formData.price ? parseFloat(formData.price) : null,
+      couponLink: formData.couponLink || null,
       status: status,
       isFixed: formData.isFixed,
       links: legacyLinks,
@@ -561,6 +565,11 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-2">ID na Plataforma (Opcional)</label>
               <input type="text" value={formData.platformProductId} onChange={(e) => setFormData({ ...formData, platformProductId: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" placeholder="ASIN, MLB-xxx, etc." />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">Link do Cupom (Opcional - para resgate sem código)</label>
+              <input type="text" value={formData.couponLink} onChange={(e) => setFormData({ ...formData, couponLink: e.target.value })} className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent text-sm" placeholder="https://s.shopee.com.br/..." />
             </div>
             
             <div className="col-span-2">

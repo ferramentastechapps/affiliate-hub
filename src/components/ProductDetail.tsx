@@ -20,6 +20,7 @@ type Product = {
   imageUrl: string;
   price: number | null;
   originalPrice: number | null;
+  couponLink?: string | null;
   links?: {
     amazon?: string | null;
     mercadoLivre?: string | null;
@@ -341,13 +342,34 @@ export function ProductDetail({ product }: { product: Product }) {
               </motion.button>
             )}
 
-            <button
-              onClick={handlePlatformClick}
-              className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors text-white font-bold text-base md:text-lg h-[52px] rounded-2xl shadow-[0_8px_30px_rgba(220,38,38,0.3)] mt-auto"
-            >
-              Ir para {platformName}
-              <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
-            </button>
+            {product.couponLink ? (
+              <div className="flex flex-col gap-3 mt-auto">
+                <button
+                  onClick={() => window.open(product.couponLink!, '_blank', 'noopener,noreferrer')}
+                  className="w-full flex items-center justify-center gap-3 bg-amber-500 hover:bg-amber-600 transition-colors text-zinc-950 font-black text-base md:text-lg h-[52px] rounded-2xl shadow-[0_8px_30px_rgba(245,158,11,0.3)]"
+                >
+                  🎟️ Resgatar Cupom
+                </button>
+                <button
+                  onClick={handlePlatformClick}
+                  className="w-full flex items-center justify-center gap-3 bg-zinc-800 hover:bg-zinc-700 transition-colors text-white font-bold text-base md:text-lg h-[52px] rounded-2xl border border-zinc-700"
+                >
+                  🛒 Ir para o Produto
+                  <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
+                </button>
+                <p className="text-xs text-center text-zinc-400 mt-1 leading-relaxed">
+                  Clique primeiro em <strong>Resgatar Cupom</strong>, depois acesse o produto para o desconto ser aplicado.
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={handlePlatformClick}
+                className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors text-white font-bold text-base md:text-lg h-[52px] rounded-2xl shadow-[0_8px_30px_rgba(220,38,38,0.3)] mt-auto"
+              >
+                Ir para {platformName}
+                <ArrowRight size={22} weight="bold" className="group-hover:translate-x-1.5 transition-transform" />
+              </button>
+            )}
 
             <div className="flex justify-between items-center mt-6 px-2">
               <AlertButton productId={product.id} />
