@@ -661,7 +661,17 @@ export async function POST(request: Request) {
         console.log(`[Webhook AI] enhancedImageUrl VAZIO - tentando buscar secundária...`);
       }
       
-      if (!finalEnhancedImageUrl && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+      // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
+      // mesmo se já tiver uma de agregador (Promobit, Gatry)
+      const isAggregatorImage = product.imageUrl.includes('promobit.com.br') || 
+                                 product.imageUrl.includes('gatry.com') ||
+                                 product.imageUrl.includes('pelando.com.br') ||
+                                 product.imageUrl.includes('pechinchou.com.br/media/img/products/D_NQ');
+      
+      if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+        if (isAggregatorImage) {
+          console.log(`[Webhook AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
+        }
         const rawEnhancedUrl = await getSecondaryLifestyleImage(body.links || {});
         if (rawEnhancedUrl) {
           const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
@@ -669,7 +679,9 @@ export async function POST(request: Request) {
             // A imagem do varejista (fundo branco) vai para imageUrl (site).
             // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
             finalImageUrl = savedRetailImage;
-            finalEnhancedImageUrl = product.imageUrl;
+            if (!finalEnhancedImageUrl) {
+              finalEnhancedImageUrl = product.imageUrl;
+            }
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
           }
         }
@@ -1195,7 +1207,17 @@ export async function PUT(request: Request) {
             console.log(`[Webhook Batch AI] enhancedImageUrl VAZIO - tentando buscar secundária...`);
           }
           
-          if (!finalEnhancedImageUrl && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+          // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
+          // mesmo se já tiver uma de agregador (Promobit, Gatry)
+          const isAggregatorImage = product.imageUrl.includes('promobit.com.br') || 
+                                     product.imageUrl.includes('gatry.com') ||
+                                     product.imageUrl.includes('pelando.com.br') ||
+                                     product.imageUrl.includes('pechinchou.com.br/media/img/products/D_NQ');
+          
+          if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+            if (isAggregatorImage) {
+              console.log(`[Webhook Batch AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
+            }
             const rawEnhancedUrl = await getSecondaryLifestyleImage(productData.links || {});
             if (rawEnhancedUrl) {
               const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
@@ -1203,7 +1225,9 @@ export async function PUT(request: Request) {
                 // A imagem do varejista (fundo branco) vai para imageUrl (site).
                 // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
                 finalImageUrl = savedRetailImage;
-                finalEnhancedImageUrl = product.imageUrl;
+                if (!finalEnhancedImageUrl) {
+                  finalEnhancedImageUrl = product.imageUrl;
+                }
                 console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
               }
             }
