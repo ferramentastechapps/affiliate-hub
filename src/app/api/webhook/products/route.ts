@@ -294,6 +294,7 @@ export async function POST(request: Request) {
             data: {
               price: body.price || existingProduct.price,
               originalPrice: body.originalPrice || existingProduct.originalPrice,
+              couponLink: body.couponLink || undefined,
               updatedAt: new Date()
             }
           });
@@ -502,6 +503,7 @@ export async function POST(request: Request) {
         description: body.description || null,
         imageUrl: body.imageUrl,
         enhancedImageUrl: body.enhancedImageUrl || null,
+        couponLink: body.couponLink || null,
         price: body.price ? parseFloat(body.price) : null,
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         status: finalStatus,
@@ -595,6 +597,7 @@ export async function POST(request: Request) {
         enhancedImageUrl: product.enhancedImageUrl,
         price: product.price,
         originalPrice: product.originalPrice,
+        couponLink: product.couponLink,
         status: product.status,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
@@ -940,6 +943,7 @@ export async function PUT(request: Request) {
                 platformId: finalPlatformId || existingProduct.platformId,
                 platformType: finalPlatformType || existingProduct.platformType,
                 storeName: productData.storeName || existingProduct.storeName,
+                couponLink: productData.couponLink || existingProduct.couponLink,
                 ...imageUpdateData,
                 links: linksData
               },
@@ -1059,6 +1063,7 @@ export async function PUT(request: Request) {
             description: productData.description || null,
             imageUrl: productData.imageUrl,
             enhancedImageUrl: productData.enhancedImageUrl || null,
+            couponLink: productData.couponLink || null,
             price: productData.price ? parseFloat(productData.price) : null,
             originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
             status: finalStatus,

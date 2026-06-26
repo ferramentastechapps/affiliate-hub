@@ -47,6 +47,7 @@ model Product {
   externalId       String? // Hash de deduplicação
   source           String? // Plataforma de origem (amazon, mercadolivre, shopee, etc.)
   enhancedImageUrl String? // Imagem aprimorada
+  couponLink       String? // URL de resgate do cupom, sem código (novo campo)
   isFixed          Boolean   @default(false) // Trava dados contra sobrescrita do robô
 
   // FASE 1 — IDs ÚNICOS POR PLATAFORMA

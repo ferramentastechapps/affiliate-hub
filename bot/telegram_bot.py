@@ -656,20 +656,34 @@ class TelegramNotifier:
         short_id = produto.get('shortId')
         print(f'🔍 [DEBUG] shortId do produto: {short_id}')
         print(f'🔍 [DEBUG] ID do produto: {produto.get("id")}')
-        if short_id:
-            link_produto = f"{base_url}/produto/{short_id}"
-            print(f'✅ [DEBUG] Link CURTO gerado: {link_produto}')
-            linhas.append(f"🔗 {link_produto}")
+        
+        coupon_link = produto.get('couponLink')
+        if coupon_link:
+            if short_id:
+                link_produto = f"{base_url}/produto/{short_id}"
+                linhas.append(f"🔗 Ver no site: {link_produto}")
+                linhas.append("")
+            elif produto.get('id'):
+                link_produto = f"{base_url}/produto/{produto.get('id')}"
+                linhas.append(f"🔗 Ver no site: {link_produto}")
+                linhas.append("")
+            linhas.append(f"🎟️ Resgate o cupom antes: {coupon_link}")
+            linhas.append(f"🛒 Depois acesse o produto: {affiliate_link}")
         else:
-            # Fallback para o ID longo caso shortId não exista
-            produto_id = produto.get('id')
-            if produto_id:
-                link_produto = f"{base_url}/produto/{produto_id}"
-                print(f'⚠️ [DEBUG] Link LONGO gerado (shortId ausente): {link_produto}')
+            if short_id:
+                link_produto = f"{base_url}/produto/{short_id}"
+                print(f'✅ [DEBUG] Link CURTO gerado: {link_produto}')
                 linhas.append(f"🔗 {link_produto}")
             else:
-                print(f'❌ [DEBUG] Sem ID, usando affiliate_link')
-                linhas.append(f"🔗 {affiliate_link}")
+                # Fallback para o ID longo caso shortId não exista
+                produto_id = produto.get('id')
+                if produto_id:
+                    link_produto = f"{base_url}/produto/{produto_id}"
+                    print(f'⚠️ [DEBUG] Link LONGO gerado (shortId ausente): {link_produto}')
+                    linhas.append(f"🔗 {link_produto}")
+                else:
+                    print(f'❌ [DEBUG] Sem ID, usando affiliate_link')
+                    linhas.append(f"🔗 {affiliate_link}")
         
         mensagem = "\n".join(linhas)
 

@@ -258,16 +258,81 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         todos_links = re.findall(r'https?://[^\s<>"\)]+', text)
         print(f"🔗 Links encontrados na mensagem: {todos_links}")
         
-        # Tentar achar link de loja conhecida (prioridade máxima)
-        link_loja_direta = None
+        # Classificar links (produto vs cupom)
+        resolved_links_info = []
         for url in todos_links:
             url_lower = url.lower()
+            
+            # Verificar se é um domínio de loja conhecido
+            is_store = False
             for dominio in LOJAS_DOMINIOS:
                 if dominio in url_lower:
-                    link_loja_direta = url
+                    is_store = True
                     break
-            if link_loja_direta:
-                break
+            
+            # Resolver redirect se for encurtador
+            resolved_url = url
+            if is_store and any(domain in url_lower for domain in ['amzn.to', 'divulgador.link', 'shope.ee', 's.shopee.com.br', 'meli.la', 'bit.ly', 'tinyurl.com']):
+                try:
+                    resolve_resp = requests.get(url, allow_redirects=True, timeout=10, headers={
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    })
+                    resolved_url = resolve_resp.url
+                    print(f"✅ Resolvido redirect de {url} para {resolved_url}")
+                except Exception as e:
+                    print(f"⚠️ Erro ao resolver redirect de {url}: {e}")
+            
+            # 1. Critério: Linha anterior contém "cupom", "resgate", "desconto"
+            has_keyword_prev_line = False
+            lines = text.split('\n')
+            for idx, line in enumerate(lines):
+                if url in line:
+                    if idx > 0:
+                        prev_line = lines[idx-1].lower()
+                        if any(w in prev_line for w in ["cupom", "resgate", "desconto"]):
+                            has_keyword_prev_line = True
+                            print(f"🎯 Detectada palavra-chave de cupom na linha anterior para {url}")
+                            break
+            
+            # 2. Critério: URL da Shopee termina em padrão de cupom (não tem i.SHOPID.PRODUCTID)
+            is_shopee_coupon = False
+            if 'shopee' in resolved_url.lower() or 'shope.ee' in resolved_url.lower():
+                import re
+                if not re.search(r'i\.\d+\.\d+', resolved_url):
+                    is_shopee_coupon = True
+                    print(f"🎯 Detectado padrão de cupom da Shopee para resolved_url: {resolved_url}")
+            
+            is_coupon = has_keyword_prev_line or is_shopee_coupon
+            
+            resolved_links_info.append({
+                'original': url,
+                'resolved': resolved_url,
+                'is_coupon': is_coupon
+            })
+        
+        # Encontrar cupom e produto
+        product_link = None
+        coupon_link = None
+        
+        for info in resolved_links_info:
+            if info['is_coupon'] and not coupon_link:
+                coupon_link = info['original']
+            elif not info['is_coupon'] and not product_link:
+                product_link = info['original']
+        
+        # Fallback se não classificou algum
+        if not product_link:
+            for info in resolved_links_info:
+                if info['original'] != coupon_link:
+                    product_link = info['original']
+                    break
+        
+        if not product_link and resolved_links_info:
+            product_link = resolved_links_info[0]['original']
+            
+        print(f"💡 Classificação de links final: Produto={product_link} | Cupom={coupon_link}")
+        
+        link_loja_direta = product_link
         
         if link_loja_direta:
             print(f"✅ Link de loja detectado diretamente (sem Gemini): {link_loja_direta}")
@@ -445,7 +510,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         
         # Resolver redirects de URLs encurtadas antes do scraping
         link_para_scraping = link
-        if any(domain in link.lower() for domain in ['amzn.to', 'divulgador.link', 'shope.ee', 'meli.la', 'bit.ly', 'tinyurl.com']):
+        if any(domain in link.lower() for domain in ['amzn.to', 'divulgador.link', 'shope.ee', 's.shopee.com.br', 'meli.la', 'bit.ly', 'tinyurl.com']):
             try:
                 print(f"🔗 URL encurtada detectada, resolvendo redirect: {link}")
                 resolve_resp = requests.get(link, allow_redirects=True, timeout=10, headers={
@@ -534,7 +599,9 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             },
             'storeName': platform.capitalize()
         }
-        
+        if coupon_link:
+            produto_data['couponLink'] = coupon_link
+            
         produto_data = enriquecer_produto(produto_data)
         
         print(f"📦 Enviando produto encaminhado diretamente (auto-aprovar) para API: {produto_data}")
