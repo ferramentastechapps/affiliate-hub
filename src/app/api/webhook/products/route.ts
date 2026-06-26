@@ -627,7 +627,15 @@ export async function POST(request: Request) {
 
       // Se autoApprove for true, definir status com base no aiScore >= 6.5 (65%)
       if (body.autoApprove === true) {
-        if (aiResult.score && aiResult.score >= 6.5) {
+        // Verificar se algum link de afiliado permaneceu com o agregador (indicando falha na geração/resolução)
+        const hasUnresolvedAggregator = Object.values(processedLinks || {}).some(
+          (link: any) => link && (link.includes('promobit.com.br') || link.includes('pechinchou.com.br'))
+        );
+
+        if (hasUnresolvedAggregator) {
+          newStatus = 'pending';
+          console.log(`[Webhook] Forçando status como 'pending' porque contém link de agregador não resolvido: ${body.name}`);
+        } else if (aiResult.score && aiResult.score >= 6.5) {
           newStatus = 'active';
           console.log(`[Webhook] Auto-aprovado pela IA (score ${aiResult.score} >= 6.5): ${body.name}`);
         } else {
