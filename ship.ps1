@@ -16,8 +16,13 @@ if ([string]::IsNullOrWhiteSpace($Msg)) {
     $Msg = "Ship update"
 }
 
-# Realizar o commit
-git commit -m $Msg
+# Realizar o commit apenas se houver alterações
+$gitStatus = git status --porcelain
+if ($gitStatus) {
+    git commit -m $Msg
+} else {
+    Write-Host "Nenhuma alteração pendente para commit. Prosseguindo..." -ForegroundColor Yellow
+}
 
 # Descobrir o nome da branch atual para dar push corretamente
 $Branch = git branch --show-current
