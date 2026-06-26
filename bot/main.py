@@ -237,8 +237,8 @@ class PromotionBot:
             # 8. Salvar o estado para evitar envios duplicados após reinicialização
             self._save_state()
             
-            # 9. Processar a fila do grupo
-            self.publicar_fila_grupo()
+            # 9. NÃO processar a fila aqui - deixar o agendamento fazer isso a cada 5 min
+            # A fila será processada pelo schedule.every(1).minutes.do(self.publicar_fila_grupo)
             
             print(f'\n✅ Busca concluída e estado salvo!')
             
