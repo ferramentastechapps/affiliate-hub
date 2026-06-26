@@ -575,6 +575,7 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
   // Se não for link curto conhecido, não precisa gastar tempo fazendo requisição
   const isShortLink = [
     'amzn.to',
+    'divulgador.link', // Links de afiliados terceiros
     'shope.ee',
     's.click.aliexpress.com',
     'a.aliexpress.com',
