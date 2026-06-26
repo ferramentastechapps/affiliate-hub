@@ -189,7 +189,7 @@ class PromotionBot:
                     # Pausa de 5 segundos para evitar estourar cota do Gemini (429)
                     time.sleep(5)
                 
-                # Escolher o MELHOR do lote e substituir a fila (descartar os outros)
+                # Escolher o MELHOR do lote e ADICIONAR à fila (mantém produtos anteriores)
                 if candidatos_grupo_lote:
                     melhor = max(candidatos_grupo_lote, key=lambda x: x['score'])
                     descartados = len(candidatos_grupo_lote) - 1
@@ -202,14 +202,12 @@ class PromotionBot:
                     if produto_com_ia:
                         melhor['produto'] = produto_com_ia
                     
-                    # SUBSTITUI a fila — descarta qualquer produto de ciclos anteriores
-                    self.fila_grupo = [melhor]
+                    # ADICIONA à fila — mantém produtos de ciclos anteriores (publicação a cada 5 min)
+                    self.fila_grupo.append(melhor)
                     self._save_state()
-                    print(f'📥 Fila do grupo atualizada com o melhor produto do ciclo.')
+                    print(f'📥 Produto adicionado à fila do grupo. Total na fila: {len(self.fila_grupo)} produto(s).')
                 else:
                     print('\nℹ️ Nenhum produto do ciclo atende aos critérios (< R$ 300 com links). Silenciando Telegram neste ciclo.')
-                    self.fila_grupo = []
-                    self._save_state()
             
             # 5. Adicionar cupons no site
             if cupons_novos:

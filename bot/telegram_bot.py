@@ -98,6 +98,37 @@ class TelegramNotifier:
                 print(f"⏳ Flood control. Aguardando {e.retry_after}s...")
                 await asyncio.sleep(e.retry_after + 1)
 
+    async def _send_document_with_retry(self, **kwargs):
+        """Envia imagem como DOCUMENTO (sem compressão) para preservar qualidade original."""
+        document = kwargs.get('document')
+        # Se document é uma string (URL), baixa os bytes
+        if isinstance(document, str):
+            img_bytes = _baixar_imagem_bytes(document)
+            if img_bytes:
+                # Detectar extensão para nomear o arquivo corretamente
+                ext = 'jpg'
+                url_clean = document.lower().split('?')[0]
+                for _ext in ('webp', 'png', 'gif', 'jpeg', 'jpg'):
+                    if url_clean.endswith(_ext):
+                        ext = _ext
+                        break
+                kwargs = dict(kwargs)  # copiar para não mutar original
+                kwargs['document'] = InputFile(io.BytesIO(img_bytes), filename=f'produto.{ext}')
+                print(f'📥 Imagem baixada ({len(img_bytes)//1024}KB) — enviando como documento SEM compressão')
+            else:
+                print(f'⚠️ Não foi possível baixar imagem, usando URL direta')
+                # Fallback: tentar enviar URL direta como documento (Telegram pode não suportar)
+                return None
+
+        while True:
+            try:
+                res = await self.bot.send_document(**kwargs)
+                await asyncio.sleep(3)
+                return res
+            except RetryAfter as e:
+                print(f"⏳ Flood control. Aguardando {e.retry_after}s...")
+                await asyncio.sleep(e.retry_after + 1)
+
     async def enviar_produto(self, produto: dict):
         """Envia notificação de produto para o Telegram"""
         try:
