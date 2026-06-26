@@ -11,13 +11,18 @@ self.addEventListener("push", (event) => {
       const icon = data.icon || "/icons/icon-192x192.png";
       const badge = data.badge || "/icons/icon-72x72.png";
       const url = data.url || "/";
+      const image = data.image || null; // URL da imagem do produto para Rich Notifications
+      const actions = data.actions || []; // Botões de ação adicionais
+      const couponCode = data.couponCode || null; // Código do cupom para copiar
 
-      const options = {
+      const options: any = {
         body,
         icon,
         badge,
-        data: { url },
+        image: image || undefined,
+        data: { url, couponCode },
         vibrate: [200, 100, 200],
+        actions: actions.length > 0 ? actions : undefined,
       };
 
       event.waitUntil(self.registration.showNotification(title, options));
@@ -30,17 +35,28 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || "/";
+  let urlToOpen = event.notification.data?.url || "/";
+  const couponCode = event.notification.data?.couponCode;
+
+  // Se o usuário clicou na ação de copiar cupom
+  if (event.action === "copy_coupon" && couponCode) {
+    const separator = urlToOpen.includes("?") ? "&" : "?";
+    urlToOpen = `${urlToOpen}${separator}copyCoupon=${encodeURIComponent(couponCode)}`;
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // Se a página já estiver aberta, foca nela
+      // Se já tiver uma aba aberta do site, podemos focar nela e navegar
       for (const client of clientList) {
-        if (client.url === urlToOpen && "focus" in client) {
-          return client.focus();
+        if ("focus" in client) {
+          // Navega a aba aberta para a URL desejada e dá foco
+          if ("navigate" in client) {
+            client.focus();
+            return (client as any).navigate(urlToOpen);
+          }
         }
       }
-      // Se não, abre uma nova aba/janela
+      // Se não houver abas abertas, abre uma nova
       if (self.clients.openWindow) {
         return self.clients.openWindow(urlToOpen);
       }

@@ -20,7 +20,7 @@ def html_to_whatsapp_md(text: str) -> str:
     text = re.sub(r'<.*?>', '', text) # remove any remaining HTML tags
     return text
 
-def _baixar_imagem_bytes(url: str, timeout: int = 15) -> bytes | None:
+def _baixar_imagem_bytes(url: str, timeout: int = 30) -> bytes | None:
     """
     Baixa a imagem da URL e retorna os bytes.
     Usa headers de browser para evitar bloqueio por CDNs de ML, Amazon, Shopee.
@@ -40,7 +40,12 @@ def _baixar_imagem_bytes(url: str, timeout: int = 15) -> bytes | None:
             content_type = resp.headers.get('Content-Type', '')
             # Só aceita imagens
             if 'image' in content_type or url.lower().split('?')[0].endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif')):
-                return resp.content
+                # Limitar tamanho máximo da imagem para evitar timeout (5MB)
+                content = resp.content
+                if len(content) > 5 * 1024 * 1024:  # 5MB
+                    print(f'⚠️ Imagem muito grande ({len(content)//1024//1024}MB), usando URL direta')
+                    return None
+                return content
     except Exception as e:
         print(f'⚠️ Falha ao baixar imagem ({url[:60]}): {e}')
     return None
