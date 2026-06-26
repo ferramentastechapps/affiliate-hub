@@ -653,6 +653,14 @@ export function extractUrlDetails(urlStr: string): UrlDetails {
       }
     }
     
+    if (urlLower.includes('tiktok')) {
+      // Tentar encontrar o id do produto (geralmente uma sequência longa de dígitos na URL ou no query)
+      const tiktokMatch = urlStr.match(/(?:product\/|product_id=)(\d+)/i) || urlStr.match(/\/video\/(\d+)/i);
+      if (tiktokMatch) {
+        details.productId = tiktokMatch[1];
+      }
+    }
+    
     return details;
   } catch {
     // Fallback se a URL for malformada
@@ -808,6 +816,87 @@ export async function generateShopeeApiLink(originUrl: string, appId: string, ap
 }
 
 /**
+ * Gera um link de afiliado oficial do TikTok Shop usando a API
+ */
+export async function generateTiktokApiLink(originUrl: string, appKey: string, appSecret: string, accessToken: string, shopId?: string): Promise<string | null> {
+  const details = extractUrlDetails(originUrl);
+  const productId = details.productId;
+  
+  if (!productId) {
+    console.error('[TikTok API] ID do produto não pôde ser extraído da URL:', originUrl);
+    return null;
+  }
+
+  const apiPath = `/affiliate_seller/202405/products/${productId}/promotion_link/generate`;
+  const endpoint = `https://open-api.tiktokglobalshop.com${apiPath}`;
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  const params: Record<string, any> = {
+    app_key: appKey,
+    timestamp: timestamp,
+  };
+
+  if (shopId) {
+    params.shop_id = shopId;
+  }
+
+  // Assinatura requer ordenação alfabética das chaves e concatenação
+  const sortedKeys = Object.keys(params).sort();
+  let signStr = apiPath;
+  for (const key of sortedKeys) {
+    signStr += `${key}${params[key]}`;
+  }
+
+  // A assinatura é gerada usando HMAC-SHA256 com o appSecret
+  const signature = crypto.createHmac('sha256', appSecret)
+    .update(signStr)
+    .digest('hex');
+
+  params.sign = signature;
+
+  // Montar URL com query parameters
+  const urlWithParams = new URL(endpoint);
+  Object.keys(params).forEach(key => urlWithParams.searchParams.append(key, params[key]));
+
+  try {
+    console.log(`[TikTok API] Enviando requisição para gerar link do produto ID: ${productId}`);
+    const response = await fetch(urlWithParams.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tts-access-token': accessToken
+      },
+      body: JSON.stringify({})
+    });
+
+    if (!response.ok) {
+      console.error(`[TikTok API] Erro HTTP na API do TikTok! Status: ${response.status}`);
+      const text = await response.text();
+      console.error(`[TikTok API] Detalhes do erro: ${text}`);
+      return null;
+    }
+
+    const result = await response.json();
+    if (result.code !== 0) {
+      console.error('[TikTok API] Resposta de erro do TikTok:', result.message, result);
+      return null;
+    }
+
+    const affiliateLink = result.data?.promotion_link || result.data?.link || result.data?.promotion_url;
+    if (affiliateLink) {
+      console.log(`[TikTok API] Link de afiliado gerado com sucesso: ${affiliateLink}`);
+      return affiliateLink;
+    } else {
+      console.error('[TikTok API] Nenhuma URL retornada no payload:', JSON.stringify(result));
+    }
+  } catch (error) {
+    console.error('[TikTok API] Falha na requisição para API do TikTok:', error);
+  }
+
+  return null;
+}
+
+/**
  * Gera um link de afiliado para uma URL original com base no arquivo .env
  */
 export async function generateAffiliateLink(originalUrl: string, preResolvedUrl?: string): Promise<string | null> {
@@ -951,6 +1040,25 @@ export async function generateAffiliateLink(originalUrl: string, preResolvedUrl?
         }
       } catch (err) {
         console.error('[Affiliate] Falha na geração do link de afiliado da Shopee via API:', err);
+      }
+    }
+  }
+
+  // --- TIKTOK ---
+  if (platform === 'tiktok') {
+    const tiktokAppKey = process.env.TIKTOK_APP_KEY;
+    const tiktokAppSecret = process.env.TIKTOK_APP_SECRET;
+    const tiktokAccessToken = process.env.TIKTOK_ACCESS_TOKEN;
+    const tiktokShopId = process.env.TIKTOK_SHOP_ID;
+
+    if (tiktokAppKey && tiktokAppSecret && tiktokAccessToken) {
+      try {
+        const apiLink = await generateTiktokApiLink(cleanedUrl, tiktokAppKey, tiktokAppSecret, tiktokAccessToken, tiktokShopId);
+        if (apiLink) {
+          return apiLink;
+        }
+      } catch (err) {
+        console.error('[Affiliate] Falha na geração do link do TikTok via API:', err);
       }
     }
   }
