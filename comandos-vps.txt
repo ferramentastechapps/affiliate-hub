@@ -1,0 +1,59 @@
+# Comandos para executar na VPS
+# Copie e cole no terminal SSH
+
+# 1. Navegar para o diretório
+cd /root/affiliate-hub
+
+# 2. Atualizar código
+git pull
+
+# 3. Verificar se AMAZON_TAG existe no .env
+grep "AMAZON_TAG" .env
+
+# 4. Se NÃO encontrou, adicionar manualmente:
+echo "" >> .env
+echo "# Tag de afiliado Amazon" >> .env
+echo "AMAZON_TAG=jota012d-20" >> .env
+
+# 5. Confirmar que foi adicionado
+grep "AMAZON_TAG" .env
+
+# 6. Fazer build do Next.js
+npm run build
+
+# 7. Reiniciar serviços
+pm2 restart ecosystem.config.js
+
+# 8. Verificar status
+pm2 list
+
+# 9. Ver logs do Next.js (últimas 30 linhas)
+pm2 logs nextjs --lines 30
+
+# 10. Ver logs do bot (últimas 30 linhas)
+pm2 logs affiliate-scraper --lines 30
+
+# ====================
+# TESTAR NO TELEGRAM
+# ====================
+# Enviar este link:
+# https://amzn.divulgador.link/JsQPa8IE
+
+# ====================
+# VERIFICAR RESULTADO
+# ====================
+# Após enviar o link, verificar os logs:
+
+# Logs do Next.js (filtrar por divulgador/Amazon)
+pm2 logs nextjs --lines 100 | grep -i "divulgador\|amazon\|B0H3PVXCKD"
+
+# Logs do bot (filtrar por chaleira)
+pm2 logs affiliate-scraper --lines 100 | grep -i "chaleira\|amazon\|divulgador"
+
+# ====================
+# RESULTADO ESPERADO
+# ====================
+# ✅ Link gerado: amazon.com.br/dp/B0H3PVXCKD?tag=jota012d-20
+# ✅ Nome: "Chaleira Elétrica..." (não "Amazon.com.br")
+# ✅ Foto: Imagem da chaleira
+# ✅ Sem mensagem de timeout
