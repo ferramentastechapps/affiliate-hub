@@ -15,7 +15,7 @@ async function processProductAffiliates(productData: { links?: Record<string, st
   const resolvedUrls: Record<string, string> = {};
   const productLinksData: Array<{ platform: string, sourceUrl?: string, affiliateUrl?: string, generatedAffiliateUrl?: string, isActive: boolean }> = [];
   let hasAffiliate = false;
-  let isAggregatorFailed = false;
+  let hasAggregatorFailure = false;
 
   const platforms = ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum'] as const;
   
@@ -25,6 +25,15 @@ async function processProductAffiliates(productData: { links?: Record<string, st
       try {
         console.log(`[Webhook] Auto-gerando link de afiliado para ${platform}: ${originalUrl}`);
         const resolved = await resolveRedirect(originalUrl);
+        
+        // Verificar se é um código de erro do Promobit/agregador
+        if (resolved && typeof resolved === 'string' && resolved.startsWith('PROMOBIT_')) {
+          console.warn(`[Webhook] ❌ Falha ao resolver link do Promobit: ${resolved}`);
+          hasAggregatorFailure = true;
+          // NÃO salva o link - deixa pending para edição manual
+          continue;
+        }
+        
         if (resolved && resolved !== 'VITRINE_INVALIDA') {
           resolvedUrls[platform] = resolved;
           console.log(`[Webhook] URL de ${platform} resolvida com sucesso: ${originalUrl} -> ${resolved}`);
@@ -44,16 +53,9 @@ async function processProductAffiliates(productData: { links?: Record<string, st
         } else {
           const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
           if (isAggregator) {
-            console.log(`[Webhook] Falha ao resolver link do agregador ${originalUrl}. Salvando original para edição manual.`);
-            isAggregatorFailed = true;
-            // SALVA o link mesmo sendo agregador!
-            generatedLinks[platform] = originalUrl;
-            productLinksData.push({
-              platform,
-              sourceUrl: originalUrl,
-              affiliateUrl: originalUrl,
-              isActive: true
-            });
+            console.log(`[Webhook] ⚠️ Link do agregador não resolvido: ${originalUrl}. Marcando produto como pending.`);
+            hasAggregatorFailure = true;
+            // NÃO salva o link - deixa pending
           } else {
             generatedLinks[platform] = originalUrl;
             productLinksData.push({
@@ -68,15 +70,9 @@ async function processProductAffiliates(productData: { links?: Record<string, st
         console.error(`Erro ao gerar link de afiliado para ${platform}:`, e);
         const isAggregator = originalUrl.includes('promobit.com.br') || originalUrl.includes('pechinchou.com.br');
         if (isAggregator) {
-           isAggregatorFailed = true;
-           // SALVA O LINK
-           generatedLinks[platform] = originalUrl;
-           productLinksData.push({
-             platform,
-             sourceUrl: originalUrl,
-             affiliateUrl: originalUrl,
-             isActive: true
-           });
+           console.log(`[Webhook] ⚠️ Erro ao processar agregador: ${originalUrl}. Marcando como pending.`);
+           hasAggregatorFailure = true;
+           // NÃO salva o link
         } else {
            generatedLinks[platform] = originalUrl;
            productLinksData.push({
@@ -90,10 +86,17 @@ async function processProductAffiliates(productData: { links?: Record<string, st
     }
   }
 
+  // Se teve falha de agregador, forçar status pending
+  const finalStatus = hasAggregatorFailure ? 'pending' : (hasAffiliate ? 'active' : 'pending');
+  
+  if (hasAggregatorFailure) {
+    console.log(`[Webhook] 🔴 Produto marcado como PENDING devido a falha em resolver link de agregador`);
+  }
+
   return {
     links: Object.keys(generatedLinks).length > 0 ? generatedLinks : null,
     productLinksData,
-    status: hasAffiliate ? 'active' : 'pending',
+    status: finalStatus,
     resolvedUrls
   };
 }
