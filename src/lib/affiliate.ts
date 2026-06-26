@@ -465,9 +465,15 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
         const data = JSON.parse(scriptText);
         // O caminho dos dados pode variar, tentando algumas opções comuns no Promobit
         const serverOffer = data.props?.pageProps?.serverOffer || data.props?.pageProps?.offer || {};
-        const outboundUrl = serverOffer.offerUrl;
-        const offerTitle = serverOffer.offerTitle || originalTitle;
+        const offerId = serverOffer.offerId;
+        const outboundUrl = serverOffer.offerUrl || serverOffer.redirectUrl || serverOffer.link || serverOffer.url;
+        const offerTitle = serverOffer.offerTitle || serverOffer.title || originalTitle;
         
+        // Log detalhado para diagnóstico
+        console.log(`[Affiliate] Promobit offerId: ${offerId || 'N/A'}`);
+        console.log(`[Affiliate] Campos disponíveis no serverOffer:`, Object.keys(serverOffer).join(', '));
+        
+        // Estratégia 1: offerUrl direto do __NEXT_DATA__
         if (outboundUrl) {
           console.log(`[Affiliate] ✅ Link real extraído do Promobit via __NEXT_DATA__: ${outboundUrl} (Título: ${offerTitle || 'N/A'})`);
           
@@ -486,43 +492,66 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
           
           // Resolve recursivamente o link real encontrado (que pode ser amzn.to ou redirecionar mais)
           return resolveRedirect(outboundUrl, offerTitle);
-        } else {
-          console.warn(`[Affiliate] ⚠️ offerUrl não encontrado no __NEXT_DATA__ do Promobit`);
         }
-
-        // Se não encontrou o link de saída no JSON, tenta extrair pelo endpoint de redirecionamento
-        const offerId = serverOffer.offerId;
+        
+        // Estratégia 2: Endpoint de redirect do Promobit
         if (offerId) {
-          console.log(`[Affiliate] Tentando endpoint de redirecionamento do Promobit com offerId: ${offerId}`);
-          const redirectUrl = `https://www.promobit.com.br/Redirect/to/${offerId}/`;
-          const redirectResponse = await fetch(redirectUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-          });
-          const redirectHtml = await redirectResponse.text();
-          // O Promobit redireciona por javascript com a variável l = 'url';
-          const match = redirectHtml.match(/l\s*=\s*['"](https?:\/\/[^'"]+)['"]/);
+          console.log(`[Affiliate] ⚠️ offerUrl não encontrado para oferta ${offerId}`);
+          console.log(`[Affiliate] Tentando via endpoint de redirect...`);
           
-          if (match && match[1]) {
-            const resolvedOutboundUrl = match[1];
-            console.log(`[Affiliate] ✅ Link real extraído do Promobit via endpoint: ${resolvedOutboundUrl} (Título: ${offerTitle || 'N/A'})`);
+          try {
+            const redirectUrl = `https://www.promobit.com.br/Redirect/to/${offerId}/`;
+            const redirectResponse = await fetch(redirectUrl, {
+              method: 'GET',
+              redirect: 'follow', // Seguir redirects automaticamente
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              }
+            });
             
-            // Se for link do Mercado Livre, validar MLB antes de retornar
-            if (resolvedOutboundUrl.toLowerCase().includes('mercadolivre')) {
-              const mlbMatch = resolvedOutboundUrl.match(/(MLB-?\d+)/i);
+            // A URL final após redirects
+            let finalRedirectUrl = redirectResponse.url;
+            
+            // Se ainda não resolveu (redirect por JS), tentar extrair do HTML
+            if (finalRedirectUrl === redirectUrl || finalRedirectUrl.includes('/Redirect/')) {
+              const redirectHtml = await redirectResponse.text();
+              // O Promobit redireciona por javascript com a variável l = 'url';
+              const jsMatch = redirectHtml.match(/l\s*=\s*['"](https?:\/\/[^'"]+)['"]/);
+              
+              if (jsMatch && jsMatch[1]) {
+                finalRedirectUrl = jsMatch[1];
+                console.log(`[Affiliate] ✅ Link extraído via JS do endpoint: ${finalRedirectUrl}`);
+              }
+            } else {
+              console.log(`[Affiliate] ✅ Link resolvido via HTTP redirect: ${finalRedirectUrl}`);
+            }
+            
+            // Estratégia 3: Se for link social do ML, resolver
+            if (finalRedirectUrl.toLowerCase().includes('mercadolivre.com.br/social/')) {
+              console.log(`[Affiliate] Link do Promobit aponta para vitrine ML, resolvendo...`);
+              return resolveRedirect(finalRedirectUrl, offerTitle);
+            }
+            
+            // Estratégia 4: Validar MLB se for link direto do ML
+            if (finalRedirectUrl.toLowerCase().includes('mercadolivre')) {
+              const mlbMatch = finalRedirectUrl.match(/(MLB-?\d+)/i);
               if (mlbMatch) {
                 const mlbId = mlbMatch[1].replace('-', '');
                 const isValid = await validateMLBId(mlbId);
                 if (!isValid) {
-                  console.warn(`[Affiliate] ❌ MLB inválido descartado: ${mlbId} do link ${resolvedOutboundUrl}`);
+                  console.warn(`[Affiliate] ❌ MLB inválido descartado do redirect: ${mlbId} do link ${finalRedirectUrl}`);
                   return url; // Retorna URL original do Promobit sem resolver
                 }
               }
             }
             
-            return resolveRedirect(resolvedOutboundUrl, offerTitle);
+            console.log(`[Affiliate] ✅ Link real extraído do Promobit via endpoint: ${finalRedirectUrl} (Título: ${offerTitle || 'N/A'})`);
+            return resolveRedirect(finalRedirectUrl, offerTitle);
+          } catch (redirectError) {
+            console.error(`[Affiliate] ❌ Erro ao tentar endpoint de redirect:`, redirectError instanceof Error ? redirectError.message : redirectError);
           }
+        } else {
+          console.warn(`[Affiliate] ⚠️ Nem offerUrl nem offerId encontrados no __NEXT_DATA__`);
         }
       } else {
         console.warn(`[Affiliate] ⚠️ __NEXT_DATA__ não encontrado na página do Promobit`);
@@ -532,7 +561,7 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
     }
     
     // Se chegou aqui, não conseguiu extrair link válido - retorna URL original
-    console.warn(`[Affiliate] ❌ Não foi possível extrair link válido do Promobit: ${url}`);
+    console.warn(`[Affiliate] ❌ Todas as estratégias falharam para Promobit: ${url}`);
     return url;
   }
 
