@@ -2248,6 +2248,47 @@ class PromotionScraper:
         t = unicodedata.normalize('NFD', texto.lower().strip())
         return ''.join(ch for ch in t if unicodedata.category(ch) != 'Mn')
 
+    @staticmethod
+    def _gerar_chave_dedup(produto: dict) -> str:
+        """
+        Gera chave única para deduplicação baseada em:
+        1. platformId + platformType (ID REAL da plataforma - prioridade máxima)
+        2. externalId + source (fallback para sistema antigo)
+        3. nome normalizado completo (último recurso - SEM TRUNCAR)
+        
+        Retorna chave única que identifica o produto sem ambiguidade.
+        """
+        import hashlib
+        
+        # Prioridade 1: platformId + platformType (ÚNICO REAL)
+        platform_id = produto.get('platformId')
+        platform_type = produto.get('platformType')
+        if platform_id and platform_type:
+            return f"{platform_type}:{platform_id}"
+        
+        # Prioridade 2: externalId + source (sistema antigo)
+        ext_id = produto.get('externalId')
+        source = produto.get('source')
+        if ext_id and source:
+            return f"{source}:{ext_id}"
+        
+        # Prioridade 3: Hash da primeira URL disponível (evita variações de nome)
+        links = produto.get('links', {})
+        for platform in ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'tiktok', 'magalu', 'kabum', 'netshoes']:
+            url = links.get(platform)
+            if url:
+                # Normaliza URL removendo parâmetros e hash
+                url_clean = url.split('?')[0].split('#')[0].lower().strip()
+                return hashlib.md5(url_clean.encode()).hexdigest()
+        
+        # Fallback 4: nome normalizado COMPLETO (sem truncar em 60 chars)
+        nome = produto.get('name', '')
+        if nome:
+            return PromotionScraper._normalizar(nome)
+        
+        # Último recurso: gera hash do objeto inteiro
+        return hashlib.md5(str(produto).encode()).hexdigest()
+
     def _mapear_categoria_promobit(self, categoria_promobit: str) -> str:
         """Mapeia TODAS as categorias e subcategorias do Promobit para as categorias do site"""
         c = self._normalizar(categoria_promobit)

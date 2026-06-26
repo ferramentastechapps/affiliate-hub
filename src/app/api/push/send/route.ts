@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import webpush from 'web-push';
+import { filterSubscribers } from '@/lib/notifications/filterSubscribers';
+import { validateImageUrl } from '@/lib/notifications/urlValidator';
 
 // Configura as chaves VAPID
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
@@ -30,20 +32,28 @@ export async function POST(request: NextRequest) {
 
     let productCategory: string | null = null;
     let hasCoupon = false;
+    let couponCode: string | null = null;
+    let imageUrl: string | null = null;
 
     if (productId) {
       const product = await prisma.product.findUnique({
         where: { id: productId },
         select: { 
           category: true,
+          imageUrl: true,
           coupons: {
-            where: { isActive: true }
+            where: { isActive: true },
+            take: 1
           }
         }
       });
       if (product) {
         productCategory = product.category;
         hasCoupon = product.coupons.length > 0;
+        imageUrl = product.imageUrl;
+        if (hasCoupon) {
+          couponCode = product.coupons[0].code;
+        }
       }
     }
 
@@ -53,32 +63,22 @@ export async function POST(request: NextRequest) {
       hasCoupon = true;
     }
 
+    // Valida a URL da imagem de forma assíncrona uma única vez no início do fluxo (timeout de 2 segundos)
+    let validImageUrl: string | null = null;
+    if (imageUrl) {
+      const isValid = await validateImageUrl(imageUrl);
+      if (isValid) {
+        validImageUrl = imageUrl;
+      }
+    }
+
     // Busca todas as subscriptions ativas
     const allSubscriptions = await prisma.pushSubscription.findMany();
 
-    // Filtra as subscriptions com base nas preferências
-    const subscriptions = allSubscriptions.filter(sub => {
-      // Sem preferências (legado) -> recebe sempre
-      if (!sub.preferences) return true;
-      
-      const prefs = sub.preferences as { all?: boolean; couponsOnly?: boolean; categories?: string[] };
-      
-      // Filtro para quem quer somente cupons
-      if (prefs.couponsOnly) {
-        return hasCoupon;
-      }
-
-      if (prefs.all) return true;
-
-      // Se all = false e temos a categoria do produto, checar se a categoria está no array
-      if (productCategory && prefs.categories && Array.isArray(prefs.categories)) {
-        return prefs.categories.includes(productCategory);
-      }
-
-      // Se all = false e não sabemos a categoria do produto (push genérico),
-      // a regra pode ser não enviar, a menos que seja um alerta geral.
-      // Neste caso, se for push sem produto associado (ex: mensagem manual do admin), podemos assumir que é importante e enviar.
-      return !productId; 
+    // Filtra utilizando a lógica centralizada
+    const subscriptions = filterSubscribers(allSubscriptions, {
+      category: productCategory || undefined,
+      hasCoupon
     });
 
     if (subscriptions.length === 0) {
@@ -89,12 +89,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Configura botões de ação para a notificação
+    const actions = [];
+    if (hasCoupon && couponCode) {
+      actions.push({
+        action: 'copy_coupon',
+        title: `🎟️ Copiar Cupom (${couponCode})`
+      });
+    }
+    actions.push({
+      action: 'open_url',
+      title: '🛒 Ver Oferta'
+    });
+
     const payload = JSON.stringify({
       title,
       body,
       icon: icon || '/icons/icon-192x192.png',
       badge: '/icons/icon-72x72.png',
       url: url || '/',
+      image: validImageUrl || undefined, // Imagem validada via urlValidator
+      actions,
+      couponCode, // Código do cupom para clique em 'copy_coupon'
       data: { productId },
     });
 
@@ -114,11 +130,11 @@ export async function POST(request: NextRequest) {
           );
           return { success: true, endpoint: sub.endpoint };
         } catch (error: any) {
-          // Se a subscription expirou ou é inválida, remove do banco
+          // Se a subscription expirou ou é inválida (410 Gone ou 404 Not Found), remove do banco
           if (error.statusCode === 410 || error.statusCode === 404) {
             await prisma.pushSubscription.delete({
               where: { endpoint: sub.endpoint },
-            });
+            }).catch(() => {});
           }
           throw error;
         }

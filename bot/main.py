@@ -60,7 +60,13 @@ class PromotionBot:
                     # Normalizar os produtos do estado antigo para evitar reenvio
                     loaded_produtos = state.get('produtos', [])
                     for p in loaded_produtos:
-                        chave = self.scraper._normalizar(p)[:60] if hasattr(self.scraper, '_normalizar') else p
+                        # Compatibilidade: se é string antiga (nome truncado), mantém
+                        # Se é dict novo (do estado futuro), usa chave forte
+                        if isinstance(p, dict):
+                            chave = self.scraper._gerar_chave_dedup(p)
+                        else:
+                            # String antiga: mantém compatibilidade
+                            chave = p if len(p) <= 64 else self.scraper._normalizar(p)[:60]
                         self.produtos_enviados.add(chave)
                         
                     self.cupons_enviados = set(state.get('cupons', []))
@@ -97,16 +103,23 @@ class PromotionBot:
             
             # 2. Filtrar produtos novos
             produtos_novos = []
+            produtos_duplicados = 0
             for p in produtos:
-                chave = self.scraper._normalizar(p['name'])[:60]
+                chave = self.scraper._gerar_chave_dedup(p)
                 if chave not in self.produtos_enviados:
                     produtos_novos.append(p)
+                else:
+                    produtos_duplicados += 1
             
             cupons_novos = [
                 c for c in cupons 
                 if c['code'] not in self.cupons_enviados
             ]
             
+            # Log de deduplicação
+            total_bruto = len(produtos)
+            taxa_dedup = (produtos_duplicados / total_bruto * 100) if total_bruto > 0 else 0
+            print(f'📊 [Dedup] {total_bruto} encontrados | {produtos_duplicados} duplicados ({taxa_dedup:.1f}%) | {len(produtos_novos)} novos para processar')
             print(f'✨ Novos: {len(produtos_novos)} produtos e {len(cupons_novos)} cupons')
             
             # 3. Adicionar produtos no site e escolher um para o grupo
@@ -167,7 +180,7 @@ class PromotionBot:
                         else:
                             print(f'ℹ️ Produto ignorado para o grupo (preço R${price_float:.2f} não está abaixo de R$ 300).')
                             
-                        chave = self.scraper._normalizar(produto['name'])[:60]
+                        chave = self.scraper._gerar_chave_dedup(produto)
                         self.produtos_enviados.add(chave)
                     else:
                         erro = resultado.get('error') if resultado else 'Falha na comunicação com a API'
