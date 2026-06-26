@@ -653,6 +653,14 @@ export async function POST(request: Request) {
       // Processamento da imagem se aprovado (obtendo imagem de lifestyle/secundária do varejista)
       let finalEnhancedImageUrl: string | null = product.enhancedImageUrl;
       let finalImageUrl: string = product.imageUrl;
+      
+      // DEBUG: Log do enhancedImageUrl recebido do scraper
+      if (product.enhancedImageUrl) {
+        console.log(`[Webhook AI] enhancedImageUrl JÁ VINHA DO SCRAPER: ${product.enhancedImageUrl}`);
+      } else {
+        console.log(`[Webhook AI] enhancedImageUrl VAZIO - tentando buscar secundária...`);
+      }
+      
       if (!finalEnhancedImageUrl && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
         const rawEnhancedUrl = await getSecondaryLifestyleImage(body.links || {});
         if (rawEnhancedUrl) {
@@ -665,6 +673,8 @@ export async function POST(request: Request) {
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
           }
         }
+      } else if (finalEnhancedImageUrl) {
+        console.log(`[Webhook AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
       }
 
           await prisma.product.update({
@@ -1177,12 +1187,29 @@ export async function PUT(request: Request) {
 
           let finalEnhancedImageUrl: string | null = product.enhancedImageUrl;
           let finalImageUrl: string = product.imageUrl;
+          
+          // DEBUG: Log do enhancedImageUrl recebido do scraper
+          if (product.enhancedImageUrl) {
+            console.log(`[Webhook Batch AI] enhancedImageUrl JÁ VINHA DO SCRAPER: ${product.enhancedImageUrl}`);
+          } else {
+            console.log(`[Webhook Batch AI] enhancedImageUrl VAZIO - tentando buscar secundária...`);
+          }
+          
           if (!finalEnhancedImageUrl && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
             const rawEnhancedUrl = await getSecondaryLifestyleImage(productData.links || {});
             if (rawEnhancedUrl) {
               const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
               if (savedRetailImage) {
                 // A imagem do varejista (fundo branco) vai para imageUrl (site).
+                // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
+                finalImageUrl = savedRetailImage;
+                finalEnhancedImageUrl = product.imageUrl;
+                console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
+              }
+            }
+          } else if (finalEnhancedImageUrl) {
+            console.log(`[Webhook Batch AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
+          }
                 // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
                 finalImageUrl = savedRetailImage;
                 finalEnhancedImageUrl = product.imageUrl;
