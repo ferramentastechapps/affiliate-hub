@@ -155,8 +155,14 @@ class PromotionBot:
                         except:
                             price_float = 0.0
                             
-                        # Verificar se o produto está abaixo de 300 reais
+                        # Verificar se o produto está abaixo de 300 reais E tem foto lifestyle
                         if 0 < price_float < 300:
+                            # Verificar se tem enhancedImageUrl (foto lifestyle)
+                            enhanced_image = produto_retornado.get('enhancedImageUrl') if produto_retornado else None
+                            if not enhanced_image:
+                                print(f'⚠️ Produto sem foto lifestyle - NÃO vai para o Telegram: {produto["name"][:50]}')
+                                continue
+                            
                             # Coletar links de afiliado do produto retornado
                             links = (produto_retornado.get('links', {}) if produto_retornado else {}) or {}
                             platform = None
@@ -174,7 +180,7 @@ class PromotionBot:
                                     'affiliate_link': affiliate_link,
                                     'score': produto.get('qualityScore', 0)
                                 })
-                                print(f'📋 Candidato ao grupo coletado (preço R${price_float:.2f}, score {produto.get("qualityScore", 0)}): {produto["name"][:50]}')
+                                print(f'📋 Candidato ao grupo coletado (preço R${price_float:.2f}, score {produto.get("qualityScore", 0)}, foto lifestyle ✅): {produto["name"][:50]}')
                             else:
                                 print(f'⚠️ Produto sem link de afiliado correspondente para o Telegram.')
                         else:
