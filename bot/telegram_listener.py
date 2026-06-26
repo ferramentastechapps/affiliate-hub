@@ -442,12 +442,26 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             return
             
         await msg_status.edit_text("⏳ Buscando mais informações sobre o produto...")
+        
+        # Resolver redirects de URLs encurtadas antes do scraping
+        link_para_scraping = link
+        if any(domain in link.lower() for domain in ['amzn.to', 'divulgador.link', 'shope.ee', 'meli.la', 'bit.ly', 'tinyurl.com']):
+            try:
+                print(f"🔗 URL encurtada detectada, resolvendo redirect: {link}")
+                resolve_resp = requests.get(link, allow_redirects=True, timeout=10, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                })
+                link_para_scraping = resolve_resp.url
+                print(f"✅ URL resolvida para scraping: {link_para_scraping}")
+            except Exception as e:
+                print(f"⚠️ Erro ao resolver redirect, usando link original: {e}")
+                link_para_scraping = link
             
         # Tentar raspar os dados da página se faltar nome, preço ou imagem (quando não houver foto enviada)
         scraped_data = {}
         try:
-            print(f"🔍 Tentando fazer scraping do link: {link}")
-            scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link}, timeout=60)
+            print(f"🔍 Tentando fazer scraping do link: {link_para_scraping}")
+            scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link_para_scraping}, timeout=60)
             if scrape_resp.status_code == 200:
                 scraped_data = scrape_resp.json()
                 print(f"✅ Scraped fallback: {scraped_data}")
