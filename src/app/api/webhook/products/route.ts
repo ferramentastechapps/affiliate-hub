@@ -1210,13 +1210,6 @@ export async function PUT(request: Request) {
           } else if (finalEnhancedImageUrl) {
             console.log(`[Webhook Batch AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
           }
-                // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
-                finalImageUrl = savedRetailImage;
-                finalEnhancedImageUrl = product.imageUrl;
-                console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
-              }
-            }
-          }
 
           await prisma.product.update({
             where: { id: product.id },
