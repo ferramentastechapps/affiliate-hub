@@ -90,6 +90,49 @@ async function resolveUrlSlug(urlStr: string): Promise<string> {
 }
 
 /**
+ * Valida se um MLB ID existe no Mercado Livre
+ */
+async function validateMLBId(mlbId: string): Promise<boolean> {
+  try {
+    // Limpar o ID (remover "MLB" prefix se presente, adicionar de volta)
+    const cleanId = mlbId.replace(/^MLB-?/i, '');
+    const fullId = `MLB${cleanId}`;
+    
+    // Verificar formato (MLB + 10-12 dígitos)
+    if (!/^MLB\d{10,12}$/.test(fullId)) {
+      console.log(`[Affiliate] MLB inválido (formato): ${fullId}`);
+      return false;
+    }
+    
+    // Consultar API do ML (pública, sem autenticação)
+    const response = await fetch(`https://api.mercadolivre.com.br/items/${fullId}`, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (response.status === 404) {
+      console.log(`[Affiliate] MLB não existe na API do ML: ${fullId}`);
+      return false;
+    }
+    
+    if (response.ok) {
+      console.log(`[Affiliate] ✅ MLB validado: ${fullId}`);
+      return true;
+    }
+    
+    // Outros status codes (500, 429, etc.) - assumir válido por segurança
+    console.warn(`[Affiliate] MLB retornou status ${response.status}, assumindo válido: ${fullId}`);
+    return true;
+  } catch (error) {
+    console.warn(`[Affiliate] Erro ao validar MLB ${mlbId}:`, error instanceof Error ? error.message : error);
+    // Em caso de erro de rede, assumir válido para não bloquear produtos legítimos
+    return true;
+  }
+}
+
+/**
  * Resolve encurtadores de links seguindo redirecionamentos HTTP
  * para obter a URL final real da loja.
  */
@@ -426,14 +469,31 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
         const offerTitle = serverOffer.offerTitle || originalTitle;
         
         if (outboundUrl) {
-          console.log(`[Affiliate] Link real extraído do Promobit: ${outboundUrl} (Título: ${offerTitle || 'N/A'})`);
+          console.log(`[Affiliate] ✅ Link real extraído do Promobit via __NEXT_DATA__: ${outboundUrl} (Título: ${offerTitle || 'N/A'})`);
+          
+          // Se for link do Mercado Livre, validar MLB antes de retornar
+          if (outboundUrl.toLowerCase().includes('mercadolivre')) {
+            const mlbMatch = outboundUrl.match(/(MLB-?\d+)/i);
+            if (mlbMatch) {
+              const mlbId = mlbMatch[1].replace('-', '');
+              const isValid = await validateMLBId(mlbId);
+              if (!isValid) {
+                console.warn(`[Affiliate] ❌ MLB inválido descartado: ${mlbId} do link ${outboundUrl}`);
+                return url; // Retorna URL original do Promobit sem resolver
+              }
+            }
+          }
+          
           // Resolve recursivamente o link real encontrado (que pode ser amzn.to ou redirecionar mais)
           return resolveRedirect(outboundUrl, offerTitle);
+        } else {
+          console.warn(`[Affiliate] ⚠️ offerUrl não encontrado no __NEXT_DATA__ do Promobit`);
         }
 
-        // Se não encontrou o link de saída, tenta extrair pelo endpoint de redirecionamento
+        // Se não encontrou o link de saída no JSON, tenta extrair pelo endpoint de redirecionamento
         const offerId = serverOffer.offerId;
         if (offerId) {
+          console.log(`[Affiliate] Tentando endpoint de redirecionamento do Promobit com offerId: ${offerId}`);
           const redirectUrl = `https://www.promobit.com.br/Redirect/to/${offerId}/`;
           const redirectResponse = await fetch(redirectUrl, {
             headers: {
@@ -446,14 +506,34 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
           
           if (match && match[1]) {
             const resolvedOutboundUrl = match[1];
-            console.log(`[Affiliate] Link real extraído do Promobit via endpoint: ${resolvedOutboundUrl} (Título: ${offerTitle || 'N/A'})`);
+            console.log(`[Affiliate] ✅ Link real extraído do Promobit via endpoint: ${resolvedOutboundUrl} (Título: ${offerTitle || 'N/A'})`);
+            
+            // Se for link do Mercado Livre, validar MLB antes de retornar
+            if (resolvedOutboundUrl.toLowerCase().includes('mercadolivre')) {
+              const mlbMatch = resolvedOutboundUrl.match(/(MLB-?\d+)/i);
+              if (mlbMatch) {
+                const mlbId = mlbMatch[1].replace('-', '');
+                const isValid = await validateMLBId(mlbId);
+                if (!isValid) {
+                  console.warn(`[Affiliate] ❌ MLB inválido descartado: ${mlbId} do link ${resolvedOutboundUrl}`);
+                  return url; // Retorna URL original do Promobit sem resolver
+                }
+              }
+            }
+            
             return resolveRedirect(resolvedOutboundUrl, offerTitle);
           }
         }
+      } else {
+        console.warn(`[Affiliate] ⚠️ __NEXT_DATA__ não encontrado na página do Promobit`);
       }
     } catch (err) {
       console.warn(`[Affiliate] Falha ao extrair link real do Promobit:`, err instanceof Error ? err.message : err);
     }
+    
+    // Se chegou aqui, não conseguiu extrair link válido - retorna URL original
+    console.warn(`[Affiliate] ❌ Não foi possível extrair link válido do Promobit: ${url}`);
+    return url;
   }
 
   // Caso especial: página de oferta do Pechinchou (precisamos extrair o link de saída do HTML)
