@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     let productCategory: string | null = null;
+    let productName: string | null = null;
     let hasCoupon = false;
     let couponCode: string | null = null;
     let imageUrl: string | null = null;
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
       const product = await prisma.product.findUnique({
         where: { id: productId },
         select: { 
+          name: true,
           category: true,
           imageUrl: true,
           coupons: {
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
       });
       if (product) {
         productCategory = product.category;
+        productName = product.name;
         hasCoupon = product.coupons.length > 0;
         imageUrl = product.imageUrl;
         if (hasCoupon) {
@@ -78,6 +81,7 @@ export async function POST(request: NextRequest) {
     // Filtra utilizando a lógica centralizada
     const subscriptions = filterSubscribers(allSubscriptions, {
       category: productCategory || undefined,
+      productName: productName || `${title} ${body}`,
       hasCoupon
     });
 

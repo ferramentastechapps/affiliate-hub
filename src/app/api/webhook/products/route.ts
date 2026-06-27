@@ -563,7 +563,8 @@ export async function POST(request: Request) {
           title: `Nova Oferta: ${product.name}`,
           body: `Preço: R$ ${product.price?.toFixed(2)}`,
           icon: product.imageUrl,
-          url: `/produto/${product.id}`
+          url: `/produto/${product.id}`,
+          productId: product.id
         };
 
         if (discount > 0) {
@@ -722,7 +723,8 @@ export async function POST(request: Request) {
             title: `Novo Produto Aprovado: ${product.name}`,
             body: `Preço: R$ ${product.price?.toFixed(2)}`,
             icon: finalEnhancedImageUrl || product.imageUrl,
-            url: `/produto/${product.id}`
+            url: `/produto/${product.id}`,
+            productId: product.id
           };
 
           if (discount > 0) {
@@ -1143,7 +1145,8 @@ export async function PUT(request: Request) {
               title: `Nova Oferta: ${product.name}`,
               body: `Preço: R$ ${product.price?.toFixed(2)}`,
               icon: product.imageUrl,
-              url: `/produto/${product.id}`
+              url: `/produto/${product.id}`,
+              productId: product.id
             };
 
             if (discount > 0) {
@@ -1268,7 +1271,8 @@ export async function PUT(request: Request) {
                 title: `Novo Produto Aprovado: ${product.name}`,
                 body: `Preço: R$ ${product.price?.toFixed(2)}`,
                 icon: finalEnhancedImageUrl || product.imageUrl,
-                url: `/produto/${product.id}`
+                url: `/produto/${product.id}`,
+                productId: product.id
               };
 
               if (discount > 0) {

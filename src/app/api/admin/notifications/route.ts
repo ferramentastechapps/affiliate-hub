@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
   // 3. Filtra os assinantes conforme os filtros selecionados pelo admin
   const subscriptions = filterSubscribers(allSubscriptions, {
     categories: target === 'categories' && Array.isArray(categories) ? categories : undefined,
+    productName: `${title} ${body}`,
     hasCoupon: target === 'coupons' ? true : undefined
   });
 
