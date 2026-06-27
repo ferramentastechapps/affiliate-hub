@@ -129,12 +129,12 @@ else:
 separador('GEMINI API')
 if GEMINI_API_KEY and GEMINI_API_KEY != 'sua_chave_aqui':
     try:
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}'
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
         body = {'contents': [{'parts': [{'text': 'Responda apenas: OK'}]}],
                 'generationConfig': {'responseMimeType': 'application/json'}}
         resp = requests.post(url, json=body, timeout=20)
         if resp.status_code == 200:
-            check('Gemini API funcionando', True, 'gemini-2.0-flash OK')
+            check('Gemini API funcionando', True, 'gemini-2.5-flash OK')
         elif resp.status_code == 429:
             check('Gemini API - COTA ESGOTADA', False, 'HTTP 429: Rate limit/quota exceeded!')
         elif resp.status_code in (401, 403):
