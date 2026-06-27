@@ -732,12 +732,20 @@ class TelegramNotifier:
             print(f'✅ foto_para_usar: {foto_para_usar}')
             
             if usar_foto:
-                await self._send_photo_with_retry(
-                    chat_id=TELEGRAM_PROMO_GROUP_ID,
-                    photo=foto_para_usar,
-                    caption=mensagem,
-                    parse_mode='HTML'
-                )
+                try:
+                    await self._send_photo_with_retry(
+                        chat_id=TELEGRAM_PROMO_GROUP_ID,
+                        photo=foto_para_usar,
+                        caption=mensagem,
+                        parse_mode='HTML'
+                    )
+                except Exception as photo_err:
+                    print(f'⚠️ Erro ao enviar foto (tentando enviar apenas texto): {photo_err}')
+                    await self._send_message_with_retry(
+                        chat_id=TELEGRAM_PROMO_GROUP_ID,
+                        text=mensagem,
+                        parse_mode='HTML'
+                    )
             else:
                 await self._send_message_with_retry(
                     chat_id=TELEGRAM_PROMO_GROUP_ID,
