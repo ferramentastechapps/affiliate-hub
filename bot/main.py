@@ -139,6 +139,14 @@ class PromotionBot:
                     resultado = self.api.adicionar_produto(produto)
                     
                     if resultado and resultado.get('success'):
+                        # Se for apenas atualização de preço de um produto existente, NÃO postar no Telegram
+                        if resultado.get('message') == 'Preço atualizado':
+                            print(f'ℹ️ Produto já existente no site (Preço atualizado) - ignorando Telegram: {produto["name"][:50]}')
+                            # Adicionar ao cache local para evitar reprocessamento no mesmo ciclo
+                            chave = self.scraper._gerar_chave_dedup(produto)
+                            self.produtos_enviados.add(chave)
+                            continue
+                            
                         produto_retornado = resultado.get('product')
                         if produto_retornado and produto_retornado.get('id'):
                             produto['id'] = produto_retornado['id']
