@@ -155,14 +155,8 @@ class PromotionBot:
                         except:
                             price_float = 0.0
                             
-                        # Verificar se o produto tem preço válido E tem foto lifestyle
+                        # Verificar se o produto tem preço válido
                         if price_float > 0:
-                            # Verificar se tem enhancedImageUrl (foto lifestyle)
-                            enhanced_image = produto_retornado.get('enhancedImageUrl') if produto_retornado else None
-                            if not enhanced_image:
-                                print(f'⚠️ Produto sem foto lifestyle - NÃO vai para o Telegram: {produto["name"][:50]}')
-                                continue
-                            
                             # Coletar links de afiliado do produto retornado
                             links = (produto_retornado.get('links', {}) if produto_retornado else {}) or {}
                             platform = None
@@ -180,7 +174,7 @@ class PromotionBot:
                                     'affiliate_link': affiliate_link,
                                     'score': produto.get('qualityScore', 0)
                                 })
-                                print(f'📋 Candidato ao grupo coletado (preço R${price_float:.2f}, score {produto.get("qualityScore", 0)}, foto lifestyle ✅): {produto["name"][:50]}')
+                                print(f'📋 Candidato ao grupo coletado (preço R${price_float:.2f}, score {produto.get("qualityScore", 0)}): {produto["name"][:50]}')
                             else:
                                 print(f'⚠️ Produto sem link de afiliado correspondente para o Telegram.')
                         else:
@@ -217,6 +211,11 @@ class PromotionBot:
                         produto_com_ia = wait_for_ai_analysis(self.api, candidato['produto']['id'])
                         if produto_com_ia:
                             candidato['produto'] = produto_com_ia
+                        
+                        # Verificar se tem enhancedImageUrl (foto lifestyle) após o processamento da IA
+                        if not candidato['produto'].get('enhancedImageUrl'):
+                            print(f"⚠️ Produto sem foto lifestyle após aguardar IA - pulando: {candidato['produto'].get('name')[:50]}")
+                            continue
                         
                         # ADICIONA à fila — mantém produtos de ciclos anteriores (publicação a cada 5 min)
                         self.fila_grupo.append(candidato)
