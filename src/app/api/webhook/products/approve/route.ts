@@ -192,8 +192,12 @@ export async function POST(request: Request) {
           // A imagem do varejista (fundo branco) vai para imageUrl (site)
           // A imagem original (lifestyle) vai para enhancedImageUrl (grupo)
           updateData.imageUrl = savedEnhanced;
-          updateData.enhancedImageUrl = product.imageUrl || null;
-          console.log(`[Approve] Imagem do varejista (fundo branco) salva em imageUrl, original salva em enhancedImageUrl: ${savedEnhanced}`);
+          const isLifestyle = product.imageUrl && (
+            product.imageUrl.includes('/products/social/') || 
+            product.imageUrl.includes('/products/real/')
+          );
+          updateData.enhancedImageUrl = isLifestyle ? product.imageUrl : null;
+          console.log(`[Approve] Imagem do varejista (fundo branco) salva em imageUrl. enhancedImageUrl setado para: ${updateData.enhancedImageUrl}`);
         }
       }
     }
