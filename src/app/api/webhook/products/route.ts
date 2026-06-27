@@ -275,7 +275,10 @@ export async function POST(request: Request) {
           platformId: finalPlatformId,
           platformType: finalPlatformType
         },
-        include: { priceHistory: { orderBy: { createdAt: 'desc' }, take: 1 } }
+        include: { 
+          priceHistory: { orderBy: { createdAt: 'desc' }, take: 1 },
+          links: true
+        }
       });
       
       if (existingProduct) {
