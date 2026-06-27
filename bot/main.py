@@ -155,8 +155,8 @@ class PromotionBot:
                         except:
                             price_float = 0.0
                             
-                        # Verificar se o produto está abaixo de 300 reais E tem foto lifestyle
-                        if 0 < price_float < 300:
+                        # Verificar se o produto tem preço válido E tem foto lifestyle
+                        if price_float > 0:
                             # Verificar se tem enhancedImageUrl (foto lifestyle)
                             enhanced_image = produto_retornado.get('enhancedImageUrl') if produto_retornado else None
                             if not enhanced_image:
@@ -184,7 +184,7 @@ class PromotionBot:
                             else:
                                 print(f'⚠️ Produto sem link de afiliado correspondente para o Telegram.')
                         else:
-                            print(f'ℹ️ Produto ignorado para o grupo (preço R${price_float:.2f} não está abaixo de R$ 300).')
+                            print(f'ℹ️ Produto ignorado para o grupo (preço R${price_float:.2f} inválido).')
                             
                         chave = self.scraper._gerar_chave_dedup(produto)
                         self.produtos_enviados.add(chave)

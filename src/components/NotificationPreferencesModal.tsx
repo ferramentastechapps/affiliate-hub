@@ -13,6 +13,8 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   const [step, setStep] = useState<1 | 2>(1); // 1 = Bem-vindo/Opções, 2 = Processando/Final
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [customInterests, setCustomInterests] = useState<string[]>([]);
+  const [newInterest, setNewInterest] = useState('');
   const [receiveAll, setReceiveAll] = useState(true);
   const [couponsOnly, setCouponsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +47,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
               setReceiveAll(data.preferences.all);
               setCouponsOnly(data.preferences.couponsOnly || false);
               setSelectedCategories(data.preferences.categories || []);
+              setCustomInterests(data.preferences.customInterests || []);
             }
           }
         }
@@ -55,6 +58,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
       setReceiveAll(true);
       setCouponsOnly(false);
       setSelectedCategories([]);
+      setCustomInterests([]);
     }
   }, [isOpen, mode]);
 
@@ -74,12 +78,34 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
     );
   };
 
+  const handleAddInterest = () => {
+    const trimmed = newInterest.trim().toLowerCase();
+    if (!trimmed) return;
+
+    if (receiveAll) {
+      setReceiveAll(false);
+    }
+    if (couponsOnly) {
+      setCouponsOnly(false);
+    }
+
+    if (!customInterests.includes(trimmed)) {
+      setCustomInterests(prev => [...prev, trimmed]);
+    }
+    setNewInterest('');
+  };
+
+  const handleRemoveInterest = (interest: string) => {
+    setCustomInterests(prev => prev.filter(i => i !== interest));
+  };
+
   const handleToggleReceiveAll = () => {
     const nextVal = !receiveAll;
     setReceiveAll(nextVal);
     if (nextVal) {
       setCouponsOnly(false);
       setSelectedCategories([]);
+      setCustomInterests([]);
     }
   };
 
@@ -89,6 +115,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
     if (nextVal) {
       setReceiveAll(false);
       setSelectedCategories([]);
+      setCustomInterests([]);
     }
   };
 
@@ -110,7 +137,8 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
       const preferences = {
         all: receiveAll,
         couponsOnly: couponsOnly,
-        categories: (receiveAll || couponsOnly) ? [] : selectedCategories
+        categories: (receiveAll || couponsOnly) ? [] : selectedCategories,
+        customInterests: (receiveAll || couponsOnly) ? [] : customInterests
       };
 
       if (mode === 'edit' && subscriptionEndpoint) {
@@ -239,35 +267,85 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
             {/* Lista Dinâmica */}
             <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Categorias Específicas</h3>
             
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2 mb-6 max-h-48 overflow-y-auto pr-1">
               {allCategories.length === 0 ? (
                 <p className="text-zinc-500 text-sm">Carregando categorias...</p>
               ) : (
                 allCategories.map(cat => {
                   const isSelected = selectedCategories.includes(cat);
                   return (
-                    <div 
+                    <button
                       key={cat}
-                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
-                        isSelected ? 'bg-zinc-800 border-zinc-600' : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800/50'
-                      }`}
+                      type="button"
                       onClick={() => toggleCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        isSelected 
+                          ? 'bg-orange-500/10 border-orange-500 text-orange-400' 
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
+                      }`}
                     >
-                      <span className="text-zinc-200 text-sm capitalize">{cat}</span>
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                        isSelected ? 'bg-orange-500 border-orange-500' : 'border-zinc-600 bg-zinc-800'
-                      }`}>
-                        {isSelected && <CheckCircle size={14} weight="bold" className="text-white" />}
-                      </div>
-                    </div>
+                      <span className="capitalize">{cat}</span>
+                      {isSelected && <CheckCircle size={12} weight="bold" />}
+                    </button>
                   )
                 })
               )}
             </div>
 
+            {/* Alertas Customizados por Palavra-Chave */}
+            <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">
+              Alertas por Palavras-Chave (Livre)
+            </h3>
+            <p className="text-zinc-500 text-[11px] mb-3 leading-relaxed">
+              Digite marcas ou produtos de seu interesse (ex: "iphone", "rtx 4060", "tenis nike") para receber alertas sempre que aparecerem.
+            </p>
+            
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newInterest}
+                onChange={(e) => setNewInterest(e.target.value)}
+                placeholder="Ex: ps5, jbl, ar condicionado..."
+                className="flex-1 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 py-2 rounded-xl text-xs placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddInterest();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddInterest}
+                className="bg-zinc-800 hover:bg-zinc-750 text-white text-xs font-semibold px-4 py-2 rounded-xl border border-zinc-700 transition-colors cursor-pointer"
+              >
+                Adicionar
+              </button>
+            </div>
+
+            {customInterests.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-6 max-h-32 overflow-y-auto pr-1">
+                {customInterests.map((interest) => (
+                  <span
+                    key={interest}
+                    className="inline-flex items-center gap-1.5 bg-zinc-850 border border-zinc-750 text-zinc-300 text-xs px-2.5 py-1 rounded-md"
+                  >
+                    <span>{interest}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveInterest(interest)}
+                      className="text-zinc-500 hover:text-red-400 ml-0.5 cursor-pointer flex items-center justify-center"
+                    >
+                      <X size={10} weight="bold" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <button
               onClick={handleSave}
-              disabled={isLoading || (!receiveAll && !couponsOnly && selectedCategories.length === 0)}
+              disabled={isLoading || (!receiveAll && !couponsOnly && selectedCategories.length === 0 && customInterests.length === 0)}
               className="w-full mt-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {isLoading ? 'Salvando...' : mode === 'install' ? 'Ativar Notificações' : 'Salvar Preferências'}
@@ -286,6 +364,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
             </p>
           </div>
         )}
+
 
       </div>
     </div>
