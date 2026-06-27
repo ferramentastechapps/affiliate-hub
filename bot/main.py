@@ -44,7 +44,7 @@ class PromotionBot:
         self.telegram = TelegramNotifier()
         self.scraper = PromotionScraper()
         
-        self.state_file = Path('bot_state.json')
+        self.state_file = Path(__file__).parent / 'bot_state.json'
         self._load_state()
         
     def _load_state(self):
