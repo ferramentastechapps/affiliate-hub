@@ -666,13 +666,15 @@ export async function POST(request: Request) {
       const isAggregatorImage = product.imageUrl.includes('promobit.com.br') || 
                                  product.imageUrl.includes('gatry.com') ||
                                  product.imageUrl.includes('pelando.com.br') ||
-                                 product.imageUrl.includes('pechinchou.com.br/media/img/products/D_NQ');
+                                 product.imageUrl.includes('pechinchou.com.br') ||
+                                 product.imageUrl.includes('assets.pechinchou.com.br');
       
       if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
         if (isAggregatorImage) {
           console.log(`[Webhook AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
         }
-        const rawEnhancedUrl = await getSecondaryLifestyleImage(body.links || {});
+        // CRÍTICO: Usar resolvedUrls (links reais do varejista) ao invés de body.links (agregador)
+        const rawEnhancedUrl = await getSecondaryLifestyleImage(resolvedUrls || body.links || {});
         if (rawEnhancedUrl) {
           const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
           if (savedRetailImage) {
@@ -684,6 +686,8 @@ export async function POST(request: Request) {
             }
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
           }
+        } else {
+          console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original do agregador.`);
         }
       } else if (finalEnhancedImageUrl) {
         console.log(`[Webhook AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
