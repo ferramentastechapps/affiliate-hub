@@ -686,7 +686,13 @@ export async function POST(request: Request) {
             // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
             finalImageUrl = savedRetailImage;
             if (!finalEnhancedImageUrl) {
-              finalEnhancedImageUrl = product.imageUrl;
+              const isLifestyle = product.imageUrl && (
+                product.imageUrl.includes('/products/social/') || 
+                product.imageUrl.includes('/products/real/')
+              );
+              if (isLifestyle) {
+                finalEnhancedImageUrl = product.imageUrl;
+              }
             }
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
           }
@@ -1234,10 +1240,16 @@ export async function PUT(request: Request) {
               if (savedRetailImage) {
                 // A imagem do varejista (fundo branco) vai para imageUrl (site).
                 // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
-                finalImageUrl = savedRetailImage;
-                if (!finalEnhancedImageUrl) {
-                  finalEnhancedImageUrl = product.imageUrl;
-                }
+                 finalImageUrl = savedRetailImage;
+                 if (!finalEnhancedImageUrl) {
+                   const isLifestyle = product.imageUrl && (
+                     product.imageUrl.includes('/products/social/') || 
+                     product.imageUrl.includes('/products/real/')
+                   );
+                   if (isLifestyle) {
+                     finalEnhancedImageUrl = product.imageUrl;
+                   }
+                 }
                 console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
               }
             }
