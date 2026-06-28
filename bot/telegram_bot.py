@@ -515,17 +515,22 @@ class TelegramNotifier:
         preco = produto.get('price')
         preco_original = produto.get('originalPrice')
         
-        # Lógica de imagem: foto_file_id > enhancedImageUrl > imageUrl
         from config import AFFILIATE_HUB_URL
         base_url = AFFILIATE_HUB_URL.rstrip('/')
         
-        imagem = produto.get('imageUrl')
-        enhanced_image = produto.get('enhancedImageUrl')
+        enhanced = produto.get('enhancedImageUrl', '')
         
-        if enhanced_image:
-            if enhanced_image.startswith('/'):
-                enhanced_image = f"{base_url}{enhanced_image}"
-            imagem = enhanced_image
+        # Prioridade de foto para o grupo:
+        # 1. foto_file_id (admin enviou via /aprovar com foto)
+        # 2. enhancedImageUrl (lifestyle gerada por IA ou enviada pelo admin)
+        foto_para_grupo = foto_file_id or (enhanced if enhanced and 'placeholder' not in enhanced else None)
+
+        if not foto_para_grupo:
+            print(f'⛔ [BLOQUEADO] Produto sem foto lifestyle — não publicando no grupo: {nome}')
+            return  # Sai sem publicar
+            
+        if isinstance(foto_para_grupo, str) and foto_para_grupo.startswith('/'):
+            foto_para_grupo = f"{base_url}{foto_para_grupo}"
 
         # Emoji por categoria
         categoria_nome = produto.get('category', 'Diversos')
@@ -724,12 +729,10 @@ class TelegramNotifier:
         mensagem = "\n".join(linhas)
 
         try:
-            # Prioridade: foto enviada pelo admin > imageUrl do produto
-            foto_para_usar = foto_file_id or imagem
-            usar_foto = bool(foto_para_usar and 'placeholder' not in foto_para_usar)
-            print(f'📸 foto_file_id (admin): {foto_file_id}')
-            print(f'🖼️ imageUrl (produto): {imagem}')
-            print(f'✅ foto_para_usar: {foto_para_usar}')
+            print(f'📢 Publicando com foto lifestyle: {link_produto if "link_produto" in locals() else "?"}')
+            
+            foto_para_usar = foto_para_grupo
+            usar_foto = True
             
             if usar_foto:
                 try:

@@ -50,7 +50,9 @@ class PromotionBot:
     def _load_state(self):
         self.produtos_enviados = set()
         self.cupons_enviados = set()
-        self.fila_grupo = []
+        self.fila_lifestyle = []
+        self.fila_sem_lifestyle = []
+        self.fila_manual = []
         self.ultimo_envio_grupo = 0
         try:
             if self.state_file.exists():
@@ -70,7 +72,20 @@ class PromotionBot:
                         self.produtos_enviados.add(chave)
                         
                     self.cupons_enviados = set(state.get('cupons', []))
-                    self.fila_grupo = state.get('fila_grupo', [])
+                    
+                    # Migrar fila_grupo antiga para as novas filas
+                    fila_grupo_legado = state.get('fila_grupo', [])
+                    for item in fila_grupo_legado:
+                        enhanced = item.get('produto', {}).get('enhancedImageUrl')
+                        if enhanced and 'placeholder' not in enhanced:
+                            self.fila_lifestyle.append(item)
+                        else:
+                            self.fila_sem_lifestyle.append(item)
+                            
+                    self.fila_lifestyle.extend(state.get('fila_lifestyle', []))
+                    self.fila_sem_lifestyle.extend(state.get('fila_sem_lifestyle', []))
+                    self.fila_manual = state.get('fila_manual', [])
+                    
                     self.ultimo_envio_grupo = state.get('ultimo_envio_grupo', 0)
         except Exception as e:
             print(f'Aviso: Não foi possível carregar o estado anterior: {e}')
@@ -81,11 +96,31 @@ class PromotionBot:
                 json.dump({
                     'produtos': list(self.produtos_enviados),
                     'cupons': list(self.cupons_enviados),
-                    'fila_grupo': self.fila_grupo,
+                    'fila_lifestyle': self.fila_lifestyle,
+                    'fila_sem_lifestyle': self.fila_sem_lifestyle,
+                    'fila_manual': self.fila_manual,
                     'ultimo_envio_grupo': self.ultimo_envio_grupo
                 }, f, ensure_ascii=False)
         except Exception as e:
             print(f'Aviso: Não foi possível salvar o estado: {e}')
+            
+    def _remover_da_fila(self, candidato):
+        """Remove o candidato da fila_lifestyle ou fila_manual baseando-se no ID do produto."""
+        produto_id = candidato.get('produto', {}).get('id')
+        if not produto_id:
+            return
+            
+        for i, item in enumerate(self.fila_lifestyle):
+            if item.get('produto', {}).get('id') == produto_id:
+                self.fila_lifestyle.pop(i)
+                print(f'🗑️ Removido da fila_lifestyle: {produto_id}')
+                return
+                
+        for i, item in enumerate(self.fila_manual):
+            if item.get('produto', {}).get('id') == produto_id:
+                self.fila_manual.pop(i)
+                print(f'🗑️ Removido da fila_manual: {produto_id}')
+                return
     
     def executar_busca(self):
         """Executa uma busca completa"""
@@ -219,16 +254,25 @@ class PromotionBot:
                         if produto_com_ia:
                             candidato['produto'] = produto_com_ia
                         
-                        # Log se não tem enhancedImageUrl (foto lifestyle) — mas NÃO bloqueia
-                        if not candidato['produto'].get('enhancedImageUrl'):
-                            print(f"ℹ️ Produto sem foto lifestyle — usará imageUrl padrão: {candidato['produto'].get('name')[:50]}")
+                        candidato['added_at'] = time.time()
                         
-                        # ADICIONA à fila — mantém produtos de ciclos anteriores (publicação a cada 5 min)
-                        self.fila_grupo.append(candidato)
+                        enhanced = candidato['produto'].get('enhancedImageUrl')
+                        if enhanced and 'placeholder' not in enhanced:
+                            self.fila_lifestyle.append(candidato)
+                            print(f'🟢 → Fila LIFESTYLE: {candidato["produto"].get("name")[:50]}')
+                        else:
+                            self.fila_sem_lifestyle.append(candidato)
+                            print(f'🟡 → Fila SEM LIFESTYLE (aguardando admin): {candidato["produto"].get("name")[:50]}')
+                        
                         produtos_adicionados += 1
                     
+                    # Limitar tamanho das filas
+                    if len(self.fila_lifestyle) > 20: self.fila_lifestyle = self.fila_lifestyle[:20]
+                    if len(self.fila_manual) > 20: self.fila_manual = self.fila_manual[:20]
+                    if len(self.fila_sem_lifestyle) > 30: self.fila_sem_lifestyle = self.fila_sem_lifestyle[:30]
+                    
                     self._save_state()
-                    print(f'📥 {produtos_adicionados} produto(s) adicionado(s) à fila. Total na fila: {len(self.fila_grupo)} produto(s).')
+                    print(f'📥 {produtos_adicionados} produto(s) processado(s) nas filas.')
                 else:
                     print('\nℹ️ Nenhum produto do ciclo atende aos critérios (< R$ 300 com links). Silenciando Telegram neste ciclo.')
             
@@ -261,7 +305,7 @@ class PromotionBot:
             self._save_state()
             
             # 9. NÃO processar a fila aqui - deixar o agendamento fazer isso a cada 5 min
-            # A fila será processada pelo schedule.every(1).minutes.do(self.publicar_fila_grupo)
+            # A fila será processada pelo schedule.every(1).minutes.do(self.publicar_fila_telegram)
             
             print(f'\n✅ Busca concluída e estado salvo!')
             
@@ -280,64 +324,40 @@ class PromotionBot:
         # Agendar execuções
         schedule.every(SEARCH_INTERVAL_MINUTES).minutes.do(self.executar_busca)
         # Agendar verificações da fila do grupo a cada 1 minuto (ele respeitará o intervalo de 5 min internamente)
-        schedule.every(1).minutes.do(self.publicar_fila_grupo)
+        schedule.every(1).minutes.do(self.publicar_fila_telegram)
         
         # Loop principal
         while True:
             schedule.run_pending()
             time.sleep(60)
             
-    def publicar_fila_grupo(self):
-        """Publica a melhor promoção da fila no grupo respeitando o intervalo de 5 minutos"""
+    def publicar_fila_telegram(self):
+        """Publica a promoção mais recente da fila lifestyle/manual respeitando intervalo de 5 minutos"""
         agora = time.time()
         # Permitir envio se já se passaram 5 minutos (300 segundos) desde o último envio
         if agora - self.ultimo_envio_grupo < 300:
             return
 
-        if not self.fila_grupo:
+        # Unir fila_lifestyle + fila_manual
+        todos_com_lifestyle = self.fila_lifestyle + self.fila_manual
+
+        if not todos_com_lifestyle:
+            print('⏳ Sem produtos com foto lifestyle na fila — aguardando')
             return
 
-        print(f'\n⏰ Processando fila do grupo ({len(self.fila_grupo)} itens)...')
+        print(f'\n⏰ Processando fila do Telegram ({len(todos_com_lifestyle)} itens com lifestyle)...')
         
-        # Função para calcular pontuação/desconto
-        def get_score(item):
-            score = 0
-            try:
-                p = item['produto'].get('price')
-                o = item['produto'].get('originalPrice')
-                if p is not None and o is not None:
-                    p_float = float(p)
-                    o_float = float(o)
-                    if o_float > p_float and o_float > 0:
-                        score += ((o_float - p_float) / o_float) * 100  # 0 a 100
-            except:
-                pass
-                
-            # Bônus por nota da IA (0 a 10 vira 0 a 10)
-            ai_score = item['produto'].get('aiScore')
-            if ai_score is not None:
-                try:
-                    score += float(ai_score)
-                except:
-                    pass
-                    
-            return score
-            
-        # Ordenar a fila pelas melhores promoções (maior score: desconto + IA)
-        self.fila_grupo.sort(key=get_score, reverse=True)
+        # Ordenar por 'added_at' decrescente (mais recente primeiro)
+        todos_com_lifestyle.sort(key=lambda x: x.get('added_at', 0), reverse=True)
         
         # Tentar pegar o próximo item válido (produto ainda existe e está ativo no banco)
         melhor_item = None
-        itens_removidos = 0
-        while self.fila_grupo:
-            candidato = self.fila_grupo.pop(0)
+        
+        for candidato in todos_com_lifestyle:
             produto_id = candidato.get('produto', {}).get('id')
-            
             if not produto_id:
-                print(f'⚠️ Item sem ID na fila — descartando.')
-                itens_removidos += 1
                 continue
-            
+                
             # Verificar se o produto ainda existe e está ativo no banco
             resultado = self.api.buscar_produto(produto_id)
             if resultado and resultado.get('success'):
@@ -353,29 +373,23 @@ class PromotionBot:
                     break
                 else:
                     print(f'⚠️ Produto {produto_id} com status "{status}" — descartando da fila.')
-                    itens_removidos += 1
+                    self._remover_da_fila(candidato)
             else:
                 print(f'🗑️ Produto {produto_id} não encontrado no banco (foi deletado) — descartando da fila.')
-                itens_removidos += 1
-        
-        if itens_removidos > 0:
-            print(f'🧹 {itens_removidos} produto(s) removido(s) da fila por não existirem mais no banco.')
-            self._save_state()
-        
+                self._remover_da_fila(candidato)
+
         if not melhor_item:
-            print('📭 Nenhum produto válido na fila para publicar agora.')
+            print('📭 Nenhum produto válido nas filas com lifestyle para publicar agora.')
             return
-        
-        print(f'⭐ Publicando melhor promoção no grupo: {melhor_item["produto"].get("name")[:50]} (Score/Desconto: {get_score(melhor_item):.1f})')
+
+        # Remover da respectiva fila original
+        self._remover_da_fila(melhor_item)
+
+        print(f'📢 Publicando promoção mais recente: {melhor_item["produto"].get("name")[:50]}')
         
         self.telegram.enviar_sync('publicar_grupo', melhor_item)
         
         self.ultimo_envio_grupo = agora
-        
-        # Limitar o tamanho da fila para não crescer infinitamente
-        if len(self.fila_grupo) > 50:
-            self.fila_grupo = self.fila_grupo[:50]
-            
         self._save_state()
     
     def iniciar_modo_continuo(self):
@@ -392,7 +406,7 @@ class PromotionBot:
                 ultimo_search = time.time()
                 print(f'\n⏳ Aguardando {SEARCH_INTERVAL_MINUTES} minutos para a próxima busca...\n')
             
-            self.publicar_fila_grupo()
+            self.publicar_fila_telegram()
             time.sleep(60)
 
 

@@ -389,15 +389,22 @@ export async function POST(request: Request) {
             });
             
             // Disparar publicação no Telegram (assíncrono, não aguarda)
-            publishToGroup({
+            const pToPublish = {
               ...existingProduct,
               price: body.price,
               originalPrice: body.originalPrice || existingProduct.originalPrice,
               dropPercent: Math.round(dropPercent * 10) / 10,
               coupons: coupons.map(c => ({ code: c.code, discount: c.discount }))
-            }, platform, affiliateLink).catch(err => {
-              console.error('[Webhook] Erro ao publicar produto:', err);
-            });
+            };
+            
+            const lifestyleImg1 = pToPublish.enhancedImageUrl;
+            if (lifestyleImg1 && !lifestyleImg1.includes('placeholder') && lifestyleImg1.trim() !== '') {
+              publishToGroup(pToPublish, platform, affiliateLink).catch(err => {
+                console.error('[Webhook] Erro ao publicar produto:', err);
+              });
+            } else {
+              console.log(`[Webhook] Preço atualizado, mas sem foto lifestyle - Pulando Telegram: ${pToPublish.name}`);
+            }
           }
           
           // Disparar alertas de preço
@@ -778,13 +785,19 @@ export async function POST(request: Request) {
                 aiScore: aiResult.score,
                 aiAnalysis: aiResult.rawJson
               };
-              publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
-                if (success) {
-                  console.log(`🚀 [Telegram Auto-Aprovar] Oferta publicada no grupo: ${product.name}`);
-                }
-              }).catch(e => {
-                console.error(`Falha ao publicar automaticamente no Telegram para o produto ${product.id}:`, e);
-              });
+              
+              const lifestyleImg2 = tempProduct.enhancedImageUrl;
+              if (lifestyleImg2 && !lifestyleImg2.includes('placeholder') && lifestyleImg2.trim() !== '') {
+                publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
+                  if (success) {
+                    console.log(`🚀 [Telegram Auto-Aprovar] Oferta publicada no grupo: ${product.name}`);
+                  }
+                }).catch(e => {
+                  console.error(`Falha ao publicar automaticamente no Telegram para o produto ${product.id}:`, e);
+                });
+              } else {
+                console.log(`[Telegram Auto-Aprovar] Produto sem foto lifestyle - Pulando publicação no grupo: ${product.name}`);
+              }
             }
           } catch (tgErr) {
             console.error('[Webhook] Falha ao extrair links para publicação no Telegram:', tgErr);
@@ -1017,13 +1030,18 @@ export async function PUT(request: Request) {
               }
 
               if (publishLink) {
-                publishToGroup(updatedProduct, activePlatform, publishLink).then((success) => {
-                  if(success) {
-                     console.log(`🚀 [Repost Telegram Lote] Oferta repostada via Webhook (isFixed=true): ${updatedProduct?.name}`);
-                  }
-                }).catch(e => {
-                   console.error(`Falha ao repostar no Telegram para o produto ${updatedProduct?.id}:`, e);
-                });
+                const lifestyleImg3 = updatedProduct?.enhancedImageUrl;
+                if (lifestyleImg3 && !lifestyleImg3.includes('placeholder') && lifestyleImg3.trim() !== '') {
+                  publishToGroup(updatedProduct, activePlatform, publishLink).then((success) => {
+                    if(success) {
+                       console.log(`🚀 [Repost Telegram Lote] Oferta repostada via Webhook (isFixed=true): ${updatedProduct?.name}`);
+                    }
+                  }).catch(e => {
+                     console.error(`Falha ao repostar no Telegram para o produto ${updatedProduct?.id}:`, e);
+                  });
+                } else {
+                  console.log(`[Repost Telegram Lote] Produto sem foto lifestyle - Pulando repost: ${updatedProduct?.name}`);
+                }
               }
             }
           }
@@ -1332,13 +1350,19 @@ export async function PUT(request: Request) {
                     aiScore: aiResult.score,
                     aiAnalysis: aiResult.rawJson
                   };
-                  publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
-                    if (success) {
-                      console.log(`🚀 [Telegram Auto-Aprovar Lote] Oferta publicada no grupo: ${product.name}`);
-                    }
-                  }).catch(e => {
-                    console.error(`Falha ao publicar automaticamente no Telegram em lote para o produto ${product.id}:`, e);
-                  });
+                  
+                  const lifestyleImg4 = tempProduct.enhancedImageUrl;
+                  if (lifestyleImg4 && !lifestyleImg4.includes('placeholder') && lifestyleImg4.trim() !== '') {
+                    publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
+                      if (success) {
+                        console.log(`🚀 [Telegram Auto-Aprovar Lote] Oferta publicada no grupo: ${product.name}`);
+                      }
+                    }).catch(e => {
+                      console.error(`Falha ao publicar automaticamente no Telegram em lote para o produto ${product.id}:`, e);
+                    });
+                  } else {
+                    console.log(`[Telegram Auto-Aprovar Lote] Produto sem foto lifestyle - Pulando publicação: ${product.name}`);
+                  }
                 }
               } catch (tgErr) {
                 console.error('[Webhook Batch] Falha ao extrair links para publicação no Telegram:', tgErr);

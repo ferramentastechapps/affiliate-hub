@@ -547,29 +547,48 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             preco = scraped_data.get('price')
             print(f"💰 Preço atualizado do scraper: R$ {preco}")
 
-        # Pegar a foto original se a mensagem tiver foto, senão usa a do scraper
-        foto_url = None
+        # Determinar foto do produto (fundo branco pro site, lifestyle pro Telegram)
+        foto_url_site = None
+        foto_lifestyle_admin = None
+        
         if update.message.photo:
             foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
-            foto_url = foto_file.file_path
-            print(f"📸 Foto da mensagem capturada: {foto_url}")
-        elif scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
-            foto_url = scraped_data.get('imageUrl')
-            print(f"📸 Foto do scraper: {foto_url}")
-
-        # Se ainda não temos imagem, tenta buscar no DuckDuckGo pelo nome do produto
-        if not foto_url and nome and nome != 'Produto Encontrado':
-            try:
-                print(f"🔍 Imagem não encontrada no scraper/mensagem, buscando no DuckDuckGo para: {nome}")
-                import urllib.parse
-                images_resp = requests.get(f"http://127.0.0.1:3005/api/scrape/images?q={urllib.parse.quote(nome)}", timeout=15)
-                if images_resp.status_code == 200:
-                    images_data = images_resp.json()
-                    if images_data and len(images_data) > 0:
-                        foto_url = images_data[0].get('image')
-                        print(f"✅ Foto encontrada via DuckDuckGo: {foto_url}")
-            except Exception as e:
-                print(f"⚠️ Erro ao buscar imagem no DuckDuckGo: {e}")
+            foto_lifestyle_admin = foto_file.file_path
+            print(f"📸 Foto enviada (Lifestyle): {foto_lifestyle_admin}")
+            
+            # Buscar fundo branco via scraper para o site
+            if scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
+                foto_url_site = scraped_data.get('imageUrl')
+                print(f"📸 Foto fundo branco do scraper: {foto_url_site}")
+            else:
+                try:
+                    print(f"🔍 Tentando buscar fundo branco com scrape dedicado: {link_para_scraping}")
+                    scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link_para_scraping}, timeout=60)
+                    if scrape_resp.status_code == 200:
+                        s_data = scrape_resp.json()
+                        if s_data.get('imageUrl') and 'placeholder' not in s_data.get('imageUrl'):
+                            foto_url_site = s_data.get('imageUrl')
+                except Exception as e:
+                    print(f"⚠️ Erro ao buscar fundo branco: {e}")
+                    
+            if not foto_url_site:
+                foto_url_site = foto_lifestyle_admin
+                
+        else:
+            # Sem foto enviada
+            if scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
+                foto_url_site = scraped_data.get('imageUrl')
+            
+            if not foto_url_site and nome and nome != 'Produto Encontrado':
+                try:
+                    import urllib.parse
+                    images_resp = requests.get(f"http://127.0.0.1:3005/api/scrape/images?q={urllib.parse.quote(nome)}", timeout=15)
+                    if images_resp.status_code == 200:
+                        images_data = images_resp.json()
+                        if images_data and len(images_data) > 0:
+                            foto_url_site = images_data[0].get('image')
+                except Exception as e:
+                    pass
             
         # Determinar categoria
         from metadata_utils import extrair_categoria_granular
@@ -589,7 +608,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             'name': nome,
             'category': categoria,
             'description': descricao,
-            'imageUrl': foto_url or '/placeholder.webp',
+            'imageUrl': foto_url_site or '/placeholder.webp',
             'price': preco,
             'originalPrice': None,
             'status': 'active',
@@ -599,6 +618,9 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             },
             'storeName': platform.capitalize()
         }
+        if foto_lifestyle_admin:
+            produto_data['enhancedImageUrl'] = foto_lifestyle_admin
+            
         if coupon_link:
             produto_data['couponLink'] = coupon_link
             
@@ -617,29 +639,38 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             final_links = produto_info.get('links', {}) or {}
             final_affiliate_link = final_links.get(platform) or link
             
-            # Publicar diretamente no canal/grupo do Telegram
-            try:
-                await publicar_no_grupo(
-                    context, 
-                    produto_info, 
-                    platform, 
-                    final_affiliate_link, 
-                    update.message.photo[-1].file_id if update.message.photo else None
+            import time
+            from main import PromotionBot
+            bot_instance = PromotionBot()
+            
+            candidato = {
+                'produto': produto_info,
+                'platform': platform,
+                'affiliate_link': final_affiliate_link,
+                'added_at': time.time()
+            }
+            
+            if foto_lifestyle_admin:
+                bot_instance.fila_manual.append(candidato)
+                bot_instance._save_state()
+                await msg_status.edit_text(
+                    f"✅ <b>Produto adicionado à fila manual com foto lifestyle!</b>\n\n"
+                    f"📦 <b>{nome[:100]}</b>\n"
+                    f"💰 Preço: R$ {preco if preco else 'N/A'}\n"
+                    f"🔗 {final_affiliate_link}\n\n"
+                    f"🚀 Será publicado na próxima janela de 5 min.",
+                    parse_mode='HTML'
                 )
-                print(f"📢 Publicado automaticamente no grupo do Telegram!")
-            except Exception as e:
-                print(f"⚠️ Erro ao publicar automaticamente no grupo: {e}")
-                
-            await msg_status.edit_text(
-                f"✅ <b>Oferta publicada com sucesso!</b>\n\n"
-                f"📦 <b>{nome[:100]}</b>\n"
-                f"💰 Preço: R$ {preco if preco else 'N/A'}\n"
-                f"📂 Categoria: {categoria}\n"
-                f"🏪 Loja: <b>{platform.capitalize()}</b>\n"
-                f"🔗 Link de Afiliado: {final_affiliate_link}\n\n"
-                f"🚀 Publicado no grupo e cadastrado no site como ativo!",
-                parse_mode='HTML'
-            )
+            else:
+                bot_instance.fila_sem_lifestyle.append(candidato)
+                bot_instance._save_state()
+                await msg_status.edit_text(
+                    f"⚠️ <b>Produto adicionado à fila sem foto lifestyle.</b>\n\n"
+                    f"📦 <b>{nome[:100]}</b>\n\n"
+                    f"Use /pendentes para ver os produtos aguardando foto.\n"
+                    f"Use /foto {produto_id} [URL] para adicionar uma foto e liberar para publicação.",
+                    parse_mode='HTML'
+                )
         else:
             erro = resultado.get('error', 'Erro desconhecido') if resultado else "Sem resposta da API"
             print(f"❌ Falha ao salvar produto: {erro}")
@@ -872,6 +903,121 @@ async def handle_tiktok_command(update: Update, context: ContextTypes.DEFAULT_TY
         print(f'❌ Erro ao adicionar produto TikTok: {e}')
         await msg_status.edit_text(f"❌ Erro: {str(e)}")
 
+async def handle_pendentes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Lista produtos na fila sem lifestyle"""
+    if str(update.effective_chat.id) != str(TELEGRAM_CHAT_ID):
+        return
+        
+    from main import PromotionBot
+    bot_instance = PromotionBot()
+    
+    fila = bot_instance.fila_sem_lifestyle
+    if not fila:
+        await update.message.reply_text("✅ Nenhum produto aguardando foto lifestyle.", parse_mode='HTML')
+        return
+        
+    import time
+    agora = time.time()
+    
+    linhas = ["🟡 <b>Produtos aguardando foto lifestyle (Top 10)</b>\n"]
+    
+    # Ordenar por mais recente e pegar os 10 primeiros
+    itens = sorted(fila, key=lambda x: x.get('added_at', 0), reverse=True)[:10]
+    
+    for i, item in enumerate(itens, 1):
+        produto_id = item.get('produto', {}).get('id', 'N/A')
+        nome = item.get('produto', {}).get('name', 'Produto')[:40]
+        added_at = item.get('added_at', 0)
+        
+        diff_min = int((agora - added_at) / 60)
+        if diff_min < 60:
+            tempo = f"há {diff_min} min"
+        else:
+            h = diff_min // 60
+            m = diff_min % 60
+            tempo = f"há {h}h {m}m"
+            
+        linhas.append(f"#{i} | ID: <code>{produto_id}</code> | {nome}... | adicionado {tempo}")
+        
+    linhas.append("\n📸 Use /foto [ID] [URL] para adicionar foto e mover para publicação.")
+    await update.message.reply_text("\n".join(linhas), parse_mode='HTML')
+
+async def handle_foto_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/foto [ID] [URL_OPCIONAL]"""
+    if str(update.effective_chat.id) != str(TELEGRAM_CHAT_ID):
+        return
+        
+    args = context.args or []
+    if not args and not update.message.caption:
+        await update.message.reply_text("❌ Informe o ID do produto. Exemplo: /foto abc123 https://...")
+        return
+        
+    produto_id = None
+    if not args and update.message.caption:
+        # Se for foto com legenda e o comando for /foto
+        caption_parts = update.message.caption.split()
+        if len(caption_parts) > 1:
+            produto_id = caption_parts[1]
+    elif args:
+        produto_id = args[0]
+        
+    if not produto_id:
+        await update.message.reply_text("❌ Informe o ID do produto. Exemplo: /foto abc123")
+        return
+        
+    from main import PromotionBot
+    bot_instance = PromotionBot()
+    
+    # Buscar na fila
+    candidato = None
+    for item in bot_instance.fila_sem_lifestyle:
+        if item.get('produto', {}).get('id') == produto_id:
+            candidato = item
+            break
+            
+    if not candidato:
+        await update.message.reply_text("❌ Produto não encontrado na fila sem lifestyle. Use /pendentes para ver os disponíveis.")
+        return
+        
+    foto_url = None
+    if update.message.photo:
+        foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
+        foto_url = foto_file.file_path
+    elif len(args) > 1:
+        foto_url = args[1]
+    elif update.message.reply_to_message and update.message.reply_to_message.photo:
+        foto_file = await context.bot.get_file(update.message.reply_to_message.photo[-1].file_id)
+        foto_url = foto_file.file_path
+        
+    if not foto_url:
+        await update.message.reply_text("❌ Envie uma foto ou informe a URL da imagem lifestyle. Exemplo: /foto abc123 https://...")
+        return
+        
+    # Chamar API para atualizar o produto
+    try:
+        import requests
+        from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY
+        api_url = f"{AFFILIATE_HUB_URL.rstrip('/')}/api/products/{produto_id}"
+        resp = requests.patch(api_url, json={'enhancedImageUrl': foto_url}, headers={'Authorization': f'Bearer {AFFILIATE_HUB_API_KEY}'})
+        if resp.status_code != 200:
+            print(f"⚠️ Aviso: falha ao atualizar API {resp.status_code}")
+    except Exception as e:
+        print(f"⚠️ Erro ao chamar API: {e}")
+        
+    # Remover da fila sem lifestyle
+    bot_instance.fila_sem_lifestyle.remove(candidato)
+    
+    # Atualizar candidato e mover para lifestyle
+    import time
+    candidato['produto']['enhancedImageUrl'] = foto_url
+    candidato['added_at'] = time.time()
+    
+    bot_instance.fila_lifestyle.append(candidato)
+    bot_instance._save_state()
+    
+    nome = candidato.get('produto', {}).get('name', '')[:30]
+    await update.message.reply_text(f"✅ Foto lifestyle associada! '{nome}...' movido para a fila de publicação. Será postado na próxima janela de 5 min.")
+
 async def handle_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de ajuda"""
     help_text = """
@@ -935,6 +1081,8 @@ def run_listener():
     app.add_handler(CommandHandler("aprovar", handle_aprovar_command))
     app.add_handler(CommandHandler("rejeitar", handle_rejeitar_command))
     app.add_handler(CommandHandler("tiktok", handle_tiktok_command))
+    app.add_handler(CommandHandler("pendentes", handle_pendentes_command))
+    app.add_handler(CommandHandler("foto", handle_foto_command))
     app.add_handler(CommandHandler("help", handle_help_command))
     app.add_handler(CommandHandler("start", handle_help_command))
 
