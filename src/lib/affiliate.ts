@@ -8,6 +8,7 @@ import crypto from 'crypto';
 interface UrlDetails {
   rawUrl: string;
   cleanUrl: string;
+  baseUrl?: string;
   hostname: string;
   path: string;
   asin?: string;
@@ -204,7 +205,12 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
             } else {
               // É um MLB ID, montar URL canônica
               const mlbId = extracted.replace('-', '');
-              let productUrl = `https://produto.mercadolivre.com.br/${mlbId}`;
+              // Preservar formato catálogo se o link original era /p/MLB
+              const isCatalog = url.toLowerCase().includes('/p/mlb') || 
+                                (extracted.toLowerCase().startsWith('http') && extracted.toLowerCase().includes('/p/mlb'));
+              let productUrl = isCatalog
+                ? `https://www.mercadolivre.com.br/p/${mlbId}`
+                : `https://produto.mercadolivre.com.br/${mlbId}`;
               if (originalTitle) {
                 productUrl = await resolveUrlSlug(productUrl);
                 if (!isUrlTitleMatch(originalTitle, productUrl)) {
@@ -336,8 +342,14 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
               const title = firstPolycard?.components?.find((comp: any) => comp.type === 'title')?.title?.text;
               
               if (mlbId) {
+                const mlbIdClean = mlbId.replace('-', '');
+                const permalink = firstPolycard?.metadata?.permalink || '';
+                const isCatalog = permalink.includes('/p/MLB') || permalink.includes('/p/mlb');
+                
                 // Preferir sempre a URL direta com o ID MLB real para consistência e deduplicação no banco de dados
-                let mlbUrl = `https://produto.mercadolivre.com.br/${mlbId.replace('-', '')}`;
+                let mlbUrl = isCatalog
+                  ? `https://www.mercadolivre.com.br/p/${mlbIdClean}`
+                  : `https://produto.mercadolivre.com.br/${mlbIdClean}`;
                 
                 if (originalTitle) {
                   let matched = false;
@@ -376,7 +388,13 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
       // Estratégia 2.2: Regex fallback do HTML
       const idMatch = html.match(/"metadata"\s*:\s*\{[^}]*?"id"\s*:\s*"(MLB\d+)"/i);
       if (idMatch?.[1]) {
-        let mlbUrl = `https://produto.mercadolivre.com.br/${idMatch[1]}`;
+        const mlbIdClean = idMatch[1].replace('-', '');
+        // Se o contexto HTML capturou um /p/MLB, respeitar o formato catálogo
+        const isCatalog = (idMatch[0] || '').includes('/p/MLB') || 
+                          (idMatch[0] || '').includes('/p/mlb');
+        let mlbUrl = isCatalog
+          ? `https://www.mercadolivre.com.br/p/${mlbIdClean}`
+          : `https://produto.mercadolivre.com.br/${mlbIdClean}`;
         if (originalTitle) {
           mlbUrl = await resolveUrlSlug(mlbUrl);
           if (!isUrlTitleMatch(originalTitle, mlbUrl)) {
@@ -427,7 +445,9 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
       // Estratégia 3: regex direto no HTML (funciona se o ML não bloquear)
       const regexMatch = html.match(/(https?:\/\/(?:produto|www)\.mercadolivre\.com\.br\/(?:p\/MLB-?\d+|MLB-?\d+)[^"'\s\\<>]*)/i);
       if (regexMatch?.[1]) {
-        let productUrl = regexMatch[1].replace(/&amp;/g, '&').split('?')[0];
+        // Preservar query string estrutural — apenas decodificar HTML entities
+        let productUrl = regexMatch[1].replace(/&amp;/g, '&');
+        productUrl = productUrl.split('#')[0];
         if (originalTitle) {
           productUrl = await resolveUrlSlug(productUrl);
           if (!isUrlTitleMatch(originalTitle, productUrl)) {
@@ -687,12 +707,15 @@ export function extractUrlDetails(urlStr: string): UrlDetails {
     const hostname = parsed.hostname;
     const path = parsed.pathname;
     
-    // Limpar parâmetros de busca para obter a cleanUrl
-    const cleanUrl = `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`;
+    // cleanUrl: remove apenas parâmetros de tracking, preserva parâmetros estruturais
+    // baseUrl: sem query string (usado para plataformas como Amazon/Magalu que reconstroem a URL)
+    const baseUrl = `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`;
+    const cleanUrl = cleanTrackingParams(urlStr);
     
     const details: UrlDetails = {
       rawUrl: urlStr,
       cleanUrl,
+      baseUrl,
       hostname,
       path,
     };
