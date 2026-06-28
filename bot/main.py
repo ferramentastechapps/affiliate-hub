@@ -219,10 +219,9 @@ class PromotionBot:
                         if produto_com_ia:
                             candidato['produto'] = produto_com_ia
                         
-                        # Verificar se tem enhancedImageUrl (foto lifestyle) após o processamento da IA
+                        # Log se não tem enhancedImageUrl (foto lifestyle) — mas NÃO bloqueia
                         if not candidato['produto'].get('enhancedImageUrl'):
-                            print(f"⚠️ Produto sem foto lifestyle após aguardar IA - pulando: {candidato['produto'].get('name')[:50]}")
-                            continue
+                            print(f"ℹ️ Produto sem foto lifestyle — usará imageUrl padrão: {candidato['produto'].get('name')[:50]}")
                         
                         # ADICIONA à fila — mantém produtos de ciclos anteriores (publicação a cada 5 min)
                         self.fila_grupo.append(candidato)
