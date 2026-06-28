@@ -10,12 +10,17 @@ const prisma = new PrismaClient({
 
 async function main() {
   const result = await prisma.$queryRawUnsafe(`
-    SELECT "generatedAffiliateUrl"
-    FROM "ProductLink"
-    WHERE platform = 'mercadoLivre'
-    AND "generatedAffiliateUrl" LIKE '%matt_tool%'
-    ORDER BY "createdAt" DESC
-    LIMIT 1;
+    SELECT 
+      p.name as title,
+      p.status,
+      p."createdAt",
+      p."updatedAt",
+      pl."sourceUrl",
+      pl."generatedAffiliateUrl"
+    FROM "ProductLink" pl
+    JOIN "Product" p ON p.id = pl."productId"
+    WHERE pl."generatedAffiliateUrl" LIKE '%MLB4381407875%'
+       OR pl."sourceUrl" LIKE '%MLB4381407875%';
   `);
   console.log(JSON.stringify(result, null, 2));
 }

@@ -18,6 +18,37 @@ interface UrlDetails {
 /**
  * Funções auxiliares para limpeza e comparação de títulos de ofertas
  */
+/**
+ * Normaliza e valida permalinks extraídos de vitrines do ML
+ */
+function normalizeMlUrl(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  let urlStr = raw;
+  
+  // Prefixar com https se faltar
+  if (!urlStr.startsWith('http')) {
+    urlStr = `https://${urlStr.replace(/^\/\//, '')}`;
+  }
+  
+  const lowerUrl = urlStr.toLowerCase();
+  
+  // Rejeitar URLs que ainda apontam para vitrines / logins
+  if (lowerUrl.includes('/social/') || lowerUrl.includes('/affiliate-profile') || 
+      lowerUrl.includes('forceinapp') || lowerUrl.includes('/gz/') || 
+      lowerUrl.includes('mercadolivre.com.br/social')) {
+    return null;
+  }
+  
+  // Aceitar se tiver algum formato de produto válido
+  if (lowerUrl.includes('/up/mlbu') || lowerUrl.includes('/p/mlb') || 
+      lowerUrl.includes('produto.mercadolivre.com.br/mlb') || 
+      lowerUrl.match(/mercadolivre\.com\.br\/.*\/mlb/)) {
+    return urlStr;
+  }
+  
+  return null;
+}
+
 function cleanTitle(title: string): string[] {
   const stopWords = new Set(['de', 'para', 'com', 'o', 'a', 'os', 'as', 'um', 'uma', 'em', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas']);
   return title
@@ -277,16 +308,29 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
             const permalink = item?.permalink || item?.url || item?.item_url || item?.product_url || item?.link;
             const title = item?.title;
             if (permalink && (permalink.includes('mercadolivre') || permalink.includes('MLB'))) {
-              let cleanPermalink = permalink.split('?')[0];
-              if (originalTitle) {
-                cleanPermalink = await resolveUrlSlug(cleanPermalink);
-                if (title && !isTitleMatch(originalTitle, title) && !isUrlTitleMatch(originalTitle, cleanPermalink)) {
-                  console.warn(`[Affiliate] Descartando produto da API ML por incompatibilidade de título: "${title}" vs original "${originalTitle}"`);
-                  return 'VITRINE_INVALIDA';
+              const normalized = normalizeMlUrl(permalink);
+              if (normalized) {
+                let cleanPermalink: string;
+                try {
+                  const u = new URL(normalized);
+                  const safe = new URL(`${u.protocol}//${u.host}${u.pathname}`);
+                  const pdpFilters = new URL(permalink.startsWith('http') ? permalink : `https://${permalink}`).searchParams.get('pdp_filters');
+                  if (pdpFilters) safe.searchParams.set('pdp_filters', pdpFilters);
+                  cleanPermalink = safe.toString();
+                } catch {
+                  cleanPermalink = normalized;
                 }
+                
+                if (originalTitle) {
+                  cleanPermalink = await resolveUrlSlug(cleanPermalink);
+                  if (title && !isTitleMatch(originalTitle, title) && !isUrlTitleMatch(originalTitle, cleanPermalink)) {
+                    console.warn(`[Affiliate] Descartando produto da API ML por incompatibilidade de título: "${title}" vs original "${originalTitle}"`);
+                    return 'VITRINE_INVALIDA';
+                  }
+                }
+                console.log(`[Affiliate] 💥 Vitrine destruída via API ML (ref=${refId ?? 'n/a'})! Produto: ${cleanPermalink}`);
+                return cleanPermalink;
               }
-              console.log(`[Affiliate] 💥 Vitrine destruída via API ML (ref=${refId ?? 'n/a'})! Produto: ${cleanPermalink}`);
-              return cleanPermalink;
             }
             // Verificar se a resposta tem uma lista mesmo com ref (alguns endpoints retornam array)
             if (Array.isArray(json) && json.length > 0) {
@@ -294,16 +338,29 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
               const firstPermalink = firstItem?.permalink || firstItem?.url || firstItem?.item_url;
               const firstTitle = firstItem?.title;
               if (firstPermalink) {
-                let cleanFirst = firstPermalink.split('?')[0];
-                if (originalTitle) {
-                  cleanFirst = await resolveUrlSlug(cleanFirst);
-                  if (firstTitle && !isTitleMatch(originalTitle, firstTitle) && !isUrlTitleMatch(originalTitle, cleanFirst)) {
-                    console.warn(`[Affiliate] Descartando produto da API ML (array) por incompatibilidade de título: "${firstTitle}" vs original "${originalTitle}"`);
-                    return 'VITRINE_INVALIDA';
+                const normalized = normalizeMlUrl(firstPermalink);
+                if (normalized) {
+                  let cleanFirst: string;
+                  try {
+                    const u = new URL(normalized);
+                    const safe = new URL(`${u.protocol}//${u.host}${u.pathname}`);
+                    const pdpFilters = new URL(firstPermalink.startsWith('http') ? firstPermalink : `https://${firstPermalink}`).searchParams.get('pdp_filters');
+                    if (pdpFilters) safe.searchParams.set('pdp_filters', pdpFilters);
+                    cleanFirst = safe.toString();
+                  } catch {
+                    cleanFirst = normalized;
                   }
+                  
+                  if (originalTitle) {
+                    cleanFirst = await resolveUrlSlug(cleanFirst);
+                    if (firstTitle && !isTitleMatch(originalTitle, firstTitle) && !isUrlTitleMatch(originalTitle, cleanFirst)) {
+                      console.warn(`[Affiliate] Descartando produto da API ML (array) por incompatibilidade de título: "${firstTitle}" vs original "${originalTitle}"`);
+                      return 'VITRINE_INVALIDA';
+                    }
+                  }
+                  console.log(`[Affiliate] 💥 Vitrine destruída via API ML (array, ref=${refId ?? 'n/a'})! Produto: ${cleanFirst}`);
+                  return cleanFirst;
                 }
-                console.log(`[Affiliate] 💥 Vitrine destruída via API ML (array, ref=${refId ?? 'n/a'})! Produto: ${cleanFirst}`);
-                return cleanFirst;
               }
             }
           } else {
@@ -343,13 +400,30 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
               
               if (mlbId) {
                 const mlbIdClean = mlbId.replace('-', '');
-                const permalink = firstPolycard?.metadata?.permalink || '';
-                const isCatalog = permalink.includes('/p/MLB') || permalink.includes('/p/mlb');
                 
-                // Preferir sempre a URL direta com o ID MLB real para consistência e deduplicação no banco de dados
-                let mlbUrl = isCatalog
-                  ? `https://www.mercadolivre.com.br/p/${mlbIdClean}`
-                  : `https://produto.mercadolivre.com.br/${mlbIdClean}`;
+                // Tentar usar a URL canônica do polycard antes de reconstruir
+                const rawUrl = firstPolycard?.metadata?.url || firstPolycard?.metadata?.permalink || '';
+                const canonicalUrl = normalizeMlUrl(rawUrl);
+                
+                let mlbUrl: string;
+                if (canonicalUrl) {
+                  // Tem URL canônica válida — usar diretamente, adicionar pdp_filters se não tiver
+                  try {
+                    const u = new URL(canonicalUrl);
+                    if (!u.searchParams.has('pdp_filters')) {
+                      u.searchParams.set('pdp_filters', `item_id:${mlbId}`);
+                    }
+                    mlbUrl = u.toString();
+                  } catch {
+                    mlbUrl = canonicalUrl;
+                  }
+                } else {
+                  // Fallback: reconstruir por ID (comportamento anterior)
+                  const isCatalog = rawUrl.includes('/p/MLB') || rawUrl.includes('/p/mlb');
+                  mlbUrl = isCatalog
+                    ? `https://www.mercadolivre.com.br/p/${mlbIdClean}`
+                    : `https://produto.mercadolivre.com.br/${mlbIdClean}`;
+                }
                 
                 if (originalTitle) {
                   let matched = false;
@@ -386,15 +460,38 @@ export async function resolveRedirect(url: string, originalTitle?: string): Prom
       }
 
       // Estratégia 2.2: Regex fallback do HTML
+      // Tentar extrair a URL canônica do campo "url" dentro de metadata
+      const urlMatch = html.match(/"metadata"\s*:\s*\{[^}]*?"url"\s*:\s*"([^"]+)"/i);
       const idMatch = html.match(/"metadata"\s*:\s*\{[^}]*?"id"\s*:\s*"(MLB\d+)"/i);
-      if (idMatch?.[1]) {
-        const mlbIdClean = idMatch[1].replace('-', '');
-        // Se o contexto HTML capturou um /p/MLB, respeitar o formato catálogo
-        const isCatalog = (idMatch[0] || '').includes('/p/MLB') || 
-                          (idMatch[0] || '').includes('/p/mlb');
-        let mlbUrl = isCatalog
-          ? `https://www.mercadolivre.com.br/p/${mlbIdClean}`
-          : `https://produto.mercadolivre.com.br/${mlbIdClean}`;
+      
+      if (urlMatch?.[1] || idMatch?.[1]) {
+        const mlbId = idMatch?.[1] || '';
+        const rawUrl = urlMatch?.[1]?.replace(/\\\//g, '/') || '';  // decodificar barras escapadas
+        const canonicalUrl = normalizeMlUrl(rawUrl);
+      
+        let mlbUrl: string;
+        if (canonicalUrl) {
+          // URL canônica válida encontrada no JSON
+          try {
+            const u = new URL(canonicalUrl);
+            if (mlbId && !u.searchParams.has('pdp_filters')) {
+              u.searchParams.set('pdp_filters', `item_id:${mlbId}`);
+            }
+            mlbUrl = u.toString();
+          } catch {
+            mlbUrl = canonicalUrl;
+          }
+        } else if (mlbId) {
+          // Fallback: só tem o ID, reconstruir
+          const mlbIdClean = mlbId.replace('-', '');
+          const isCatalog = (rawUrl).includes('/p/MLB') || (rawUrl).includes('/p/mlb');
+          mlbUrl = isCatalog
+            ? `https://www.mercadolivre.com.br/p/${mlbIdClean}`
+            : `https://produto.mercadolivre.com.br/${mlbIdClean}`;
+        } else {
+          // Nenhum dado útil
+          return 'VITRINE_INVALIDA';
+        }
         if (originalTitle) {
           mlbUrl = await resolveUrlSlug(mlbUrl);
           if (!isUrlTitleMatch(originalTitle, mlbUrl)) {
