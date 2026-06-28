@@ -191,6 +191,12 @@ ${aprovarMsg}
  * Publica a oferta final e aprovada no grupo público de promoções.
  */
 export async function publishToGroup(product: any, platform: string, affiliateLink: string): Promise<boolean> {
+  const lifestyleImage = product.enhancedImageUrl;
+  if (!lifestyleImage || lifestyleImage.includes('placeholder') || lifestyleImage.trim() === '') {
+    console.warn(`[Telegram] ⛔ Produto sem foto lifestyle — publicação bloqueada: ${product.name}`);
+    return false;
+  }
+
   if (!TELEGRAM_PROMO_GROUP_ID) {
     console.warn('[Telegram] TELEGRAM_PROMO_GROUP_ID não configurada!');
     return false;
@@ -325,7 +331,6 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   }
 
   const text = lines.join('\n');
-  const imageUrl = product.enhancedImageUrl || product.imageUrl;
 
-  return sendTelegramMessage(TELEGRAM_PROMO_GROUP_ID, text, imageUrl);
+  return sendTelegramMessage(TELEGRAM_PROMO_GROUP_ID, text, lifestyleImage);
 }

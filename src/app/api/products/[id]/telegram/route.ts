@@ -89,6 +89,14 @@ export async function POST(
       finalPlatform = detectPlatform(finalAffiliateLink) || 'amazon';
     }
 
+    const lifestyleImage = product.enhancedImageUrl;
+    if (!lifestyleImage || lifestyleImage.includes('placeholder') || lifestyleImage.trim() === '') {
+      return NextResponse.json(
+        { success: false, error: "Produto sem foto lifestyle. Adicione uma foto lifestyle antes de publicar no grupo." },
+        { status: 400 }
+      );
+    }
+
     const success = await publishToGroup(product, finalPlatform, finalAffiliateLink);
     if (success) {
       return NextResponse.json({ 
