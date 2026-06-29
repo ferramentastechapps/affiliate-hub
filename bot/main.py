@@ -231,25 +231,21 @@ class PromotionBot:
                     # Pausa de 5 segundos para evitar estourar cota do Gemini (429)
                     time.sleep(5)
                 
-                # Escolher os TOP 3 do lote e ADICIONAR à fila (mantém produtos anteriores)
+                # Processar TODOS os candidatos do lote e ADICIONAR à fila (mantém produtos anteriores)
                 if candidatos_grupo_lote:
                     # Ordenar por score (melhor primeiro)
                     candidatos_grupo_lote.sort(key=lambda x: x['score'], reverse=True)
                     
-                    # Pegar os 3 melhores (ou menos se houver menos de 3)
-                    top3 = candidatos_grupo_lote[:3]
-                    descartados = len(candidatos_grupo_lote) - len(top3)
+                    # Pegar todos os candidatos
+                    candidatos_selecionados = candidatos_grupo_lote
                     
-                    print(f'\n🏆 Top {len(top3)} produtos para Telegram:')
-                    for i, candidato in enumerate(top3, 1):
+                    print(f'\n🏆 Todos os {len(candidatos_selecionados)} produtos selecionados para Telegram:')
+                    for i, candidato in enumerate(candidatos_selecionados, 1):
                         print(f'   {i}. {candidato["produto"].get("name")[:50]}... (score {candidato["score"]})')
-                    
-                    if descartados > 0:
-                        print(f'🗑️ {descartados} produto(s) descartado(s).')
                     
                     # Aguardar IA gerar legenda para cada produto antes de colocar na fila
                     produtos_adicionados = 0
-                    for candidato in top3:
+                    for candidato in candidatos_selecionados:
                         produto_com_ia = wait_for_ai_analysis(self.api, candidato['produto']['id'])
                         if produto_com_ia:
                             candidato['produto'] = produto_com_ia
