@@ -47,6 +47,13 @@ function setEnvKey(content: string, key: string, value: string): string {
   return content + `\n${newLine}`;
 }
 
+const DEFAULT_VALUES: Record<string, string> = {
+  SEARCH_INTERVAL_MINUTES: '15',
+  TELEGRAM_POST_INTERVAL_MINUTES: '5',
+  MIN_QUALITY_SCORE: '30',
+  MIN_DISCOUNT_PERCENT: '20',
+};
+
 export async function GET() {
   const payload = await getAdminPayload();
   if (!payload) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -60,7 +67,7 @@ export async function GET() {
 
   const filtered: Record<string, string> = {};
   for (const key of EDITABLE_KEYS) {
-    filtered[key] = all[key] ?? '';
+    filtered[key] = all[key] || DEFAULT_VALUES[key] || '';
   }
 
   return NextResponse.json({ config: filtered });
