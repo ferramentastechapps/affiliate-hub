@@ -9,7 +9,7 @@ from datetime import datetime
 from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
 from scrapers import PromotionScraper
-from config import SEARCH_INTERVAL_MINUTES
+from config import SEARCH_INTERVAL_MINUTES, TELEGRAM_POST_INTERVAL_MINUTES
 from metadata_utils import enriquecer_produto
 
 import json
@@ -382,7 +382,7 @@ class PromotionBot:
 
         agora = time.time()
         # Permitir envio se já se passaram 5 minutos (300 segundos) desde o último envio
-        if agora - self.ultimo_envio_grupo < 300:
+        if agora - self.ultimo_envio_grupo < (TELEGRAM_POST_INTERVAL_MINUTES * 60):
             return
 
         # Unir fila_lifestyle + fila_manual
