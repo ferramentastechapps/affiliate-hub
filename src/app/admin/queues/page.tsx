@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Camera, PaperPlaneRight, Trash, ArrowsClockwise, Image as ImageIcon, CheckCircle, Warning, Clock } from '@phosphor-icons/react';
+import { Camera, PaperPlaneRight, Trash, ArrowsClockwise, Image as ImageIcon, CheckCircle, Warning, Clock, ArrowSquareOut } from '@phosphor-icons/react';
 
 type QueueItem = {
   produto: any;
@@ -218,6 +218,19 @@ export default function QueuesPage() {
             <h3 className="text-zinc-100 font-medium text-sm line-clamp-2 leading-snug mb-1" title={p.name}>
               {p.name || 'Produto Desconhecido'}
             </h3>
+            
+            {item.affiliate_link && (
+              <a 
+                href={item.affiliate_link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-indigo-400 hover:text-indigo-300 text-xs flex items-center gap-1 mb-2 w-fit"
+                title="Abrir página do produto"
+              >
+                <ArrowSquareOut size={12} />
+                Abrir na loja
+              </a>
+            )}
             
             <div className="flex items-center gap-2 mt-auto">
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 whitespace-nowrap">
