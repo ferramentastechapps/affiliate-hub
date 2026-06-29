@@ -776,10 +776,11 @@ class TelegramNotifier:
             
             try:
                 # Add image URL to the message so whatsapp-engine could potentially use it
+                foto_img = produto.get('enhancedImageUrl') or produto.get('imageUrl')
                 payload = {
                     'message': whatsapp_text,
                     'score': score_wpp,
-                    'imageUrl': imagem if imagem and 'placeholder' not in imagem else None
+                    'imageUrl': foto_img if foto_img and 'placeholder' not in foto_img else None
                 }
                 requests.post(whatsapp_url, json=payload, timeout=5)
                 print(f'✅ Enviado para fila do WhatsApp (Score: {score_wpp})')
