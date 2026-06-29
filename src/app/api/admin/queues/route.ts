@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth-utils';
+import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
 
@@ -7,7 +8,9 @@ const BOT_STATE_PATH = path.join(process.cwd(), 'bot', 'bot_state.json');
 
 export async function GET(request: Request) {
   try {
-    const payload = await verifyToken(request);
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    const payload = sessionToken ? verifyToken(sessionToken) : null;
     if (!payload || payload.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
