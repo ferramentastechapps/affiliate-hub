@@ -301,7 +301,9 @@ export default function QueuesPage() {
 
   const getActiveArray = () => {
     if (!data) return [];
-    return data[activeTab] || [];
+    const arr = data[activeTab] || [];
+    // Ordenar os mais recentes (maior added_at) para aparecerem primeiro
+    return [...arr].sort((a, b) => (b.added_at || 0) - (a.added_at || 0));
   };
 
   const lastPublishDate = data?.ultimo_envio_grupo 

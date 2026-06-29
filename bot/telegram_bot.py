@@ -760,9 +760,18 @@ class TelegramNotifier:
             # --- INTEGRAÇÃO WHATSAPP ---
             import requests
             import os
+            import re
             
             whatsapp_url = os.getenv('WHATSAPP_API_URL', 'http://localhost:3006/send')
-            whatsapp_text = html_to_whatsapp_md(mensagem)
+            
+            w_text = mensagem
+            w_text = re.sub(r'<b>(.*?)</b>', r'*\1*', w_text, flags=re.IGNORECASE)
+            w_text = re.sub(r'<i>(.*?)</i>', r'_\1_', w_text, flags=re.IGNORECASE)
+            w_text = re.sub(r'<s>(.*?)</s>', r'~\1~', w_text, flags=re.IGNORECASE)
+            w_text = re.sub(r'<code>(.*?)</code>', r'```\1```', w_text, flags=re.IGNORECASE)
+            w_text = re.sub(r'<a href=["\']?(.*?)["\']?>(.*?)</a>', r'\2', w_text, flags=re.IGNORECASE)
+            whatsapp_text = re.sub(r'<.*?>', '', w_text)
+            
             score_wpp = produto.get('qualityScore') or 0
             
             try:
