@@ -18,7 +18,7 @@ import {
   Handshake,
   GearSix,
   Brain,
-  ListQueue
+  ListDashes
 } from '@phosphor-icons/react';
 
 export function AdminSidebar() {
@@ -63,7 +63,7 @@ export function AdminSidebar() {
     {
       items: [
         { name: 'Bot', path: '/admin/bot', icon: Robot },
-        { name: 'Filas', path: '/admin/queues', icon: ListQueue },
+        { name: 'Filas', path: '/admin/queues', icon: ListDashes },
         { name: 'IA Criativa', path: '/admin/ai-studio', icon: Brain },
         { name: 'Notificações', path: '/admin/notifications', icon: Bell },
       ]
