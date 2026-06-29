@@ -1,7 +1,7 @@
 import asyncio
 import io
 import requests as _requests
-from telegram import Bot, InputFile
+from telegram import Bot, InputFile, LinkPreviewOptions
 from telegram.error import RetryAfter
 from telegram.constants import ParseMode
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL
@@ -59,6 +59,8 @@ class TelegramNotifier:
         self.chat_id = TELEGRAM_CHAT_ID
 
     async def _send_message_with_retry(self, **kwargs):
+        if 'link_preview_options' not in kwargs:
+            kwargs['link_preview_options'] = LinkPreviewOptions(is_disabled=True)
         while True:
             try:
                 res = await self.bot.send_message(**kwargs)
@@ -165,12 +167,7 @@ class TelegramNotifier:
                             parse_mode=ParseMode.HTML
                         )
                     except Exception as foto_err:
-                        print(f'⚠️ Erro ao enviar foto ({foto_err}), enviando só texto...')
-                        await self._send_message_with_retry(
-                            chat_id=self.chat_id,
-                            text=mensagem,
-                            parse_mode=ParseMode.HTML
-                        )
+                        print(f'⚠️ Erro ao enviar foto ({foto_err}). Não enviando fallback de texto para evitar duplicidade (o Telegram costuma processar a foto mesmo com timeout).')
             else:
                 await self._send_message_with_retry(
                     chat_id=self.chat_id,
