@@ -152,7 +152,7 @@ export async function buildDynamicSystemPrompt(): Promise<string> {
       const contextBlock = contexts
         .map(c => `- ${c.title}: ${c.description}`)
         .join('\n');
-      prompt += `\n\nCONTEXTOS / EVENTOS ATIVOS AGORA:\n${contextBlock}`;
+      prompt += `\n\nCONTEXTOS / EVENTOS ATIVOS AGORA:\n${contextBlock}\n\n⚠️ IMPORTANTE: Os contextos acima são APENAS UMA OPÇÃO. NÃO force o uso do contexto em todas as legendas! Se o produto não tiver nenhuma relação natural ou engraçada com o evento, IGNORE o evento e faça a piada focada apenas no produto. A prioridade é a legenda fazer sentido com o item.`;
     }
 
     // Salva no cache
