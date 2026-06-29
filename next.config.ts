@@ -10,6 +10,13 @@ const withPWA = withPWAInit({
   workboxOptions: {
     disableDevLogs: true,
     cleanupOutdatedCaches: true,
+    exclude: [
+      /\.map$/,
+      /^manifest.*\.js(?:on)?$/,
+      /_app-build-manifest\.json$/,
+      /_buildManifest\.js$/,
+      /_ssgManifest\.js$/,
+    ],
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/.*\.(jpg|jpeg|png|gif|webp|avif|svg)$/i,
