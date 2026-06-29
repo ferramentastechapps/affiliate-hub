@@ -21,6 +21,7 @@ OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 
 # Configurações de busca
 SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 15))  # Alterado de 5 para 15 (reduz 67% dos ciclos)
+TELEGRAM_POST_INTERVAL_MINUTES = int(os.getenv('TELEGRAM_POST_INTERVAL_MINUTES', 5))
 MIN_DISCOUNT_PERCENT = int(os.getenv('MIN_DISCOUNT_PERCENT', 20))
 MIN_QUALITY_SCORE = int(os.getenv('MIN_QUALITY_SCORE', 30))  # Score mínimo para enviar promoção
 DEBUG_FILTROS = os.getenv('DEBUG_FILTROS', 'false').lower() == 'true'  # Modo debug para ver tudo
