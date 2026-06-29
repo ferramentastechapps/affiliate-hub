@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth-utils';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import fs from 'fs';
 import path from 'path';
 
