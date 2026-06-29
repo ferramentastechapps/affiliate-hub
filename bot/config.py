@@ -71,9 +71,33 @@ CATEGORY_KEYWORDS = {
     'Livros e eReaders': ['livro', 'ebook', 'kindle', 'vade mecum', 'box livros'],
     'Bebês e Crianças': ['bebe', 'infantil', 'brinquedo', 'fralda', 'carrinho de bebe', 'chupeta', 'cadeirinha', 'berco', 'leite em po', 'formula infantil'],
     'Pet': ['racao', 'coleira', 'petshop', 'cachorro', 'gato', 'areia', 'tapete higienico', 'arranhador'],
-    'Ferramentas': ['furadeira', 'parafusadeira', 'ferramenta', 'mangueira', 'serra', 'trena', 'esmerilhadeira', 'kit ferramentas'],
     'Automotivo': ['pneu', 'carro', 'moto', 'automotivo', 'oleo motor', 'capacete', 'som automotivo', 'bateria moura'],
     'Viagem': ['passagem', 'hotel', 'mala de viagem'],
+    'Cadeiras e Escritório': [
+        'cadeira', 'cadeira gamer', 'cadeira ergonomica', 'cadeira escritorio',
+        'cadeira de escritorio', 'poltrona', 'mesa escritorio', 'mesa gamer',
+        'suporte monitor', 'apoio de pes', 'mesa computador',
+    ],
+    'Sofás e Poltronas': [
+        'sofa', 'sofá', 'poltrona', 'loveseat', 'chaise', 'divã',
+    ],
+    'Camas e Colchões': [
+        'colchao', 'colchão', 'cama box', 'cama solteiro', 'cama casal',
+        'cama king', 'cama queen', 'cabeceira', 'base box',
+    ],
+    'Armários e Organizadores': [
+        'armario', 'armário', 'guarda roupa', 'guarda-roupa', 'comoda', 'cômoda',
+        'sapateira', 'rack', 'estante', 'prateleira', 'nicho',
+    ],
+    'Tapetes e Decoração': [
+        'tapete', 'cortina', 'persiana', 'quadro decorativo', 'luminaria',
+        'lustre', 'abajur', 'espelho', 'vaso decorativo',
+    ],
+    'Ferramentas': [
+        'furadeira', 'parafusadeira', 'serra', 'esmerilhadeira', 'martelete',
+        'chave de fenda', 'alicate', 'trena', 'nivel', 'martelo',
+        'macarico', 'maçarico', 'solda', 'soldador',
+    ],
     'Diversos': [],
 }
 
