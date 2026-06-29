@@ -15,6 +15,36 @@ from metadata_utils import enriquecer_produto
 notifier = TelegramNotifier()
 api = AffiliateHubAPI()
 
+import json
+import os
+import fcntl
+
+FILA_MANUAL_PATH = os.path.join(os.path.dirname(__file__), 'fila_manual_pendente.json')
+FILA_SEM_PATH = os.path.join(os.path.dirname(__file__), 'fila_sem_lifestyle_pendente.json')
+
+def salvar_na_fila_manual(candidato):
+    """Salva candidato em arquivo intermediário para o bot principal consumir."""
+    try:
+        with open(FILA_MANUAL_PATH, 'a', encoding='utf-8') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            f.write(json.dumps(candidato, ensure_ascii=False) + '\n')
+            fcntl.flock(f, fcntl.LOCK_UN)
+        return True
+    except Exception as e:
+        print(f'❌ Erro ao salvar na fila manual pendente: {e}')
+        return False
+
+def salvar_na_fila_sem_lifestyle(candidato):
+    try:
+        with open(FILA_SEM_PATH, 'a', encoding='utf-8') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            f.write(json.dumps(candidato, ensure_ascii=False) + '\n')
+            fcntl.flock(f, fcntl.LOCK_UN)
+        return True
+    except Exception as e:
+        print(f'❌ Erro ao salvar na fila sem lifestyle pendente: {e}')
+        return False
+
 def infer_platform_from_url(url: str) -> str:
     """Descobre qual mercado o link pertence baseado na URL."""
     url_lower = url.lower() if url else ''
@@ -640,8 +670,6 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             final_affiliate_link = final_links.get(platform) or link
             
             import time
-            from main import PromotionBot
-            bot_instance = PromotionBot()
             
             candidato = {
                 'produto': produto_info,
@@ -651,8 +679,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             }
             
             if foto_lifestyle_admin:
-                bot_instance.fila_manual.append(candidato)
-                bot_instance._save_state()
+                salvar_na_fila_manual(candidato)
                 await msg_status.edit_text(
                     f"✅ <b>Produto adicionado à fila manual com foto lifestyle!</b>\n\n"
                     f"📦 <b>{nome[:100]}</b>\n"
@@ -662,8 +689,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                     parse_mode='HTML'
                 )
             else:
-                bot_instance.fila_sem_lifestyle.append(candidato)
-                bot_instance._save_state()
+                salvar_na_fila_sem_lifestyle(candidato)
                 await msg_status.edit_text(
                     f"⚠️ <b>Produto adicionado à fila sem foto lifestyle.</b>\n\n"
                     f"📦 <b>{nome[:100]}</b>\n\n"

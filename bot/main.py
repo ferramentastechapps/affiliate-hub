@@ -333,6 +333,53 @@ class PromotionBot:
             
     def publicar_fila_telegram(self):
         """Publica a promoção mais recente da fila lifestyle/manual respeitando intervalo de 5 minutos"""
+        import os, json
+        
+        # 1. Consumir fila_manual_pendente.json (produtos do listener)
+        FILA_MANUAL_PATH = os.path.join(os.path.dirname(__file__), 'fila_manual_pendente.json')
+        if os.path.exists(FILA_MANUAL_PATH):
+            try:
+                with open(FILA_MANUAL_PATH, 'r', encoding='utf-8') as f:
+                    linhas = f.readlines()
+                novos = []
+                for linha in linhas:
+                    linha = linha.strip()
+                    if linha:
+                        try:
+                            novos.append(json.loads(linha))
+                        except:
+                            pass
+                if novos:
+                    self.fila_manual.extend(novos)
+                    print(f'📥 {len(novos)} produto(s) manual(is) carregado(s) da fila pendente')
+                os.remove(FILA_MANUAL_PATH)  # Limpar após consumir
+            except Exception as e:
+                print(f'❌ Erro ao ler fila_manual_pendente: {e}')
+
+        # 2. Consumir fila_sem_lifestyle_pendente.json (produtos sem foto do listener)
+        FILA_SEM_PATH = os.path.join(os.path.dirname(__file__), 'fila_sem_lifestyle_pendente.json')
+        if os.path.exists(FILA_SEM_PATH):
+            try:
+                with open(FILA_SEM_PATH, 'r', encoding='utf-8') as f:
+                    linhas = f.readlines()
+                novos_sem = []
+                for linha in linhas:
+                    linha = linha.strip()
+                    if linha:
+                        try:
+                            novos_sem.append(json.loads(linha))
+                        except:
+                            pass
+                if novos_sem:
+                    self.fila_sem_lifestyle.extend(novos_sem)
+                    print(f'📥 {len(novos_sem)} produto(s) sem lifestyle carregado(s) da fila pendente')
+                os.remove(FILA_SEM_PATH)
+            except Exception as e:
+                print(f'❌ Erro ao ler fila_sem_lifestyle_pendente: {e}')
+
+        # 3. Salvar estado consolidado
+        self._save_state()
+
         agora = time.time()
         # Permitir envio se já se passaram 5 minutos (300 segundos) desde o último envio
         if agora - self.ultimo_envio_grupo < 300:
@@ -364,6 +411,12 @@ class PromotionBot:
                 produto_no_banco = resultado.get('product', {})
                 status = produto_no_banco.get('status', '')
                 if status in ('active', 'approved'):
+                    enhanced = produto_no_banco.get('enhancedImageUrl', '')
+                    if not enhanced or 'placeholder' in enhanced or (isinstance(enhanced, str) and enhanced.strip() == ''):
+                        print(f'⚠️ Produto na fila_lifestyle sem enhancedImageUrl no banco — descartando: {produto_no_banco.get("name", "?")}')
+                        self._remover_da_fila(candidato)
+                        continue  # Não selecionar esse item, tentar o próximo
+                    
                     # Produto válido — atualizar com dados frescos do banco (preço, shortId, etc.)
                     candidato['produto'].update({
                         k: v for k, v in produto_no_banco.items() if v is not None
