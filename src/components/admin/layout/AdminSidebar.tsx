@@ -17,7 +17,8 @@ import {
   Megaphone,
   Handshake,
   GearSix,
-  Brain
+  Brain,
+  ListQueue
 } from '@phosphor-icons/react';
 
 export function AdminSidebar() {
@@ -62,6 +63,7 @@ export function AdminSidebar() {
     {
       items: [
         { name: 'Bot', path: '/admin/bot', icon: Robot },
+        { name: 'Filas', path: '/admin/queues', icon: ListQueue },
         { name: 'IA Criativa', path: '/admin/ai-studio', icon: Brain },
         { name: 'Notificações', path: '/admin/notifications', icon: Bell },
       ]
