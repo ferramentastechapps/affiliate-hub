@@ -581,15 +581,31 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         foto_url_site = None
         foto_lifestyle_admin = None
         
+        INVALID_IMAGE_PATTERNS = [
+            'placeholder',
+            '/social/',
+            'social-media-icons',
+            'internetowi.pl',
+            'mercadolivre.com.br/social',
+            'api.telegram.org',  # nunca usar file temporário do Telegram como imageUrl do site
+        ]
+        
         if update.message.photo:
             foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
             foto_lifestyle_admin = foto_file.file_path
             print(f"📸 Foto enviada (Lifestyle): {foto_lifestyle_admin}")
             
             # Buscar fundo branco via scraper para o site
-            if scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
-                foto_url_site = scraped_data.get('imageUrl')
+            scraped_image = scraped_data.get('imageUrl', '')
+            image_is_valid = scraped_image and not any(p in scraped_image for p in INVALID_IMAGE_PATTERNS)
+
+            if image_is_valid:
+                foto_url_site = scraped_image
                 print(f"📸 Foto fundo branco do scraper: {foto_url_site}")
+            else:
+                if scraped_image:
+                    print(f"⚠️ Imagem do scraper rejeitada (inválida): {scraped_image}")
+                foto_url_site = None
             else:
                 try:
                     print(f"🔍 Tentando buscar fundo branco com scrape dedicado: {link_para_scraping}")
@@ -606,8 +622,16 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 
         else:
             # Sem foto enviada
-            if scraped_data.get('imageUrl') and 'placeholder' not in scraped_data.get('imageUrl'):
-                foto_url_site = scraped_data.get('imageUrl')
+            scraped_image_fallback = scraped_data.get('imageUrl', '')
+            image_fallback_valid = scraped_image_fallback and not any(p in scraped_image_fallback for p in INVALID_IMAGE_PATTERNS)
+            
+            if image_fallback_valid:
+                foto_url_site = scraped_image_fallback
+                print(f"📸 Foto fundo branco do scraper (fallback): {foto_url_site}")
+            else:
+                if scraped_image_fallback:
+                    print(f"⚠️ Imagem fallback do scraper rejeitada (inválida): {scraped_image_fallback}")
+                foto_url_site = None
             
             if not foto_url_site and nome and nome != 'Produto Encontrado':
                 try:
