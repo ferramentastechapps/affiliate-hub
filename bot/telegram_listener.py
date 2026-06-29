@@ -606,7 +606,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 if scraped_image:
                     print(f"⚠️ Imagem do scraper rejeitada (inválida): {scraped_image}")
                 foto_url_site = None
-            else:
+                
                 try:
                     print(f"🔍 Tentando buscar fundo branco com scrape dedicado: {link_para_scraping}")
                     scrape_resp = requests.post("http://127.0.0.1:3005/api/scrape", json={"url": link_para_scraping}, timeout=60)
