@@ -1,6 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
+import { sendTelegramMessage } from '@/lib/telegram';
+
+// Cache para alerta de custos diários
+let dailyCostCache = 0;
+let lastResetDate = new Date().getDate();
+let alertSentToday = false;
 
 // ─── HELPER PARA REGISTRAR USO DE TOKENS E CUSTOS ───────────────────────────
 async function logAiUsage(functionName: string, modelUsed: string, provider: string, inputTokens: number, outputTokens: number) {
@@ -10,6 +16,26 @@ async function logAiUsage(functionName: string, modelUsed: string, provider: str
     const inputCost = (inputTokens / 1_000_000) * 0.075;
     const outputCost = (outputTokens / 1_000_000) * 0.30;
     const costUSD = inputCost + outputCost;
+
+    // Lógica do Alerta Diário ($ 1.00)
+    const today = new Date().getDate();
+    if (today !== lastResetDate) {
+      dailyCostCache = 0;
+      lastResetDate = today;
+      alertSentToday = false;
+    }
+    dailyCostCache += costUSD;
+
+    if (dailyCostCache > 1.00 && !alertSentToday) {
+      alertSentToday = true;
+      const adminChatId = process.env.TELEGRAM_CHAT_ID;
+      if (adminChatId) {
+        sendTelegramMessage(
+          adminChatId, 
+          `⚠️ <b>ALERTA DE CUSTO IA</b>\n\nO sistema já gastou mais de <b>$ 1.00</b> em tokens Gemini hoje.\nPara evitar custos excessivos, verifique se não há nenhum erro nos webhooks ou robôs enviando requisições em loop.`
+        ).catch(console.error);
+      }
+    }
 
     await prisma.aiTokenLog.create({
       data: {
@@ -479,14 +505,22 @@ export async function processProductWithAI(
   rawJson: string | null;
 }> {
   try {
+    const now = new Date();
+    const timeZone = 'America/Sao_Paulo';
+
+    // Verifica se está no horário de bloqueio (01:00 às 06:59)
+    const brazilHour = parseInt(new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hour12: false, timeZone }).format(now), 10);
+    if (brazilHour >= 1 && brazilHour < 7) {
+      console.log(`[AI] Avaliação bloqueada: fora do horário de funcionamento (01:00 às 07:00). Hora atual: ${brazilHour}h.`);
+      return { titulo: null, subtitulo: null, score: null, rawJson: null };
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.warn('[AI] GEMINI_API_KEY não configurada no ambiente.');
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
 
-    const now = new Date();
-    const timeZone = 'America/Sao_Paulo';
     const formatter = new Intl.DateTimeFormat('pt-BR', {
       timeZone,
       weekday: 'long',

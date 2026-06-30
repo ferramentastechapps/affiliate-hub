@@ -20,16 +20,25 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const period = searchParams.get('period') || '30d';
+    const period = searchParams.get('period') || 'hoje';
 
-    let dateFilter = new Date();
-    if (period === '7d') dateFilter.setDate(dateFilter.getDate() - 7);
-    else if (period === '30d') dateFilter.setDate(dateFilter.getDate() - 30);
-    else if (period === '90d') dateFilter.setDate(dateFilter.getDate() - 90);
-
-    const where = {
-      createdAt: { gte: dateFilter }
-    };
+    const where: any = {};
+    const now = new Date();
+    
+    if (period === 'hoje') {
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      where.createdAt = { gte: startOfToday };
+    } else if (period === 'ontem') {
+      const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+      where.createdAt = { gte: startOfYesterday, lte: endOfYesterday };
+    } else {
+      let dateFilter = new Date();
+      if (period === '7d') dateFilter.setDate(dateFilter.getDate() - 7);
+      else if (period === '30d') dateFilter.setDate(dateFilter.getDate() - 30);
+      else if (period === '90d') dateFilter.setDate(dateFilter.getDate() - 90);
+      where.createdAt = { gte: dateFilter };
+    }
 
     // Agrupar por função
     const groupByFunction = await prisma.aiTokenLog.groupBy({
