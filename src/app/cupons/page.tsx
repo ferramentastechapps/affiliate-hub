@@ -195,17 +195,26 @@ function DraggableCouponButton({ code, onCopy }: { code: string, onCopy: (c: str
   };
 
   const handleDragEnd = (event: any, info: any) => {
-    if (info.offset.x > 80) {
+    if (info.offset.x > 50) {
       handleReveal();
     }
   };
 
   return (
-    <div className="relative w-full h-[56px] bg-white rounded-full flex items-center justify-center overflow-hidden border-[4px] border-zinc-900 shadow-inner select-none">
-      {/* Código revelado no fundo branco */}
-      <span className="font-mono text-zinc-900 font-black text-xl tracking-widest uppercase relative z-0">
-        {code}
-      </span>
+    <div className="relative w-full h-[56px] bg-white rounded-full flex items-center overflow-hidden border-[4px] border-zinc-900 shadow-inner select-none">
+      {/* Texto de fundo (código) */}
+      <div className="absolute inset-0 flex items-center justify-center z-0">
+        <span className="font-mono text-zinc-900 font-black text-xl tracking-widest uppercase">
+          {revealed ? code : (code.length > 3 ? code.substring(0, 3) + '...' : code)}
+        </span>
+      </div>
+
+      {/* Efeito de blur no lado direito quando escondido */}
+      {!revealed && (
+        <div className="absolute right-0 top-0 bottom-0 w-[40%] flex items-center justify-center pointer-events-none z-0 bg-white/40 backdrop-blur-[3px] rounded-r-full">
+        </div>
+      )}
+
       {revealed && (
          <span className="absolute right-4 text-[10px] md:text-xs font-bold text-green-700 bg-green-100 border border-green-300 px-2 py-1 rounded-md z-0 shadow-sm">
            COPIADO
@@ -219,17 +228,17 @@ function DraggableCouponButton({ code, onCopy }: { code: string, onCopy: (c: str
         dragElastic={{ left: 0, right: 1 }}
         onDragEnd={handleDragEnd}
         onClick={handleReveal}
-        animate={{ x: revealed ? '100%' : '0%' }}
+        animate={{ x: revealed ? '200%' : '0%' }}
         transition={{ type: "spring", stiffness: 200, damping: 25 }}
-        className="absolute inset-0 bg-[#E62334] rounded-full flex items-center justify-between px-6 shadow-[4px_0_15px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing z-10"
+        className="absolute left-0 top-0 bottom-0 w-[65%] bg-[#E62334] rounded-full flex items-center justify-between px-3 md:px-5 shadow-[4px_0_15px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing z-10"
       >
-        <span className="text-white font-black text-lg flex-1 text-center pl-8">
+        <span className="text-white font-black text-[15px] md:text-lg flex-1 text-center truncate pr-2">
           Pegar Cupom
         </span>
         
         {/* Indicador visual de arraste */}
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white shadow-sm">
-          <CaretRight size={20} weight="bold" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white shadow-sm flex-shrink-0">
+          <CaretRight size={18} weight="bold" />
         </div>
       </motion.div>
     </div>
