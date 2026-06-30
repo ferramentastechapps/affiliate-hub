@@ -163,10 +163,21 @@ export function DailyDeals() {
       const customEvent = e as CustomEvent<{ query: string }>;
       setSearchQuery(customEvent.detail.query || "");
     };
+    
+    const handleChangeFilter = (e: Event) => {
+      const customEvent = e as CustomEvent<{ filter: any }>;
+      setFilterType(customEvent.detail.filter);
+      const dealsSection = document.getElementById('ofertas');
+      if (dealsSection) {
+        dealsSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
 
     window.addEventListener("search-change", handleSearchChange);
+    window.addEventListener("change-filter", handleChangeFilter);
     return () => {
       window.removeEventListener("search-change", handleSearchChange);
+      window.removeEventListener("change-filter", handleChangeFilter);
     };
   }, []);
 
