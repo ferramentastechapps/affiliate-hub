@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Star, Trash, Plus, Copy, Check, ArrowClockwise, Lightning,
-  BookmarksSimple, Prohibit, ArrowsLeftRight, CalendarBlank, Eye, Package
+  BookmarksSimple, Prohibit, ArrowsLeftRight, CalendarBlank, Eye, Package, Coin
 } from "@phosphor-icons/react";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type Caption = {
   id: string; productId?: string | null; productName: string; caption: string;
   score?: number | null; rating?: number | null; ratedAt?: string | null;
@@ -19,10 +19,10 @@ type AiContext = {
   startsAt?: string | null; endsAt?: string | null; createdAt: string;
 };
 
-type SubTab = 'captions' | 'products' | 'banned' | 'substitutions' | 'contexts';
+type SubTab = 'captions' | 'products' | 'banned' | 'substitutions' | 'contexts' | 'tokens';
 type RatingFilter = 'all' | 'unrated' | '10' | '9' | '8' | '7' | '6' | '5' | '4' | '3' | '2' | '1' | 'examples';
 
-// ─── StarRating ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ StarRating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StarRating({ value, onChange }: { value?: number | null; onChange: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
   return (
@@ -46,7 +46,7 @@ function StarRating({ value, onChange }: { value?: number | null; onChange: (v: 
   );
 }
 
-// ─── Section A: Captions ───────────────────────────────────────────────────────
+// â”€â”€â”€ Section A: Captions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CaptionsSection() {
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [total, setTotal] = useState(0);
@@ -100,8 +100,8 @@ function CaptionsSection() {
 
   const ratingFilters: { value: RatingFilter; label: string }[] = [
     { value: 'all', label: `Todas (${total})` },
-    { value: 'unrated', label: '⬜ Sem nota' },
-    { value: 'examples', label: '✨ Exemplos' },
+    { value: 'unrated', label: 'â¬œ Sem nota' },
+    { value: 'examples', label: 'âœ¨ Exemplos' },
     { value: '10', label: '10' },
     { value: '9', label: '9' },
     { value: '8', label: '8' },
@@ -148,7 +148,7 @@ function CaptionsSection() {
                   : 'bg-zinc-900/60 border-zinc-800/40'
               }`}
             >
-              {/* Cabeçalho */}
+              {/* CabeÃ§alho */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex gap-4 min-w-0 flex-1">
                   {caption.imageUrl && (
@@ -182,7 +182,7 @@ function CaptionsSection() {
                 <div className="flex items-center gap-2 shrink-0">
                   {caption.usedAsExample && (
                     <span className="text-[10px] bg-amber-900/40 text-amber-400 border border-amber-800/50 px-2 py-0.5 rounded-full font-medium">
-                      ✨ Exemplo
+                      âœ¨ Exemplo
                     </span>
                   )}
                   <button
@@ -214,7 +214,7 @@ function CaptionsSection() {
         </div>
       )}
 
-      {/* Paginação */}
+      {/* PaginaÃ§Ã£o */}
       {total > 25 && (
         <div className="flex items-center justify-center gap-3 mt-6">
           <button
@@ -222,15 +222,15 @@ function CaptionsSection() {
             disabled={page === 1}
             className="px-4 py-2 bg-zinc-800 rounded-lg text-sm disabled:opacity-40"
           >
-            ← Anterior
+            â† Anterior
           </button>
-          <span className="text-sm text-zinc-400">Pág. {page} de {Math.ceil(total / 25)}</span>
+          <span className="text-sm text-zinc-400">PÃ¡g. {page} de {Math.ceil(total / 25)}</span>
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={page >= Math.ceil(total / 25)}
             className="px-4 py-2 bg-zinc-800 rounded-lg text-sm disabled:opacity-40"
           >
-            Próxima →
+            PrÃ³xima â†’
           </button>
         </div>
       )}
@@ -238,7 +238,7 @@ function CaptionsSection() {
   );
 }
 
-// ─── Section B: Banned Words ───────────────────────────────────────────────────
+// â”€â”€â”€ Section B: Banned Words â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BannedWordsSection() {
   const [words, setWords] = useState<BannedWord[]>([]);
   const [newWord, setNewWord] = useState('');
@@ -284,8 +284,8 @@ function BannedWordsSection() {
   return (
     <div>
       <p className="text-sm text-zinc-400 mb-5">
-        Palavras que a IA <strong className="text-red-400">nunca</strong> poderá usar nas legendas geradas.
-        São injetadas no prompt como regra absoluta.
+        Palavras que a IA <strong className="text-red-400">nunca</strong> poderÃ¡ usar nas legendas geradas.
+        SÃ£o injetadas no prompt como regra absoluta.
       </p>
 
       {/* Add form */}
@@ -344,7 +344,7 @@ function BannedWordsSection() {
   );
 }
 
-// ─── Section C: Substitutions ──────────────────────────────────────────────────
+// â”€â”€â”€ Section C: Substitutions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SubstitutionsSection() {
   const [subs, setSubs] = useState<Substitution[]>([]);
   const [fromWord, setFromWord] = useState('');
@@ -374,7 +374,7 @@ function SubstitutionsSection() {
         setFromWord(''); setToWord('');
       } else {
         const err = await res.json();
-        alert(err.error || 'Erro ao adicionar substituição');
+        alert(err.error || 'Erro ao adicionar substituiÃ§Ã£o');
       }
     } finally {
       setAdding(false);
@@ -389,8 +389,8 @@ function SubstitutionsSection() {
   return (
     <div>
       <p className="text-sm text-zinc-400 mb-5">
-        Substituições aplicadas <strong className="text-purple-400">depois</strong> da IA gerar a legenda, antes de salvar.
-        Útil para corrigir gírias, ortografia ou preferências de estilo.
+        SubstituiÃ§Ãµes aplicadas <strong className="text-purple-400">depois</strong> da IA gerar a legenda, antes de salvar.
+        Ãštil para corrigir gÃ­rias, ortografia ou preferÃªncias de estilo.
       </p>
 
       {/* Add form */}
@@ -405,7 +405,7 @@ function SubstitutionsSection() {
         <ArrowsLeftRight size={18} className="text-zinc-500 shrink-0" />
         <input
           type="text"
-          placeholder="Para (ex: bebê)"
+          placeholder="Para (ex: bebÃª)"
           value={toWord}
           onChange={e => setToWord(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
@@ -425,14 +425,14 @@ function SubstitutionsSection() {
       {loading ? (
         <div className="text-zinc-500 text-center py-8">Carregando...</div>
       ) : subs.length === 0 ? (
-        <div className="text-zinc-500 text-center py-8 text-sm">Nenhuma substituição cadastrada ainda.</div>
+        <div className="text-zinc-500 text-center py-8 text-sm">Nenhuma substituiÃ§Ã£o cadastrada ainda.</div>
       ) : (
         <div className="border border-zinc-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-zinc-900 border-b border-zinc-800">
               <tr>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">De</th>
-                <th className="text-left px-4 py-3 text-zinc-400 font-medium">→ Para</th>
+                <th className="text-left px-4 py-3 text-zinc-400 font-medium">â†’ Para</th>
                 <th className="text-left px-4 py-3 text-zinc-400 font-medium">Adicionado</th>
                 <th className="w-12 px-4 py-3"></th>
               </tr>
@@ -461,7 +461,7 @@ function SubstitutionsSection() {
   );
 }
 
-// ─── Section D: Contexts ───────────────────────────────────────────────────────
+// â”€â”€â”€ Section D: Contexts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ContextsSection() {
   const [contexts, setContexts] = useState<AiContext[]>([]);
   const [loading, setLoading] = useState(true);
@@ -559,13 +559,13 @@ function ContextsSection() {
           <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-4 space-y-3">
             <input
               type="text"
-              placeholder="Título (ex: Dia dos Pais 2026)"
+              placeholder="TÃ­tulo (ex: Dia dos Pais 2026)"
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-sm focus:border-accent outline-none"
             />
             <textarea
-              placeholder="Descrição (injetada no prompt da IA. Ex: Use referências ao dia dos pais, presentes, família...)"
+              placeholder="DescriÃ§Ã£o (injetada no prompt da IA. Ex: Use referÃªncias ao dia dos pais, presentes, famÃ­lia...)"
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               rows={3}
@@ -573,7 +573,7 @@ function ContextsSection() {
             />
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-xs text-zinc-500 mb-1">Início (opcional)</label>
+                <label className="block text-xs text-zinc-500 mb-1">InÃ­cio (opcional)</label>
                 <input
                   type="date"
                   value={form.startsAt}
@@ -626,15 +626,15 @@ function ContextsSection() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-sm text-white">{ctx.title}</span>
                         {active ? (
-                          <span className="text-[10px] bg-emerald-900/40 text-emerald-400 border border-emerald-800/50 px-2 py-0.5 rounded-full">✅ Ativo agora</span>
+                          <span className="text-[10px] bg-emerald-900/40 text-emerald-400 border border-emerald-800/50 px-2 py-0.5 rounded-full">âœ… Ativo agora</span>
                         ) : (
-                          <span className="text-[10px] bg-zinc-800 text-zinc-500 border border-zinc-700/50 px-2 py-0.5 rounded-full">{ctx.isActive ? '⏰ Fora do período' : '⏸ Pausado'}</span>
+                          <span className="text-[10px] bg-zinc-800 text-zinc-500 border border-zinc-700/50 px-2 py-0.5 rounded-full">{ctx.isActive ? 'â° Fora do perÃ­odo' : 'â¸ Pausado'}</span>
                         )}
                       </div>
                       <p className="text-xs text-zinc-400 leading-relaxed">{ctx.description}</p>
                       {(ctx.startsAt || ctx.endsAt) && (
                         <div className="flex gap-3 mt-1.5 text-[10px] text-zinc-500">
-                          {ctx.startsAt && <span>Início: {new Date(ctx.startsAt).toLocaleDateString('pt-BR')}</span>}
+                          {ctx.startsAt && <span>InÃ­cio: {new Date(ctx.startsAt).toLocaleDateString('pt-BR')}</span>}
                           {ctx.endsAt && <span>Fim: {new Date(ctx.endsAt).toLocaleDateString('pt-BR')}</span>}
                         </div>
                       )}
@@ -649,7 +649,7 @@ function ContextsSection() {
                             : 'bg-zinc-800 border-zinc-700/50 text-zinc-500 hover:text-emerald-400 hover:border-emerald-800/50'
                         }`}
                       >
-                        {ctx.isActive ? '⏸' : '▶'}
+                        {ctx.isActive ? 'â¸' : 'â–¶'}
                       </button>
                       <button
                         onClick={() => handleDelete(ctx.id)}
@@ -707,7 +707,7 @@ function ContextsSection() {
   );
 }
 
-// ─── Section E: Products Rating ───────────────────────────────────────────────
+// â”€â”€â”€ Section E: Products Rating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type ScrapedProduct = {
   id: string;
   name: string;
@@ -787,7 +787,7 @@ function ProductsSection() {
               }`}
             >
               {f === 'all' && 'Todos'}
-              {f === 'unrated' && 'Não avaliados'}
+              {f === 'unrated' && 'NÃ£o avaliados'}
               {f === 'rated' && 'Avaliados'}
             </button>
           ))}
@@ -825,29 +825,29 @@ function ProductsSection() {
                   <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
                 </div>
 
-                {/* Conteúdo */}
+                {/* ConteÃºdo */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-start justify-between gap-4">
                     <h4 className="font-semibold text-sm text-zinc-200 line-clamp-1" title={p.name}>
                       {p.name}
                     </h4>
                     <span className="text-xs font-mono bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded">
-                      R$ {p.price ? p.price.toFixed(2) : '—'}
+                      R$ {p.price ? p.price.toFixed(2) : 'â€”'}
                     </span>
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
-                    <span>Loja: <strong className="text-zinc-400">{p.storeName || '—'}</strong></span>
-                    <span>•</span>
+                    <span>Loja: <strong className="text-zinc-400">{p.storeName || 'â€”'}</strong></span>
+                    <span>â€¢</span>
                     <span>Categoria: <strong className="text-zinc-400">{p.category}</strong></span>
-                    <span>•</span>
+                    <span>â€¢</span>
                     <span>Achado em: <strong className="text-zinc-400">{new Date(p.createdAt).toLocaleDateString('pt-BR')}</strong></span>
                   </div>
 
                   {/* Detalhes da IA */}
                   <div className="mt-2 bg-zinc-950/50 border border-zinc-800/50 rounded-lg p-2.5 text-xs flex flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-zinc-400">Pontuação IA:</span>
+                      <span className="font-bold text-zinc-400">PontuaÃ§Ã£o IA:</span>
                       <span className={`font-extrabold ${
                         (p.aiScore || 0) >= 8 ? 'text-emerald-400' :
                         (p.aiScore || 0) >= 6 ? 'text-yellow-400' : 'text-zinc-500'
@@ -863,7 +863,7 @@ function ProductsSection() {
                   </div>
                 </div>
 
-                {/* Avaliação do Admin */}
+                {/* AvaliaÃ§Ã£o do Admin */}
                 <div className="flex flex-col items-end justify-center shrink-0 pl-4 border-l border-zinc-800/80 min-w-[160px] gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Sua nota para o produto</span>
                   <div className="relative">
@@ -887,7 +887,7 @@ function ProductsSection() {
         </div>
       )}
 
-      {/* Paginação */}
+      {/* PaginaÃ§Ã£o */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-1 mt-6">
           <button
@@ -898,14 +898,14 @@ function ProductsSection() {
             Anterior
           </button>
           <span className="px-3 py-1.5 text-xs text-zinc-500">
-            Página {page} de {totalPages}
+            PÃ¡gina {page} de {totalPages}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="px-3 py-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs"
           >
-            Próxima
+            PrÃ³xima
           </button>
         </div>
       )}
@@ -913,16 +913,17 @@ function ProductsSection() {
   );
 }
 
-// ─── AiStudioTab (Main) ────────────────────────────────────────────────────────
+// â”€â”€â”€ AiStudioTab (Main) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function AiStudioTab() {
   const [subTab, setSubTab] = useState<SubTab>('captions');
 
   const subTabs: { value: SubTab; label: string; icon: React.ReactNode; desc: string }[] = [
-    { value: 'captions', label: '⭐ Legendas', icon: <Star size={16} />, desc: 'Avalie as legendas geradas e ensine a IA' },
-    { value: 'products', label: '🏷️ Produtos', icon: <Package size={16} />, desc: 'Avalie os produtos encontrados e refine o direcionamento da IA' },
-    { value: 'banned', label: '🚫 Bloqueadas', icon: <Prohibit size={16} />, desc: 'Palavras que a IA nunca deve usar' },
-    { value: 'substitutions', label: '🔄 Substituições', icon: <ArrowsLeftRight size={16} />, desc: 'Corrija palavras no pós-processamento' },
-    { value: 'contexts', label: '📅 Contextos', icon: <CalendarBlank size={16} />, desc: 'Eventos e contextos temporais + preview do prompt' },
+    { value: 'captions', label: 'â­ Legendas', icon: <Star size={16} />, desc: 'Avalie as legendas geradas e ensine a IA' },
+    { value: 'products', label: 'ðŸ·ï¸ Produtos', icon: <Package size={16} />, desc: 'Avalie os produtos encontrados e refine o direcionamento da IA' },
+    { value: 'banned', label: 'ðŸš« Bloqueadas', icon: <Prohibit size={16} />, desc: 'Palavras que a IA nunca deve usar' },
+    { value: 'substitutions', label: 'ðŸ”„ SubstituiÃ§Ãµes', icon: <ArrowsLeftRight size={16} />, desc: 'Corrija palavras no pÃ³s-processamento' },
+    { value: 'contexts', label: 'ðŸ“… Contextos', icon: <CalendarBlank size={16} />, desc: 'Eventos e contextos temporais + preview do prompt' },
+    { value: 'tokens', label: 'ðŸª™ Tokens & Custos', icon: <Coin size={16} />, desc: 'Monitore o uso e os custos estimados da IA' },
   ];
 
   return (
@@ -930,7 +931,7 @@ export function AiStudioTab() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-semibold flex items-center gap-2">
-          🧠 IA Criativa
+          ðŸ§  IA Criativa
         </h2>
         <p className="text-sm text-zinc-400 mt-1">
           Treine, corrija e controle como a IA gera as legendas dos produtos.
@@ -954,18 +955,104 @@ export function AiStudioTab() {
         ))}
       </div>
 
-      {/* Descrição da sub-aba */}
+      {/* DescriÃ§Ã£o da sub-aba */}
       <div className="mb-5 text-xs text-zinc-500 flex items-center gap-2">
         <Lightning size={12} className="text-accent" />
         {subTabs.find(t => t.value === subTab)?.desc}
       </div>
 
-      {/* Conteúdo */}
+      {/* ConteÃºdo */}
       {subTab === 'captions' && <CaptionsSection />}
       {subTab === 'products' && <ProductsSection />}
-      {subTab === 'banned' && <BannedWordsSection />}
-      {subTab === 'substitutions' && <SubstitutionsSection />}
-      {subTab === 'contexts' && <ContextsSection />}
+      { subTab === 'banned' && <BannedWordsSection /> }
+      { subTab === 'substitutions' && <SubstitutionsSection /> }
+      { subTab === 'contexts' && <ContextsSection /> }
+      { subTab === 'tokens' && <TokensSection /> }
     </div>
   );
 }
+
+// --- Section G: Tokens -------------------------------------------------------
+function TokensSection() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('30d');
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/admin/analytics/tokens?period=${period}`)
+      .then(res => res.json())
+      .then(json => setData(json.data))
+      .finally(() => setLoading(false));
+  }, [period]);
+
+  if (loading) return <div className="p-8 text-center text-zinc-400">Carregando métricas de IA...</div>;
+  if (!data) return <div className="p-8 text-center text-red-400">Erro ao carregar métricas.</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-2">
+        {['7d', '30d', '90d'].map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${period === p ? 'bg-accent text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+          >
+            {p === '7d' ? 'Últimos 7 dias' : p === '30d' ? 'Últimos 30 dias' : 'Últimos 90 dias'}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <span className="text-zinc-400 text-sm">Total de Chamadas</span>
+          <p className="text-3xl font-bold text-white mt-2">{data.totalCalls?.toLocaleString() || 0}</p>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <span className="text-zinc-400 text-sm">Tokens Processados</span>
+          <p className="text-3xl font-bold text-accent mt-2">{data.totalTokens?.toLocaleString() || 0}</p>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <span className="text-zinc-400 text-sm">Custo Estimado</span>
+          <p className="text-3xl font-bold text-green-400 mt-2">
+            ${(data.totalCostUSD || 0).toFixed(4)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <h3 className="font-semibold mb-4 text-zinc-100">Uso por Função</h3>
+          <div className="space-y-3">
+            {data.groupByFunction?.map((f: any) => (
+              <div key={f.functionName} className="flex justify-between items-center bg-zinc-950 p-3 rounded-lg border border-zinc-800/50">
+                <span className="font-medium text-zinc-300">{f.functionName}</span>
+                <div className="text-right text-xs">
+                  <div className="text-zinc-400">{(f._sum.totalTokens || 0).toLocaleString()} tokens</div>
+                  <div className="text-green-500 font-medium">${(f._sum.costUSD || 0).toFixed(4)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <h3 className="font-semibold mb-4 text-zinc-100">Uso por Modelo</h3>
+          <div className="space-y-3">
+            {data.groupByModel?.map((m: any) => (
+              <div key={m.modelUsed} className="flex justify-between items-center bg-zinc-950 p-3 rounded-lg border border-zinc-800/50">
+                <span className="font-medium text-zinc-300">{m.modelUsed}</span>
+                <div className="text-right text-xs">
+                  <div className="text-zinc-400">{(m._sum.totalTokens || 0).toLocaleString()} tokens</div>
+                  <div className="text-green-500 font-medium">${(m._sum.costUSD || 0).toFixed(4)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+

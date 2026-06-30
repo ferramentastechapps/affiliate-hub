@@ -2,6 +2,31 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
 
+// ─── HELPER PARA REGISTRAR USO DE TOKENS E CUSTOS ───────────────────────────
+async function logAiUsage(functionName: string, modelUsed: string, provider: string, inputTokens: number, outputTokens: number) {
+  try {
+    const totalTokens = inputTokens + outputTokens;
+    // Custos estimados baseados no Gemini Flash (aprox $0.075 / 1M input, $0.30 / 1M output)
+    const inputCost = (inputTokens / 1_000_000) * 0.075;
+    const outputCost = (outputTokens / 1_000_000) * 0.30;
+    const costUSD = inputCost + outputCost;
+
+    await prisma.aiTokenLog.create({
+      data: {
+        functionName,
+        modelUsed,
+        provider,
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        costUSD
+      }
+    });
+  } catch (error) {
+    console.error('[AI] Erro ao registrar uso de tokens:', error);
+  }
+}
+
 // ─── SYSTEM_PROMPT BASE (estático) ────────────────────────────────────────────
 // Este é o prompt base. Ele é ENRIQUECIDO dinamicamente em buildDynamicSystemPrompt()
 // com: exemplos aprovados, palavras bloqueadas, contextos/eventos ativos.
@@ -405,6 +430,17 @@ export async function processProductWithOpenRouter(
     }
 
     const data = await response.json();
+    
+    if (data.usage) {
+      logAiUsage(
+        mode === 'caption' ? 'generateCaption' : 'evaluateProduct',
+        'google/gemini-2.5-flash',
+        'openrouter',
+        data.usage.prompt_tokens || 0,
+        data.usage.completion_tokens || 0
+      ).catch(console.error);
+    }
+
     const responseText = data.choices?.[0]?.message?.content;
     if (!responseText) {
       console.warn('[AI-OpenRouter] Resposta vazia do OpenRouter.');
@@ -527,6 +563,17 @@ Contexto atual:
 
         const result = await model.generateContent(promptText);
         const responseText = result.response.text();
+
+        if (result.response.usageMetadata) {
+          const { promptTokenCount, candidatesTokenCount } = result.response.usageMetadata;
+          logAiUsage(
+            mode === 'caption' ? 'generateCaption' : 'evaluateProduct',
+            modelName,
+            'google',
+            promptTokenCount || 0,
+            candidatesTokenCount || 0
+          ).catch(console.error);
+        }
 
         if (!responseText) {
           console.warn(`[AI] Resposta vazia do modelo ${modelName} — tentando próximo.`);

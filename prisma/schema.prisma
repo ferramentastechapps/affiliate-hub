@@ -515,3 +515,23 @@ model AiContext {
   @@index([startsAt])
   @@index([endsAt])
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📊 LOG DE USO DE IA (TOKENS E CUSTOS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model AiTokenLog {
+  id           String   @id @default(cuid())
+  functionName String   // "generateCaption", "evaluateProduct", etc.
+  modelUsed    String   // "gemini-2.5-flash", "google/gemini-2.5-flash"
+  provider     String   // "google", "openrouter"
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  totalTokens  Int      @default(0)
+  costUSD      Float?   // Custo estimado
+  createdAt    DateTime @default(now())
+
+  @@index([functionName])
+  @@index([modelUsed])
+  @@index([provider])
+  @@index([createdAt])
+}
