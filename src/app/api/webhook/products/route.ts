@@ -366,6 +366,7 @@ export async function POST(request: Request) {
               price: body.price || existingProduct.price,
               originalPrice: body.originalPrice || existingProduct.originalPrice,
               couponLink: body.couponLink || undefined,
+              description: body.description || existingProduct.description,
               updatedAt: new Date()
             }
           });
@@ -1055,6 +1056,7 @@ export async function PUT(request: Request) {
                 originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : existingProduct.originalPrice,
                 subcategory: productData.subcategory || existingProduct.subcategory,
                 brand: productData.brand || existingProduct.brand,
+                description: productData.description || existingProduct.description,
                 model: productData.model || existingProduct.model,
                 platformProductId: productData.platformProductId || finalPlatformId || existingProduct.platformProductId,
                 platformId: finalPlatformId || existingProduct.platformId,

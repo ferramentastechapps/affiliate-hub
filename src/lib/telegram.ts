@@ -245,6 +245,16 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
     }
   }
   
+  // Extrair regras e condições da descrição (antes do cupom se houver)
+  let condicoesMsg = "";
+  const desc = product.description || '';
+  const descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
+  if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
+    // Escolher ícone: 🔷 para Prime, ↪️ para outros
+    const icon = descSemCupom.toLowerCase().includes('prime') ? '🔷' : '↪️';
+    condicoesMsg = `${icon} <i>${descSemCupom}</i>`;
+  }
+  
   // Badge de queda de preço
   let dropBadge = "";
   if (product.dropPercent && product.dropPercent > 0) {
@@ -327,6 +337,9 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   
   if (precoTxt) {
     lines.push(precoTxt);
+  }
+  if (condicoesMsg) {
+    lines.push(condicoesMsg);
   }
   if (cupomMsg) {
     lines.push(cupomMsg);

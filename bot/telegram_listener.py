@@ -393,6 +393,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 f"- name: Nome do produto bem descritivo, sem emojis e sem preço (string)\n"
                 f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
                 f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
+                f"- conditions: Regras e condições especiais para o desconto (ex: \"Mínimo: 2 un.\", \"Programe e poupe\", \"Exclusivo Membros Prime\"). Responda com uma string curta e direta ou null se não houver (string ou null)\n"
                 f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
             )
         else:
@@ -405,6 +406,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 f"- price: Preço final do produto apenas em número (number ou null se não achar. ex: 199.90)\n"
                 f"- link: URL completa para compra do produto — escolha APENAS a URL da loja (Amazon, Mercado Livre, Shopee, etc.), ignorando links de grupos, regras e afiliados (string)\n"
                 f"- coupon: Código do cupom de desconto (string ou null se não houver)\n"
+                f"- conditions: Regras e condições especiais para o desconto (ex: \"Mínimo: 2 un.\", \"Programe e poupe\", \"Exclusivo Membros Prime\"). Responda com uma string curta e direta ou null se não houver (string ou null)\n"
                 f"Não use marcações markdown (```json), retorne puramente o objeto JSON."
             )
         
@@ -511,6 +513,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         nome = dados.get('name') or 'Produto Encontrado'
         preco = dados.get('price')
         cupom = dados.get('coupon')
+        condicoes = dados.get('conditions')
         
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # Definir o link final: regex (loja direta) > Gemini
@@ -653,7 +656,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         platform = infer_platform_from_url(link)
         print(f"🏪 Plataforma detectada: {platform}")
         
-        descricao = f"Oferta encaminhada de grupos"
+        descricao = condicoes if condicoes else ""
         if cupom:
             descricao += f"\n🎟️ CUPOM: {cupom}"
             print(f"🎟️ Cupom detectado: {cupom}")
@@ -670,7 +673,8 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             'links': {
                 platform: link
             },
-            'storeName': platform.capitalize()
+            'storeName': platform.capitalize(),
+            'couponText': cupom
         }
         if foto_lifestyle_admin:
             produto_data['enhancedImageUrl'] = foto_lifestyle_admin
