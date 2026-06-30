@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { publishToGroup } from '@/lib/telegram';
+import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
           }
         }
 
-        await publishToGroup(
+        await publishToQueueTop(
           {
             ...product,
             coupons: [{ code, discount: discount || '' }],

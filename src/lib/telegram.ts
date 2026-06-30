@@ -362,3 +362,26 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
 
   return sendTelegramMessage(TELEGRAM_PROMO_GROUP_ID, text, lifestyleImage);
 }
+
+export async function publishToQueueTop(product: any, platform: string, affiliateLink: string) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const candidato = {
+      produto: product,
+      platform,
+      affiliate_link: affiliateLink,
+      score: 1000, // Score altíssimo para ser escolhido primeiro
+      added_at: (Date.now() / 1000) + 3600 // +1 hora no futuro para ficar no topo absoluto
+    };
+    
+    const queuePath = path.join(process.cwd(), 'bot', 'fila_manual_pendente.json');
+    fs.appendFileSync(queuePath, JSON.stringify(candidato) + '\n');
+    console.log(`[Fila] Produto adicionado ao topo da fila manual: ${product.name}`);
+    return true;
+  } catch (err) {
+    console.error('Erro ao adicionar à fila manual pendente:', err);
+    return false;
+  }
+}

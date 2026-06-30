@@ -5,7 +5,7 @@ import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
 import { getSecondaryLifestyleImage } from '@/lib/scraper';
-import { publishToGroup } from '@/lib/telegram';
+import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
 
@@ -467,8 +467,8 @@ export async function POST(request: Request) {
             
             const lifestyleImg1 = pToPublish.enhancedImageUrl;
             if (lifestyleImg1 && !lifestyleImg1.includes('placeholder') && lifestyleImg1.trim() !== '') {
-              publishToGroup(pToPublish, platform, affiliateLink).catch(err => {
-                console.error('[Webhook] Erro ao publicar produto:', err);
+              publishToQueueTop(pToPublish, platform, affiliateLink).catch(err => {
+                console.error('[Webhook] Erro ao colocar produto na fila:', err);
               });
             } else {
               console.log(`[Webhook] Preço atualizado, mas sem foto lifestyle - Pulando Telegram: ${pToPublish.name}`);
@@ -856,13 +856,15 @@ export async function POST(request: Request) {
               
               const lifestyleImg2 = tempProduct.enhancedImageUrl;
               if (lifestyleImg2 && !lifestyleImg2.includes('placeholder') && lifestyleImg2.trim() !== '') {
-                publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
-                  if (success) {
-                    console.log(`🚀 [Telegram Auto-Aprovar] Oferta publicada no grupo: ${product.name}`);
-                  }
-                }).catch(e => {
-                  console.error(`Falha ao publicar automaticamente no Telegram para o produto ${product.id}:`, e);
-                });
+                if (activePlatform && publishLink) {
+                  publishToQueueTop(tempProduct, activePlatform, publishLink).then((success) => {
+                    if (success) {
+                      console.log(`🚀 [Telegram Auto-Aprovar] Oferta publicada no grupo: ${product.name}`);
+                    }
+                  }).catch(e => {
+                    console.error(`Falha ao publicar automaticamente no Telegram para o produto ${product.id}:`, e);
+                  });
+                }
               } else {
                 console.log(`[Telegram Auto-Aprovar] Produto sem foto lifestyle - Pulando publicação no grupo: ${product.name}`);
               }
@@ -1097,11 +1099,11 @@ export async function PUT(request: Request) {
                 }
               }
 
-              if (publishLink) {
+              if (activePlatform && publishLink) {
                 const lifestyleImg3 = updatedProduct?.enhancedImageUrl;
                 if (lifestyleImg3 && !lifestyleImg3.includes('placeholder') && lifestyleImg3.trim() !== '') {
-                  publishToGroup(updatedProduct, activePlatform, publishLink).then((success) => {
-                    if(success) {
+                  publishToQueueTop(updatedProduct, activePlatform, publishLink).then((success) => {
+                    if (success) {
                        console.log(`🚀 [Repost Telegram Lote] Oferta repostada via Webhook (isFixed=true): ${updatedProduct?.name}`);
                     }
                   }).catch(e => {
@@ -1409,7 +1411,7 @@ export async function PUT(request: Request) {
                   }
                 }
 
-                if (publishLink) {
+                if (activePlatform && publishLink) {
                   const tempProduct = {
                     ...product,
                     imageUrl: finalImageUrl,
@@ -1421,7 +1423,7 @@ export async function PUT(request: Request) {
                   
                   const lifestyleImg4 = tempProduct.enhancedImageUrl;
                   if (lifestyleImg4 && !lifestyleImg4.includes('placeholder') && lifestyleImg4.trim() !== '') {
-                    publishToGroup(tempProduct, activePlatform, publishLink).then((success) => {
+                    publishToQueueTop(tempProduct, activePlatform, publishLink).then((success) => {
                       if (success) {
                         console.log(`🚀 [Telegram Auto-Aprovar Lote] Oferta publicada no grupo: ${product.name}`);
                       }
