@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Ticket, Storefront, MagnifyingGlass, Check, TrendUp, Copy } from "@phosphor-icons/react";
+import { Ticket, Storefront, MagnifyingGlass, Check, TrendUp, Copy, CaretRight } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Coupon {
@@ -154,7 +154,7 @@ export default function CuponsPage() {
                         </span>
                       </div>
                       
-                      <h3 className="text-white font-bold text-lg md:text-xl leading-tight mb-2">
+                      <h3 className="text-white font-bold text-lg md:text-xl leading-tight mb-2 line-clamp-2">
                         {coupon.discount} {coupon.description}
                       </h3>
                       
@@ -170,23 +170,9 @@ export default function CuponsPage() {
                     <div className="h-px bg-zinc-800 w-full mb-4"></div>
                   </div>
 
-                  {/* Botão Inferior */}
+                  {/* Botão Inferior (Arrastável) */}
                   <div className="px-5 pb-5">
-                    <button
-                      onClick={() => handleCopyCoupon(coupon.code)}
-                      className="w-full relative h-[56px] bg-[#E62334] text-white font-black rounded-full flex items-center hover:bg-[#d01f2f] transition-all overflow-hidden group shadow-lg shadow-accent/20"
-                    >
-                      <span className="flex-1 text-center text-lg pr-[120px]">
-                        {copiedCode === coupon.code ? 'COPIADO!' : 'Pegar Cupom'}
-                      </span>
-                      
-                      {/* Área do código vazada (simulando corte) */}
-                      <div className="absolute right-[-4px] top-[-4px] bottom-[-4px] w-[140px] bg-white rounded-full flex items-center justify-center border-[6px] border-zinc-900 group-hover:bg-zinc-100 transition-colors">
-                        <span className="font-mono text-zinc-800 font-black text-xl blur-[3px] select-none uppercase tracking-widest">
-                          {coupon.code.substring(0, 4)}...
-                        </span>
-                      </div>
-                    </button>
+                    <DraggableCouponButton code={coupon.code} onCopy={handleCopyCoupon} />
                   </div>
                 </motion.div>
               ))}
@@ -194,6 +180,58 @@ export default function CuponsPage() {
           )}
         </motion.div>
       </div>
+    </div>
+  );
+}
+
+function DraggableCouponButton({ code, onCopy }: { code: string, onCopy: (c: string) => void }) {
+  const [revealed, setRevealed] = useState(false);
+
+  const handleReveal = () => {
+    if (!revealed) {
+      setRevealed(true);
+      onCopy(code);
+    }
+  };
+
+  const handleDragEnd = (event: any, info: any) => {
+    if (info.offset.x > 80) {
+      handleReveal();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-[56px] bg-white rounded-full flex items-center justify-center overflow-hidden border-[4px] border-zinc-900 shadow-inner select-none">
+      {/* Código revelado no fundo branco */}
+      <span className="font-mono text-zinc-900 font-black text-xl tracking-widest uppercase relative z-0">
+        {code}
+      </span>
+      {revealed && (
+         <span className="absolute right-4 text-[10px] md:text-xs font-bold text-green-700 bg-green-100 border border-green-300 px-2 py-1 rounded-md z-0 shadow-sm">
+           COPIADO
+         </span>
+      )}
+
+      {/* Capa vermelha (deslizável) */}
+      <motion.div
+        drag={revealed ? false : "x"}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: 0, right: 1 }}
+        onDragEnd={handleDragEnd}
+        onClick={handleReveal}
+        animate={{ x: revealed ? '100%' : '0%' }}
+        transition={{ type: "spring", stiffness: 200, damping: 25 }}
+        className="absolute inset-0 bg-[#E62334] rounded-full flex items-center justify-between px-6 shadow-[4px_0_15px_rgba(0,0,0,0.3)] cursor-grab active:cursor-grabbing z-10"
+      >
+        <span className="text-white font-black text-lg flex-1 text-center pl-8">
+          Pegar Cupom
+        </span>
+        
+        {/* Indicador visual de arraste */}
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white shadow-sm">
+          <CaretRight size={20} weight="bold" />
+        </div>
+      </motion.div>
     </div>
   );
 }
