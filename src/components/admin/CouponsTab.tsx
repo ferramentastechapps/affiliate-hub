@@ -14,6 +14,9 @@ type Coupon = {
   platform: string;
   isActive: boolean;
   expiresAt?: string;
+  minPurchaseValue?: number | null;
+  maxDiscountValue?: number | null;
+  applicableCategories?: string | null;
   product?: {
     name: string;
   };
