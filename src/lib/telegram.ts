@@ -213,8 +213,7 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   let cupomMsg = "";
   
   if (product.originalPrice && product.price && Number(product.originalPrice) > Number(product.price)) {
-    const discountPercent = ((product.originalPrice - product.price) / product.originalPrice) * 100;
-    precoTxt = `~~De R$ ${formatBrCurrency(product.originalPrice)}~~\nPor R$ <b>${formatBrCurrency(product.price)}</b> (-${discountPercent.toFixed(0)}%)`;
+    precoTxt = `🔥 DE R$ <s>${formatBrCurrency(product.originalPrice)}</s> | POR R$ <b>${formatBrCurrency(product.price)}</b>`;
   } else if (product.price) {
     precoTxt = `🔥 POR R$ <b>${formatBrCurrency(product.price)}</b>`;
   }
@@ -268,16 +267,14 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
           if (subtitulo) {
             legendaTop += `\n<i>${subtitulo.toLowerCase()}</i>`;
           }
-        } else if (analise) {
-          legendaTop = `<b>🔥 AVALIAÇÃO DA IA:</b>\n<i>${analise}</i>`;
         } else {
-          legendaTop = `<b>${aiAnalysisRaw.trim()}</b>`;
+          legendaTop = `<b>🔥 ACHADINHO IMPERDÍVEL!</b>`;
         }
       } else {
-        legendaTop = `<b>${aiAnalysisRaw.trim()}</b>`;
+        legendaTop = `<b>🔥 ACHADINHO IMPERDÍVEL!</b>`;
       }
     } catch {
-      legendaTop = `<b>${aiAnalysisRaw.trim()}</b>`;
+      legendaTop = `<b>🔥 ACHADINHO IMPERDÍVEL!</b>`;
     }
   } else {
     legendaTop = "<b>🔥 ACHADINHO IMPERDÍVEL!</b>";
@@ -296,6 +293,37 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   
   lines.push(`${emoji} ${product.name}`);
   lines.push("");
+
+  // Adicionar nome da loja/plataforma (apenas a bolinha e o nome)
+  const PLATAFORMA_EMOJIS: Record<string, string> = {
+    amazon: '🟠 Amazon',
+    mercadoLivre: '🟡 Mercado Livre',
+    shopee: '🟠 Shopee',
+    aliexpress: '🔴 AliExpress',
+    tiktok: '⚫ TikTok Shop',
+    netshoes: '🟣 Netshoes',
+    magalu: '🔵 Magalu',
+    kabum: '🔵 Kabum',
+  };
+
+  let lojaDetectada = platform ? PLATAFORMA_EMOJIS[platform] : '';
+  if (!lojaDetectada && product.storeName) {
+    const storeLower = product.storeName.toLowerCase();
+    if (storeLower.includes('amazon')) lojaDetectada = '🟠 Amazon';
+    else if (storeLower.includes('mercado')) lojaDetectada = '🟡 Mercado Livre';
+    else if (storeLower.includes('shopee')) lojaDetectada = '🟠 Shopee';
+    else if (storeLower.includes('aliexpress')) lojaDetectada = '🔴 AliExpress';
+    else if (storeLower.includes('tiktok')) lojaDetectada = '⚫ TikTok Shop';
+    else if (storeLower.includes('netshoes')) lojaDetectada = '🟣 Netshoes';
+    else if (storeLower.includes('magalu') || storeLower.includes('magazine')) lojaDetectada = '🔵 Magalu';
+    else if (storeLower.includes('kabum')) lojaDetectada = '🔵 Kabum';
+    else lojaDetectada = product.storeName;
+  }
+
+  if (lojaDetectada) {
+    lines.push(`<b>${lojaDetectada}</b>`);
+    lines.push("");
+  }
   
   if (precoTxt) {
     lines.push(precoTxt);
