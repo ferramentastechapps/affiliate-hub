@@ -1,7 +1,7 @@
 import asyncio
 import io
 import requests as _requests
-from telegram import Bot, InputFile, LinkPreviewOptions
+from telegram import Bot, InputFile
 from telegram.error import RetryAfter
 from telegram.constants import ParseMode
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL
@@ -59,8 +59,8 @@ class TelegramNotifier:
         self.chat_id = TELEGRAM_CHAT_ID
 
     async def _send_message_with_retry(self, **kwargs):
-        if 'link_preview_options' not in kwargs:
-            kwargs['link_preview_options'] = LinkPreviewOptions(is_disabled=True)
+        if 'disable_web_page_preview' not in kwargs:
+            kwargs['disable_web_page_preview'] = True
         while True:
             try:
                 res = await self.bot.send_message(**kwargs)
