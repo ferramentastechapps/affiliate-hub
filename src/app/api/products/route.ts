@@ -35,20 +35,57 @@ export async function GET(request: Request) {
       orderByClause = { clicks: 'desc' };
     } else if (filterParam === 'alertas') {
       if (userIdParam) {
-        // Obter os produtos que o usuário alertou para achar as categorias ("relacionados")
+        // Obter categorias e palavras-chave do PushSubscription do usuário
+        const pushSubs = await prisma.pushSubscription.findMany({
+          where: { userId: userIdParam }
+        });
+        
+        let pushCategories: string[] = [];
+        let pushKeywords: string[] = [];
+        
+        for (const sub of pushSubs) {
+          if (sub.preferences) {
+            const prefs = sub.preferences as any;
+            if (prefs.categories && Array.isArray(prefs.categories)) {
+              pushCategories.push(...prefs.categories);
+            }
+            if (prefs.customInterests && Array.isArray(prefs.customInterests)) {
+              pushKeywords.push(...prefs.customInterests);
+            }
+          }
+        }
+        
+        // Mantém a lógica antiga de ProductAlert por segurança
         const userAlerts = await prisma.productAlert.findMany({
           where: { userId: userIdParam },
           include: { product: { select: { category: true } } }
         });
         
+        const alertedCategories = [...new Set([
+          ...userAlerts.map(a => a.product.category).filter(Boolean),
+          ...pushCategories
+        ])] as string[];
+        
+        const orConditions: any[] = [];
+        
+        if (alertedCategories.length > 0) {
+          orConditions.push({ category: { in: alertedCategories } });
+        }
+        
         if (userAlerts.length > 0) {
-          const alertedCategories = [...new Set(userAlerts.map(a => a.product.category))].filter(Boolean);
-          whereClause.OR = [
-            { alerts: { some: { userId: userIdParam } } },
-            { category: { in: alertedCategories } }
-          ];
+          orConditions.push({ alerts: { some: { userId: userIdParam } } });
+        }
+        
+        // Adiciona as keywords no OR
+        for (const kw of pushKeywords) {
+          orConditions.push({ name: { contains: kw, mode: 'insensitive' } });
+          orConditions.push({ description: { contains: kw, mode: 'insensitive' } });
+        }
+        
+        if (orConditions.length > 0) {
+          whereClause.OR = orConditions;
         } else {
-          whereClause.alerts = { some: { userId: userIdParam } }; // Sem alertas = array vazio
+          whereClause.id = 'none'; // Sem alertas configurados
         }
       } else {
         whereClause.alerts = { some: {} }; // Fallback

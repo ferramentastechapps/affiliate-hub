@@ -52,6 +52,18 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
     }
   }, [isOpen, mode]);
 
+  // Bloqueia o scroll da página (fundo) quando o modal está aberto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -223,8 +235,8 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
               </button>
             </div>
 
-            {customInterests.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-8 max-h-32 overflow-y-auto pr-1">
+            {(customInterests.length > 0 || selectedCategories.length > 0) && (
+              <div className="flex flex-wrap gap-1.5 mb-8 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                 {customInterests.map((interest) => (
                   <span
                     key={interest}
@@ -234,6 +246,22 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
                     <button
                       type="button"
                       onClick={() => handleRemoveInterest(interest)}
+                      className="text-orange-500/50 hover:text-orange-400 ml-0.5 cursor-pointer flex items-center justify-center"
+                    >
+                      <X size={12} weight="bold" />
+                    </button>
+                  </span>
+                ))}
+                
+                {selectedCategories.map((cat) => (
+                  <span
+                    key={`top-${cat}`}
+                    className="inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs px-2.5 py-1.5 rounded-md"
+                  >
+                    <span className="font-medium capitalize">{cat}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
                       className="text-orange-500/50 hover:text-orange-400 ml-0.5 cursor-pointer flex items-center justify-center"
                     >
                       <X size={12} weight="bold" />
@@ -252,21 +280,15 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
               {allCategories.length === 0 ? (
                 <p className="text-zinc-500 text-sm">Carregando categorias...</p>
               ) : (
-                allCategories.map(cat => {
-                  const isSelected = selectedCategories.includes(cat);
+                allCategories.filter(cat => !selectedCategories.includes(cat)).map(cat => {
                   return (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => toggleCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                        isSelected 
-                          ? 'bg-orange-500/10 border-orange-500 text-orange-400' 
-                          : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
-                      }`}
+                      className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
                     >
                       <span className="capitalize">{cat}</span>
-                      {isSelected && <CheckCircle size={12} weight="bold" />}
                     </button>
                   )
                 })
