@@ -219,17 +219,19 @@ export function ProductDetail({ product }: { product: Product }) {
     : targetUrl;
 
   // Find coupon
-  let displayCoupon = "";
-  if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
-    const firstCoupon = product.coupons[0];
-    if (firstCoupon.code && firstCoupon.code.toUpperCase() !== "NORMAL") {
-      displayCoupon = firstCoupon.code;
-    }
-  } else if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
-    const extracted = product.description.split('🎟️ CUPOM:')[1].trim();
-    if (extracted && extracted.toUpperCase() !== "NORMAL") {
-      displayCoupon = extracted;
-    }
+  let displayCoupon = '';
+  if (product.coupons && product.coupons.length > 0) {
+    displayCoupon = product.coupons[0].code;
+  } else if (product.description?.includes('🎟️ CUPOM:')) {
+    displayCoupon = product.description.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
+  }
+  
+  // Extrair regras e condições da descrição (antes do cupom se houver)
+  let condicoesMsg = "";
+  const desc = product.description || '';
+  const descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
+  if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
+    condicoesMsg = descSemCupom;
   }
 
   return (
@@ -335,6 +337,13 @@ export function ProductDetail({ product }: { product: Product }) {
             ) : (
               <div className="mb-8 p-4 bg-white/5 rounded-xl border border-white/5">
                 <p className="text-zinc-300">Verifique o preço atualizado diretamente no site da loja.</p>
+              </div>
+            )}
+
+            {condicoesMsg && (
+              <div className="mb-8 flex items-start gap-3 text-zinc-300 bg-accent/5 p-4 rounded-xl border border-accent/20 shadow-sm">
+                <span className="text-xl mt-0.5">{condicoesMsg.toLowerCase().includes('prime') ? '🔷' : '↪️'}</span>
+                <p className="font-medium text-[15px] leading-snug">{condicoesMsg}</p>
               </div>
             )}
 
