@@ -162,6 +162,29 @@ def enriquecer_produto(produto: dict) -> dict:
         plataforma = next(iter(produto['links'].keys()), 'unknown')
         if not produto.get('externalId'):
             produto['externalId'] = f"{plataforma}_{produto['platformProductId']}"
+            
+    # Extração automática de condições da Amazon (Prime, Programe e poupe)
+    plataforma = next(iter(produto.get('links', {}).keys()), 'unknown')
+    storeName = produto.get('storeName', '').lower()
+    
+    if plataforma == 'amazon' or storeName == 'amazon':
+        texto_busca = (produto.get('name', '') + ' ' + (produto.get('description', '') or '')).lower()
+        condicoes = []
+        if 'prime' in texto_busca:
+            condicoes.append("Exclusivo Membros Prime")
+        if 'programe' in texto_busca or 'subscribe' in texto_busca:
+            condicoes.append("Programe e poupe")
+            
+        if condicoes:
+            nova_condicao = " | ".join(condicoes)
+            desc_atual = produto.get('description', '') or ''
+            
+            # Evita duplicar se já tiver
+            if nova_condicao not in desc_atual:
+                if desc_atual and not desc_atual.startswith('Oferta do Dia') and desc_atual != 'Oferta encaminhada de grupos':
+                    produto['description'] = f"{nova_condicao}\n{desc_atual}"
+                else:
+                    produto['description'] = nova_condicao
 
     return produto
 
