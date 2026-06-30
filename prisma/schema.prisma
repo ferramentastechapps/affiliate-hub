@@ -219,17 +219,20 @@ model UserFavorite {
 // 🎫 CUPONS DE DESCONTO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 model Coupon {
-  id          String    @id @default(cuid())
-  code        String // Código do cupom (ex: DESCONTO10)
-  description String // Descrição pode ser longa
-  discount    String // Valor do desconto (ex: "10% OFF")
-  platform    String // Plataforma (Amazon, Shopee, etc)
-  productId   String? // Opcional: cupom específico para um produto
-  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  expiresAt   DateTime? // Data de expiração (opcional)
-  isActive    Boolean   @default(true) // Ativo/Inativo
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  code                 String // Código do cupom (ex: DESCONTO10)
+  description          String // Descrição pode ser longa
+  discount             String // Valor do desconto (ex: "10% OFF")
+  platform             String // Plataforma (Amazon, Shopee, etc)
+  productId            String? // Opcional: cupom específico para um produto
+  product              Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minPurchaseValue     Float? // Valor mínimo de compra
+  maxDiscountValue     Float? // Limite máximo de desconto em R$
+  applicableCategories String? // Categorias aplicáveis ou texto explicativo
+  expiresAt            DateTime? // Data de expiração (opcional)
+  isActive             Boolean   @default(true) // Ativo/Inativo
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([platform])
   @@index([isActive])

@@ -206,6 +206,74 @@ export async function POST(request: Request) {
     const { name, externalId, source, platformId, platformType } = body;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🎟️ INTERCEPTADOR DE CUPONS AVULSOS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const isCouponCategory = body.category?.toLowerCase().includes('cupom');
+    const isCouponName = body.name?.toLowerCase().includes('cupom');
+    
+    if (isCouponCategory || isCouponName) {
+      console.log(`[Webhook] 🎟️ Interceptado como CUPOM avulso: ${body.name}`);
+      
+      let extractedCode = "CUPOM";
+      let extractedDiscount = body.price ? `R$ ${body.price}` : "OFF";
+      
+      // Tentar extrair código e desconto
+      if (body.description?.includes('🎟️ CUPOM:')) {
+        extractedCode = body.description.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
+      }
+      
+      const discountMatch = body.name?.match(/(\d+%|R\$\s?\d+)/);
+      if (discountMatch) {
+        extractedDiscount = discountMatch[1] + (discountMatch[1].includes('%') ? " OFF" : "");
+      }
+
+      // Determinar plataforma
+      let platform = 'outros';
+      const bodyStr = JSON.stringify(body).toLowerCase();
+      if (bodyStr.includes('amazon') || body.links?.amazon) platform = 'amazon';
+      else if (bodyStr.includes('shopee') || body.links?.shopee) platform = 'shopee';
+      else if (bodyStr.includes('mercadolivre') || body.links?.mercadoLivre) platform = 'mercadolivre';
+      else if (bodyStr.includes('aliexpress') || body.links?.aliexpress) platform = 'aliexpress';
+      else if (bodyStr.includes('magalu') || body.links?.magalu) platform = 'magalu';
+      
+      const coupon = await prisma.coupon.create({
+        data: {
+          code: extractedCode,
+          description: body.name,
+          discount: extractedDiscount,
+          platform: platform,
+          isActive: true
+        }
+      });
+      
+      // Se for Amazon, ML ou Shopee, disparar
+      if (['amazon', 'mercadolivre', 'shopee'].includes(platform)) {
+        let affiliateLink = "";
+        let originalLink = "";
+        
+        if (body.links) {
+          originalLink = body.links[platform] || body.links.amazon || body.links.shopee || body.links.mercadoLivre || Object.values(body.links)[0] as string;
+        }
+
+        if (originalLink) {
+          const resolved = await resolveRedirect(originalLink);
+          affiliateLink = await generateAffiliateLink(originalLink, resolved) || originalLink;
+        }
+        
+        // Chamada assíncrona para disparo social (evita travar o webhook)
+        import('@/lib/socials').then((m) => {
+          m.publishCouponToSocials(coupon, affiliateLink || originalLink).catch(err => {
+            console.error('[Webhook] Erro ao publicar cupom nas redes:', err);
+          });
+        }).catch(err => {
+          console.error('[Webhook] Falha ao importar módulo de sociais:', err);
+        });
+      }
+      
+      return NextResponse.json({ success: true, message: 'Cupom interceptado e salvo', coupon }, { status: 201 });
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // RESOLUÇÃO DE LINKS E PARSE DE PLATAFORMA (NOVA ORDEM)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     const { links: processedLinks, productLinksData, status: processedStatus, resolvedUrls } = await processProductAffiliates(body);

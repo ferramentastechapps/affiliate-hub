@@ -12,6 +12,9 @@ interface Coupon {
   platform: string;
   expiresAt: string | null;
   isActive: boolean;
+  minPurchaseValue: number | null;
+  maxDiscountValue: number | null;
+  applicableCategories: string | null;
 }
 
 type Platform = 'amazon' | 'mercadolivre' | 'shopee' | 'aliexpress' | 'magalu' | 'outros';
@@ -65,6 +68,7 @@ export default function CuponsPage() {
   const [calcCouponSiteType, setCalcCouponSiteType] = useState<'percent' | 'fixed'>('percent');
   const [calcCouponVendor, setCalcCouponVendor] = useState<string>('');
   const [calcCouponVendorType, setCalcCouponVendorType] = useState<'percent' | 'fixed'>('percent');
+  const [calcCouponMaxDiscount, setCalcCouponMaxDiscount] = useState<string>('');
   const [calcPaymentMethod, setCalcPaymentMethod] = useState<PaymentMethod>('normal');
   const [calcShipping, setCalcShipping] = useState<string>('0');
   const [calcFreeShipping, setCalcFreeShipping] = useState(false);
@@ -103,14 +107,24 @@ export default function CuponsPage() {
     // 1. Cupom do site
     if (calcCouponSite) {
       const couponValue = parseFloat(calcCouponSite) || 0;
+      let discount = 0;
       if (calcCouponSiteType === 'percent') {
-        const discount = currentPrice * (couponValue / 100);
-        currentPrice -= discount;
-        breakdown.push({ label: `Cupom Site (${couponValue}%)`, value: -discount });
+        discount = currentPrice * (couponValue / 100);
       } else {
-        currentPrice -= couponValue;
-        breakdown.push({ label: `Cupom Site`, value: -couponValue });
+        discount = couponValue;
       }
+
+      // Aplicar limite máximo se houver
+      if (calcCouponMaxDiscount) {
+        const maxLimit = parseFloat(calcCouponMaxDiscount) || 0;
+        if (maxLimit > 0 && discount > maxLimit) {
+          discount = maxLimit;
+          breakdown.push({ label: `Limite do Cupom Atingido`, value: 0 });
+        }
+      }
+
+      currentPrice -= discount;
+      breakdown.push({ label: `Cupom Site ${calcCouponSiteType === 'percent' ? `(${couponValue}%)` : ''}`, value: -discount });
     }
 
     // 2. Cupom do vendedor (só Shopee)
@@ -261,7 +275,21 @@ export default function CuponsPage() {
                 </div>
               </div>
 
-              {/* Cupom do Vendedor (só Shopee) */}
+              {/* Limite de Desconto (Cupom do Site) */}
+              {calcCouponSiteType === 'percent' && (
+                <div className="pt-2">
+                  <label className="block text-sm font-bold text-white mb-2 text-accent/80">Limite Máximo do Cupom (R$)</label>
+                  <input
+                    type="number"
+                    value={calcCouponMaxDiscount}
+                    onChange={(e) => setCalcCouponMaxDiscount(e.target.value)}
+                    placeholder="Deixe vazio se não houver"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-accent/50 transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Cupom do Vendedor (apenas Shopee) */}
               {calcPlatform === 'shopee' && (
                 <div>
                   <label className="block text-sm font-bold text-white mb-2">Cupom do Vendedor</label>
@@ -442,6 +470,22 @@ export default function CuponsPage() {
                   {/* Conteúdo */}
                   <h3 className="text-white font-bold mb-2 line-clamp-2">{coupon.description}</h3>
                   <p className="text-text-secondary text-sm mb-4">{coupon.discount}</p>
+                  
+                  {/* Regras (novo) */}
+                  {(coupon.minPurchaseValue || coupon.maxDiscountValue || coupon.applicableCategories) && (
+                    <div className="mb-4 bg-black/20 p-3 rounded-lg border border-white/5 space-y-2">
+                      <p className="text-xs text-text-secondary font-bold uppercase mb-1">Regras:</p>
+                      {coupon.minPurchaseValue && (
+                        <p className="text-xs text-white/80">💰 Compras acima de R$ {coupon.minPurchaseValue.toFixed(2)}</p>
+                      )}
+                      {coupon.maxDiscountValue && (
+                        <p className="text-xs text-white/80">🛑 Desconto máximo de R$ {coupon.maxDiscountValue.toFixed(2)}</p>
+                      )}
+                      {coupon.applicableCategories && (
+                        <p className="text-xs text-white/80 line-clamp-1">🏷️ Válido em: {coupon.applicableCategories}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Código */}
                   <div className="flex items-center gap-2">
