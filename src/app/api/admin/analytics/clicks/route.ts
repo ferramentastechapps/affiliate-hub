@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth-utils';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d';
-    
+    const channelFilter = searchParams.get('channel') || null;
+
     let days = 30;
     if (period === '7d') days = 7;
     else if (period === '90d') days = 90;
@@ -28,64 +30,128 @@ export async function GET(request: Request) {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    const clicks = await prisma.clickLog.findMany({
-      where: { createdAt: { gte: startDate } },
-      include: {
-        product: { select: { id: true, name: true } }
-      }
-    });
+    // ── Condição de canal reutilizável ─────────────────────────────────
+    const channelCondition = channelFilter
+      ? Prisma.sql`AND channel = ${channelFilter}`
+      : Prisma.empty;
 
+    // ── 1. Cliques por dia via SQL GROUP BY (performático) ─────────────
+    type DayRow = { day: string; count: bigint };
+    const byDayRaw = await prisma.$queryRaw<DayRow[]>(Prisma.sql`
+      SELECT
+        TO_CHAR("createdAt" AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') as day,
+        COUNT(*) as count
+      FROM "ClickLog"
+      WHERE "createdAt" >= ${startDate}
+      ${channelCondition}
+      GROUP BY day
+      ORDER BY day ASC
+    `);
+
+    // Preencher dias sem cliques com 0
     const byDayMap: Record<string, number> = {};
-    const byChannelMap: Record<string, number> = {};
-    const byDeviceMap: Record<string, number> = { mobile: 0, desktop: 0, unknown: 0 };
-    const byProductMap: Record<string, { name: string, clicks: number }> = {};
-
-    // Initialize days
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      byDayMap[dateStr] = 0;
+      byDayMap[d.toISOString().split('T')[0]] = 0;
     }
+    byDayRaw.forEach(row => {
+      if (byDayMap[row.day] !== undefined) byDayMap[row.day] = Number(row.count);
+    });
+    const byDay = Object.keys(byDayMap).sort().map(date => ({ date, clicks: byDayMap[date] }));
 
-    clicks.forEach(click => {
-      const date = click.createdAt.toISOString().split('T')[0];
-      if (byDayMap[date] !== undefined) byDayMap[date]++;
+    // ── 2. Cliques por canal ────────────────────────────────────────────
+    type ChannelRow = { channel: string | null; count: bigint };
+    const byChannelRaw = await prisma.$queryRaw<ChannelRow[]>(Prisma.sql`
+      SELECT COALESCE(channel, 'orgânico') as channel, COUNT(*) as count
+      FROM "ClickLog"
+      WHERE "createdAt" >= ${startDate}
+      GROUP BY COALESCE(channel, 'orgânico')
+      ORDER BY count DESC
+    `);
+    const byChannel = byChannelRaw.map(r => ({
+      channel: r.channel ?? 'orgânico',
+      clicks: Number(r.count),
+    }));
 
-      const channel = click.channel || 'orgânico';
-      byChannelMap[channel] = (byChannelMap[channel] || 0) + 1;
+    // ── 3. Lista de canais disponíveis (para a UI) ──────────────────────
+    const availableChannels = byChannel.map(r => r.channel).filter(Boolean);
 
+    // ── 4. Cliques por dispositivo (via User-Agent em JS) ───────────────
+    const clicksForDevice = await prisma.clickLog.findMany({
+      where: {
+        createdAt: { gte: startDate },
+        ...(channelFilter ? { channel: channelFilter } : {}),
+      },
+      select: { userAgent: true },
+    });
+    const byDeviceMap: Record<string, number> = { mobile: 0, desktop: 0, unknown: 0 };
+    clicksForDevice.forEach(click => {
       const ua = click.userAgent?.toLowerCase() || '';
-      let device = 'unknown';
-      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
-        device = 'mobile';
-      } else if (ua) {
-        device = 'desktop';
-      }
-      byDeviceMap[device]++;
-
-      const pId = click.productId;
-      if (!byProductMap[pId] && click.product) {
-        byProductMap[pId] = { name: click.product.name, clicks: 0 };
-      }
-      if (byProductMap[pId]) {
-        byProductMap[pId].clicks++;
+      if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('ipad')) {
+        byDeviceMap.mobile++;
+      } else if (ua && ua !== 'unknown') {
+        byDeviceMap.desktop++;
+      } else {
+        byDeviceMap.unknown++;
       }
     });
+    const byDevice = Object.entries(byDeviceMap)
+      .map(([device, clicks]) => ({ device, clicks }))
+      .filter(d => d.clicks > 0);
 
-    const byDay = Object.keys(byDayMap).sort().map(date => ({ date, clicks: byDayMap[date] }));
-    const byChannel = Object.keys(byChannelMap).map(channel => ({ channel, clicks: byChannelMap[channel] })).sort((a, b) => b.clicks - a.clicks);
-    const byDevice = Object.keys(byDeviceMap).map(device => ({ device, clicks: byDeviceMap[device] }));
-    const byProduct = Object.keys(byProductMap)
-      .map(productId => ({ productId, name: byProductMap[productId].name, clicks: byProductMap[productId].clicks }))
-      .sort((a, b) => b.clicks - a.clicks)
-      .slice(0, 20);
+    // ── 5. Top produtos via SQL GROUP BY ────────────────────────────────
+    type ProductRow = { productId: string; count: bigint };
+    const byProductRaw = await prisma.$queryRaw<ProductRow[]>(Prisma.sql`
+      SELECT "productId", COUNT(*) as count
+      FROM "ClickLog"
+      WHERE "createdAt" >= ${startDate}
+      ${channelCondition}
+      GROUP BY "productId"
+      ORDER BY count DESC
+      LIMIT 20
+    `);
+
+    const productIds = byProductRaw.map(r => r.productId);
+    const productDetails = productIds.length > 0
+      ? await prisma.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, name: true, category: true },
+        })
+      : [];
+
+    const productMap = Object.fromEntries(productDetails.map(p => [p.id, p]));
+    const byProduct = byProductRaw
+      .map(r => ({
+        productId: r.productId,
+        name: productMap[r.productId]?.name ?? '',
+        category: productMap[r.productId]?.category ?? '',
+        clicks: Number(r.count),
+      }))
+      .filter(p => p.name !== '');
+
+    // ── 6. Métricas de resumo ────────────────────────────────────────────
+    const totalClicks = byDay.reduce((sum, d) => sum + d.clicks, 0);
+    const avgPerDay = days > 0 ? Math.round(totalClicks / days) : 0;
+    const peakDay = byDay.reduce(
+      (best, d) => (d.clicks > best.clicks ? d : best),
+      { date: '', clicks: 0 }
+    );
+    const topChannel = byChannel[0]?.channel ?? '—';
 
     return NextResponse.json({
       byDay,
       byChannel,
       byDevice,
-      byProduct
+      byProduct,
+      availableChannels,
+      summary: {
+        total: totalClicks,
+        avgPerDay,
+        peakDay: peakDay.date,
+        peakClicks: peakDay.clicks,
+        topChannel,
+      },
     });
   } catch (error) {
     console.error('Erro ao buscar analytics:', error);
