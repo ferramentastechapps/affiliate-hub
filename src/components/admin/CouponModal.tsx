@@ -18,6 +18,9 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
     platform: "",
     productId: "",
     expiresAt: "",
+    minPurchaseValue: "",
+    maxDiscountValue: "",
+    applicableCategories: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +39,9 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
         expiresAt: coupon.expiresAt
           ? new Date(coupon.expiresAt).toISOString().split("T")[0]
           : "",
+        minPurchaseValue: coupon.minPurchaseValue?.toString() || "",
+        maxDiscountValue: coupon.maxDiscountValue?.toString() || "",
+        applicableCategories: coupon.applicableCategories || "",
       });
     } else {
       setFormData({
@@ -45,6 +51,9 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
         platform: "",
         productId: "",
         expiresAt: "",
+        minPurchaseValue: "",
+        maxDiscountValue: "",
+        applicableCategories: "",
       });
     }
   }, [coupon, isOpen]);
@@ -68,6 +77,9 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
         ...formData,
         productId: formData.productId || null,
         expiresAt: formData.expiresAt || null,
+        minPurchaseValue: formData.minPurchaseValue ? parseFloat(formData.minPurchaseValue) : null,
+        maxDiscountValue: formData.maxDiscountValue ? parseFloat(formData.maxDiscountValue) : null,
+        applicableCategories: formData.applicableCategories || null,
       };
 
       const url = coupon ? `/api/coupons/${coupon.id}` : "/api/coupons";
@@ -197,6 +209,42 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
               onChange={(e) =>
                 setFormData({ ...formData, expiresAt: e.target.value })
               }
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Compra Mínima (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.minPurchaseValue}
+                onChange={(e) => setFormData({ ...formData, minPurchaseValue: e.target.value })}
+                placeholder="Ex: 100.00"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Desconto Máximo (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.maxDiscountValue}
+                onChange={(e) => setFormData({ ...formData, maxDiscountValue: e.target.value })}
+                placeholder="Ex: 60.00"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Categorias Aplicáveis</label>
+            <input
+              type="text"
+              value={formData.applicableCategories}
+              onChange={(e) => setFormData({ ...formData, applicableCategories: e.target.value })}
+              placeholder="Ex: Eletrônicos, Moda (ou texto livre)"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             />
           </div>

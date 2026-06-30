@@ -140,6 +140,15 @@ export function CouponsTab() {
                   </div>
                   <p className="text-zinc-300 mb-1">{coupon.description}</p>
                   <p className="text-sm text-accent font-semibold">{coupon.discount}</p>
+                  
+                  {(coupon.minPurchaseValue || coupon.maxDiscountValue || coupon.applicableCategories) && (
+                    <div className="mt-2 text-xs text-zinc-400">
+                      {coupon.minPurchaseValue && <span className="mr-3">Min: R$ {coupon.minPurchaseValue}</span>}
+                      {coupon.maxDiscountValue && <span className="mr-3">Max: R$ {coupon.maxDiscountValue}</span>}
+                      {coupon.applicableCategories && <span>Cat: {coupon.applicableCategories}</span>}
+                    </div>
+                  )}
+
                   {coupon.product && (
                     <p className="text-xs text-zinc-500 mt-2">
                       Produto: {coupon.product.name}
