@@ -976,7 +976,7 @@ export function AiStudioTab() {
 function TokensSection() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('30d');
+  const [period, setPeriod] = useState('hoje');
 
   useEffect(() => {
     setLoading(true);
@@ -992,13 +992,16 @@ function TokensSection() {
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
-        {['7d', '30d', '90d'].map(p => (
+        {['hoje', 'ontem', '7d', '30d', '90d'].map(p => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
             className={`px-4 py-2 rounded-lg text-sm font-medium ${period === p ? 'bg-accent text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
           >
-            {p === '7d' ? 'Últimos 7 dias' : p === '30d' ? 'Últimos 30 dias' : 'Últimos 90 dias'}
+            {p === 'hoje' ? 'Hoje' : 
+             p === 'ontem' ? 'Ontem' : 
+             p === '7d' ? 'Últimos 7 dias' : 
+             p === '30d' ? 'Últimos 30 dias' : 'Últimos 90 dias'}
           </button>
         ))}
       </div>
