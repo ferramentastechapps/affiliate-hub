@@ -274,10 +274,10 @@ class PromotionBot:
                         
                         produtos_adicionados += 1
                     
-                    # Limitar tamanho das filas
-                    if len(self.fila_lifestyle) > 20: self.fila_lifestyle = self.fila_lifestyle[:20]
-                    if len(self.fila_manual) > 20: self.fila_manual = self.fila_manual[:20]
-                    if len(self.fila_sem_lifestyle) > 30: self.fila_sem_lifestyle = self.fila_sem_lifestyle[:30]
+                    # Limitar tamanho das filas (mantendo sempre os mais recentes)
+                    if len(self.fila_lifestyle) > 50: self.fila_lifestyle = self.fila_lifestyle[-50:]
+                    if len(self.fila_manual) > 50: self.fila_manual = self.fila_manual[-50:]
+                    if len(self.fila_sem_lifestyle) > 100: self.fila_sem_lifestyle = self.fila_sem_lifestyle[-100:]
                     
                     self._save_state()
                     print(f'📥 {produtos_adicionados} produto(s) processado(s) nas filas.')
