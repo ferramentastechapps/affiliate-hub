@@ -5,7 +5,7 @@ Robô de Promoções - Busca, adiciona no site e envia para Telegram
 
 import time
 import schedule
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from affiliate_hub_api import AffiliateHubAPI
 from telegram_bot import TelegramNotifier
 from scrapers import PromotionScraper
@@ -104,6 +104,12 @@ class PromotionBot:
         except Exception as e:
             print(f'Aviso: Não foi possível salvar o estado: {e}')
             
+    def is_sleep_time(self):
+        """Verifica se o bot está no período de pausa (01:00 às 06:59, Horário de Brasília)"""
+        br_tz = timezone(timedelta(hours=-3))
+        now_br = datetime.now(br_tz)
+        return 1 <= now_br.hour < 7
+            
     def _remover_da_fila(self, candidato):
         """Remove o candidato da fila_lifestyle ou fila_manual baseando-se no ID do produto."""
         produto_id = candidato.get('produto', {}).get('id')
@@ -124,6 +130,12 @@ class PromotionBot:
     
     def executar_busca(self):
         """Executa uma busca completa"""
+        if self.is_sleep_time():
+            print('\n' + '='*60)
+            print('😴 Modo noturno ativo. Buscas pausadas entre 01h e 07h.')
+            print('='*60)
+            return
+            
         print('\n' + '='*60)
         print(f'🤖 Iniciando busca de promoções - {datetime.now().strftime("%H:%M:%S")}')
         print('='*60)
@@ -329,6 +341,9 @@ class PromotionBot:
             
     def publicar_fila_telegram(self):
         """Publica a promoção mais recente da fila lifestyle/manual respeitando intervalo de 5 minutos"""
+        if self.is_sleep_time():
+            return
+            
         import os, json
         
         # 1. Consumir fila_manual_pendente.json (produtos do listener)
