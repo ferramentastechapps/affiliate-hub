@@ -203,15 +203,15 @@ function DraggableCouponButton({ code, onCopy }: { code: string, onCopy: (c: str
   return (
     <div className="relative w-full h-[56px] bg-white rounded-full flex items-center overflow-hidden border-[4px] border-zinc-900 shadow-inner select-none">
       {/* Texto de fundo (código) */}
-      <div className="absolute inset-0 flex items-center justify-center z-0">
-        <span className="font-mono text-zinc-900 font-black text-xl tracking-widest uppercase">
+      <div className={`absolute top-0 bottom-0 flex items-center z-0 transition-all duration-300 ${revealed ? 'inset-0 justify-center' : 'right-0 w-[35%] justify-center'}`}>
+        <span className="font-mono text-zinc-900 font-black text-lg md:text-xl tracking-widest uppercase truncate px-2">
           {revealed ? code : (code.length > 3 ? code.substring(0, 3) + '...' : code)}
         </span>
       </div>
 
       {/* Efeito de blur no lado direito quando escondido */}
       {!revealed && (
-        <div className="absolute right-0 top-0 bottom-0 w-[40%] flex items-center justify-center pointer-events-none z-0 bg-white/40 backdrop-blur-[3px] rounded-r-full">
+        <div className="absolute right-0 top-0 bottom-0 w-[35%] flex items-center justify-center pointer-events-none z-0 bg-white/40 backdrop-blur-[2px] rounded-r-full">
         </div>
       )}
 
