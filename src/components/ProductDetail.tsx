@@ -167,6 +167,17 @@ export function ProductDetail({ product }: { product: Product }) {
 
   function trackAffiliateClick(platform: string, productName: string, url: string) {
     try {
+      // Registrar no backend para os relatórios do painel
+      fetch('/api/track/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          productId: product.id || product.shortId, 
+          platform, 
+          channel: 'website' 
+        })
+      }).catch(err => console.error('Erro ao salvar click log:', err));
+
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'affiliate_click', {
           event_category: 'Affiliate',

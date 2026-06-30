@@ -35,58 +35,60 @@ export async function GET(request: Request) {
       ? Prisma.sql`AND channel = ${channelFilter}`
       : Prisma.empty;
 
-    // ── 1. Cliques por dia via SQL GROUP BY (performático) ─────────────
-    type DayRow = { day: string; count: bigint };
-    const byDayRaw = await prisma.$queryRaw<DayRow[]>(Prisma.sql`
-      SELECT
-        TO_CHAR("createdAt" AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') as day,
-        COUNT(*) as count
-      FROM "ClickLog"
-      WHERE "createdAt" >= ${startDate}
-      ${channelCondition}
-      GROUP BY day
-      ORDER BY day ASC
-    `);
+    // ── Buscando todos os cliques no período ───────────────────────────
+    const allClicks = await prisma.clickLog.findMany({
+      where: {
+        createdAt: { gte: startDate },
+        ...(channelFilter ? { channel: channelFilter } : {}),
+      },
+      select: {
+        createdAt: true,
+        channel: true,
+        userAgent: true,
+        productId: true,
+      },
+    });
 
-    // Preencher dias sem cliques com 0
+    // ── 1. Cliques por dia ─────────────────────────────────────────────
     const byDayMap: Record<string, number> = {};
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       byDayMap[d.toISOString().split('T')[0]] = 0;
     }
-    byDayRaw.forEach(row => {
-      if (byDayMap[row.day] !== undefined) byDayMap[row.day] = Number(row.count);
-    });
-    const byDay = Object.keys(byDayMap).sort().map(date => ({ date, clicks: byDayMap[date] }));
-
+    
     // ── 2. Cliques por canal ────────────────────────────────────────────
-    type ChannelRow = { channel: string | null; count: bigint };
-    const byChannelRaw = await prisma.$queryRaw<ChannelRow[]>(Prisma.sql`
-      SELECT COALESCE(channel, 'orgânico') as channel, COUNT(*) as count
-      FROM "ClickLog"
-      WHERE "createdAt" >= ${startDate}
-      GROUP BY COALESCE(channel, 'orgânico')
-      ORDER BY count DESC
-    `);
-    const byChannel = byChannelRaw.map(r => ({
-      channel: r.channel ?? 'orgânico',
-      clicks: Number(r.count),
-    }));
+    const byChannelMap: Record<string, number> = {};
+    
+    allClicks.forEach(click => {
+      // Por dia
+      // Convert to local time string approximation or just use UTC date string
+      const dateStr = new Date(click.createdAt.getTime() - (3 * 60 * 60 * 1000)).toISOString().split('T')[0];
+      if (byDayMap[dateStr] !== undefined) {
+        byDayMap[dateStr]++;
+      } else {
+        // Se cair fora por fuso, ignora ou soma no mais próximo
+        const fallback = click.createdAt.toISOString().split('T')[0];
+        if (byDayMap[fallback] !== undefined) byDayMap[fallback]++;
+      }
+      
+      // Por canal
+      const ch = click.channel || 'orgânico';
+      byChannelMap[ch] = (byChannelMap[ch] || 0) + 1;
+    });
+
+    const byDay = Object.keys(byDayMap).sort().map(date => ({ date, clicks: byDayMap[date] }));
+    
+    const byChannel = Object.entries(byChannelMap)
+      .map(([channel, clicks]) => ({ channel, clicks }))
+      .sort((a, b) => b.clicks - a.clicks);
 
     // ── 3. Lista de canais disponíveis (para a UI) ──────────────────────
     const availableChannels = byChannel.map(r => r.channel).filter(Boolean);
 
     // ── 4. Cliques por dispositivo (via User-Agent em JS) ───────────────
-    const clicksForDevice = await prisma.clickLog.findMany({
-      where: {
-        createdAt: { gte: startDate },
-        ...(channelFilter ? { channel: channelFilter } : {}),
-      },
-      select: { userAgent: true },
-    });
     const byDeviceMap: Record<string, number> = { mobile: 0, desktop: 0, unknown: 0 };
-    clicksForDevice.forEach(click => {
+    allClicks.forEach(click => {
       const ua = click.userAgent?.toLowerCase() || '';
       if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('ipad')) {
         byDeviceMap.mobile++;
@@ -100,17 +102,18 @@ export async function GET(request: Request) {
       .map(([device, clicks]) => ({ device, clicks }))
       .filter(d => d.clicks > 0);
 
-    // ── 5. Top produtos via SQL GROUP BY ────────────────────────────────
-    type ProductRow = { productId: string; count: bigint };
-    const byProductRaw = await prisma.$queryRaw<ProductRow[]>(Prisma.sql`
-      SELECT "productId", COUNT(*) as count
-      FROM "ClickLog"
-      WHERE "createdAt" >= ${startDate}
-      ${channelCondition}
-      GROUP BY "productId"
-      ORDER BY count DESC
-      LIMIT 20
-    `);
+    // ── 5. Top produtos via JS ────────────────────────────────
+    const byProductCountMap: Record<string, number> = {};
+    allClicks.forEach(click => {
+      if (click.productId) {
+        byProductCountMap[click.productId] = (byProductCountMap[click.productId] || 0) + 1;
+      }
+    });
+
+    const byProductRaw = Object.entries(byProductCountMap)
+      .map(([productId, count]) => ({ productId, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
 
     const productIds = byProductRaw.map(r => r.productId);
     const productDetails = productIds.length > 0

@@ -45,8 +45,20 @@ type PlatformModalProps = {
 };
 
 // Tracking fake function
-function trackAffiliateClick(platform: string, productName: string, url: string) {
+function trackAffiliateClick(platform: string, productName: string, url: string, productId?: string) {
   try {
+    if (productId) {
+      fetch('/api/track/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          productId: productId, 
+          platform, 
+          channel: 'website' 
+        })
+      }).catch(err => console.error('Erro ao salvar click log:', err));
+    }
+
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'affiliate_click', {
         event_category: 'Affiliate',
@@ -232,14 +244,14 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoF
       setShowCouponModal(true);
     } else {
       // Se não houver cupom, ir direto para a loja
-      trackAffiliateClick(platformName, product.name, targetUrl);
+      trackAffiliateClick(platformName, product.name, targetUrl, product.id);
       window.open(targetUrl, '_blank', 'noopener,noreferrer');
     }
   }
   
   function handleGoToStore() {
     if (!targetUrl) return;
-    trackAffiliateClick(platformName, product.name, targetUrl);
+    trackAffiliateClick(platformName, product.name, targetUrl, product.id);
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
   }
 

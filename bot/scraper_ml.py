@@ -74,12 +74,14 @@ def _mapear_categoria_ml(category_id: str, category_path: list = None) -> str:
     return 'Diversos'
 
 
-def _gerar_link_afiliado(url: str, tag: str) -> str:
+def _gerar_link_afiliado(url: str, tag: str, word: str = None) -> str:
     """Adiciona os parâmetros de afiliado do ML na URL do produto"""
     if not tag:
         return url
+    if not word:
+        word = tag
     separator = '&' if '?' in url else '?'
-    return f"{url}{separator}matt_tool={tag}&matt_word={tag}"
+    return f"{url}{separator}matt_tool={tag}&matt_word={word}"
 
 
 def _extrair_preco(item: dict) -> tuple:
@@ -110,6 +112,7 @@ class MercadoLivreAPIScraper:
 
     def __init__(self):
         self.tag = os.getenv('MERCADOLIVRE_TAG', '')
+        self.word = os.getenv('MERCADOLIVRE_WORD', self.tag)
         self.headers = {
             'User-Agent': 'affiliate-hub-bot/1.0',
             'Accept': 'application/json',
@@ -273,7 +276,7 @@ class MercadoLivreAPIScraper:
             link_ml = item.get('permalink', '')
             if not link_ml:
                 return None
-            link_afiliado = _gerar_link_afiliado(link_ml, self.tag)
+            link_afiliado = _gerar_link_afiliado(link_ml, self.tag, self.word)
 
             # Imagem — buscar a maior resolução disponível
             # Prioridade 1: campo 'pictures' da API do ML (retorna URLs em alta qualidade)
