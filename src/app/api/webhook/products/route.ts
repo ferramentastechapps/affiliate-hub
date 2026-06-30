@@ -710,7 +710,7 @@ export async function POST(request: Request) {
     ).then(async (aiResult) => {
       let newStatus = finalStatus;
 
-      // Se autoApprove for true, definir status com base no aiScore >= 6.5 (65%)
+      // Se autoApprove for true, forçar status como 'active' ignorando a nota da IA
       if (body.autoApprove === true) {
         // Verificar se algum link de afiliado permaneceu com o agregador (indicando falha na geração/resolução)
         const hasUnresolvedAggregator = Object.values(processedLinks || {}).some(
@@ -720,12 +720,9 @@ export async function POST(request: Request) {
         if (hasUnresolvedAggregator) {
           newStatus = 'pending';
           console.log(`[Webhook] Forçando status como 'pending' porque contém link de agregador não resolvido: ${body.name}`);
-        } else if (aiResult.score && aiResult.score >= 6.5) {
-          newStatus = 'active';
-          console.log(`[Webhook] Auto-aprovado pela IA (score ${aiResult.score} >= 6.5): ${body.name}`);
         } else {
-          newStatus = 'pending';
-          console.log(`[Webhook] Mantido pendente (score ${aiResult.score || 0} < 6.5): ${body.name}`);
+          newStatus = 'active';
+          console.log(`[Webhook] Auto-aprovado pelo scraper (ignorando score da IA): ${body.name}`);
         }
       }
 
@@ -1290,15 +1287,10 @@ export async function PUT(request: Request) {
         ).then(async (aiResult) => {
           let newStatus = finalStatus;
 
-          // Se autoApprove for true, definir status com base no aiScore >= 6.5 (65%)
+          // Se autoApprove for true, forçar status como 'active' ignorando a nota da IA
           if (productData.autoApprove === true) {
-            if (aiResult.score && aiResult.score >= 6.5) {
-              newStatus = 'active';
-              console.log(`[Webhook Batch] Auto-aprovado pela IA (score ${aiResult.score} >= 6.5): ${productData.name}`);
-            } else {
-              newStatus = 'pending';
-              console.log(`[Webhook Batch] Mantido pendente (score ${aiResult.score || 0} < 6.5): ${productData.name}`);
-            }
+            newStatus = 'active';
+            console.log(`[Webhook Batch] Auto-aprovado pelo scraper (ignorando score da IA): ${productData.name}`);
           }
 
           let finalEnhancedImageUrl: string | null = product.enhancedImageUrl;
