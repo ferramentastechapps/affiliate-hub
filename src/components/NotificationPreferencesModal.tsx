@@ -11,16 +11,12 @@ interface NotificationPreferencesModalProps {
 }
 
 export function NotificationPreferencesModal({ isOpen, onClose, mode }: NotificationPreferencesModalProps) {
-  const [activeTab, setActiveTab] = useState<'history' | 'settings'>(mode === 'edit' ? 'history' : 'settings');
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customInterests, setCustomInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [subscriptionEndpoint, setSubscriptionEndpoint] = useState<string | null>(null);
-  
-  const [historyProducts, setHistoryProducts] = useState<any[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Carrega categorias dinâmicas
   useEffect(() => {
@@ -55,20 +51,6 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
       setCustomInterests([]);
     }
   }, [isOpen, mode]);
-
-  // Carrega histórico quando muda pra aba history
-  useEffect(() => {
-    if (activeTab === 'history' && subscriptionEndpoint) {
-      setIsLoadingHistory(true);
-      fetch(`/api/push/history?endpoint=${encodeURIComponent(subscriptionEndpoint)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.products) setHistoryProducts(data.products);
-          setIsLoadingHistory(false);
-        })
-        .catch(() => setIsLoadingHistory(false));
-    }
-  }, [activeTab, subscriptionEndpoint]);
 
   const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -161,7 +143,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-[#121214] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col h-[85vh] max-h-[800px] shadow-2xl">
+      <div className="bg-[#121214] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col max-h-[85vh] shadow-2xl">
         
         {/* Header */}
         <div className="flex flex-col shrink-0 bg-white/5 border-b border-white/10">
@@ -185,27 +167,27 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
           {/* Tabs */}
           <div className="flex px-5 gap-6">
             <button
-              onClick={() => setActiveTab('history')}
-              className={`pb-3 text-sm font-semibold transition-colors relative ${activeTab === 'history' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent("change-filter", { detail: { filter: 'alertas' } }));
+              }}
+              className="pb-3 text-sm font-semibold transition-colors relative text-zinc-500 hover:text-orange-500"
             >
               Meus alertas
-              {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-t-full" />}
             </button>
             <button
-              onClick={() => setActiveTab('settings')}
-              className={`pb-3 text-sm font-semibold transition-colors relative ${activeTab === 'settings' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className="pb-3 text-sm font-semibold transition-colors relative text-white"
             >
               Meus gostos
-              {activeTab === 'settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-t-full" />}
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-t-full" />
             </button>
           </div>
         </div>
 
         {/* Tab: Settings */}
-        {activeTab === 'settings' && (
-          <div className="p-5 flex-1 overflow-y-auto">
-            {mode === 'install' && !subscriptionEndpoint && (
-              <div className="bg-orange-500/10 border border-orange-500/30 text-orange-400 p-3 rounded-xl text-xs mb-5">
+        <div className="p-5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+          {mode === 'install' && !subscriptionEndpoint && (
+            <div className="bg-orange-500/10 border border-orange-500/30 text-orange-400 p-3 rounded-xl text-xs mb-5">
                 Configure seus alertas! Ao selecionar o primeiro item, pediremos permissão para te notificar. As configurações são salvas automaticamente.
               </div>
             )}
@@ -290,54 +272,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
                 })
               )}
             </div>
-          </div>
-        )}
-
-        {/* Tab: History */}
-        {activeTab === 'history' && (
-          <div className="flex-1 overflow-y-auto bg-[#0a0a0b]">
-            {!subscriptionEndpoint || (selectedCategories.length === 0 && customInterests.length === 0) ? (
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-60">
-                <ClockCounterClockwise size={48} className="text-zinc-600 mb-4" />
-                <p className="text-zinc-400 text-sm">
-                  Você ainda não configurou alertas ou não ativou as notificações.
-                </p>
-                <button onClick={() => setActiveTab('settings')} className="mt-4 text-orange-500 text-sm font-semibold underline">
-                  Configurar agora
-                </button>
-              </div>
-            ) : isLoadingHistory ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
-              </div>
-            ) : historyProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-60">
-                <ClockCounterClockwise size={48} className="text-zinc-600 mb-4" />
-                <p className="text-zinc-400 text-sm">Nenhuma promoção encontrada recentemente para os seus alertas.</p>
-              </div>
-            ) : (
-              <div className="p-4 space-y-3">
-                {historyProducts.map((p) => (
-                  <Link key={p.id} href={`/produto/${p.id}`} onClick={onClose} className="flex gap-3 bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800/50 p-3 rounded-2xl transition-colors group">
-                    <div className="w-20 h-20 shrink-0 bg-white rounded-xl p-2 flex items-center justify-center">
-                      <img src={p.imageUrl} alt={p.name} className="max-w-full max-h-full object-contain mix-blend-multiply" />
-                    </div>
-                    <div className="flex flex-col justify-center flex-1 min-w-0">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-orange-500 mb-1">{p.category}</span>
-                      <h4 className="text-zinc-200 text-sm font-medium line-clamp-2 leading-snug mb-1 group-hover:text-white transition-colors">{p.name}</h4>
-                      <p className="text-white font-bold">
-                        {p.price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price) : 'Ver oferta'}
-                      </p>
-                    </div>
-                    <div className="flex items-center text-zinc-600 group-hover:text-orange-500 transition-colors pr-2">
-                      <ArrowRight size={20} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        </div>
 
       </div>
     </div>
