@@ -140,6 +140,22 @@ if [ -n "$OPENROUTER_KEY_VAL" ]; then
   fi
 fi
 
+echo "💽 Verificando Memória SWAP para evitar travamento de RAM..."
+if ! swapon --show | grep -q "swapfile"; then
+  echo "Criando arquivo de SWAP de 2GB (isso pode demorar uns segundos)..."
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile || true
+  # Adicionar ao fstab apenas se não existir
+  if ! grep -q "swapfile" /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+  echo "✅ SWAP ativado!"
+else
+  echo "✅ SWAP já está configurado."
+fi
+
 echo "📦 Instalando dependências..."
 npm install
 
