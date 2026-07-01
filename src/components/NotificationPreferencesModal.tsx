@@ -218,7 +218,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
                 value={newInterest}
                 onChange={(e) => setNewInterest(e.target.value)}
                 placeholder="Ex: ps5, jbl, geladeira..."
-                className="flex-1 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 py-2 rounded-xl text-xs placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors"
+                className="flex-1 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 py-2 rounded-xl text-base sm:text-xs placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
