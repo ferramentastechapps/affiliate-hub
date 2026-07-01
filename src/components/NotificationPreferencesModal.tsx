@@ -53,15 +53,9 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   }, [isOpen, mode]);
 
   // Bloqueia o scroll da página (fundo) quando o modal está aberto
+  // Removido pois causa bug de travamento de scroll no iOS Safari
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    // Intencionalmente vazio para corrigir bug do iOS
   }, [isOpen]);
 
   const urlBase64ToUint8Array = (base64String: string) => {
