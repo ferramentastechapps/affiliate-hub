@@ -53,9 +53,15 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   }, [isOpen, mode]);
 
   // Bloqueia o scroll da página (fundo) quando o modal está aberto
-  // Removido pois causa bug de travamento de scroll no iOS Safari
   useEffect(() => {
-    // Intencionalmente vazio para corrigir bug do iOS
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -191,7 +197,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
         </div>
 
         {/* Tab: Settings */}
-        <div className="p-5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+        <div className="p-5 flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           {mode === 'install' && !subscriptionEndpoint && (
             <div className="bg-orange-500/10 border border-orange-500/30 text-orange-400 p-3 rounded-xl text-xs mb-5">
                 Configure seus alertas! Ao selecionar o primeiro item, pediremos permissão para te notificar. As configurações são salvas automaticamente.
