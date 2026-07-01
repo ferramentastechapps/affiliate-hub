@@ -248,7 +248,10 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   // Extrair regras e condições da descrição (antes do cupom se houver)
   let condicoesMsg = "";
   const desc = product.description || '';
-  const descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
+  let descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
+  // Limpar texto padrão do scraper
+  descSemCupom = descSemCupom.replace(/Oferta na loja[^\n]+no[^\n]+/gi, '').trim();
+  
   if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
     // Escolher ícone: 🔷 para Prime, ↪️ para outros
     const icon = descSemCupom.toLowerCase().includes('prime') ? '🔷' : '↪️';
