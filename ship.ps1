@@ -221,8 +221,17 @@ pm2 status
 echo "🌐 Next.js rodando em http://127.0.0.1:3005"
 "@
 
-# Envia o script à VPS como um pacote sólido para não engolir chamadas
-$cleanCommand = $sshCommand -replace "`r", ""
-Write-Output $cleanCommand | ssh root@212.85.10.239 "bash"
+# Salva o script em um arquivo temporário local
+$DeployScript = ".deploy.sh"
+Set-Content -Path $DeployScript -Value ($sshCommand -replace "`r", "") -Encoding UTF8
+
+Write-Host "Transferindo script de deploy para a VPS..." -ForegroundColor Cyan
+scp $DeployScript root@212.85.10.239:~/deploy.sh
+
+Write-Host "Executando script na VPS (pode pedir a senha novamente)..." -ForegroundColor Cyan
+ssh root@212.85.10.239 "bash ~/deploy.sh && rm ~/deploy.sh"
+
+# Limpa o arquivo local
+Remove-Item $DeployScript -ErrorAction SilentlyContinue
 
 Write-Host "Deploy na VPS finalizado e sistemas rodando!" -ForegroundColor Green
