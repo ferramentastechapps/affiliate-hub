@@ -91,7 +91,7 @@ node swap_images.js
 echo "ðŸ—ï¸  Fazendo build do Next.js..."
 rm -rf .next
 rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
-NEXT_TELEMETRY_DISABLED=1 npm run build
+NODE_OPTIONS="--max-old-space-size=1024" NEXT_TELEMETRY_DISABLED=1 npm run build
 
 echo "ðŸŽ¬ Convertendo vÃ­deo de entrada para MP4 (compatibilidade Android/Chrome)..."
 if command -v ffmpeg &>/dev/null; then
