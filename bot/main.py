@@ -215,7 +215,7 @@ class PromotionBot:
                             links = (produto_retornado.get('links', {}) if produto_retornado else {}) or {}
                             platform = None
                             affiliate_link = None
-                            for p_name in ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum']:
+                            for p_name in ['amazon', 'aliexpress', 'shopee', 'mercadoLivre', 'tiktok', 'netshoes', 'magalu', 'kabum', 'pagueMenos']:
                                 if links.get(p_name):
                                     platform = p_name
                                     affiliate_link = links.get(p_name)
