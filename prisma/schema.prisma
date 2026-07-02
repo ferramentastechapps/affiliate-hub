@@ -132,6 +132,7 @@ model Link {
   netshoes     String?
   magalu       String?
   kabum        String?
+  pagueMenos   String?
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -143,7 +144,7 @@ model ProductLink {
   id                    String   @id @default(cuid())
   productId             String
   product               Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  platform              String // "amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok", "magalu", "kabum", "netshoes"
+  platform              String // "amazon", "mercadoLivre", "shopee", "aliexpress", "tiktok", "magalu", "kabum", "netshoes", "pagueMenos"
   sourceUrl             String?  @db.Text // URL original da plataforma (ANTES de qualquer tag de afiliado)
   affiliateUrl          String?  @db.Text // Link enviado pelo bot (pode já ter tag do parceiro)
   generatedAffiliateUrl String?  @db.Text // Link gerado pelo nosso sistema (com nossa própria tag)

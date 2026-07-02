@@ -2098,6 +2098,94 @@ class PromotionScraper:
         
         return min(score, 100)  # Máximo 100
 
+    def buscar_promocoes_pague_menos(self, limite: int = 20) -> List[Dict]:
+        """Busca ofertas da Pague Menos via API VTEX com link de afiliado."""
+        produtos = []
+        try:
+            import os
+            loja_id = os.getenv('PAGUE_MENOS_LOJA', 'economizeiomjota')
+            print('💊 Buscando ofertas na Pague Menos (VTEX API)...')
+
+            url = 'https://www.paguemenos.com.br/api/catalog_system/pub/products/search/'
+            params = {
+                'O': 'OrderByBestDiscountDESC',
+                '_from': 0,
+                '_to': limite - 1,
+                'sc': 1,
+            }
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+            }
+            r = requests.get(url, params=params, headers=headers, timeout=15)
+            if r.status_code not in (200, 206):
+                print(f'❌ Erro HTTP Pague Menos: {r.status_code}')
+                return produtos
+
+            data = r.json()
+            for produto in data:
+                try:
+                    nome = produto.get('productName', '').strip()
+                    slug = produto.get('linkText', '')
+                    if not nome or not slug:
+                        continue
+
+                    item = (produto.get('items') or [{}])[0]
+                    offer = (item.get('sellers') or [{}])[0].get('commertialOffer', {})
+                    preco = offer.get('Price', 0) or 0
+                    preco_original = offer.get('ListPrice', 0) or 0
+
+                    # Filtrar produtos sem preço
+                    if preco <= 0:
+                        continue
+
+                    # Filtrar descontos artificiais (>80%) — evita medicamentos genéricos
+                    if preco_original > 0:
+                        desconto_pct = (preco_original - preco) / preco_original * 100
+                        if desconto_pct > 80 or desconto_pct < 5:
+                            continue
+                    else:
+                        preco_original = None
+
+                    # Imagem
+                    imgs = item.get('images') or []
+                    imagem_url = _melhorar_qualidade_imagem(imgs[0].get('imageUrl', '')) if imgs else '/placeholder.webp'
+
+                    # Link de afiliado
+                    link_afiliado = f'https://www.paguemenos.com.br/{slug}/p?loja={loja_id}'
+
+                    categoria = self._detectar_categoria(nome)
+
+                    platform_type, platform_id = self.extrair_platform_id(link_afiliado)
+                    if not platform_id:
+                        platform_type = 'paguemenos'
+                        platform_id = slug
+
+                    produtos.append({
+                        'name': nome[:200],
+                        'category': categoria,
+                        'description': f'Oferta na Pague Menos com {int(desconto_pct if preco_original else 0)}% de desconto',
+                        'imageUrl': imagem_url or '/placeholder.webp',
+                        'price': float(preco),
+                        'originalPrice': float(preco_original) if preco_original else None,
+                        'links': {'pagueMenos': link_afiliado},
+                        'storeName': 'Pague Menos',
+                        'autoApprove': True,
+                        'source': 'paguemenos',
+                        'externalId': slug,
+                        'platformType': platform_type,
+                        'platformId': platform_id,
+                    })
+                    print(f'  ✅ [Pague Menos] {nome[:50]}...')
+                except Exception as e:
+                    print(f'  ⚠️  Erro ao processar produto Pague Menos: {e}')
+
+        except Exception as e:
+            print(f'❌ Erro ao buscar na Pague Menos: {e}')
+
+        print(f'   ✅ Total Pague Menos: {len(produtos)} produtos')
+        return produtos
+
     def buscar_todas_promocoes(self) -> Dict[str, List]:
         """Busca promoções em PARALELO em todas as plataformas - 3x mais rápido!"""
         print('\n📡 Buscando em múltiplas fontes (PARALELO)...')
@@ -2117,6 +2205,7 @@ class PromotionScraper:
                 executor.submit(self.buscar_promocoes_hardmob_fixed): 'Hardmob',
                 executor.submit(self.buscar_promocoes_pechinchou): 'Pechinchou',
                 executor.submit(self.buscar_promocoes_pelando_site): 'Pelando Site',
+                executor.submit(self.buscar_promocoes_pague_menos): 'Pague Menos',
                 executor.submit(self.buscar_cupons_pelando): 'Cupons Promobit',
                 executor.submit(self.buscar_cupons_cuponomia): 'Cupons Cuponomia',
             }
@@ -2350,6 +2439,8 @@ class PromotionScraper:
             links['kabum'] = link_oferta
         elif 'tiktok' in loja_lower:
             links['tiktok'] = link_oferta
+        elif 'pague menos' in loja_lower or 'paguemenos' in loja_lower:
+            links['pagueMenos'] = link_oferta
         else:
             # Lojas sem campo próprio: salva como amazon (campo genérico de link)
             # Inclui: Adidas, Nike, Centauro, Renner, C&A, Riachuelo, Zara,
