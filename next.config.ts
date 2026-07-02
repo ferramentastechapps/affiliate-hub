@@ -95,10 +95,6 @@ const nextConfig: NextConfig = {
     // Cache de imagens otimizadas
     minimumCacheTTL: 60,
   },
-  webpack: (config) => {
-    config.output.hashFunction = 'sha256';
-    return config;
-  },
 };
 
 export default nextConfig;

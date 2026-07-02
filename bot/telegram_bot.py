@@ -570,6 +570,17 @@ class TelegramNotifier:
             if cupom_extraido.upper() not in _invalidos:
                 cupom_msg = f"🎟️ CUPOM: <code>{cupom_extraido}</code>"
 
+        # Extrair regras e condições da descrição (antes do cupom se houver)
+        import re
+        condicoes_msg = ""
+        desc_sem_cupom = descricao_prod.split('🎟️ CUPOM:')[0].strip()
+        # Limpar texto padrão do scraper
+        desc_sem_cupom = re.sub(r'Oferta na loja[^\n]+no[^\n]+', '', desc_sem_cupom, flags=re.IGNORECASE).strip()
+        
+        if desc_sem_cupom and desc_sem_cupom != 'Oferta encaminhada de grupos':
+            icon = '🔷' if 'prime' in desc_sem_cupom.lower() else '↪️'
+            condicoes_msg = f"{icon} <i>{desc_sem_cupom}</i>"
+
         # Título e Subtítulo da IA
         legenda_top = ""
         if custom_caption:
@@ -685,6 +696,8 @@ class TelegramNotifier:
         
         if preco_txt:
             linhas.append(preco_txt)
+        if condicoes_msg:
+            linhas.append(condicoes_msg)
         if cupom_msg:
             linhas.append(cupom_msg)
             
