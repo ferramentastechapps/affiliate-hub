@@ -212,6 +212,9 @@ export function ProductsTab() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("list");
   const [sortMode, setSortMode] = useState<SortMode>("date_desc");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [noAffiliateLinkFilter, setNoAffiliateLinkFilter] = useState<boolean>(false);
   
   const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -352,10 +355,29 @@ export function ProductsTab() {
 
   const filteredAndSorted = useMemo(() => {
     let result = products.filter((p) => {
-      if (statusFilter === "active") return p.status === "active" || p.status === "approved";
-      if (statusFilter === "pending") return p.status === "pending";
-      if (statusFilter === "fixed") return p.isFixed === true;
-      if (statusFilter === "notFixed") return !p.isFixed;
+      // 1. Status Filter
+      if (statusFilter === "active" && p.status !== "active" && p.status !== "approved") return false;
+      if (statusFilter === "pending" && p.status !== "pending") return false;
+      if (statusFilter === "fixed" && !p.isFixed) return false;
+      if (statusFilter === "notFixed" && p.isFixed) return false;
+
+      // 2. Category Filter
+      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
+
+      // 3. Store Filter
+      if (storeFilter !== "all") {
+        const pStore = (p.source || p.platformType || (p as any).storeName || "").toLowerCase();
+        if (!pStore.includes(storeFilter.toLowerCase())) return false;
+      }
+
+      // 4. No Affiliate Link Filter
+      if (noAffiliateLinkFilter) {
+        const hasPlatformLink = p.productLinks?.some(link => link.affiliateUrl || link.generatedAffiliateUrl);
+        const hasOldLink = Object.values(p.links || {}).some(url => url && typeof url === 'string');
+        const hasLocalLink = !!p._localAffiliateUrl;
+        if (hasPlatformLink || hasOldLink || hasLocalLink) return false;
+      }
+
       return true;
     });
 
@@ -372,7 +394,7 @@ export function ProductsTab() {
     });
 
     return result;
-  }, [products, statusFilter, sortMode]);
+  }, [products, statusFilter, sortMode, categoryFilter, storeFilter, noAffiliateLinkFilter]);
 
   return (
     <div>
@@ -416,20 +438,57 @@ export function ProductsTab() {
 
       {/* ─── Toolbar ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-5 gap-3">
-        <div className="flex items-center gap-2">
-          <SortAscending size={16} className="text-zinc-400 shrink-0" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            <SortAscending size={16} className="text-zinc-400 shrink-0" />
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+            >
+              <option value="date_desc">📅 Mais Recentes</option>
+              <option value="date_asc">📅 Mais Antigos</option>
+              <option value="alpha_asc">🔤 A → Z</option>
+              <option value="alpha_desc">🔤 Z → A</option>
+              <option value="price_asc">💰 Menor Preço</option>
+              <option value="price_desc">💰 Maior Preço</option>
+            </select>
+          </div>
+          
           <select
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 sm:py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-accent cursor-pointer flex-1 sm:flex-initial"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
           >
-            <option value="date_desc">📅 Mais Recentes</option>
-            <option value="date_asc">📅 Mais Antigos</option>
-            <option value="alpha_asc">🔤 A → Z</option>
-            <option value="alpha_desc">🔤 Z → A</option>
-            <option value="price_asc">💰 Menor Preço</option>
-            <option value="price_desc">💰 Maior Preço</option>
+            <option value="all">📁 Todas Categorias</option>
+            {categories.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
           </select>
+          
+          <select
+            value={storeFilter}
+            onChange={(e) => setStoreFilter(e.target.value)}
+            className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+          >
+            <option value="all">🏪 Todas Lojas</option>
+            {Array.from(new Set(products.map(p => (p.source || p.platformType || (p as any).storeName || "Outros")).filter(Boolean))).sort().map(s => (
+              <option key={s as string} value={s as string}>{String(s).toUpperCase()}</option>
+            ))}
+          </select>
+          
+          <button
+            onClick={() => setNoAffiliateLinkFilter(!noAffiliateLinkFilter)}
+            className={`px-2 py-1.5 text-xs rounded-lg border transition-colors flex items-center gap-1 ${
+              noAffiliateLinkFilter 
+                ? "bg-red-900/40 border-red-500 text-red-300" 
+                : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <Warning size={14} />
+            Sem Link
+          </button>
+
           <span className="text-xs text-zinc-500 ml-1 hidden sm:inline">
             {filteredAndSorted.length} produto{filteredAndSorted.length !== 1 ? "s" : ""}
           </span>
