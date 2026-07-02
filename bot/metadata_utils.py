@@ -166,13 +166,23 @@ def enriquecer_produto(produto: dict) -> dict:
     # Extração automática de condições da Amazon (Prime, Programe e poupe)
     plataforma = next(iter(produto.get('links', {}).keys()), 'unknown')
     storeName = produto.get('storeName', '').lower()
+    links_urls = ' '.join(str(v) for v in produto.get('links', {}).values()).lower()
     
-    if plataforma == 'amazon' or storeName == 'amazon':
+    # Detecta que é Amazon se: chave é 'amazon', storeName contém 'amazon', ou URL contém amazon.com/amzn
+    _is_amazon = (
+        plataforma == 'amazon'
+        or 'amazon' in storeName
+        or 'amazon.com' in links_urls
+        or 'amzn.to' in links_urls
+        or 'amzn.com' in links_urls
+    )
+    
+    if _is_amazon:
         texto_busca = (produto.get('name', '') + ' ' + (produto.get('description', '') or '')).lower()
         condicoes = []
         if 'prime' in texto_busca:
             condicoes.append("Exclusivo Membros Prime")
-        if 'programe' in texto_busca or 'subscribe' in texto_busca:
+        if 'programe' in texto_busca or 'subscribe' in texto_busca or 'programe e poupe' in texto_busca:
             condicoes.append("Programe e poupe")
             
         if condicoes:
@@ -185,6 +195,7 @@ def enriquecer_produto(produto: dict) -> dict:
                     produto['description'] = f"{nova_condicao}\n{desc_atual}"
                 else:
                     produto['description'] = nova_condicao
+
 
     return produto
 
