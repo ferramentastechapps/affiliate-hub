@@ -702,8 +702,6 @@ class TelegramNotifier:
             linhas.append(condicoes_msg)
         if cupom_msg:
             linhas.append(cupom_msg)
-            if 'amazon' in (loja_detectada or '').lower():
-                linhas.append("💡 <i>O campo do cupom fica no carrinho ou na tela de pagamento.</i>")
             
         linhas.append("")
         

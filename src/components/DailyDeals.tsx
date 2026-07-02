@@ -551,15 +551,22 @@ export function DailyDeals() {
                     </h3>
 
                     {/* Coupons and Conditions Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                      {displayCoupon && (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={displayCoupon}>
-                          <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">CUPOM: {displayCoupon}</span>
-                        </span>
-                      )}
-                      {product.description?.toLowerCase().includes('prime') && (
-                        <span className="bg-[#00a8e1]/10 text-[#00a8e1] border border-[#00a8e1]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[120px] sm:max-w-[150px] truncate" title="Exclusivo Membros Prime">
-                          <Star size={10} weight="fill" className="shrink-0" /> <span className="truncate">EXCLUSIVO PRIME</span>
+                    <div className="flex flex-col gap-1 mb-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {displayCoupon && (
+                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={displayCoupon}>
+                            <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">CUPOM: {displayCoupon}</span>
+                          </span>
+                        )}
+                        {product.description?.toLowerCase().includes('prime') && (
+                          <span className="bg-[#00a8e1]/10 text-[#00a8e1] border border-[#00a8e1]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[120px] sm:max-w-[150px] truncate" title="Exclusivo Membros Prime">
+                            <Star size={10} weight="fill" className="shrink-0" /> <span className="truncate">EXCLUSIVO PRIME</span>
+                          </span>
+                        )}
+                      </div>
+                      {displayCoupon && product.storeName?.toLowerCase().includes('amazon') && (
+                        <span className="text-[8px] text-[#8e92a4]/80 italic truncate" title="O campo do cupom fica no carrinho ou na tela de pagamento.">
+                          * Insira o cupom no carrinho ou pagamento
                         </span>
                       )}
                     </div>
