@@ -397,12 +397,13 @@ class TelegramNotifier:
         _eh_amazon = (
             links.get('amazon')
             or 'amazon' in (produto.get('storeName') or '').lower()
-            or 'Exclusivo Membros Prime' in descricao_produto
-            or 'Programe e poupe' in descricao_produto
+            or 'exclusivo membros prime' in desc_lower
+            or 'programe e poupe' in desc_lower
         )
         if _eh_amazon:
             badges = []
-            if 'exclusivo membros prime' in desc_lower or 'prime' in (produto.get('name') or '').lower():
+            # Só mostra badge Prime se a descrição já foi marcada (pelo metadata_utils ou scraper)
+            if 'exclusivo membros prime' in desc_lower:
                 badges.append("👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵")
             if 'programe e poupe' in desc_lower or 'subscribe' in desc_lower:
                 badges.append("🔄 <b>Programe e Poupe</b>")
