@@ -183,8 +183,19 @@ export async function GET(request: Request) {
 
     // Se for price-drops, filtrar apenas produtos com queda real e ordenar por maior queda
     let finalProducts = mappedProducts;
+
+    // Oculta produtos sem link de afiliado no site (mas não no painel admin, onde status=all ou pending)
+    if (statusParam !== 'all' && statusParam !== 'pending') {
+      finalProducts = finalProducts.filter((p: any) => {
+        const hasPlatformLink = p.productLinks?.some((link: any) => link.affiliateUrl || link.generatedAffiliateUrl);
+        const linkKeys = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'tiktok', 'netshoes', 'magalu', 'kabum'];
+        const hasOldLink = p.links && linkKeys.some(key => p.links[key]);
+        return hasPlatformLink || hasOldLink;
+      });
+    }
+
     if (filterParam === 'price-drops') {
-      finalProducts = mappedProducts
+      finalProducts = finalProducts
         .filter((p: any) => p.dropPercent > 0)
         .sort((a: any, b: any) => b.dropPercent - a.dropPercent);
     }
