@@ -554,7 +554,7 @@ export function DailyDeals() {
                     <div className="flex flex-wrap items-center gap-1.5 mb-2">
                       {displayCoupon && (
                         <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={displayCoupon}>
-                          <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">CUPOM: {displayCoupon}</span>
+                          <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">{displayCoupon}</span>
                         </span>
                       )}
                       {product.description?.toLowerCase().includes('prime') && (
