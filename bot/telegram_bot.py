@@ -382,7 +382,7 @@ class TelegramNotifier:
                 link_promobit = f"🔗 <a href='{primeiro_link}'>🛒 COMPRAR AGORA</a>"
 
         produto_id = produto.get('id', 'N/A')
-        descricao_produto = produto.get('description', '')
+        descricao_produto = produto.get('description', '') or ''
         
         cupom_msg = ""
         if '🎟️ CUPOM:' in descricao_produto:
@@ -390,6 +390,24 @@ class TelegramNotifier:
             _invalidos = {'NORMAL', 'NONE', 'NULL', 'N/A', 'NA', ''}
             if cupom_extraido.upper() not in _invalidos:
                 cupom_msg = f"\n🎟️ <b>CUPOM:</b> <code>{cupom_extraido}</code>"
+
+        # Badge Amazon Prime / Programe e Poupe
+        prime_msg = ""
+        desc_lower = descricao_produto.lower()
+        _eh_amazon = (
+            links.get('amazon')
+            or 'amazon' in (produto.get('storeName') or '').lower()
+            or 'Exclusivo Membros Prime' in descricao_produto
+            or 'Programe e poupe' in descricao_produto
+        )
+        if _eh_amazon:
+            badges = []
+            if 'exclusivo membros prime' in desc_lower or 'prime' in (produto.get('name') or '').lower():
+                badges.append("👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵")
+            if 'programe e poupe' in desc_lower or 'subscribe' in desc_lower:
+                badges.append("🔄 <b>Programe e Poupe</b>")
+            if badges:
+                prime_msg = "\n" + "\n".join(badges)
 
         # Score visual
         score_visual = "⭐" * min(5, score // 20)
@@ -427,7 +445,7 @@ class TelegramNotifier:
 ⚠️ <b>AGUARDANDO APROVAÇÃO</b>
 
 📦 <b>{produto['name'][:150]}</b>
-
+{prime_msg}
 🏷️ {produto['category']}
 {plataforma_linha}{preco_texto}{desconto_texto}{cupom_msg}{urgencia}
 
