@@ -53,3 +53,5 @@ corrigir-ia-vps.ps1
 /scratch/
 /bot/venv/
 
+# deploy script gerado (contém chaves de API — nunca commitar)
+.deploy.sh
