@@ -132,7 +132,11 @@ export function CouponModal({
               <ol className="text-zinc-300 text-xs space-y-1.5 list-decimal list-inside">
                 <li>Clique em "Copiar e Ir para a Loja"</li>
                 <li>Adicione o produto ao carrinho</li>
-                <li>Cole o cupom no campo de desconto</li>
+                <li>
+                  {platformName?.toLowerCase() === 'amazon' 
+                    ? "O campo do cupom fica no carrinho ou na tela de pagamento." 
+                    : "Cole o cupom no campo de desconto"}
+                </li>
               </ol>
             </div>
 
