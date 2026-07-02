@@ -79,6 +79,22 @@ if [ -n "" ]; then
   fi
 fi
 
+echo "ðŸ’½ Verificando MemÃ³ria SWAP para evitar travamento de RAM..."
+if ! swapon --show | grep -q "swapfile"; then
+  echo "Criando arquivo de SWAP de 2GB (isso pode demorar uns segundos)..."
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile || true
+  # Adicionar ao fstab apenas se nÃ£o existir
+  if ! grep -q "swapfile" /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+  echo "âœ… SWAP ativado!"
+else
+  echo "âœ… SWAP jÃ¡ estÃ¡ configurado."
+fi
+
 echo "ðŸ“¦ Instalando dependÃªncias..."
 npm install
 
