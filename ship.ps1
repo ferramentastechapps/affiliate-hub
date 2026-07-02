@@ -146,12 +146,12 @@ if [ -n "$PAGUE_MENOS_LOJA_VAL" ]; then
   if grep -q 'PAGUE_MENOS_LOJA=' ~/affiliate-hub/.env; then
     sed -i "s|PAGUE_MENOS_LOJA=.*|PAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"|g" ~/affiliate-hub/.env
   else
-    echo "PAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"" >> ~/affiliate-hub/.env
+    echo -e "\nPAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"" >> ~/affiliate-hub/.env
   fi
   if grep -q 'PAGUE_MENOS_LOJA=' ~/affiliate-hub/bot/.env; then
     sed -i "s|PAGUE_MENOS_LOJA=.*|PAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"|g" ~/affiliate-hub/bot/.env
   else
-    echo "PAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"" >> ~/affiliate-hub/bot/.env
+    echo -e "\nPAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"" >> ~/affiliate-hub/bot/.env
   fi
 fi
 
