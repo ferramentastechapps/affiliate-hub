@@ -153,7 +153,7 @@ export async function sendToModeration(product: any): Promise<boolean> {
   if (desc.includes('🎟️ CUPOM:')) {
     const cupomExtraido = desc.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
     if (cupomExtraido && !['NORMAL', 'NONE', 'NULL', 'N/A', 'NA'].includes(cupomExtraido.toUpperCase())) {
-      cupomMsg = `\n🎟️ Cupom: <code>${cupomExtraido}</code>`;
+      cupomMsg = `\n🎟️ <code>${cupomExtraido}</code>`;
     }
   }
 
@@ -221,7 +221,7 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   // Se tem cupom, calcular preço final
   if (hasCoupons && product.price) {
     const coupon = coupons[0];
-    cupomMsg = `🎟️ CUPOM: <code>${coupon.code}</code>`;
+    cupomMsg = `🎟️ <code>${coupon.code}</code>`;
     
     // Tentar calcular preço com cupom (estimativa)
     if (product.priceWithCoupon) {
@@ -240,7 +240,7 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
     if (desc.includes('🎟️ CUPOM:')) {
       const cupomExtraido = desc.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
       if (cupomExtraido && !['NORMAL', 'NONE', 'NULL', 'N/A', 'NA'].includes(cupomExtraido.toUpperCase())) {
-        cupomMsg = `🎟️ CUPOM: <code>${cupomExtraido}</code>`;
+        cupomMsg = `🎟️ <code>${cupomExtraido}</code>`;
       }
     }
   }
@@ -250,12 +250,18 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   const desc = product.description || '';
   let descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
   // Limpar texto padrão do scraper
-  descSemCupom = descSemCupom.replace(/Oferta na loja[^\n]+no[^\n]+/gi, '').trim();
+  descSemCupom = descSemCupom.replace(/Oferta (na|no) [^\n]+/gi, '').trim();
   
-  if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
-    // Escolher ícone: 🔷 para Prime, ↪️ para outros
-    const icon = descSemCupom.toLowerCase().includes('prime') ? '🔷' : '↪️';
-    condicoesMsg = `${icon} <i>${descSemCupom}</i>`;
+  let isPrime = false;
+  const isAmazon = platform.toLowerCase() === 'amazon' || product.name.toLowerCase().includes('amazon');
+  if (isAmazon && (descSemCupom.toLowerCase().includes('prime') || /\bprime\b/i.test(product.name))) {
+    isPrime = true;
+  }
+
+  if (isPrime) {
+    condicoesMsg = `👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵`;
+  } else if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
+    condicoesMsg = `↪️ <i>${descSemCupom}</i>`;
   }
   
   // Badge de queda de preço
