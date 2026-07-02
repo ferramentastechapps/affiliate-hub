@@ -2440,7 +2440,12 @@ class PromotionScraper:
         elif 'tiktok' in loja_lower:
             links['tiktok'] = link_oferta
         elif 'pague menos' in loja_lower or 'paguemenos' in loja_lower:
-            links['pagueMenos'] = link_oferta
+            from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+            parsed = urlparse(link_oferta)
+            query = parse_qs(parsed.query)
+            query['loja'] = ['economizeiomjota']
+            parsed = parsed._replace(query=urlencode(query, doseq=True))
+            links['pagueMenos'] = urlunparse(parsed)
         else:
             # Lojas sem campo próprio: salva como amazon (campo genérico de link)
             # Inclui: Adidas, Nike, Centauro, Renner, C&A, Riachuelo, Zara,

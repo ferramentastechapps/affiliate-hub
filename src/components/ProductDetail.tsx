@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check, Bell, ThumbsUp, ThumbsDown, WhatsappLogo, ChatText, PaperPlaneRight, User } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check, Bell, ThumbsUp, ThumbsDown, WhatsappLogo, ChatText, PaperPlaneRight, User, Crown } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CouponModal } from "./CouponModal";
@@ -344,9 +344,19 @@ export function ProductDetail({ product }: { product: Product }) {
             )}
 
             {condicoesMsg && (
-              <div className="mb-8 flex items-start gap-3 text-zinc-300 bg-accent/5 p-4 rounded-xl border border-accent/20 shadow-sm">
-                <span className="text-xl mt-0.5">{condicoesMsg.toLowerCase().includes('prime') ? '🔷' : '↪️'}</span>
-                <p className="font-medium text-[15px] leading-snug">{condicoesMsg}</p>
+              <div className={`mb-8 flex items-center gap-3 p-4 rounded-xl border shadow-sm ${
+                condicoesMsg.toLowerCase().includes('prime') 
+                  ? 'bg-gradient-to-r from-blue-900/40 to-blue-800/10 border-blue-500/30 text-blue-100' 
+                  : 'bg-accent/5 border-accent/20 text-zinc-300'
+              }`}>
+                {condicoesMsg.toLowerCase().includes('prime') ? (
+                  <div className="flex items-center justify-center min-w-[32px] h-[32px] rounded-full bg-blue-500/20 text-blue-400">
+                    <Crown size={20} weight="duotone" />
+                  </div>
+                ) : (
+                  <span className="text-xl">↪️</span>
+                )}
+                <p className="font-semibold text-[15px] leading-snug">{condicoesMsg}</p>
               </div>
             )}
 
