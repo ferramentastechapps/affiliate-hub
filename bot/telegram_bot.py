@@ -578,8 +578,10 @@ class TelegramNotifier:
         desc_sem_cupom = re.sub(r'Oferta na loja[^\n]+no[^\n]+', '', desc_sem_cupom, flags=re.IGNORECASE).strip()
         
         if desc_sem_cupom and desc_sem_cupom != 'Oferta encaminhada de grupos':
-            icon = '🔷' if 'prime' in desc_sem_cupom.lower() else '↪️'
-            condicoes_msg = f"{icon} <i>{desc_sem_cupom}</i>"
+            if 'prime' in desc_sem_cupom.lower():
+                condicoes_msg = f"💎 <i>Exclusivo Membros Prime</i>"
+            else:
+                condicoes_msg = f"↪️ <i>{desc_sem_cupom}</i>"
 
         # Título e Subtítulo da IA
         legenda_top = ""
@@ -700,6 +702,8 @@ class TelegramNotifier:
             linhas.append(condicoes_msg)
         if cupom_msg:
             linhas.append(cupom_msg)
+            if 'amazon' in (loja_detectada or '').lower():
+                linhas.append("💡 <i>O campo do cupom fica no carrinho ou na tela de pagamento.</i>")
             
         linhas.append("")
         
