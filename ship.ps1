@@ -170,6 +170,15 @@ rm -rf .next
 rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
 NODE_OPTIONS="--max-old-space-size=1024" NEXT_TELEMETRY_DISABLED=1 npm run build
 
+echo "🔍 Verificando integridade do build..."
+if [ ! -f ".next/BUILD_ID" ]; then
+  echo "❌ BUILD FALHOU! Arquivo .next/BUILD_ID não encontrado."
+  echo "   O deploy foi ABORTADO para evitar crash loop no PM2."
+  echo "   Verifique os erros acima e tente novamente."
+  exit 1
+fi
+echo "✅ Build OK! BUILD_ID: $(cat .next/BUILD_ID)"
+
 echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrome)..."
 if command -v ffmpeg &>/dev/null; then
   MOV_SRC="public/Video de entrada.mov"
