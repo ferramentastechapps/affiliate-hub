@@ -846,18 +846,35 @@ class PromotionScraper:
                         loja = 'AliExpress'
                     elif 'netshoes' in texto_lower:
                         loja = 'Netshoes'
-                    
+
+                    # Detectar condições especiais Amazon no card/título
+                    card_text_lower = card.get_text(separator=' ', strip=True).lower()
+                    condicao_extra = ''
+                    if loja == 'Amazon':
+                        # Busca 'prime' como palavra isolada para evitar falsos positivos
+                        import re as _re
+                        if _re.search(r'\bprime\b', card_text_lower):
+                            condicao_extra = 'Exclusivo Membros Prime'
+                        elif 'programe e poupe' in card_text_lower or 'subscribe & save' in card_text_lower:
+                            condicao_extra = 'Programe e poupe'
+
+                    # Montar descrição: condição especial primeiro, depois fonte
+                    if condicao_extra:
+                        descricao = f"{condicao_extra}\nOferta no Gatry via {loja}"
+                    else:
+                        descricao = f"Oferta no Gatry via {loja}"
+
                     # CORREÇÃO 2: Usar o link resolvido ao invés do link do Gatry
                     links = self._criar_links(link_resolvido, loja)
                     categoria = self._detectar_categoria(nome)
-                    
+
                     # CORREÇÃO 3: Extrair platformId da URL resolvida (real da loja)
                     platform_type, platform_id = self.extrair_platform_id(link_resolvido)
-                    
+
                     produtos.append({
                         'name': nome[:200],
                         'category': categoria,
-                        'description': f"Oferta no Gatry via {loja}",
+                        'description': descricao,
                         'imageUrl': imagem_url,  # CORREÇÃO 4: Usar imagem real ao invés de placeholder
                         'price': preco,
                         'links': links,
@@ -866,7 +883,8 @@ class PromotionScraper:
                         'platformType': platform_type,
                         'platformId': platform_id
                     })
-                    print(f'  ✅ [Gatry] {nome[:50]}... (loja: {loja}, platformId: {platform_id or "N/A"})')
+                    _prime_flag = f' 👑 PRIME' if condicao_extra == 'Exclusivo Membros Prime' else ''
+                    print(f'  ✅ [Gatry] {nome[:50]}... (loja: {loja}{_prime_flag}, platformId: {platform_id or "N/A"})') 
                     
                 except Exception as e:
                     print(f'  ⚠️  Erro ao processar card Gatry: {e}')

@@ -179,22 +179,38 @@ def enriquecer_produto(produto: dict) -> dict:
     
     if _is_amazon:
         texto_busca = (produto.get('name', '') + ' ' + (produto.get('description', '') or '')).lower()
+        desc_atual = produto.get('description', '') or ''
         condicoes = []
-        if 'prime' in texto_busca:
+
+        # Usa regex para 'prime' como palavra isolada (evita falso positivo em "optimus prime", etc.)
+        import re as _re_meta
+        if _re_meta.search(r'\bprime\b', texto_busca):
             condicoes.append("Exclusivo Membros Prime")
-        if 'programe' in texto_busca or 'subscribe' in texto_busca or 'programe e poupe' in texto_busca:
+        if 'programe e poupe' in texto_busca or 'subscribe' in texto_busca:
             condicoes.append("Programe e poupe")
-            
+
         if condicoes:
             nova_condicao = " | ".join(condicoes)
-            desc_atual = produto.get('description', '') or ''
-            
-            # Evita duplicar se já tiver
-            if nova_condicao not in desc_atual:
-                if desc_atual and not desc_atual.startswith('Oferta do Dia') and desc_atual != 'Oferta encaminhada de grupos':
-                    produto['description'] = f"{nova_condicao}\n{desc_atual}"
-                else:
+
+            # Evita duplicar se já estiver na descrição
+            if nova_condicao.lower() not in desc_atual.lower():
+                # Não sobrescreve descrições genéricas conhecidas (Oferta do Dia, Gatry, etc.)
+                descricoes_a_substituir = {
+                    'oferta encaminhada de grupos',
+                }
+                desc_lower_atual = desc_atual.lower()
+                deve_substituir = (
+                    not desc_atual
+                    or desc_lower_atual in descricoes_a_substituir
+                    or desc_lower_atual.startswith('oferta do dia')
+                    or desc_lower_atual.startswith('oferta no ')
+                )
+                if deve_substituir:
                     produto['description'] = nova_condicao
+                else:
+                    produto['description'] = f"{nova_condicao}\n{desc_atual}"
+
+
 
 
     return produto
