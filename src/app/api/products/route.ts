@@ -61,10 +61,8 @@ export async function GET(request: Request) {
           include: { product: { select: { category: true } } }
         });
         
-        const alertedCategories = [...new Set([
-          ...userAlerts.map(a => a.product.category).filter(Boolean),
-          ...pushCategories
-        ])] as string[];
+        // Only include categories explicitly subscribed in Push Preferences
+        const alertedCategories = [...new Set([...pushCategories])] as string[];
         
         const orConditions: any[] = [];
         

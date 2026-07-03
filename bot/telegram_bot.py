@@ -808,7 +808,7 @@ class TelegramNotifier:
             
             try:
                 # Add image URL to the message so whatsapp-engine could potentially use it
-                foto_img = produto.get('enhancedImageUrl') or produto.get('imageUrl')
+                foto_img = foto_para_grupo if foto_para_grupo and 'placeholder' not in foto_para_grupo else None
                 payload = {
                     'message': whatsapp_text,
                     'score': score_wpp,

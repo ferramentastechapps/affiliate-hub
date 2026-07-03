@@ -258,11 +258,8 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
     || (product.storeName || '').toLowerCase().includes('amazon')
     || descRawLower.includes('amazon')
   );
-  const isPrime = isAmazon && (
-    /\bprime\b/i.test(descSemCupom)
-    || /\bprime\b/i.test(product.name || '')
-    || descRawLower.includes('exclusivo membros prime')
-  );
+  const isPrime = isAmazon; // Todo produto Amazon é tratado como Exclusivo Membros Prime
+
 
   if (isPrime) {
     condicoesMsg = `👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵`;

@@ -1384,13 +1384,7 @@ class PromotionScraper:
                     imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
 
                     slug = promo.get('slug', '')
-                    image_real = imagens_reais.get(slug)
-
                     enhanced_image_url = None
-                    if image_real and str(image_real).strip() and not str(image_real).startswith('/'):
-                        enhanced_image_url = image_real
-                        print(f"  📸 [Pechinchou] Encontrada foto real/lifestyle (paralelo): {enhanced_image_url}")
-
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
                     
