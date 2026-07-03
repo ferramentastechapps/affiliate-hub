@@ -809,6 +809,16 @@ class TelegramNotifier:
             try:
                 # Add image URL to the message so whatsapp-engine could potentially use it
                 foto_img = foto_para_grupo if foto_para_grupo and 'placeholder' not in foto_para_grupo else None
+                
+                # Se for um File ID do Telegram, converter para URL real para o WhatsApp baixar
+                if foto_img and not foto_img.startswith('http') and not foto_img.startswith('/'):
+                    try:
+                        tg_file = await self.bot.get_file(foto_img)
+                        foto_img = tg_file.file_path
+                    except Exception as e:
+                        print(f'⚠️ Erro ao obter URL da imagem do Telegram para o WhatsApp: {e}')
+                        foto_img = None
+
                 payload = {
                     'message': whatsapp_text,
                     'score': score_wpp,
