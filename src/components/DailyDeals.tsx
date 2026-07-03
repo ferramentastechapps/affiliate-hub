@@ -242,7 +242,6 @@ export function DailyDeals() {
         const productText = `${p.name} ${p.category} ${p.description || ''}`.toLowerCase();
         matchesSearch = terms.every(term => productText.includes(term));
       }
-      }
     }
 
     let matchesAlert = true;
