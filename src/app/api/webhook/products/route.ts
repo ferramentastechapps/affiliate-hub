@@ -567,7 +567,43 @@ export async function POST(request: Request) {
     } else if (body.imageUrl) {
       imagesToCreate.push({ url: body.imageUrl, source: 'scraper', isPrimary: true, order: 0 });
     }
-    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // LATE DUPLICATE CHECK
+    // Se extraímos um platformId real, conferimos se o produto já existe
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    if (finalPlatformId && finalPlatformType) {
+      const lateExisting = await prisma.product.findUnique({
+        where: {
+          platformId_platformType: {
+            platformId: finalPlatformId,
+            platformType: finalPlatformType
+          }
+        }
+      });
+
+      if (lateExisting) {
+        console.log(`[Webhook] Produto duplicado detectado pós-resolução: ${finalPlatformId}. Atualizando preço...`);
+        if (body.price) {
+          await prisma.priceHistory.create({
+            data: {
+              productId: lateExisting.id,
+              price: parseFloat(body.price),
+              originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
+            }
+          });
+          await prisma.product.update({
+            where: { id: lateExisting.id },
+            data: {
+              price: parseFloat(body.price),
+              originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : lateExisting.originalPrice,
+              status: lateExisting.status === 'rejected' ? 'rejected' : 'active'
+            }
+          });
+        }
+        return NextResponse.json({ success: true, message: 'Produto atualizado (late duplicate check)', product: lateExisting }, { status: 200 });
+      }
+    }
+
     const product = await prisma.product.create({
       data: {
         name: body.name,
@@ -1196,6 +1232,43 @@ export async function PUT(request: Request) {
           });
         } else if (productData.imageUrl) {
           imagesToCreate.push({ url: productData.imageUrl, source: 'scraper', isPrimary: true, order: 0 });
+        }
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // LATE DUPLICATE CHECK BATCH
+        // Se após a resolução descobrirmos que já existe, atualiza e ignora
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        if (finalPlatformId && finalPlatformType) {
+          const lateExisting = await prisma.product.findUnique({
+            where: {
+              platformId_platformType: {
+                platformId: finalPlatformId,
+                platformType: finalPlatformType
+              }
+            }
+          });
+
+          if (lateExisting) {
+            console.log(`[Webhook Batch] Produto duplicado detectado pós-resolução: ${finalPlatformId}. Atualizando preço...`);
+            if (productData.price) {
+              await prisma.priceHistory.create({
+                data: {
+                  productId: lateExisting.id,
+                  price: parseFloat(productData.price),
+                  originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : null,
+                }
+              });
+              await prisma.product.update({
+                where: { id: lateExisting.id },
+                data: {
+                  price: parseFloat(productData.price),
+                  originalPrice: productData.originalPrice ? parseFloat(productData.originalPrice) : lateExisting.originalPrice,
+                  status: lateExisting.status === 'rejected' ? 'rejected' : 'active'
+                }
+              });
+            }
+            results.push(lateExisting);
+            continue;
+          }
         }
         
         const product = await prisma.product.create({

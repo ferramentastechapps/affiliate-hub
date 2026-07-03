@@ -165,11 +165,14 @@ export async function POST(request: Request) {
           const savedUrl = await saveEnhancedImage(body.imageUrl, false);
           if (savedUrl) {
             // Se o usuário forneceu imagem customizada, usamos ela como principal (site/fundo branco)
-            // e preservamos a original como enhancedImageUrl (lifestyle/grupo)
+            // e preservamos a original como enhancedImageUrl (lifestyle/grupo) APENAS SE for lifestyle
             updateData.imageUrl = savedUrl;
-            updateData.enhancedImageUrl = product.imageUrl || null;
-            finalEnhancedImageUrl = product.imageUrl || null;
-            console.log(`[Approve] Imagem do Telegram salva com sucesso: ${savedUrl}`);
+            const isLifestyle = product.imageUrl && (
+              product.imageUrl.includes('/products/social/') || 
+              product.imageUrl.includes('/products/real/')
+            );
+            updateData.enhancedImageUrl = isLifestyle ? product.imageUrl : null;
+            finalEnhancedImageUrl = isLifestyle ? product.imageUrl : null;
           } else {
             updateData.imageUrl = body.imageUrl;
           }
