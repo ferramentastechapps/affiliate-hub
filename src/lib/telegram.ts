@@ -248,20 +248,34 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   // Extrair regras e condições da descrição (antes do cupom se houver)
   let condicoesMsg = "";
   const desc = product.description || '';
-  let descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
-  // Limpar texto padrão do scraper
-  descSemCupom = descSemCupom.replace(/Oferta (na|no) [^\n]+/gi, '').trim();
-  
-  let isPrime = false;
-  const isAmazon = platform.toLowerCase() === 'amazon' || product.name.toLowerCase().includes('amazon');
-  if (isAmazon && (descSemCupom.toLowerCase().includes('prime') || /\bprime\b/i.test(product.name))) {
-    isPrime = true;
-  }
+  const descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
+
+  // Detectar Prime ANTES de qualquer limpeza, usando o texto raw
+  const descRawLower = descSemCupom.toLowerCase();
+  const nameRawLower = (product.name || '').toLowerCase();
+  const isAmazon = (
+    platform.toLowerCase() === 'amazon'
+    || (product.storeName || '').toLowerCase().includes('amazon')
+    || descRawLower.includes('amazon')
+  );
+  const isPrime = isAmazon && (
+    /\bprime\b/i.test(descSemCupom)
+    || /\bprime\b/i.test(product.name || '')
+    || descRawLower.includes('exclusivo membros prime')
+  );
 
   if (isPrime) {
     condicoesMsg = `👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵`;
-  } else if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
-    condicoesMsg = `↪️ <i>${descSemCupom}</i>`;
+  } else {
+    // Limpar texto padrão do scraper SÓ se não for prime
+    const descLimpa = descSemCupom
+      .split('\n')
+      .filter(line => !/^Oferta (na|no) /i.test(line.trim()))
+      .join('\n')
+      .trim();
+    if (descLimpa && descLimpa !== 'Oferta encaminhada de grupos') {
+      condicoesMsg = `↪️ <i>${descLimpa}</i>`;
+    }
   }
   
   // Badge de queda de preço
