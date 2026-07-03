@@ -88,9 +88,26 @@ export async function dispararNotificacao(
     
     if (subscriptions.length > 0) {
       console.log(`[Alerts] Enviando alerta via Web Push para o usuário ${alerta.user.name} (${subscriptions.length} subs)`);
+      const titles = [
+        "Seu produto baixou de preço! 🔥",
+        "Um item da sua lista caiu de preço! 📉",
+        "Alerta de Desconto! 🚨",
+        "Aquele produto que você queria está mais barato! 🛍️"
+      ];
+      
+      const bodies = [
+        `${alerta.product.name} acabou de receber um desconto especial para você.`,
+        `Corra antes que acabe! ${alerta.product.name} entrou em promoção.`,
+        `Aproveite! Desconto aplicado em ${alerta.product.name}.`,
+        `${alerta.product.name} está mais barato agora. Corre pra ver!`
+      ];
+
+      const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+      const randomBody = bodies[Math.floor(Math.random() * bodies.length)];
+
       const pushPayload = JSON.stringify({
-        title: `Preço Baixou! 📉`,
-        body: `${alerta.product.name} caiu para R$ ${precoNovo.toFixed(2).replace('.', ',')} (${quedaPercent.toFixed(1)}% OFF)`,
+        title: randomTitle,
+        body: randomBody,
         icon: alerta.product.imageUrl || '/icons/icon-192x192.png',
         url: `/produto/${alerta.product.shortId || alerta.product.id}`,
       });
