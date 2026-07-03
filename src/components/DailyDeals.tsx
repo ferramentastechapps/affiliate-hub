@@ -557,11 +557,18 @@ export function DailyDeals() {
                           <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">{displayCoupon}</span>
                         </span>
                       )}
-                      {product.description?.toLowerCase().includes('prime') && (
-                        <span className="bg-[#00a8e1]/10 text-[#00a8e1] border border-[#00a8e1]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[120px] sm:max-w-[150px] truncate" title="Exclusivo Membros Prime">
-                          <Star size={10} weight="fill" className="shrink-0" /> <span className="truncate">EXCLUSIVO PRIME</span>
-                        </span>
-                      )}
+                      {(() => {
+                        const desc = product.description || '';
+                        const name = product.name || '';
+                        const store = (product.storeName || '').toLowerCase();
+                        const isAmazon = store.includes('amazon') || desc.toLowerCase().includes('amazon') || Object.keys(product.links || {}).includes('amazon');
+                        const isPrime = isAmazon && (/\bprime\b/i.test(desc) || desc.toLowerCase().includes('exclusivo membros prime'));
+                        return isPrime ? (
+                          <span className="bg-[#00a8e1]/10 text-[#00a8e1] border border-[#00a8e1]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[120px] sm:max-w-[150px] truncate" title="Exclusivo Membros Prime">
+                            <Star size={10} weight="fill" className="shrink-0" /> <span className="truncate">EXCLUSIVO PRIME</span>
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
 
                     <div className="mt-auto flex items-end gap-2">
