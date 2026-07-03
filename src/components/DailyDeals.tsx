@@ -317,11 +317,11 @@ export function DailyDeals() {
 
   return (
     <section 
-      className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-6 mb-10 relative"
+      className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-0 mb-10 relative"
       onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
     >
       {/* Abas de Filtro */}
-      <div className="flex gap-2 mt-6 md:mt-8 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mt-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
         {[
           { key: 'alertas', label: 'Meus Alertas', icon: <Bell size={18} weight="regular" className="text-[#ff334b]" /> },
           { key: 'destaques', label: 'Destaques', icon: <Star size={18} weight="regular" className="text-[#ff334b]" /> },
@@ -346,7 +346,7 @@ export function DailyDeals() {
       </div>
 
       {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-5 md:mb-6">
+      <div className="flex items-center justify-between mb-4 md:mb-5">
         <div>
           <h2 className="text-lg md:text-2xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
             Promoções do dia

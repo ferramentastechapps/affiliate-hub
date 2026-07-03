@@ -4,7 +4,7 @@ import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
-import { getSecondaryLifestyleImage } from '@/lib/scraper';
+import { getSecondaryLifestyleImage, searchDuckDuckGoImages } from '@/lib/scraper';
 import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
@@ -639,7 +639,7 @@ export async function POST(request: Request) {
           : 0;
           
         const pushPayload = {
-          title: `Nova Oferta: ${product.name}`,
+          title: product.name,
           body: `Preço: R$ ${product.price?.toFixed(2)}`,
           icon: product.imageUrl,
           url: `/produto/${product.id}`,
@@ -771,6 +771,29 @@ export async function POST(request: Request) {
           }
         } else {
           console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original do agregador.`);
+          
+          if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
+            console.log(`[Webhook AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no DuckDuckGo...`);
+            try {
+              const ddgResults = await searchDuckDuckGoImages(product.name);
+              if (ddgResults && ddgResults.length > 0) {
+                const ddgUrl = ddgResults[0].image;
+                const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
+                if (savedDdgImage) {
+                  finalImageUrl = savedDdgImage;
+                  console.log(`[Webhook AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
+                } else {
+                  finalImageUrl = '';
+                }
+              } else {
+                console.warn(`[Webhook AI] ❌ Falha ao encontrar imagem substituta no DDG. Imagem ficará vazia.`);
+                finalImageUrl = '';
+              }
+            } catch (err) {
+              console.error(`[Webhook AI] ❌ Erro ao buscar substituta no DDG:`, err);
+              finalImageUrl = '';
+            }
+          }
         }
       } else if (finalEnhancedImageUrl) {
         console.log(`[Webhook AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
@@ -802,7 +825,7 @@ export async function POST(request: Request) {
             : 0;
             
           const pushPayload = {
-            title: `Novo Produto Aprovado: ${product.name}`,
+            title: product.name,
             body: `Preço: R$ ${product.price?.toFixed(2)}`,
             icon: finalEnhancedImageUrl || product.imageUrl,
             url: `/produto/${product.id}`,
@@ -1238,7 +1261,7 @@ export async function PUT(request: Request) {
               : 0;
               
             const pushPayload = {
-              title: `Nova Oferta: ${product.name}`,
+              title: product.name,
               body: `Preço: R$ ${product.price?.toFixed(2)}`,
               icon: product.imageUrl,
               url: `/produto/${product.id}`,
@@ -1332,10 +1355,32 @@ export async function PUT(request: Request) {
                      finalEnhancedImageUrl = product.imageUrl;
                    }
                  }
-                console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
-              }
-            }
-          } else if (finalEnhancedImageUrl) {
+                 console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
+               }
+             } else {
+               if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
+                 console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no DuckDuckGo...`);
+                 try {
+                   const ddgResults = await searchDuckDuckGoImages(product.name);
+                   if (ddgResults && ddgResults.length > 0) {
+                     const ddgUrl = ddgResults[0].image;
+                     const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
+                     if (savedDdgImage) {
+                       finalImageUrl = savedDdgImage;
+                       console.log(`[Webhook Batch AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
+                     } else {
+                       finalImageUrl = '';
+                     }
+                   } else {
+                     finalImageUrl = '';
+                   }
+                 } catch (err) {
+                   console.error(`[Webhook Batch AI] ❌ Erro ao buscar substituta no DDG:`, err);
+                   finalImageUrl = '';
+                 }
+               }
+             }
+           } else if (finalEnhancedImageUrl) {
             console.log(`[Webhook Batch AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
           }
 
@@ -1365,7 +1410,7 @@ export async function PUT(request: Request) {
                 : 0;
                 
               const pushPayload = {
-                title: `Novo Produto Aprovado: ${product.name}`,
+                title: product.name,
                 body: `Preço: R$ ${product.price?.toFixed(2)}`,
                 icon: finalEnhancedImageUrl || product.imageUrl,
                 url: `/produto/${product.id}`,
