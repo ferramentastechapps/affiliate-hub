@@ -35,6 +35,26 @@ git push origin $Branch
 
 Write-Host "Atualizacao enviada ao Github com sucesso!" -ForegroundColor Green
 
+Write-Host "Iniciando build local (para nao travar a VPS)..." -ForegroundColor Cyan
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Erro no build local. Abortando." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Compactando a pasta .next e arquivos do PWA..." -ForegroundColor Cyan
+$PwaFiles = Get-ChildItem -Path "public" -Include "sw.js","workbox-*.js","swe-worker-*.js","worker-*.js","fallback-*.js" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+$PwaRelativePaths = @()
+if ($PwaFiles) {
+    $PwaRelativePaths = $PwaFiles | ForEach-Object { $_.Replace($PWD.Path + "\", "").Replace("\", "/") }
+}
+$TarArgs = @("-czf", "next_build.tar.gz", ".next") + $PwaRelativePaths
+& tar.exe $TarArgs
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Erro ao compactar a pasta. Abortando." -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "Iniciando Deploy na VPS (root@212.85.10.239)..." -ForegroundColor Cyan
 Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 
@@ -180,16 +200,15 @@ npx prisma migrate deploy
 echo "🔄 Executando script de swap de imagens no banco..."
 node swap_images.js
 
-echo "🏗️  Fazendo build do Next.js..."
+echo "📦 Extraindo build pré-compilado..."
 rm -rf .next
 rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
-NODE_OPTIONS="--max-old-space-size=1024" NEXT_TELEMETRY_DISABLED=1 npm run build
+tar -xzf next_build.tar.gz
 
 echo "🔍 Verificando integridade do build..."
 if [ ! -f ".next/BUILD_ID" ]; then
-  echo "❌ BUILD FALHOU! Arquivo .next/BUILD_ID não encontrado."
+  echo "❌ BUILD FALHOU! Arquivo .next/BUILD_ID não encontrado no pacote extraído."
   echo "   O deploy foi ABORTADO para evitar crash loop no PM2."
-  echo "   Verifique os erros acima e tente novamente."
   exit 1
 fi
 echo "✅ Build OK! BUILD_ID: $(cat .next/BUILD_ID)"
@@ -265,7 +284,8 @@ echo "🌐 Next.js rodando em http://127.0.0.1:3005"
 $DeployScript = ".deploy.sh"
 Set-Content -Path $DeployScript -Value ($sshCommand -replace "`r", "") -Encoding UTF8
 
-Write-Host "Transferindo script de deploy para a VPS..." -ForegroundColor Cyan
+Write-Host "Transferindo script de deploy e build para a VPS..." -ForegroundColor Cyan
+scp next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
 scp $DeployScript root@212.85.10.239:~/deploy.sh
 
 Write-Host "Executando script na VPS (pode pedir a senha novamente)..." -ForegroundColor Cyan
