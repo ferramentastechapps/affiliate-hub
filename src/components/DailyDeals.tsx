@@ -339,7 +339,7 @@ export function DailyDeals() {
           <button
             key={filter.key}
             onClick={() => setFilterType(filter.key as any)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap ${
               filterType === filter.key
                 ? 'bg-transparent text-white border border-[#ff334b] shadow-[0_0_15px_rgba(255,51,75,0.4)]'
                 : 'bg-transparent text-white hover:bg-white/5 border border-white/10'
