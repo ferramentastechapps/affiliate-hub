@@ -566,9 +566,9 @@ export function DailyDeals() {
                         const desc = product.description || '';
                         const name = product.name || '';
                         const store = (product.storeName || '').toLowerCase();
-                        const isAmazon = store.includes('amazon') || !!product.links?.amazon;
-                        const isPrime = isAmazon; // Todo produto Amazon é Prime
-
+                        const amazonLink = product.links?.amazon || '';
+                        const isAmazon = store.includes('amazon') || amazonLink.includes('amazon') || amazonLink.includes('amzn.to');
+                        const isPrime = isAmazon && (amazonLink.includes('amazon') || amazonLink.includes('amzn.to') || desc.toLowerCase().includes('prime'));
                         return isPrime ? (
                           <span className="bg-[#00a8e1]/10 text-[#00a8e1] border border-[#00a8e1]/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[120px] sm:max-w-[150px] truncate" title="Exclusivo Membros Prime">
                             <Star size={10} weight="fill" className="shrink-0" /> <span className="truncate">EXCLUSIVO PRIME</span>
