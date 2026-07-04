@@ -43,6 +43,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Compactando a pasta .next e arquivos do PWA..." -ForegroundColor Cyan
+Start-Sleep -Seconds 3
 $PwaFiles = Get-ChildItem -Path "public" -Include "sw.js","workbox-*.js","swe-worker-*.js","worker-*.js","fallback-*.js" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
 $PwaRelativePaths = @()
 if ($PwaFiles) {
