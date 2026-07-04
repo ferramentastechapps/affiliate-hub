@@ -1377,13 +1377,13 @@ class PromotionScraper:
             for promo in results[:limite]:
                 try:
                     nome = promo.get('title', 'Sem título')
-                    link_oferta = f"https://pechinchou.com.br/oferta/{promo.get('slug', '')}"
+                    slug = promo.get('slug', '')
+                    link_oferta = f"https://pechinchou.com.br/oferta/{slug}"
                     preco = float(promo.get('price', 0))
                     
-                    foto = promo.get('image')
+                    foto = imagens_reais.get(slug) or promo.get('image')
                     imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
 
-                    slug = promo.get('slug', '')
                     enhanced_image_url = None
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')

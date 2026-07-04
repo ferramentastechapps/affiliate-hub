@@ -152,7 +152,10 @@ async function flushBucket() {
     console.log(`🔄 Analisando ${messageQueue.length} ofertas no balde...`);
     
     messageQueue.sort((a, b) => b.score - a.score);
-    const bestOffer = messageQueue[0];
+    const bestOffer = messageQueue.shift(); // Remove from queue immediately
+
+    // Save state BEFORE sending to prevent poison-pill loop if puppeteer crashes
+    saveState();
 
     console.log(`🏆 Melhor oferta escolhida! Score: ${bestOffer.score}. Disparando para o grupo '${GROUP_NAME}'...`);
 
@@ -162,8 +165,7 @@ async function flushBucket() {
 
         if (!group) {
             console.error(`❌ Grupo '${GROUP_NAME}' não encontrado! Tem certeza que este WhatsApp está no grupo?`);
-            messageQueue = [];
-            saveState();
+            // We already removed it, no need to put it back.
             return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
         } else {
             if (bestOffer.imageUrl) {
@@ -181,6 +183,7 @@ async function flushBucket() {
                 console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
             }
             
+            // Empty the rest of the bucket since we sent one
             messageQueue = [];
             saveState();
             console.log('🗑️ Balde esvaziado para a próxima rodada.');
@@ -188,6 +191,7 @@ async function flushBucket() {
         }
     } catch (err) {
         console.error('❌ Erro ao enviar mensagem:', err);
+        // We already popped the bad message. We also empty the rest to be safe.
         messageQueue = [];
         saveState();
         return { success: false, error: err.message };
