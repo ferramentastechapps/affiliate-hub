@@ -566,7 +566,7 @@ export function DailyDeals() {
                         const desc = product.description || '';
                         const name = product.name || '';
                         const store = (product.storeName || '').toLowerCase();
-                        const isAmazon = store.includes('amazon') || desc.toLowerCase().includes('amazon') || Object.keys(product.links || {}).includes('amazon');
+                        const isAmazon = store.includes('amazon') || !!product.links?.amazon;
                         const isPrime = isAmazon; // Todo produto Amazon é Prime
 
                         return isPrime ? (

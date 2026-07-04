@@ -238,7 +238,7 @@ export function ProductDetail({ product }: { product: Product }) {
   }
 
   // Forçar tag Prime se for Amazon
-  const isAmazon = platformName === "Amazon" || desc.toLowerCase().includes('amazon');
+  const isAmazon = platformName === "Amazon" || (product.storeName || '').toLowerCase().includes('amazon') || !!product.links?.amazon;
   if (isAmazon) {
     condicoesMsg = "👑 EXCLUSIVO MEMBROS PRIME 🔵";
   }

@@ -256,7 +256,7 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   const isAmazon = (
     platform.toLowerCase() === 'amazon'
     || (product.storeName || '').toLowerCase().includes('amazon')
-    || descRawLower.includes('amazon')
+    || !!product.links?.amazon
   );
   const isPrime = isAmazon; // Todo produto Amazon é tratado como Exclusivo Membros Prime
 
