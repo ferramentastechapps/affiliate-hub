@@ -813,8 +813,9 @@ class TelegramNotifier:
                 # Se for um File ID do Telegram, converter para URL real para o WhatsApp baixar
                 if foto_img and not foto_img.startswith('http') and not foto_img.startswith('/'):
                     try:
+                        from config import TELEGRAM_BOT_TOKEN
                         tg_file = await self.bot.get_file(foto_img)
-                        foto_img = tg_file.file_path
+                        foto_img = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{tg_file.file_path}"
                     except Exception as e:
                         print(f'⚠️ Erro ao obter URL da imagem do Telegram para o WhatsApp: {e}')
                         foto_img = None
