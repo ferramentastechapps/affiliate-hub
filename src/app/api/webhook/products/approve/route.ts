@@ -165,14 +165,24 @@ export async function POST(request: Request) {
           const savedUrl = await saveEnhancedImage(body.imageUrl, false);
           if (savedUrl) {
             // Se o usuário forneceu imagem customizada, usamos ela como principal (site/fundo branco)
-            // e preservamos a original como enhancedImageUrl (lifestyle/grupo) APENAS SE for lifestyle
+            // e preservamos a original como enhancedImageUrl (lifestyle/grupo) se for válida
             updateData.imageUrl = savedUrl;
-            const isLifestyle = product.imageUrl && (
-              product.imageUrl.includes('/products/social/') || 
-              product.imageUrl.includes('/products/real/')
-            );
-            updateData.enhancedImageUrl = isLifestyle ? product.imageUrl : null;
-            finalEnhancedImageUrl = isLifestyle ? product.imageUrl : null;
+            const originalImg = product.imageUrl || '';
+            const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+            const isNotAggregator = !originalImg.includes('promobit.com.br') &&
+                                    !originalImg.includes('pelando.com.br') &&
+                                    !originalImg.includes('gatry.com') &&
+                                    !originalImg.includes('pechinchou.com.br');
+            const isDifferentFromSaved = originalImg !== savedUrl;
+            if (isNotPlaceholder && isNotAggregator && isDifferentFromSaved) {
+              updateData.enhancedImageUrl = originalImg;
+              finalEnhancedImageUrl = originalImg;
+              console.log(`[Approve] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
+            } else {
+              updateData.enhancedImageUrl = null;
+              finalEnhancedImageUrl = null;
+              console.log(`[Approve] ⚠️ Imagem original não qualificada como lifestyle (placeholder ou agregador)`);
+            }
           } else {
             updateData.imageUrl = body.imageUrl;
           }
@@ -195,12 +205,22 @@ export async function POST(request: Request) {
           // A imagem do varejista (fundo branco) vai para imageUrl (site)
           // A imagem original (lifestyle) vai para enhancedImageUrl (grupo)
           updateData.imageUrl = savedEnhanced;
-          const isLifestyle = product.imageUrl && (
-            product.imageUrl.includes('/products/social/') || 
-            product.imageUrl.includes('/products/real/')
-          );
-          updateData.enhancedImageUrl = isLifestyle ? product.imageUrl : null;
-          console.log(`[Approve] Imagem do varejista (fundo branco) salva em imageUrl. enhancedImageUrl setado para: ${updateData.enhancedImageUrl}`);
+          const originalImg = product.imageUrl || '';
+          const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+          const isNotAggregator = !originalImg.includes('promobit.com.br') &&
+                                  !originalImg.includes('pelando.com.br') &&
+                                  !originalImg.includes('gatry.com') &&
+                                  !originalImg.includes('pechinchou.com.br');
+          const isDifferentFromSaved = originalImg !== savedEnhanced;
+          if (isNotPlaceholder && isNotAggregator && isDifferentFromSaved) {
+            updateData.enhancedImageUrl = originalImg;
+            finalEnhancedImageUrl = originalImg;
+            console.log(`[Approve] ✅ Imagem do varejista (fundo branco) salva em imageUrl. Imagem original promovida para enhancedImageUrl: ${originalImg}`);
+          } else {
+            updateData.enhancedImageUrl = null;
+            finalEnhancedImageUrl = null;
+            console.log(`[Approve] ⚠️ Imagem original não qualificada como lifestyle: ${originalImg}`);
+          }
         }
       }
     }
@@ -338,11 +358,11 @@ export async function POST(request: Request) {
         name: product.name,
         price: product.price,
         originalPrice: product.originalPrice,
-        imageUrl: product.imageUrl,
+        imageUrl: updateData.imageUrl || product.imageUrl,
         category: product.category,
         description: product.description,
         aiAnalysis: product.aiAnalysis,
-        enhancedImageUrl: product.enhancedImageUrl,
+        enhancedImageUrl: finalEnhancedImageUrl ?? product.enhancedImageUrl,
       },
       coupon: couponData ? {
         id: couponData.id,
