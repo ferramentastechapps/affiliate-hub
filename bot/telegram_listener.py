@@ -598,6 +598,28 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             foto_lifestyle_admin = foto_file.file_path
             print(f"📸 Foto enviada (Lifestyle): {foto_lifestyle_admin}")
             
+            # Bug 5b Fix: Persistir a foto lifestyle do admin salvando-a localmente via API.
+            # A URL do Telegram (api.telegram.org/file/bot.../...) é TEMPORÁRIA e expira.
+            if foto_lifestyle_admin and foto_lifestyle_admin.startswith('http'):
+                try:
+                    save_resp = requests.post(
+                        "http://127.0.0.1:3005/api/scrape/save-image",
+                        json={"url": foto_lifestyle_admin},
+                        timeout=30
+                    )
+                    if save_resp.status_code == 200:
+                        saved_data = save_resp.json()
+                        saved_path = saved_data.get('path') or saved_data.get('url')
+                        if saved_path:
+                            foto_lifestyle_admin = saved_path
+                            print(f"✅ Foto lifestyle persistida localmente: {foto_lifestyle_admin}")
+                        else:
+                            print(f"⚠️ API save-image retornou sem path. Usando URL do Telegram como fallback.")
+                    else:
+                        print(f"⚠️ API save-image retornou {save_resp.status_code}. Usando URL do Telegram como fallback.")
+                except Exception as e:
+                    print(f"⚠️ Erro ao persistir foto lifestyle via API: {e}. Usando URL do Telegram como fallback.")
+            
             # Buscar fundo branco via scraper para o site
             scraped_image = scraped_data.get('imageUrl', '')
             image_is_valid = scraped_image and not any(p in scraped_image for p in INVALID_IMAGE_PATTERNS)
@@ -620,8 +642,10 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                 except Exception as e:
                     print(f"⚠️ Erro ao buscar fundo branco: {e}")
                     
+            # Bug 5a Fix: Se não achou fundo branco, NÃO usar a foto lifestyle como imageUrl do site.
             if not foto_url_site:
-                foto_url_site = foto_lifestyle_admin
+                print(f"⚠️ Nenhuma foto de fundo branco encontrada. Site ficará sem foto (placeholder).")
+                foto_url_site = None  # Explicitamente None
                 
         else:
             # Sem foto enviada

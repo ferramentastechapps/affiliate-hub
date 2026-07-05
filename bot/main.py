@@ -16,12 +16,15 @@ import json
 from pathlib import Path
 
 
-def wait_for_ai_analysis(api: AffiliateHubAPI, produto_id: str, max_wait: int = 15, intervalo: int = 2) -> dict | None:
+def wait_for_ai_analysis(api: AffiliateHubAPI, produto_id: str, max_wait: int = 30, intervalo: int = 3) -> dict | None:
     """
-    Aguarda até max_wait segundos para o campo aiAnalysis ser preenchido.
+    Aguarda até max_wait segundos para o campo aiAnalysis E enhancedImageUrl serem preenchidos.
+    O processamento de IA e o swap de imagem (lifestyle) são assíncronos no Next.js,
+    por isso precisamos aguardar ambos antes de classificar o produto na fila.
     Retorna o produto atualizado ou None se o timeout esgotar.
     """
     elapsed = 0
+    produto_com_ai = None
     while elapsed < max_wait:
         time.sleep(intervalo)
         elapsed += intervalo
@@ -29,9 +32,21 @@ def wait_for_ai_analysis(api: AffiliateHubAPI, produto_id: str, max_wait: int = 
         if resultado and resultado.get('success'):
             produto = resultado.get('product', {})
             if produto.get('aiAnalysis'):
-                print(f'✅ aiAnalysis recebido após {elapsed}s para produto {produto_id}')
-                return produto
+                produto_com_ai = produto
+                # Verificar se o enhancedImageUrl já foi preenchido
+                enhanced = produto.get('enhancedImageUrl')
+                if enhanced and 'placeholder' not in enhanced:
+                    print(f'✅ aiAnalysis + enhancedImageUrl recebidos após {elapsed}s para produto {produto_id}')
+                    return produto
+                else:
+                    # aiAnalysis chegou mas enhancedImageUrl ainda não — aguardar mais um pouco
+                    print(f'⏳ aiAnalysis OK, aguardando enhancedImageUrl... ({elapsed}/{max_wait}s)')
+                    continue
         print(f'⏳ Aguardando IA... ({elapsed}/{max_wait}s)')
+    # Timeout: retornar o produto com IA se já tiver, mesmo sem lifestyle
+    if produto_com_ai:
+        print(f'⚠️ Timeout aguardando enhancedImageUrl para {produto_id}. Classificando sem lifestyle (será reavaliado na fila).')
+        return produto_com_ai
     print(f'⚠️ Timeout aguardando aiAnalysis para {produto_id}. Publicando sem legenda da IA.')
     return None
 
@@ -388,7 +403,33 @@ class PromotionBot:
             except Exception as e:
                 print(f'❌ Erro ao ler fila_sem_lifestyle_pendente: {e}')
 
-        # 3. Salvar estado consolidado
+        # 3. Promover produtos de fila_sem_lifestyle que já ganharam enhancedImageUrl no banco
+        promovidos = 0
+        ainda_sem = []
+        for item in list(self.fila_sem_lifestyle):
+            produto_id = item.get('produto', {}).get('id')
+            if not produto_id:
+                continue
+            resultado = self.api.buscar_produto(produto_id)
+            if resultado and resultado.get('success'):
+                produto_no_banco = resultado.get('product', {})
+                enhanced = produto_no_banco.get('enhancedImageUrl', '')
+                status = produto_no_banco.get('status', '')
+                if enhanced and 'placeholder' not in enhanced.strip() and status in ('active', 'approved'):
+                    # Atualizar dados do produto no candidato com os dados frescos
+                    item['produto'].update({k: v for k, v in produto_no_banco.items() if v is not None})
+                    self.fila_lifestyle.append(item)
+                    promovidos += 1
+                    print(f'🎉 Promovido fila_sem_lifestyle → fila_lifestyle: {produto_no_banco.get("name", "?")[:50]}')
+                    continue
+            ainda_sem.append(item)
+        
+        if promovidos > 0:
+            self.fila_sem_lifestyle = ainda_sem
+            self._save_state()
+            print(f'🔄 {promovidos} produto(s) promovido(s) para fila_lifestyle.')
+
+        # 4. Salvar estado consolidado
         self._save_state()
 
         agora = time.time()

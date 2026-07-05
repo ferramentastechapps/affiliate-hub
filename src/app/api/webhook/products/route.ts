@@ -795,12 +795,22 @@ export async function POST(request: Request) {
             // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
             finalImageUrl = savedRetailImage;
             if (!finalEnhancedImageUrl) {
-              const isLifestyle = product.imageUrl && (
-                product.imageUrl.includes('/products/social/') || 
-                product.imageUrl.includes('/products/real/')
-              );
-              if (isLifestyle) {
-                finalEnhancedImageUrl = product.imageUrl;
+              // Considerar como lifestyle QUALQUER imagem original que não seja:
+              // - placeholder
+              // - a imagem de agregador detectada
+              // - a própria imagem recém-salva do varejista
+              const originalImg = product.imageUrl || '';
+              const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+              const isNotAggregator = !originalImg.includes('promobit.com.br') &&
+                                      !originalImg.includes('pelando.com.br') &&
+                                      !originalImg.includes('gatry.com') &&
+                                      !originalImg.includes('pechinchou.com.br');
+              const isDifferentFromRetail = originalImg !== savedRetailImage;
+              if (isNotPlaceholder && isNotAggregator && isDifferentFromRetail) {
+                finalEnhancedImageUrl = originalImg;
+                console.log(`[Webhook AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
+              } else {
+                console.log(`[Webhook AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder} aggregator=${!isNotAggregator}`);
               }
             }
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
@@ -1030,9 +1040,13 @@ export async function PUT(request: Request) {
               !productData.imageUrl.includes('pechinchou.com.br');
 
             if (isOldImagePlaceholderOrAggregator && isNewImageBetter && !existingProduct.isFixed) {
+              // Bug 2 fix: Não colocar a mesma foto em imageUrl E enhancedImageUrl.
+              // enhancedImageUrl só deve conter a foto lifestyle (diferente da do site).
+              // Aqui estamos substituindo a imagem do site por uma melhor;
+              // não há lifestyle distinta disponível neste ponto, então não tocamos em enhancedImageUrl.
               imageUpdateData = {
                 imageUrl: productData.imageUrl,
-                enhancedImageUrl: productData.imageUrl
+                // Manter enhancedImageUrl existente (não sobrescrever com a mesma foto)
               };
             }
 
@@ -1418,18 +1432,28 @@ export async function PUT(request: Request) {
               if (savedRetailImage) {
                 // A imagem do varejista (fundo branco) vai para imageUrl (site).
                 // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
-                 finalImageUrl = savedRetailImage;
-                 if (!finalEnhancedImageUrl) {
-                   const isLifestyle = product.imageUrl && (
-                     product.imageUrl.includes('/products/social/') || 
-                     product.imageUrl.includes('/products/real/')
-                   );
-                   if (isLifestyle) {
-                     finalEnhancedImageUrl = product.imageUrl;
-                   }
-                 }
-                 console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
-               }
+                finalImageUrl = savedRetailImage;
+                if (!finalEnhancedImageUrl) {
+                  // Considerar como lifestyle QUALQUER imagem original que não seja:
+                  // - placeholder
+                  // - imagem de agregador
+                  // - a própria imagem recém-salva do varejista
+                  const originalImg = product.imageUrl || '';
+                  const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+                  const isNotAggregator = !originalImg.includes('promobit.com.br') &&
+                                          !originalImg.includes('pelando.com.br') &&
+                                          !originalImg.includes('gatry.com') &&
+                                          !originalImg.includes('pechinchou.com.br');
+                  const isDifferentFromRetail = originalImg !== savedRetailImage;
+                  if (isNotPlaceholder && isNotAggregator && isDifferentFromRetail) {
+                    finalEnhancedImageUrl = originalImg;
+                    console.log(`[Webhook Batch AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
+                  } else {
+                    console.log(`[Webhook Batch AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder} aggregator=${!isNotAggregator}`);
+                  }
+                }
+                console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
+              }
              } else {
                if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
                  console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no DuckDuckGo...`);
