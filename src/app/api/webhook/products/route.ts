@@ -775,17 +775,7 @@ export async function POST(request: Request) {
       }
       
       // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
-      // mesmo se já tiver uma de agregador (Promobit, Gatry)
-      const isAggregatorImage = product.imageUrl.includes('promobit.com.br') || 
-                                 product.imageUrl.includes('gatry.com') ||
-                                 product.imageUrl.includes('pelando.com.br') ||
-                                 product.imageUrl.includes('pechinchou.com.br') ||
-                                 product.imageUrl.includes('assets.pechinchou.com.br');
-      
-      if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
-        if (isAggregatorImage) {
-          console.log(`[Webhook AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
-        }
+      if ((!finalEnhancedImageUrl) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
         // CRÍTICO: Usar resolvedUrls (links reais do varejista) ao invés de body.links (agregador)
         const rawEnhancedUrl = await getSecondaryLifestyleImage(resolvedUrls || body.links || {});
         if (rawEnhancedUrl) {
@@ -797,26 +787,21 @@ export async function POST(request: Request) {
             if (!finalEnhancedImageUrl) {
               // Considerar como lifestyle QUALQUER imagem original que não seja:
               // - placeholder
-              // - a imagem de agregador detectada
               // - a própria imagem recém-salva do varejista
               const originalImg = product.imageUrl || '';
               const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-              const isNotAggregator = !originalImg.includes('promobit.com.br') &&
-                                      !originalImg.includes('pelando.com.br') &&
-                                      !originalImg.includes('gatry.com') &&
-                                      !originalImg.includes('pechinchou.com.br');
               const isDifferentFromRetail = originalImg !== savedRetailImage;
-              if (isNotPlaceholder && isNotAggregator && isDifferentFromRetail) {
+              if (isNotPlaceholder && isDifferentFromRetail) {
                 finalEnhancedImageUrl = originalImg;
                 console.log(`[Webhook AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
               } else {
-                console.log(`[Webhook AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder} aggregator=${!isNotAggregator}`);
+                console.log(`[Webhook AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder}`);
               }
             }
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
           }
         } else {
-          console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original do agregador.`);
+          console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original.`);
           
           if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
             console.log(`[Webhook AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no DuckDuckGo...`);
@@ -827,6 +812,9 @@ export async function POST(request: Request) {
                 const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
                 if (savedDdgImage) {
                   finalImageUrl = savedDdgImage;
+                  if (!finalEnhancedImageUrl) {
+                    finalEnhancedImageUrl = savedDdgImage;
+                  }
                   console.log(`[Webhook AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
                 } else {
                   finalImageUrl = '';
@@ -838,6 +826,16 @@ export async function POST(request: Request) {
             } catch (err) {
               console.error(`[Webhook AI] ❌ Erro ao buscar substituta no DDG:`, err);
               finalImageUrl = '';
+            }
+          }
+
+          // Se a imagem original/atualizada é válida e finalEnhancedImageUrl está nulo, promove ela
+          if (!finalEnhancedImageUrl) {
+            const originalImg = finalImageUrl || product.imageUrl || '';
+            const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+            if (isNotPlaceholder) {
+              finalEnhancedImageUrl = originalImg;
+              console.log(`[Webhook AI] ✅ Promovida imagem final para enhancedImageUrl (sem swap): ${originalImg}`);
             }
           }
         }
@@ -1436,20 +1434,15 @@ export async function PUT(request: Request) {
                 if (!finalEnhancedImageUrl) {
                   // Considerar como lifestyle QUALQUER imagem original que não seja:
                   // - placeholder
-                  // - imagem de agregador
                   // - a própria imagem recém-salva do varejista
                   const originalImg = product.imageUrl || '';
                   const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-                  const isNotAggregator = !originalImg.includes('promobit.com.br') &&
-                                          !originalImg.includes('pelando.com.br') &&
-                                          !originalImg.includes('gatry.com') &&
-                                          !originalImg.includes('pechinchou.com.br');
                   const isDifferentFromRetail = originalImg !== savedRetailImage;
-                  if (isNotPlaceholder && isNotAggregator && isDifferentFromRetail) {
+                  if (isNotPlaceholder && isDifferentFromRetail) {
                     finalEnhancedImageUrl = originalImg;
                     console.log(`[Webhook Batch AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
                   } else {
-                    console.log(`[Webhook Batch AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder} aggregator=${!isNotAggregator}`);
+                    console.log(`[Webhook Batch AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder}`);
                   }
                 }
                 console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
@@ -1464,6 +1457,9 @@ export async function PUT(request: Request) {
                      const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
                      if (savedDdgImage) {
                        finalImageUrl = savedDdgImage;
+                       if (!finalEnhancedImageUrl) {
+                         finalEnhancedImageUrl = savedDdgImage;
+                       }
                        console.log(`[Webhook Batch AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
                      } else {
                        finalImageUrl = '';
@@ -1474,6 +1470,16 @@ export async function PUT(request: Request) {
                  } catch (err) {
                    console.error(`[Webhook Batch AI] ❌ Erro ao buscar substituta no DDG:`, err);
                    finalImageUrl = '';
+                 }
+               }
+
+               // Se a imagem original/atualizada é válida e finalEnhancedImageUrl está nulo, promove ela
+               if (!finalEnhancedImageUrl) {
+                 const originalImg = finalImageUrl || product.imageUrl || '';
+                 const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+                 if (isNotPlaceholder) {
+                   finalEnhancedImageUrl = originalImg;
+                   console.log(`[Webhook Batch AI] ✅ Promovida imagem final para enhancedImageUrl (sem swap): ${originalImg}`);
                  }
                }
              }
