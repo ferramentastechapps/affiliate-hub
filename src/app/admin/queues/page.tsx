@@ -46,9 +46,12 @@ export default function QueuesPage() {
 
   // Modals state
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<{ id: string, queue: string, currentPhoto?: string } | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string, queue: string, currentPhoto?: string, sitePhoto?: string } | null>(null);
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [sitePhotoUrl, setSitePhotoUrl] = useState('');
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadingSite, setUploadingSite] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, title: string, description: string, action: () => void, loading: boolean }>({
     isOpen: false,
@@ -95,8 +98,46 @@ export default function QueuesPage() {
     return () => clearInterval(interval);
   }, [data?.ultimo_envio_grupo]);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'lifestyle' | 'site') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (target === 'lifestyle') setUploading(true);
+    else setUploadingSite(true);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (res.ok) {
+        const json = await res.json();
+        if (json.imageUrl) {
+          if (target === 'lifestyle') setNewPhotoUrl(json.imageUrl);
+          else setSitePhotoUrl(json.imageUrl);
+        }
+      } else {
+        const err = await res.json();
+        alert('Erro no upload: ' + (err.error || 'Falha ao processar'));
+      }
+    } catch (err) {
+      alert('Erro de conexão no upload');
+    } finally {
+      if (target === 'lifestyle') setUploading(false);
+      else setUploadingSite(false);
+    }
+  };
+
   const handleUpdatePhoto = async () => {
-    if (!selectedProduct || !newPhotoUrl) return;
+    if (!selectedProduct) return;
+    if (!newPhotoUrl && !sitePhotoUrl) {
+      alert('Por favor, informe ao menos uma imagem.');
+      return;
+    }
     setSavingPhoto(true);
     
     try {
@@ -106,7 +147,8 @@ export default function QueuesPage() {
         body: JSON.stringify({
           productId: selectedProduct.id,
           queue: selectedProduct.queue,
-          enhancedImageUrl: newPhotoUrl
+          enhancedImageUrl: newPhotoUrl || null,
+          imageUrl: sitePhotoUrl || null
         })
       });
       
@@ -253,8 +295,9 @@ export default function QueuesPage() {
             <>
               <button 
                 onClick={() => {
-                  setSelectedProduct({ id: p.id, queue, currentPhoto: p.enhancedImageUrl });
+                  setSelectedProduct({ id: p.id, queue, currentPhoto: p.enhancedImageUrl, sitePhoto: p.imageUrl });
                   setNewPhotoUrl(p.enhancedImageUrl && !p.enhancedImageUrl.includes('placeholder') ? p.enhancedImageUrl : '');
+                  setSitePhotoUrl(p.imageUrl && !p.imageUrl.includes('placeholder') ? p.imageUrl : '');
                   setPhotoModalOpen(true);
                 }}
                 className="col-span-2 flex items-center justify-center gap-2 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium transition"
@@ -278,8 +321,9 @@ export default function QueuesPage() {
             <>
               <button 
                 onClick={() => {
-                  setSelectedProduct({ id: p.id, queue, currentPhoto: p.enhancedImageUrl });
-                  setNewPhotoUrl('');
+                  setSelectedProduct({ id: p.id, queue, currentPhoto: p.enhancedImageUrl, sitePhoto: p.imageUrl });
+                  setNewPhotoUrl(p.enhancedImageUrl && !p.enhancedImageUrl.includes('placeholder') ? p.enhancedImageUrl : '');
+                  setSitePhotoUrl(p.imageUrl && !p.imageUrl.includes('placeholder') ? p.imageUrl : '');
                   setPhotoModalOpen(true);
                 }}
                 className="flex items-center justify-center gap-2 py-2 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-lg text-xs font-bold transition"
@@ -412,61 +456,170 @@ export default function QueuesPage() {
 
       {/* Modal de Adicionar/Trocar Foto */}
       {photoModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-            <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2 mb-4">
               <Camera size={24} className="text-indigo-400" />
-              {selectedProduct.queue === 'fila_sem_lifestyle' ? 'Adicionar Foto Lifestyle' : 'Trocar Foto Lifestyle'}
+              Gerenciar Fotos do Produto
             </h2>
             
             {selectedProduct.queue === 'fila_sem_lifestyle' && (
-              <div className="mt-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex gap-3 text-indigo-300 text-sm">
+              <div className="mb-6 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex gap-3 text-indigo-300 text-sm">
                 <Warning size={20} weight="fill" className="flex-shrink-0" />
-                <p>Ao salvar a foto, este produto será movido automaticamente para a <strong>Fila Lifestyle</strong> e ficará pronto para o Telegram.</p>
+                <p>Ao salvar a foto lifestyle, este produto será movido automaticamente para a <strong>Fila Lifestyle</strong> e ficará pronto para o Telegram.</p>
               </div>
             )}
             
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">URL da Imagem (direta)</label>
-                <input 
-                  type="text" 
-                  value={newPhotoUrl}
-                  onChange={e => setNewPhotoUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
-              </div>
-              
-              <div className="border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950 h-48 flex items-center justify-center relative">
-                {newPhotoUrl ? (
-                  <img src={newPhotoUrl} alt="Preview" className="w-full h-full object-contain" onError={(e) => {
-                    (e.target as HTMLImageElement).src = '';
-                    (e.target as HTMLImageElement).alt = 'Erro ao carregar imagem';
-                  }} />
-                ) : (
-                  <div className="text-zinc-600 flex flex-col items-center gap-2">
-                    <ImageIcon size={32} />
-                    <span className="text-sm font-medium">Preview da imagem</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Coluna 1: Foto Lifestyle (Telegram) */}
+              <div className="space-y-4 bg-zinc-950/40 p-4 border border-zinc-800/60 rounded-xl flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-200 flex items-center gap-1.5 border-b border-zinc-800 pb-2 mb-4">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                    Foto Lifestyle (Telegram)
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Enviar Arquivo</label>
+                      <label className="flex items-center justify-center gap-2 px-3 py-2 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 text-zinc-300 rounded-lg cursor-pointer transition text-xs font-medium">
+                        {uploading ? (
+                          <>
+                            <ArrowsClockwise size={16} className="animate-spin text-indigo-400" />
+                            <span>Enviando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera size={16} className="text-indigo-400" />
+                            <span>Selecionar Arquivo</span>
+                          </>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => handleFileUpload(e, 'lifestyle')} 
+                          disabled={uploading || uploadingSite}
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-zinc-650">
+                      <div className="h-px flex-1 bg-zinc-850"></div>
+                      <span>OU URL DIRETA</span>
+                      <div className="h-px flex-1 bg-zinc-850"></div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-400 mb-1.5">URL da Imagem</label>
+                      <input 
+                        type="text" 
+                        value={newPhotoUrl}
+                        onChange={e => setNewPhotoUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full bg-zinc-950 border border-zinc-850 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
                   </div>
-                )}
+                </div>
+
+                <div className="border border-zinc-850 rounded-lg overflow-hidden bg-zinc-950 h-36 flex items-center justify-center relative mt-4">
+                  {newPhotoUrl ? (
+                    <img src={newPhotoUrl} alt="Preview Lifestyle" className="w-full h-full object-contain" onError={(e) => {
+                      (e.target as HTMLImageElement).src = '';
+                      (e.target as HTMLImageElement).alt = 'Erro ao carregar imagem';
+                    }} />
+                  ) : (
+                    <div className="text-zinc-600 flex flex-col items-center gap-1">
+                      <ImageIcon size={24} />
+                      <span className="text-xs">Sem foto lifestyle</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Coluna 2: Foto Fundo Branco (Site) */}
+              <div className="space-y-4 bg-zinc-950/40 p-4 border border-zinc-800/60 rounded-xl flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-200 flex items-center gap-1.5 border-b border-zinc-800 pb-2 mb-4">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Foto Fundo Branco (Site)
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Enviar Arquivo</label>
+                      <label className="flex items-center justify-center gap-2 px-3 py-2 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 text-zinc-300 rounded-lg cursor-pointer transition text-xs font-medium">
+                        {uploadingSite ? (
+                          <>
+                            <ArrowsClockwise size={16} className="animate-spin text-emerald-400" />
+                            <span>Enviando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera size={16} className="text-emerald-400" />
+                            <span>Selecionar Arquivo</span>
+                          </>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => handleFileUpload(e, 'site')} 
+                          disabled={uploading || uploadingSite}
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-zinc-650">
+                      <div className="h-px flex-1 bg-zinc-850"></div>
+                      <span>OU URL DIRETA</span>
+                      <div className="h-px flex-1 bg-zinc-850"></div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-400 mb-1.5">URL da Imagem</label>
+                      <input 
+                        type="text" 
+                        value={sitePhotoUrl}
+                        onChange={e => setSitePhotoUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full bg-zinc-950 border border-zinc-850 rounded-lg px-3 py-2 text-zinc-200 text-xs outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-zinc-850 rounded-lg overflow-hidden bg-zinc-950 h-36 flex items-center justify-center relative mt-4">
+                  {sitePhotoUrl ? (
+                    <img src={sitePhotoUrl} alt="Preview Site" className="w-full h-full object-contain" onError={(e) => {
+                      (e.target as HTMLImageElement).src = '';
+                      (e.target as HTMLImageElement).alt = 'Erro ao carregar imagem';
+                    }} />
+                  ) : (
+                    <div className="text-zinc-600 flex flex-col items-center gap-1">
+                      <ImageIcon size={24} />
+                      <span className="text-xs">Sem foto do site</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
             <div className="flex gap-3 mt-8">
               <button 
                 onClick={() => setPhotoModalOpen(false)}
-                disabled={savingPhoto}
+                disabled={savingPhoto || uploading || uploadingSite}
                 className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-medium transition"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleUpdatePhoto}
-                disabled={savingPhoto || !newPhotoUrl.trim()}
+                disabled={savingPhoto || uploading || uploadingSite || (!newPhotoUrl.trim() && !sitePhotoUrl.trim())}
                 className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {savingPhoto ? <ArrowsClockwise size={20} className="animate-spin" /> : 'Salvar Foto'}
+                {savingPhoto ? <ArrowsClockwise size={20} className="animate-spin" /> : 'Salvar Fotos'}
               </button>
             </div>
           </div>

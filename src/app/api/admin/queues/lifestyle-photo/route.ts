@@ -17,16 +17,24 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { productId, queue, enhancedImageUrl } = body;
+    const { productId, queue, enhancedImageUrl, imageUrl } = body;
 
-    if (!productId || !queue || !enhancedImageUrl) {
+    if (!productId || !queue) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    if (!enhancedImageUrl && !imageUrl) {
+      return NextResponse.json({ error: 'At least one image is required' }, { status: 400 });
+    }
+
+    const dataToUpdate: any = { isFixed: true };
+    if (enhancedImageUrl) dataToUpdate.enhancedImageUrl = enhancedImageUrl;
+    if (imageUrl) dataToUpdate.imageUrl = imageUrl;
 
     // 1. Atualizar banco de dados
     const product = await prisma.product.update({
       where: { id: productId },
-      data: { enhancedImageUrl }
+      data: dataToUpdate
     });
 
     if (!fs.existsSync(BOT_STATE_PATH)) {
@@ -45,10 +53,12 @@ export async function PATCH(request: Request) {
     }
 
     const item = targetArray[itemIndex];
-    item.produto = { ...item.produto, enhancedImageUrl };
+    if (enhancedImageUrl) item.produto.enhancedImageUrl = enhancedImageUrl;
+    if (imageUrl) item.produto.imageUrl = imageUrl;
+    item.produto.isFixed = true;
 
-    // Se estava na fila_sem_lifestyle, mover para fila_lifestyle
-    if (queue === 'fila_sem_lifestyle') {
+    // Se estava na fila_sem_lifestyle, mover para fila_lifestyle (somente se ganhou enhancedImageUrl!)
+    if (queue === 'fila_sem_lifestyle' && enhancedImageUrl) {
       targetArray.splice(itemIndex, 1);
       state[queue] = targetArray;
       
