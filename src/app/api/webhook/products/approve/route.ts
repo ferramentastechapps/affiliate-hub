@@ -164,34 +164,26 @@ export async function POST(request: Request) {
           console.log(`[Approve] Salvando imagem fornecida pelo Telegram localmente: ${body.imageUrl}`);
           const savedUrl = await saveEnhancedImage(body.imageUrl, false);
           if (savedUrl) {
-            // Se o usuário forneceu imagem customizada, usamos ela como principal (site/fundo branco)
-            // e preservamos a original como enhancedImageUrl (lifestyle/grupo) se for válida
+            // A imagem enviada pelo admin é a imagem lifestyle para o Telegram e a imagem principal para o site
             updateData.imageUrl = savedUrl;
-            const originalImg = product.imageUrl || '';
-            const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-            const isNotAggregator = !originalImg.includes('promobit.com.br') &&
-                                    !originalImg.includes('pelando.com.br') &&
-                                    !originalImg.includes('gatry.com') &&
-                                    !originalImg.includes('pechinchou.com.br');
-            const isDifferentFromSaved = originalImg !== savedUrl;
-            if (isNotPlaceholder && isNotAggregator && isDifferentFromSaved) {
-              updateData.enhancedImageUrl = originalImg;
-              finalEnhancedImageUrl = originalImg;
-              console.log(`[Approve] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
-            } else {
-              updateData.enhancedImageUrl = null;
-              finalEnhancedImageUrl = null;
-              console.log(`[Approve] ⚠️ Imagem original não qualificada como lifestyle (placeholder ou agregador)`);
-            }
+            updateData.enhancedImageUrl = savedUrl;
+            finalEnhancedImageUrl = savedUrl;
+            console.log(`[Approve] ✅ Imagem fornecida pelo admin salva e definida para imageUrl e enhancedImageUrl: ${savedUrl}`);
           } else {
             updateData.imageUrl = body.imageUrl;
+            updateData.enhancedImageUrl = body.imageUrl;
+            finalEnhancedImageUrl = body.imageUrl;
           }
         } catch (err) {
           console.error('[Approve] Erro ao salvar imagem localmente:', err);
           updateData.imageUrl = body.imageUrl;
+          updateData.enhancedImageUrl = body.imageUrl;
+          finalEnhancedImageUrl = body.imageUrl;
         }
       } else {
         updateData.imageUrl = body.imageUrl;
+        updateData.enhancedImageUrl = body.imageUrl;
+        finalEnhancedImageUrl = body.imageUrl;
       }
     }
     
@@ -207,20 +199,26 @@ export async function POST(request: Request) {
           updateData.imageUrl = savedEnhanced;
           const originalImg = product.imageUrl || '';
           const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-          const isNotAggregator = !originalImg.includes('promobit.com.br') &&
-                                  !originalImg.includes('pelando.com.br') &&
-                                  !originalImg.includes('gatry.com') &&
-                                  !originalImg.includes('pechinchou.com.br');
           const isDifferentFromSaved = originalImg !== savedEnhanced;
-          if (isNotPlaceholder && isNotAggregator && isDifferentFromSaved) {
+          if (isNotPlaceholder && isDifferentFromSaved) {
             updateData.enhancedImageUrl = originalImg;
             finalEnhancedImageUrl = originalImg;
             console.log(`[Approve] ✅ Imagem do varejista (fundo branco) salva em imageUrl. Imagem original promovida para enhancedImageUrl: ${originalImg}`);
           } else {
-            updateData.enhancedImageUrl = null;
-            finalEnhancedImageUrl = null;
-            console.log(`[Approve] ⚠️ Imagem original não qualificada como lifestyle: ${originalImg}`);
+            updateData.enhancedImageUrl = savedEnhanced;
+            finalEnhancedImageUrl = savedEnhanced;
+            console.log(`[Approve] ⚠️ Usando imagem do varejista em ambos os campos (original não qualificada): ${originalImg}`);
           }
+        }
+      } else {
+        // Se falhou ao buscar imagem do varejista, a imagem original (que está em imageUrl)
+        // é a melhor imagem que temos. Se for válida, definimos como enhancedImageUrl.
+        const originalImg = product.imageUrl || '';
+        const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+        if (isNotPlaceholder) {
+          updateData.enhancedImageUrl = originalImg;
+          finalEnhancedImageUrl = originalImg;
+          console.log(`[Approve] ✅ Swap falhou mas imagem original definida como enhancedImageUrl: ${originalImg}`);
         }
       }
     }
