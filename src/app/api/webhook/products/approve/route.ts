@@ -164,24 +164,20 @@ export async function POST(request: Request) {
           console.log(`[Approve] Salvando imagem fornecida pelo Telegram localmente: ${body.imageUrl}`);
           const savedUrl = await saveEnhancedImage(body.imageUrl, false);
           if (savedUrl) {
-            // A imagem enviada pelo admin é a imagem lifestyle para o Telegram e a imagem principal para o site
-            updateData.imageUrl = savedUrl;
+            // A imagem enviada pelo admin é a imagem lifestyle para o Telegram
             updateData.enhancedImageUrl = savedUrl;
             finalEnhancedImageUrl = savedUrl;
-            console.log(`[Approve] ✅ Imagem fornecida pelo admin salva e definida para imageUrl e enhancedImageUrl: ${savedUrl}`);
+            console.log(`[Approve] ✅ Imagem fornecida pelo admin salva e definida para enhancedImageUrl: ${savedUrl}`);
           } else {
-            updateData.imageUrl = body.imageUrl;
             updateData.enhancedImageUrl = body.imageUrl;
             finalEnhancedImageUrl = body.imageUrl;
           }
         } catch (err) {
           console.error('[Approve] Erro ao salvar imagem localmente:', err);
-          updateData.imageUrl = body.imageUrl;
           updateData.enhancedImageUrl = body.imageUrl;
           finalEnhancedImageUrl = body.imageUrl;
         }
       } else {
-        updateData.imageUrl = body.imageUrl;
         updateData.enhancedImageUrl = body.imageUrl;
         finalEnhancedImageUrl = body.imageUrl;
       }
