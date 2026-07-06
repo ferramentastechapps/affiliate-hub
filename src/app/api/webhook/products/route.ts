@@ -792,23 +792,8 @@ export async function POST(request: Request) {
           const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
           if (savedRetailImage) {
             // A imagem do varejista (fundo branco) vai para imageUrl (site).
-            // A imagem original (lifestyle) vai para enhancedImageUrl (Telegram).
             finalImageUrl = savedRetailImage;
-            if (!finalEnhancedImageUrl) {
-              // Considerar como lifestyle QUALQUER imagem original que não seja:
-              // - placeholder
-              // - a própria imagem recém-salva do varejista
-              const originalImg = product.imageUrl || '';
-              const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-              const isDifferentFromRetail = originalImg !== savedRetailImage;
-              if (isNotPlaceholder && isDifferentFromRetail) {
-                finalEnhancedImageUrl = originalImg;
-                console.log(`[Webhook AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
-              } else {
-                console.log(`[Webhook AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder}`);
-              }
-            }
-            console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
+            console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Atualizando imageUrl do site.`);
           }
         } else {
           console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original.`);
@@ -836,16 +821,6 @@ export async function POST(request: Request) {
             } catch (err) {
               console.error(`[Webhook AI] ❌ Erro ao buscar substituta no DDG:`, err);
               finalImageUrl = '';
-            }
-          }
-
-          // Se a imagem original/atualizada é válida e finalEnhancedImageUrl está nulo, promove ela
-          if (!finalEnhancedImageUrl) {
-            const originalImg = finalImageUrl || product.imageUrl || '';
-            const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-            if (isNotPlaceholder) {
-              finalEnhancedImageUrl = originalImg;
-              console.log(`[Webhook AI] ✅ Promovida imagem final para enhancedImageUrl (sem swap): ${originalImg}`);
             }
           }
         }

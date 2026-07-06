@@ -3,6 +3,7 @@ import { verifyToken } from '@/lib/auth-utils';
 import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
+import { prisma } from '@/lib/prisma';
 
 const BOT_STATE_PATH = path.join(process.cwd(), 'bot', 'bot_state.json');
 
@@ -41,6 +42,13 @@ export async function POST(request: Request) {
     state[queue] = targetArray;
 
     fs.writeFileSync(BOT_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
+
+    // Reject the product in the database so it's not re-added by the scraper or promoted again
+    await prisma.product.update({
+      where: { id: productId },
+      data: { status: 'rejected' }
+    });
+
 
     return NextResponse.json({ success: true, message: 'Removed successfully' });
   } catch (error) {
