@@ -774,8 +774,18 @@ export async function POST(request: Request) {
         console.log(`[Webhook AI] enhancedImageUrl VAZIO - tentando buscar secundária...`);
       }
       
+      const isAggregatorImage = product.imageUrl && (
+        product.imageUrl.includes('promobit.com.br') || 
+        product.imageUrl.includes('gatry.com') ||
+        product.imageUrl.includes('pelando.com.br') ||
+        product.imageUrl.includes('pechinchou.com.br')
+      );
+
       // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
-      if ((!finalEnhancedImageUrl) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+      if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+        if (isAggregatorImage) {
+          console.log(`[Webhook AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
+        }
         // CRÍTICO: Usar resolvedUrls (links reais do varejista) ao invés de body.links (agregador)
         const rawEnhancedUrl = await getSecondaryLifestyleImage(resolvedUrls || body.links || {});
         if (rawEnhancedUrl) {
