@@ -191,30 +191,40 @@ export async function POST(request: Request) {
         const savedEnhanced = await saveEnhancedImage(rawEnhancedUrl, false);
         if (savedEnhanced) {
           // A imagem do varejista (fundo branco) vai para imageUrl (site)
-          // A imagem original (lifestyle) vai para enhancedImageUrl (grupo)
+          // A imagem original (lifestyle) vai para enhancedImageUrl (grupo) SOMENTE se não for agregador
           updateData.imageUrl = savedEnhanced;
           const originalImg = product.imageUrl || '';
           const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
           const isDifferentFromSaved = originalImg !== savedEnhanced;
-          if (isNotPlaceholder && isDifferentFromSaved) {
+          const isAggregator = product.platformType === 'promobit' || product.platformType === 'pechinchou' || product.platformType === 'agregador' || product.source === 'gatry';
+          
+          if (isNotPlaceholder && isDifferentFromSaved && !isAggregator) {
             updateData.enhancedImageUrl = originalImg;
             finalEnhancedImageUrl = originalImg;
             console.log(`[Approve] ✅ Imagem do varejista (fundo branco) salva em imageUrl. Imagem original promovida para enhancedImageUrl: ${originalImg}`);
           } else {
-            updateData.enhancedImageUrl = savedEnhanced;
-            finalEnhancedImageUrl = savedEnhanced;
-            console.log(`[Approve] ⚠️ Usando imagem do varejista em ambos os campos (original não qualificada): ${originalImg}`);
+            // Se for agregador ou a imagem for igual, NÃO definimos enhancedImageUrl
+            // Deixamos vazio para o admin preencher uma foto lifestyle real
+            updateData.enhancedImageUrl = null;
+            finalEnhancedImageUrl = null;
+            console.log(`[Approve] ⚠️ Não promovemos a imagem original para lifestyle (agregador ou igual à do varejista). enhancedImageUrl ficará nulo.`);
           }
         }
       } else {
         // Se falhou ao buscar imagem do varejista, a imagem original (que está em imageUrl)
-        // é a melhor imagem que temos. Se for válida, definimos como enhancedImageUrl.
+        // é a melhor imagem que temos. Se for válida e não for agregador, definimos como enhancedImageUrl.
         const originalImg = product.imageUrl || '';
         const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-        if (isNotPlaceholder) {
+        const isAggregator = product.platformType === 'promobit' || product.platformType === 'pechinchou' || product.platformType === 'agregador' || product.source === 'gatry';
+        
+        if (isNotPlaceholder && !isAggregator) {
           updateData.enhancedImageUrl = originalImg;
           finalEnhancedImageUrl = originalImg;
           console.log(`[Approve] ✅ Swap falhou mas imagem original definida como enhancedImageUrl: ${originalImg}`);
+        } else {
+          updateData.enhancedImageUrl = null;
+          finalEnhancedImageUrl = null;
+          console.log(`[Approve] ⚠️ Swap falhou, e imagem original é de agregador. enhancedImageUrl ficará nulo.`);
         }
       }
     }
