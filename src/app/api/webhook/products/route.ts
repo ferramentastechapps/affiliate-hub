@@ -782,7 +782,7 @@ export async function POST(request: Request) {
       );
 
       // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
-      if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
+      if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending') {
         if (isAggregatorImage) {
           console.log(`[Webhook AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
         }
