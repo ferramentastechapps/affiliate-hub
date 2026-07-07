@@ -19,7 +19,10 @@ export async function PATCH(
     if (brand !== undefined) dataToUpdate.brand = brand;
     if (platformProductId !== undefined) dataToUpdate.platformProductId = platformProductId;
     if (isFixed !== undefined) dataToUpdate.isFixed = isFixed;
-    if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl;
+    if (imageUrl !== undefined) {
+      dataToUpdate.imageUrl = imageUrl;
+      dataToUpdate.enhancedImageUrl = imageUrl;
+    }
     if (userRating !== undefined) {
       dataToUpdate.userRating = userRating !== null ? parseInt(userRating) : null;
       dataToUpdate.ratedAt = userRating !== null ? new Date() : null;

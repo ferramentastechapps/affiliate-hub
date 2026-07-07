@@ -241,6 +241,7 @@ export async function POST(request: Request) {
         platformProductId,
         description,
         imageUrl,
+        enhancedImageUrl: imageUrl,
         couponLink: couponLink || null,
         price: price ? parseFloat(price) : null,
         originalPrice: originalPrice ? parseFloat(originalPrice) : null,
