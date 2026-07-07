@@ -792,7 +792,8 @@ export async function POST(request: Request) {
           const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
           if (savedRetailImage) {
             // A imagem do varejista (fundo branco) vai para imageUrl (site).
-            finalImageUrl = savedRetailImage;
+            finalEnhancedImageUrl = finalImageUrl; // preserva a imagem original do agregador antes de trocar
+            finalImageUrl = savedRetailImage;       // fundo branco do varejista
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Atualizando imageUrl do site.`);
           }
         } else {
