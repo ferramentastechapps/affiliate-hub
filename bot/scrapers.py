@@ -236,6 +236,36 @@ class PromotionScraper:
             self._link_resolution_cache[url] = (url, now)
             return url
 
+    def extrair_imagem_agregador(self, source_url: str) -> Optional[str]:
+        """
+        Scrapes an aggregator page URL and extracts the og:image meta tag content.
+        Uses the same self.headers and requests session style.
+        """
+        if not source_url:
+            return None
+        try:
+            response = requests.get(
+                source_url,
+                headers=self.headers,
+                timeout=10,
+                allow_redirects=True,
+                verify=False
+            )
+            if response.status_code != 200:
+                print(f"[Extrair Imagem] ❌ Status {response.status_code} para {source_url[:60]}")
+                return None
+                
+            soup = BeautifulSoup(response.text, 'html.parser')
+            meta_og = soup.find('meta', property='og:image')
+            if meta_og:
+                og_image = meta_og.get('content')
+                if og_image:
+                    return og_image.strip()
+            return None
+        except Exception as e:
+            print(f"[Extrair Imagem] ❌ Erro ao buscar og:image para {source_url[:60]}: {e}")
+            return None
+
     def _extrair_platform_id_regex(self, url: str) -> tuple[str | None, str | None]:
         """
         Executa a extração por Expressões Regulares de (platformType, platformId) de uma URL direta da loja.
