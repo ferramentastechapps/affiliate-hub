@@ -404,26 +404,45 @@ class PromotionBot:
                 print(f'❌ Erro ao ler fila_sem_lifestyle_pendente: {e}')
 
         # 3. Promover produtos de fila_sem_lifestyle que já ganharam enhancedImageUrl no banco
+        # [DEBUG TEMPORÁRIO — remover após investigação do bug]
+        print(f'[DEBUG] ▶ Início verificação promoção: fila_sem_lifestyle tem {len(self.fila_sem_lifestyle)} item(s)')
         promovidos = 0
         ainda_sem = []
         for item in list(self.fila_sem_lifestyle):
             produto_id = item.get('produto', {}).get('id')
+            print(f'[DEBUG]   → Verificando item: produto_id={produto_id!r}')
             if not produto_id:
+                print(f'[DEBUG]   ⚠ produto_id ausente no item — pulando')
                 continue
             resultado = self.api.buscar_produto(produto_id)
             if resultado and resultado.get('success'):
                 produto_no_banco = resultado.get('product', {})
                 enhanced = produto_no_banco.get('enhancedImageUrl', '')
                 status = produto_no_banco.get('status', '')
-                if enhanced and 'placeholder' not in enhanced.strip() and status in ('active', 'approved'):
+                cond_enhanced = bool(enhanced)
+                cond_placeholder = 'placeholder' not in enhanced.strip() if enhanced else False
+                cond_status = status in ('active', 'approved')
+                cond_final = cond_enhanced and cond_placeholder and cond_status
+                print(f'[DEBUG]   Resposta API: enhanced={enhanced!r} | status={status!r}')
+                print(f'[DEBUG]   Condições: enhanced_nao_vazio={cond_enhanced} | sem_placeholder={cond_placeholder} | status_ok={cond_status} | PROMOVER={cond_final}')
+                if cond_final:
                     # Atualizar dados do produto no candidato com os dados frescos
                     item['produto'].update({k: v for k, v in produto_no_banco.items() if v is not None})
                     self.fila_lifestyle.append(item)
                     promovidos += 1
+                    print(f'[DEBUG]   ✅ MOVIDO para fila_lifestyle: {produto_no_banco.get("name", "?")[:50]}')
                     print(f'🎉 Promovido fila_sem_lifestyle → fila_lifestyle: {produto_no_banco.get("name", "?")[:50]}')
                     continue
+                else:
+                    print(f'[DEBUG]   🔴 NÃO promovido — permanece em fila_sem_lifestyle')
+            else:
+                resp_resumo = resultado if resultado else 'None'
+                print(f'[DEBUG]   ❌ API falhou ou success=False para {produto_id}: {str(resp_resumo)[:200]}')
             ainda_sem.append(item)
         
+        print(f'[DEBUG] ◀ Fim verificação: promovidos={promovidos} | fila_sem_lifestyle restante={len(ainda_sem)}')
+        # [FIM DEBUG TEMPORÁRIO]
+
         if promovidos > 0:
             self.fila_sem_lifestyle = ainda_sem
             self._save_state()
