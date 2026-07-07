@@ -53,7 +53,7 @@ export async function POST(
       });
       await prisma.product.update({
         where: { id },
-        data: { imageUrl: url }
+        data: { imageUrl: url, enhancedImageUrl: url }
       });
     }
 
@@ -69,7 +69,7 @@ export async function POST(
     if (existingImages.length === 0) {
       await prisma.product.update({
         where: { id },
-        data: { imageUrl: url }
+        data: { imageUrl: url, enhancedImageUrl: url }
       });
     }
 

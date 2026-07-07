@@ -13,6 +13,7 @@ const PORT = 3006;
 
 // Variables from env
 const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || "";
+const GROUP_ID = process.env.WHATSAPP_GROUP_ID || "";
 const DELAY_MINUTES = parseInt(process.env.WHATSAPP_DELAY_MINUTES || "30", 10);
 
 const fs = require('fs');
@@ -66,6 +67,10 @@ const client = new Client({
     puppeteer: {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         headless: true
+    },
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
     }
 });
 
@@ -87,6 +92,17 @@ client.on('authenticated', () => {
 
 client.on('auth_failure', msg => {
     console.error('❌ Falha na autenticação:', msg);
+});
+
+client.on('message', async (msg) => {
+    if (msg.body === '/grupo') {
+        try {
+            await msg.reply(`JID deste chat: ${msg.from}`);
+            console.log(`ℹ️ Comando /grupo respondido para ${msg.from}`);
+        } catch (e) {
+            console.error('Erro ao responder /grupo:', e.message);
+        }
+    }
 });
 
 client.initialize();
@@ -111,7 +127,7 @@ app.get('/groups', async (req, res) => {
     if (!isReady) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
     try {
         const chats = await client.getChats();
-        const groups = chats.filter(c => c.isGroup).map(c => c.name);
+        const groups = chats.filter(c => c.isGroup).map(c => ({ name: c.name, id: c.id._serialized }));
         return res.status(200).json({ groups });
     } catch (err) {
         return res.status(500).json({ error: err.message });
@@ -142,11 +158,11 @@ async function flushBucket() {
         return { skipped: true, reason: 'empty' };
     }
 
-    if (!GROUP_NAME) {
-        console.log(`⚠️ WHATSAPP_GROUP_NAME está vazio no .env. Esvaziando o balde (${messageQueue.length} ofertas) sem enviar.`);
+    if (!GROUP_NAME && !GROUP_ID) {
+        console.log(`⚠️ WHATSAPP_GROUP_NAME e WHATSAPP_GROUP_ID estão vazios no .env. Esvaziando o balde (${messageQueue.length} ofertas) sem enviar.`);
         messageQueue = [];
         saveState();
-        return { skipped: true, reason: 'no_group_name' };
+        return { skipped: true, reason: 'no_group_configured' };
     }
 
     console.log(`🔄 Analisando ${messageQueue.length} ofertas no balde...`);
@@ -157,13 +173,22 @@ async function flushBucket() {
     // Save state BEFORE sending to prevent poison-pill loop if puppeteer crashes
     saveState();
 
-    console.log(`🏆 Melhor oferta escolhida! Score: ${bestOffer.score}. Disparando para o grupo '${GROUP_NAME}'...`);
+    const targetLabel = GROUP_ID ? `JID: ${GROUP_ID}` : `grupo '${GROUP_NAME}'`;
+    console.log(`🏆 Melhor oferta escolhida! Score: ${bestOffer.score}. Disparando para ${targetLabel}...`);
 
     try {
-        const chats = await client.getChats();
-        const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
+        let targetChatId = GROUP_ID;
 
-        if (!group) {
+        if (!targetChatId) {
+            console.log(`🔍 Buscando ID do grupo pelo nome '${GROUP_NAME}'...`);
+            const chats = await client.getChats();
+            const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
+            if (group) {
+                targetChatId = group.id._serialized;
+            }
+        }
+
+        if (!targetChatId) {
             console.error(`❌ Grupo '${GROUP_NAME}' não encontrado! Tem certeza que este WhatsApp está no grupo?`);
             // We already removed it, no need to put it back.
             return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
@@ -171,15 +196,15 @@ async function flushBucket() {
             if (bestOffer.imageUrl) {
                 try {
                     const media = await MessageMedia.fromUrl(bestOffer.imageUrl, { unsafeMime: true });
-                    await client.sendMessage(group.id._serialized, media, { caption: bestOffer.message });
+                    await client.sendMessage(targetChatId, media, { caption: bestOffer.message });
                     console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
                 } catch (imgErr) {
                     console.error('❌ Erro ao enviar imagem via WhatsApp, enviando só texto:', imgErr.message);
-                    await client.sendMessage(group.id._serialized, bestOffer.message);
+                    await client.sendMessage(targetChatId, bestOffer.message);
                     console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
                 }
             } else {
-                await client.sendMessage(group.id._serialized, bestOffer.message);
+                await client.sendMessage(targetChatId, bestOffer.message);
                 console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
             }
             

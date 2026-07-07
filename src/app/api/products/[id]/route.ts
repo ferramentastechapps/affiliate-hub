@@ -96,6 +96,7 @@ export async function PUT(
         platformType: platformTypeUpdate,
         description,
         imageUrl,
+        enhancedImageUrl: imageUrl,
         couponLink: couponLink !== undefined ? couponLink : undefined,
         price: price ? parseFloat(price) : null,
         status: status || undefined,
