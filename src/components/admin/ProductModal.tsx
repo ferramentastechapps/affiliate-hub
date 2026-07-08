@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, MagicWand, TelegramLogo, Check, PaperPlaneTilt, Plus, Trash, ArrowSquareOut } from "@phosphor-icons/react";
+import { X, MagicWand, TelegramLogo, Check, PaperPlaneTilt, Plus, Trash, ArrowSquareOut, ArrowsLeftRight, Camera, Image as ImageIcon } from "@phosphor-icons/react";
 
 type ProductModalProps = {
   isOpen: boolean;
@@ -18,10 +18,14 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     platformProductId: "",
     description: "",
     imageUrl: "",
+    enhancedImageUrl: "",
     price: "",
     couponLink: "",
     isFixed: false,
   });
+
+  const [uploadingSite, setUploadingSite] = useState(false);
+  const [uploadingLifestyle, setUploadingLifestyle] = useState(false);
 
   const [productLinks, setProductLinks] = useState<any[]>([]);
   const [images, setImages] = useState<any[]>([]);
@@ -50,6 +54,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         platformProductId: product.platformProductId || "",
         description: product.description || "",
         imageUrl: product.imageUrl || "",
+        enhancedImageUrl: product.enhancedImageUrl || "",
         price: product.price?.toString() || "",
         couponLink: product.couponLink || "",
         isFixed: product.isFixed || false,
@@ -101,6 +106,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
         platformProductId: "",
         description: "",
         imageUrl: "",
+        enhancedImageUrl: "",
         price: "",
         couponLink: "",
         isFixed: false,
@@ -252,6 +258,60 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
     }
   }
 
+  async function handleSpecificUpload(e: React.ChangeEvent<HTMLInputElement>, target: 'site' | 'lifestyle') {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (target === 'site') setUploadingSite(true);
+    else setUploadingLifestyle(true);
+
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: form
+      });
+      const data = await res.json();
+      if (res.ok && data.imageUrl) {
+        if (target === 'site') {
+          setFormData(prev => ({ ...prev, imageUrl: data.imageUrl }));
+          setImages(prev => {
+            if (prev.some(i => i.url === data.imageUrl)) return prev;
+            return [...prev, { url: data.imageUrl, isPrimary: prev.length === 0 }];
+          });
+        } else {
+          setFormData(prev => ({ ...prev, enhancedImageUrl: data.imageUrl }));
+          setImages(prev => {
+            if (prev.some(i => i.url === data.imageUrl)) return prev;
+            return [...prev, { url: data.imageUrl, isPrimary: false }];
+          });
+        }
+      } else {
+        alert(data.error || "Erro ao fazer upload da imagem");
+      }
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      alert("Erro ao fazer upload da imagem");
+    } finally {
+      if (target === 'site') setUploadingSite(false);
+      else setUploadingLifestyle(false);
+      e.target.value = '';
+    }
+  }
+
+  function swapImages() {
+    setFormData(prev => {
+      const temp = prev.imageUrl;
+      return {
+        ...prev,
+        imageUrl: prev.enhancedImageUrl,
+        enhancedImageUrl: temp
+      };
+    });
+  }
+
   async function handleReprocess(type: 'ai' | 'affiliate') {
     if (!product?.id) return;
     if (!confirm(`Deseja forçar o reprocessamento de ${type === 'ai' ? 'IA' : 'Links'}? O bot irá atualizar este produto no próximo ciclo.`)) return;
@@ -297,7 +357,8 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       subcategory: formData.subcategory,
       platformProductId: formData.platformProductId,
       description: formData.description,
-      imageUrl: primaryImage,
+      imageUrl: formData.imageUrl || primaryImage,
+      enhancedImageUrl: formData.enhancedImageUrl || null,
       price: formData.price ? parseFloat(formData.price) : null,
       couponLink: formData.couponLink || null,
       status: status,
@@ -578,6 +639,120 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
             </div>
           </div>
 
+          {/* Nova Área de Gerenciamento das Duas Fotos Principais */}
+          <div className="border-t border-zinc-800 pt-6 space-y-4">
+            <h3 className="text-lg font-semibold text-zinc-100 flex items-center gap-2">
+              <Camera size={20} className="text-indigo-400" />
+              Imagens do Produto
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+              {/* Botão de Swap centralizado */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden md:block">
+                <button
+                  type="button"
+                  onClick={swapImages}
+                  title="Inverter Imagens (Site <-> Grupo)"
+                  className="p-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 rounded-full shadow-lg transition active:scale-95"
+                >
+                  <ArrowsLeftRight size={18} weight="bold" />
+                </button>
+              </div>
+
+              {/* Coluna 1: Foto do Site */}
+              <div className="bg-zinc-950/40 p-4 border border-zinc-800/80 rounded-xl flex flex-col justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-1.5 border-b border-zinc-800/60 pb-2 mb-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Foto do Site (Fundo Branco)
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] uppercase font-semibold text-zinc-500 mb-1">Upload de Arquivo</label>
+                      <label className="flex items-center justify-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-700 hover:border-zinc-600 text-zinc-300 rounded-lg cursor-pointer transition text-xs font-medium">
+                        {uploadingSite ? "Enviando..." : "Selecionar Arquivo"}
+                        <input type="file" accept="image/*" onChange={(e) => handleSpecificUpload(e, 'site')} disabled={uploadingSite || uploadingLifestyle} className="hidden" />
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-semibold text-zinc-500 mb-1">URL da Imagem</label>
+                      <input
+                        type="text"
+                        value={formData.imageUrl}
+                        onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200 text-xs outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950/80 h-32 flex items-center justify-center relative mt-2">
+                  {formData.imageUrl ? (
+                    <img src={formData.imageUrl} alt="Site Preview" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
+                  ) : (
+                    <div className="text-zinc-650 flex flex-col items-center gap-1">
+                      <ImageIcon size={20} />
+                      <span className="text-[10px]">Sem foto do site</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Coluna 2: Foto do Grupo */}
+              <div className="bg-zinc-950/40 p-4 border border-zinc-800/80 rounded-xl flex flex-col justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-1.5 border-b border-zinc-800/60 pb-2 mb-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                    Foto do Grupo (Lifestyle)
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] uppercase font-semibold text-zinc-500 mb-1">Upload de Arquivo</label>
+                      <label className="flex items-center justify-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-700 hover:border-zinc-600 text-zinc-300 rounded-lg cursor-pointer transition text-xs font-medium">
+                        {uploadingLifestyle ? "Enviando..." : "Selecionar Arquivo"}
+                        <input type="file" accept="image/*" onChange={(e) => handleSpecificUpload(e, 'lifestyle')} disabled={uploadingSite || uploadingLifestyle} className="hidden" />
+                      </label>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-semibold text-zinc-500 mb-1">URL da Imagem</label>
+                      <input
+                        type="text"
+                        value={formData.enhancedImageUrl}
+                        onChange={e => setFormData({ ...formData, enhancedImageUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950/80 h-32 flex items-center justify-center relative mt-2">
+                  {formData.enhancedImageUrl ? (
+                    <img src={formData.enhancedImageUrl} alt="Group Preview" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
+                  ) : (
+                    <div className="text-zinc-650 flex flex-col items-center gap-1">
+                      <ImageIcon size={20} />
+                      <span className="text-[10px]">Sem foto lifestyle</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Botão de Swap visível apenas em Mobile */}
+              <div className="col-span-1 md:hidden flex justify-center mt-1">
+                <button
+                  type="button"
+                  onClick={swapImages}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 rounded-lg text-xs font-medium transition"
+                >
+                  <ArrowsLeftRight size={14} /> Inverter Imagens
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Galeria de imagens */}
           <div className="border-t border-zinc-800 pt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Galeria de Imagens</h3>
@@ -590,19 +765,21 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
             {images.length > 0 ? (
               <div className="grid grid-cols-4 gap-3">
                 {images.map((img, idx) => (
-                  <div key={idx} className={`relative group aspect-square rounded-lg overflow-hidden border-2 ${img.isPrimary ? 'border-accent' : 'border-zinc-800'}`}>
+                  <div key={idx} className={`relative group aspect-square rounded-lg overflow-hidden border-2 ${formData.imageUrl === img.url ? 'border-emerald-500' : formData.enhancedImageUrl === img.url ? 'border-indigo-500' : 'border-zinc-800'}`}>
                     <img src={img.url} alt="Galeria" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      {!img.isPrimary && (
-                        <button type="button" onClick={() => setPrimaryImage(idx)} className="text-[10px] bg-zinc-800 px-2 py-1 rounded text-white hover:bg-zinc-700">
-                          Tornar Principal
-                        </button>
-                      )}
-                      <button type="button" onClick={() => removeImage(idx)} className="text-[10px] bg-red-900/50 px-2 py-1 rounded text-red-300 hover:bg-red-900">
+                    <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1">
+                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, imageUrl: img.url }))} className="w-full py-0.5 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium">
+                        Usar no Site
+                      </button>
+                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, enhancedImageUrl: img.url }))} className="w-full py-0.5 text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium">
+                        Usar no Grupo
+                      </button>
+                      <button type="button" onClick={() => removeImage(idx)} className="w-full py-0.5 text-[9px] bg-red-900/40 hover:bg-red-900 text-red-300 rounded font-medium">
                         Remover
                       </button>
                     </div>
-                    {img.isPrimary && <span className="absolute top-1 left-1 bg-accent text-black text-[10px] font-bold px-1.5 py-0.5 rounded">Principal</span>}
+                    {formData.imageUrl === img.url && <span className="absolute top-1 left-1 bg-emerald-500 text-white text-[8px] font-bold px-1 rounded">Site</span>}
+                    {formData.enhancedImageUrl === img.url && <span className="absolute top-1 right-1 bg-indigo-500 text-white text-[8px] font-bold px-1 rounded">Grupo</span>}
                   </div>
                 ))}
               </div>
@@ -611,7 +788,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
             )}
           </div>
 
-          {/* Grade de Imagens Alternativas (Opção C) */}
+          {/* Grade de Imagens Alternativas */}
           <div className="bg-zinc-850/50 border border-zinc-800 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-zinc-300">Imagens Alternativas</span>
@@ -628,12 +805,27 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                 {alternativeImages.length > 0 && (
                   <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1.5 bg-zinc-950/70 border border-zinc-800 rounded-lg">
                     {alternativeImages.map((img, idx) => (
-                      <button key={idx} type="button" onClick={() => {
-                        setImages(prev => [...prev, { url: img.image, isPrimary: prev.length === 0 }]);
-                        if (!formData.imageUrl) setFormData(prev => ({ ...prev, imageUrl: img.image }));
-                      }} className="aspect-square relative rounded-md overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all hover:scale-[1.03]">
+                      <div key={idx} className="aspect-square relative rounded-md overflow-hidden bg-zinc-900 border border-zinc-800 group transition-all hover:scale-[1.03]">
                         <img src={img.thumbnail || img.image} alt={img.title || "Imagem alternativa"} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }} />
-                      </button>
+                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 items-center justify-center p-1">
+                          <button type="button" onClick={() => {
+                            if (!images.some(i => i.url === img.image)) {
+                              setImages(prev => [...prev, { url: img.image, isPrimary: false }]);
+                            }
+                            setFormData(prev => ({ ...prev, imageUrl: img.image }));
+                          }} className="w-full py-0.5 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium">
+                            Usar no Site
+                          </button>
+                          <button type="button" onClick={() => {
+                            if (!images.some(i => i.url === img.image)) {
+                              setImages(prev => [...prev, { url: img.image, isPrimary: false }]);
+                            }
+                            setFormData(prev => ({ ...prev, enhancedImageUrl: img.image }));
+                          }} className="w-full py-0.5 text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium">
+                            Usar no Grupo
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}

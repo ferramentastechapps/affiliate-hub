@@ -214,7 +214,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, category, description, imageUrl, price, originalPrice, links, brand, subcategory, platformProductId, productLinks, images, couponLink } = body;
+    const { name, category, description, imageUrl, enhancedImageUrl, price, originalPrice, links, brand, subcategory, platformProductId, productLinks, images, couponLink } = body;
     
     // Validação de campos obrigatórios
     if (!name || !category || !imageUrl) {
@@ -241,7 +241,7 @@ export async function POST(request: Request) {
         platformProductId,
         description,
         imageUrl,
-        enhancedImageUrl: imageUrl,
+        enhancedImageUrl: enhancedImageUrl !== undefined ? enhancedImageUrl : imageUrl,
         couponLink: couponLink || null,
         price: price ? parseFloat(price) : null,
         originalPrice: originalPrice ? parseFloat(originalPrice) : null,

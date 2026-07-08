@@ -41,7 +41,7 @@ export async function PATCH(
       // Atualizar imagem legada no Produto
       await prisma.product.update({
         where: { id },
-        data: { imageUrl: updated.url, enhancedImageUrl: updated.url }
+        data: { imageUrl: updated.url }
       });
     }
 
@@ -84,7 +84,7 @@ export async function DELETE(
         });
         await prisma.product.update({
           where: { id },
-          data: { imageUrl: remainingImages[0].url, enhancedImageUrl: remainingImages[0].url }
+          data: { imageUrl: remainingImages[0].url }
         });
       }
     }
