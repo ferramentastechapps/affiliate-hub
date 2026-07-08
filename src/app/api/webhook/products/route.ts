@@ -812,27 +812,34 @@ export async function POST(request: Request) {
           console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original.`);
           
           if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
-            console.log(`[Webhook AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no DuckDuckGo...`);
+            console.log(`[Webhook AI] 🚫 Imagem do Pechinchou detectada. Salvando localmente para evitar hotlink block...`);
             try {
-              const ddgResults = await searchDuckDuckGoImages(product.name);
-              if (ddgResults && ddgResults.length > 0) {
-                const ddgUrl = ddgResults[0].image;
-                const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
-                if (savedDdgImage) {
-                  finalImageUrl = savedDdgImage;
-                  if (!finalEnhancedImageUrl) {
-                    finalEnhancedImageUrl = savedDdgImage;
+              const savedLocalImage = await saveEnhancedImage(product.imageUrl, false);
+              if (savedLocalImage) {
+                finalImageUrl = savedLocalImage;
+                console.log(`[Webhook AI] ✅ Imagem do Pechinchou salva localmente com sucesso: ${savedLocalImage}`);
+              } else {
+                console.warn(`[Webhook AI] ⚠️ Falha ao baixar imagem do Pechinchou localmente. Tentando buscar substituta no DuckDuckGo...`);
+                const ddgResults = await searchDuckDuckGoImages(product.name);
+                if (ddgResults && ddgResults.length > 0) {
+                  const ddgUrl = ddgResults[0].image;
+                  const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
+                  if (savedDdgImage) {
+                    finalImageUrl = savedDdgImage;
+                    if (!finalEnhancedImageUrl) {
+                      finalEnhancedImageUrl = savedDdgImage;
+                    }
+                    console.log(`[Webhook AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
+                  } else {
+                    finalImageUrl = '';
                   }
-                  console.log(`[Webhook AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
                 } else {
+                  console.warn(`[Webhook AI] ❌ Falha ao encontrar imagem substituta no DDG. Imagem ficará vazia.`);
                   finalImageUrl = '';
                 }
-              } else {
-                console.warn(`[Webhook AI] ❌ Falha ao encontrar imagem substituta no DDG. Imagem ficará vazia.`);
-                finalImageUrl = '';
               }
             } catch (err) {
-              console.error(`[Webhook AI] ❌ Erro ao buscar substituta no DDG:`, err);
+              console.error(`[Webhook AI] ❌ Erro ao baixar ou buscar substituta no DDG:`, err);
               finalImageUrl = '';
             }
           }

@@ -29,9 +29,17 @@ export async function saveEnhancedImage(source: string, isBase64: boolean): Prom
       fs.writeFileSync(filePath, buffer);
     } else {
       // Handle URL download
-      const response = await fetch(source);
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      };
+      try {
+        const parsedUrl = new URL(source);
+        headers['Referer'] = `${parsedUrl.protocol}//${parsedUrl.hostname}/`;
+      } catch (e) {}
+
+      const response = await fetch(source, { headers });
       if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.statusText}`);
+        throw new Error(`Failed to fetch image: ${response.status}`);
       }
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);

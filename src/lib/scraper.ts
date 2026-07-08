@@ -12,7 +12,7 @@ export type ScrapedProduct = {
 // 🔍 SCRAPER ROBUSTO COM CHEERIO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct> {
+export async function scrapeProductFromUrl(url: string, disableDdgFallback: boolean = false): Promise<ScrapedProduct> {
   try {
     console.log('🔍 Iniciando scraping:', url);
     
@@ -107,7 +107,7 @@ export async function scrapeProductFromUrl(url: string): Promise<ScrapedProduct>
       }
     }
     
-    if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp') || imageUrl.includes('placeholder')) {
+    if (!disableDdgFallback && (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp') || imageUrl.includes('placeholder'))) {
       console.warn('⚠️ Imagem não encontrada, tentando buscar no DuckDuckGo para:', name);
       try {
         const ddgResults = await searchDuckDuckGoImages(name);
@@ -488,7 +488,7 @@ export async function getSecondaryLifestyleImage(links: Record<string, string | 
 
   try {
     console.log(`[Scraper-Imagem] Tentando extrair imagem secundária de: ${targetUrl}`);
-    const scraped = await scrapeProductFromUrl(targetUrl);
+    const scraped = await scrapeProductFromUrl(targetUrl, true);
     if (scraped.imageUrl && !scraped.imageUrl.includes('placeholder')) {
       console.log(`[Scraper-Imagem] Imagem secundária encontrada: ${scraped.imageUrl}`);
       return scraped.imageUrl;
