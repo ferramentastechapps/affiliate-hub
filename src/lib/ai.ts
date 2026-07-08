@@ -71,17 +71,7 @@ REGRAS OBRIGATÓRIAS:
 - NUNCA use emojis na frase principal
 - O nome do produto já vem pronto do sistema — você NÃO cria o nome, apenas a frase
 
-EXEMPLOS DO ESTILO ESPERADO (produto → frase):
-- Papel higiênico → FOLHA DUPLA PRA TRATAR BEM O FURICO
-- Aparador de pelos → PARA FICAR LISO IGUAL SUA CARTEIRA
-- Calça skinny → CUIDADO PRA NÃO FICAR EMBALADO A VÁCUO
-- Sanduicheira → AQUI SEU SANDUBA SOBE DE NIVEL
-- Máscara capilar → HIDRATA ESSA PAÇOCA Q CÊ CHAMA DE CABELO
-- Gin → TU QUE É O BARMAN NO CHURRAS?
-- Água micelar → NÃO VAI DORMIR COM A CARA SUJA
-- Aparador Philips → PRA DEIXAR O LOTE CAPINADO
-- Detergente roupa → NADA MELHOR QUE ROUPINHA LIMPINHA E CHEIROSA
-- Conjunto fitness → PRA IR TREINAR A SEMANA TODA
+{EXAMPLES_PLACEHOLDER}
 
 FORMATO DE SAÍDA — responda APENAS com JSON válido:
 {
@@ -177,19 +167,22 @@ export async function buildDynamicSystemPrompt(): Promise<string> {
 
     let prompt = BASE_SYSTEM_PROMPT;
 
-    // Injeta exemplos aprendidos (se existirem)
+    // Injeta exemplos aprendidos (se existirem) ou usa fallbacks
     if (examples.length > 0) {
       const examplesBlock = examples
         .map(e => `- ${e.productName} → ${e.caption}`)
         .join('\n');
 
-      const insertAfterMarker = 'Varie as piadas, não repita os mesmos exemplos. Seja criativo no deboche!';
-      if (prompt.includes(insertAfterMarker)) {
-        prompt = prompt.replace(
-          insertAfterMarker,
-          `${insertAfterMarker}\n\n// ─── EXEMPLOS APROVADOS PELO ADMIN (produto → legenda JÁ ENVIADA) ────────────\n⚠️ ATENÇÃO MÁXIMA: As legendas abaixo JÁ FORAM PUBLICADAS E ENVIADAS. É PROIBIDO repetir qualquer uma delas. Use APENAS como referência de estilo, tom e criatividade. Crie sempre algo 100% DIFERENTE e ORIGINAL.\n\n${examplesBlock}\n\n📌 REGRA CRÍTICA: Gere uma legenda COMPLETAMENTE NOVA que o público ainda não viu.`
-        );
-      }
+      const examplesSection = `EXEMPLOS DO ESTILO ESPERADO (produto → frase):\n${examplesBlock}\n\n⚠️ ATENÇÃO: Os exemplos acima servem apenas como guia de estilo. Não repita os mesmos exemplos na saída. Gere sempre legendas novas e originais.`;
+      prompt = prompt.replace('{EXAMPLES_PLACEHOLDER}', examplesSection);
+    } else {
+      const fallbackExamples = [
+        "- Fritadeira Elétrica → COMA TUDO SEM CULPA NESSA AÍ",
+        "- Smartphone → CELULAR NOVO PRA DAR UNS STALK NO EX",
+        "- Secador De Cabelos → DEIXA ESSA JUBINHA NO TALENTO"
+      ].join('\n');
+      const examplesSection = `EXEMPLOS DO ESTILO ESPERADO (produto → frase):\n${fallbackExamples}`;
+      prompt = prompt.replace('{EXAMPLES_PLACEHOLDER}', examplesSection);
     }
 
     // Injeta palavras bloqueadas (se existirem)
