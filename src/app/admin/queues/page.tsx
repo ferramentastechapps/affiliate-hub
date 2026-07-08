@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Camera, PaperPlaneRight, Trash, ArrowsClockwise, Image as ImageIcon, CheckCircle, Warning, Clock, ArrowSquareOut } from '@phosphor-icons/react';
+import { Camera, PaperPlaneRight, Trash, ArrowsClockwise, Image as ImageIcon, CheckCircle, Warning, Clock, ArrowSquareOut, ArrowsLeftRight } from '@phosphor-icons/react';
 
 type QueueItem = {
   produto: any;
@@ -130,6 +130,12 @@ export default function QueuesPage() {
       if (target === 'lifestyle') setUploading(false);
       else setUploadingSite(false);
     }
+  };
+
+  const swapQueuePhotos = () => {
+    const temp = newPhotoUrl;
+    setNewPhotoUrl(sitePhotoUrl);
+    setSitePhotoUrl(temp);
   };
 
   const handleUpdatePhoto = async () => {
@@ -470,7 +476,19 @@ export default function QueuesPage() {
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+              {/* Botão de Swap centralizado */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden md:block">
+                <button
+                  type="button"
+                  onClick={swapQueuePhotos}
+                  title="Inverter Imagens (Site <-> Grupo)"
+                  className="p-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-750 text-zinc-200 rounded-full shadow-lg transition active:scale-95"
+                >
+                  <ArrowsLeftRight size={18} weight="bold" />
+                </button>
+              </div>
+
               {/* Coluna 1: Foto Lifestyle (Telegram) */}
               <div className="space-y-4 bg-zinc-950/40 p-4 border border-zinc-800/60 rounded-xl flex flex-col justify-between">
                 <div>
@@ -603,6 +621,17 @@ export default function QueuesPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Botão de Swap visível apenas em Mobile */}
+              <div className="col-span-1 md:hidden flex justify-center mt-1">
+                <button
+                  type="button"
+                  onClick={swapQueuePhotos}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 rounded-lg text-xs font-medium transition"
+                >
+                  <ArrowsLeftRight size={14} /> Inverter Imagens
+                </button>
               </div>
             </div>
             
