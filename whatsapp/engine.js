@@ -94,6 +94,21 @@ client.on('auth_failure', msg => {
     console.error('❌ Falha na autenticação:', msg);
 });
 
+// ── Reconexão automática em caso de desconexão ────────────────────────
+client.on('disconnected', (reason) => {
+    console.log('🔌 WhatsApp desconectado. Motivo:', reason);
+    isReady = false;
+    console.log('♻️ Tentando reconectar em 30 segundos...');
+    setTimeout(() => {
+        console.log('🔄 Reconectando WhatsApp...');
+        try {
+            client.initialize();
+        } catch (err) {
+            console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
+        }
+    }, 30000);
+});
+
 client.on('message', async (msg) => {
     if (msg.body === '/grupo') {
         try {
@@ -147,9 +162,8 @@ async function flushBucket() {
     const currentHour = brTime.getHours();
 
     if (currentHour < 7) {
-        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Descartando ${messageQueue.length} oferta(s) do balde.`);
-        messageQueue = []; // Esvazia o balde para não acumular velhas
-        saveState();
+        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Retendo ${messageQueue.length} oferta(s) para enviar às 07h.`);
+        // NÃO descartar a fila — manter as mensagens para enviar quando amanhecer
         return { skipped: true, reason: 'out_of_hours' };
     }
 
@@ -234,6 +248,34 @@ setInterval(async () => {
         await flushBucket();
     }
 }, 20 * 1000); // Checa a cada 20 segundos
+
+// ── Health Check periódico para detectar Chrome/Puppeteer travado ──────
+setInterval(async () => {
+    if (isReady) {
+        try {
+            const state = await client.getState();
+            if (state !== 'CONNECTED') {
+                console.log(`⚠️ Health Check: estado do WhatsApp = '${state}'. Forçando reconexão...`);
+                isReady = false;
+                try { await client.destroy(); } catch (e) { /* ignora */ }
+                setTimeout(() => {
+                    console.log('🔄 Reconectando WhatsApp após health check...');
+                    client.initialize();
+                }, 5000);
+            }
+        } catch (err) {
+            console.log('⚠️ Health Check: WhatsApp não responde. Forçando reconexão...', err.message);
+            isReady = false;
+            try { await client.destroy(); } catch (e) { /* ignora */ }
+            setTimeout(() => {
+                console.log('🔄 Reconectando WhatsApp após health check falho...');
+                client.initialize();
+            }, 5000);
+        }
+    } else {
+        console.log('💤 Health Check: WhatsApp não está pronto (isReady=false). Aguardando reconexão...');
+    }
+}, 5 * 60 * 1000); // Health check a cada 5 minutos
 
 // Flush manual (para testes ou admin)
 app.post('/flush', async (req, res) => {
