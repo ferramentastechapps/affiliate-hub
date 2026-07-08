@@ -792,7 +792,19 @@ export async function POST(request: Request) {
           const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
           if (savedRetailImage) {
             // A imagem do varejista (fundo branco) vai para imageUrl (site).
-            finalEnhancedImageUrl = finalImageUrl; // preserva a imagem original do agregador antes de trocar
+            // A imagem original (lifestyle) vai para enhancedImageUrl (grupo) SOMENTE se não for de agregador
+            const originalImg = finalImageUrl || '';
+            const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+            const isDifferentFromSaved = originalImg !== savedRetailImage;
+            const isAggregator = product.source === 'promobit' || product.source === 'pechinchou' || product.source === 'gatry' || product.source === 'pelando' || isAggregatorImage;
+
+            if (isNotPlaceholder && isDifferentFromSaved && !isAggregator) {
+              finalEnhancedImageUrl = originalImg;
+              console.log(`[Webhook AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
+            } else {
+              finalEnhancedImageUrl = null;
+              console.log(`[Webhook AI] ⚠️ Não promovemos a imagem original para lifestyle (agregador ou igual à do varejista). enhancedImageUrl ficará nulo.`);
+            }
             finalImageUrl = savedRetailImage;       // fundo branco do varejista
             console.log(`[Webhook AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Atualizando imageUrl do site.`);
           }
@@ -1421,14 +1433,18 @@ export async function PUT(request: Request) {
                   // Considerar como lifestyle QUALQUER imagem original que não seja:
                   // - placeholder
                   // - a própria imagem recém-salva do varejista
+                  // - de agregador (Promobit/Pechinchou/Gatry/Pelando)
                   const originalImg = product.imageUrl || '';
                   const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
                   const isDifferentFromRetail = originalImg !== savedRetailImage;
-                  if (isNotPlaceholder && isDifferentFromRetail) {
+                  const isAggregator = product.source === 'promobit' || product.source === 'pechinchou' || product.source === 'gatry' || product.source === 'pelando' || isAggregatorImage;
+
+                  if (isNotPlaceholder && isDifferentFromRetail && !isAggregator) {
                     finalEnhancedImageUrl = originalImg;
                     console.log(`[Webhook Batch AI] ✅ Imagem original promovida para enhancedImageUrl (lifestyle): ${originalImg}`);
                   } else {
-                    console.log(`[Webhook Batch AI] ⚠️ Imagem original não qualificada como lifestyle. placeholder=${!isNotPlaceholder}`);
+                    finalEnhancedImageUrl = null;
+                    console.log(`[Webhook Batch AI] ⚠️ Imagem original não qualificada como lifestyle (agregador ou igual à do varejista). enhancedImageUrl ficará nulo.`);
                   }
                 }
                 console.log(`[Webhook Batch AI] Encontrada imagem do varejista (fundo branco): ${savedRetailImage}. Swapeando original para enhancedImageUrl.`);
@@ -1459,15 +1475,18 @@ export async function PUT(request: Request) {
                  }
                }
 
-               // Se a imagem original/atualizada é válida e finalEnhancedImageUrl está nulo, promove ela
-               if (!finalEnhancedImageUrl) {
-                 const originalImg = finalImageUrl || product.imageUrl || '';
-                 const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
-                 if (isNotPlaceholder) {
-                   finalEnhancedImageUrl = originalImg;
-                   console.log(`[Webhook Batch AI] ✅ Promovida imagem final para enhancedImageUrl (sem swap): ${originalImg}`);
-                 }
-               }
+               // Se a imagem original/atualizada é válida e finalEnhancedImageUrl está nulo, promove ela se não for de agregador
+                if (!finalEnhancedImageUrl) {
+                  const originalImg = finalImageUrl || product.imageUrl || '';
+                  const isNotPlaceholder = originalImg && !originalImg.includes('placeholder');
+                  const isAggregator = product.source === 'promobit' || product.source === 'pechinchou' || product.source === 'gatry' || product.source === 'pelando' || isAggregatorImage;
+                  if (isNotPlaceholder && !isAggregator) {
+                    finalEnhancedImageUrl = originalImg;
+                    console.log(`[Webhook Batch AI] ✅ Promovida imagem final para enhancedImageUrl (sem swap): ${originalImg}`);
+                  } else {
+                    finalEnhancedImageUrl = null;
+                  }
+                }
              }
            } else if (finalEnhancedImageUrl) {
             console.log(`[Webhook Batch AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
