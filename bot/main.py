@@ -60,6 +60,7 @@ class PromotionBot:
         self.scraper = PromotionScraper()
         
         self.state_file = Path(__file__).parent / 'bot_state.json'
+        self._last_state_time = 0
         self._load_state()
         
     def _load_state(self):
@@ -71,6 +72,7 @@ class PromotionBot:
         self.ultimo_envio_grupo = 0
         try:
             if self.state_file.exists():
+                self._last_state_time = self.state_file.stat().st_mtime
                 with open(self.state_file, 'r', encoding='utf-8') as f:
                     state = json.load(f)
                     
@@ -116,8 +118,20 @@ class PromotionBot:
                     'fila_manual': self.fila_manual,
                     'ultimo_envio_grupo': self.ultimo_envio_grupo
                 }, f, ensure_ascii=False)
+            if self.state_file.exists():
+                self._last_state_time = self.state_file.stat().st_mtime
         except Exception as e:
             print(f'Aviso: Não foi possível salvar o estado: {e}')
+            
+    def _sync_state_if_needed(self):
+        try:
+            if self.state_file.exists():
+                current_mtime = self.state_file.stat().st_mtime
+                if current_mtime > self._last_state_time + 0.1:
+                    print("🔄 [sync] Detectada alteração externa no bot_state.json. Recarregando filas...")
+                    self._load_state()
+        except Exception as e:
+            print(f"Erro ao verificar sincronização do bot_state.json: {e}")
             
     def is_sleep_time(self):
         """Verifica se o bot está no período de pausa (01:00 às 06:59, Horário de Brasília)"""
@@ -145,6 +159,7 @@ class PromotionBot:
     
     def executar_busca(self):
         """Executa uma busca completa"""
+        self._sync_state_if_needed()
         if self.is_sleep_time():
             print('\n' + '='*60)
             print('😴 Modo noturno ativo. Buscas pausadas entre 01h e 07h.')
@@ -356,6 +371,7 @@ class PromotionBot:
             
     def publicar_fila_telegram(self):
         """Publica a promoção mais recente da fila lifestyle/manual respeitando intervalo de 5 minutos"""
+        self._sync_state_if_needed()
         if self.is_sleep_time():
             return
             
@@ -415,6 +431,12 @@ class PromotionBot:
                 produto_no_banco = resultado.get('product', {})
                 enhanced = produto_no_banco.get('enhancedImageUrl') or ''
                 status = produto_no_banco.get('status', '')
+                
+                # Se o produto foi rejeitado no painel, remove da fila sem lifestyle
+                if status == 'rejected':
+                    print(f'🗑️ Produto rejeitado detectado na fila_sem_lifestyle — removendo: {produto_id}')
+                    continue
+                    
                 if enhanced and 'placeholder' not in enhanced.strip() and status in ('active', 'approved'):
                     # Atualizar dados do produto no candidato com os dados frescos
                     item['produto'].update({k: v for k, v in produto_no_banco.items() if v is not None})
