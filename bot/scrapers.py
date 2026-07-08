@@ -1411,10 +1411,16 @@ class PromotionScraper:
                     link_oferta = f"https://pechinchou.com.br/oferta/{slug}"
                     preco = float(promo.get('price', 0))
                     
-                    foto = imagens_reais.get(slug) or promo.get('image')
-                    imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
-
-                    enhanced_image_url = None
+                    foto_real = imagens_reais.get(slug)
+                    foto_padrao = promo.get('image')
+                    
+                    if foto_real and foto_real != foto_padrao:
+                        imagem_url = _melhorar_qualidade_imagem(foto_padrao) if foto_padrao else '/placeholder.webp'
+                        enhanced_image_url = _melhorar_qualidade_imagem(foto_real)
+                    else:
+                        foto = foto_real or foto_padrao
+                        imagem_url = _melhorar_qualidade_imagem(foto) if foto else '/placeholder.webp'
+                        enhanced_image_url = None
                     loja_dict = promo.get('store') or {}
                     loja = loja_dict.get('name', 'Desconhecido')
                     
