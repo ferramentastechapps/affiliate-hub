@@ -466,22 +466,8 @@ class PromotionBot:
         todos_com_lifestyle = self.fila_lifestyle + self.fila_manual
 
         if not todos_com_lifestyle:
-            # Se não tem lifestyle mas tem produtos na fila_sem_lifestyle,
-            # publicar com imagem normal após 30+ minutos de espera na fila
-            TEMPO_MAX_ESPERA_SEM_LIFESTYLE = 30 * 60  # 30 minutos
-            candidatos_antigos = [
-                c for c in self.fila_sem_lifestyle
-                if (agora - c.get('added_at', agora)) > TEMPO_MAX_ESPERA_SEM_LIFESTYLE
-            ]
-            if candidatos_antigos:
-                print(f'⏰ Fila lifestyle vazia mas {len(candidatos_antigos)} produto(s) esperando há mais de 30min — publicando com imagem normal.')
-                # Ordenar por mais recente
-                candidatos_antigos.sort(key=lambda x: x.get('added_at', 0), reverse=True)
-                # Passar esses candidatos para a publicação como se fossem lifestyle
-                todos_com_lifestyle = candidatos_antigos
-            else:
-                print('⏳ Sem produtos com foto lifestyle na fila — aguardando')
-                return
+            print('⏳ Sem produtos com foto lifestyle na fila — aguardando')
+            return
 
         print(f'\n⏰ Processando fila do Telegram ({len(todos_com_lifestyle)} itens com lifestyle)...')
         
@@ -524,17 +510,7 @@ class PromotionBot:
 
         if not melhor_item:
             print('📭 Nenhum produto válido nas filas com lifestyle para publicar agora.')
-            # Tentar fallback com fila_sem_lifestyle se tiver itens antigos
-            TEMPO_MAX_ESPERA_SEM_LIFESTYLE = 30 * 60
-            candidatos_antigos = [
-                c for c in self.fila_sem_lifestyle
-                if (agora - c.get('added_at', agora)) > TEMPO_MAX_ESPERA_SEM_LIFESTYLE
-            ]
-            if not candidatos_antigos:
-                return
-            candidatos_antigos.sort(key=lambda x: x.get('added_at', 0), reverse=True)
-            melhor_item = candidatos_antigos[0]
-            print(f'⏰ Publicando sem lifestyle (imagem normal): {melhor_item["produto"].get("name", "?")[:50]}')
+            return
 
         # Remover da respectiva fila original
         self._remover_da_fila(melhor_item)
