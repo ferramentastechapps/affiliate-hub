@@ -77,6 +77,7 @@ $SHOPEE_SECRET = $LocalEnv["SHOPEE_APP_SECRET"]
 $GEMINI_KEY = $LocalEnv["GEMINI_API_KEY"]
 $NVIDIA_KEY = $LocalEnv["NVIDIA_API_KEY"]
 $OPENROUTER_KEY = $LocalEnv["OPENROUTER_API_KEY"]
+$OPENROUTER_MODEL = $LocalEnv["OPENROUTER_EVALUATE_MODEL"]
 $PAGUE_MENOS_LOJA = $LocalEnv["PAGUE_MENOS_LOJA"]
 
 # O comando SSH reformulado e robusto para evitar quebra de linhas e skips.
@@ -94,6 +95,7 @@ SHOPEE_SECRET="$SHOPEE_SECRET"
 GEMINI_KEY_VAL="$GEMINI_KEY"
 NVIDIA_KEY_VAL="$NVIDIA_KEY"
 OPENROUTER_KEY_VAL="$OPENROUTER_KEY"
+OPENROUTER_MODEL_VAL="$OPENROUTER_MODEL"
 PAGUE_MENOS_LOJA_VAL="$PAGUE_MENOS_LOJA"
 
 echo "⚙️ Sincronizando chaves locais para o VPS..."
@@ -160,6 +162,19 @@ if [ -n "$OPENROUTER_KEY_VAL" ]; then
     sed -i "s|OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=\"$OPENROUTER_KEY_VAL\"|g" ~/affiliate-hub/bot/.env
   else
     echo "OPENROUTER_API_KEY=\"$OPENROUTER_KEY_VAL\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
+if [ -n "$OPENROUTER_MODEL_VAL" ]; then
+  if grep -q 'OPENROUTER_EVALUATE_MODEL=' ~/affiliate-hub/.env; then
+    sed -i "s|OPENROUTER_EVALUATE_MODEL=.*|OPENROUTER_EVALUATE_MODEL=\"$OPENROUTER_MODEL_VAL\"|g" ~/affiliate-hub/.env
+  else
+    echo "OPENROUTER_EVALUATE_MODEL=\"$OPENROUTER_MODEL_VAL\"" >> ~/affiliate-hub/.env
+  fi
+  if grep -q 'OPENROUTER_EVALUATE_MODEL=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|OPENROUTER_EVALUATE_MODEL=.*|OPENROUTER_EVALUATE_MODEL=\"$OPENROUTER_MODEL_VAL\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "OPENROUTER_EVALUATE_MODEL=\"$OPENROUTER_MODEL_VAL\"" >> ~/affiliate-hub/bot/.env
   fi
 fi
 

@@ -390,7 +390,7 @@ export async function processProductWithNvidia(
 }
 
 /**
- * Executa a chamada para o OpenRouter (google/gemini-2.5-flash) como 3º fallback.
+ * Executa a chamada para o OpenRouter.
  */
 export async function processProductWithOpenRouter(
   promptText: string,
@@ -412,8 +412,12 @@ export async function processProductWithOpenRouter(
     authHeader = `Bearer ${authHeader}`;
   }
 
+  const model = mode === 'caption'
+    ? (process.env.OPENROUTER_CAPTION_MODEL || 'google/gemini-2.5-flash')
+    : (process.env.OPENROUTER_EVALUATE_MODEL || 'tencent/hy3:free');
+
   try {
-    console.log(`[AI-OpenRouter] Acionando fallback do OpenRouter (google/gemini-2.5-flash)...`);
+    console.log(`[AI-OpenRouter] Chamando OpenRouter com o modelo ${model} no modo ${mode}...`);
 
     // Carrega prompt adequado ao modo
     let systemPrompt = '';
@@ -423,28 +427,44 @@ export async function processProductWithOpenRouter(
       systemPrompt = await buildDynamicSystemPrompt();
     }
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://economizei.ftech-apps.com.br',
-        'X-Title': 'Affiliate Hub Bot'
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+    const fetchCompletion = async (useJsonFormat: boolean) => {
+      const bodyPayload: any = {
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: promptText }
         ],
-        temperature: mode === 'caption' ? 1.1 : 0.3,
-        response_format: { type: 'json_object' }
-      })
-    });
+        temperature: mode === 'caption' ? 1.1 : 0.3
+      };
+
+      if (useJsonFormat) {
+        bodyPayload.response_format = { type: 'json_object' };
+      }
+
+      return fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://economizei.ftech-apps.com.br',
+          'X-Title': 'Affiliate Hub Bot'
+        },
+        body: JSON.stringify(bodyPayload)
+      });
+    };
+
+    let response = await fetchCompletion(true);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[AI-OpenRouter] OpenRouter falhou com status ${response.status}: ${errorText}`);
+      console.warn(`[AI-OpenRouter] Chamada com response_format falhou com status ${response.status}: ${errorText}. Tentando sem response_format...`);
+      // Retry without JSON format constraint (e.g. for models that do not support it natively)
+      response = await fetchCompletion(false);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[AI-OpenRouter] OpenRouter falhou definitivamente com status ${response.status}: ${errorText}`);
       return null;
     }
 
@@ -453,7 +473,7 @@ export async function processProductWithOpenRouter(
     if (data.usage) {
       logAiUsage(
         mode === 'caption' ? 'generateCaption' : 'evaluateProduct',
-        'google/gemini-2.5-flash',
+        model,
         'openrouter',
         data.usage.prompt_tokens || 0,
         data.usage.completion_tokens || 0
@@ -482,6 +502,7 @@ export async function processProductWithOpenRouter(
 }
 
 
+
 export async function processProductWithAI(
   productName: string,
   price: number,
@@ -505,12 +526,6 @@ export async function processProductWithAI(
     const brazilHour = parseInt(new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hour12: false, timeZone }).format(now), 10);
     if (brazilHour >= 1 && brazilHour < 7) {
       console.log(`[AI] Avaliação bloqueada: fora do horário de funcionamento (01:00 às 07:00). Hora atual: ${brazilHour}h.`);
-      return { titulo: null, subtitulo: null, score: null, rawJson: null };
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('[AI] GEMINI_API_KEY não configurada no ambiente.');
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
 
@@ -553,21 +568,39 @@ Contexto atual:
 - Hora: ${timeStr} (horário de Brasília)
 - Fim de semana: ${weekendStr}`;
 
-    // Carrega prompt adequado ao modo
-    let systemPrompt = '';
-    let substitutions: { fromWord: string, toWord: string }[] = [];
-
+    // SE O MODO FOR AVALIAÇÃO (EVALUATE), CHAMA DIRETAMENTE O OPENROUTER
     if (mode === 'evaluate') {
-      systemPrompt = await buildDynamicEvaluationPrompt();
-    } else {
-      [systemPrompt, substitutions] = await Promise.all([
-        buildDynamicSystemPrompt(),
-        prisma.aiWordSubstitution.findMany(),
-      ]);
+      console.log(`[AI] Modo 'evaluate' acionado. Chamando OpenRouter diretamente para avaliar: "${productName}"`);
+      const openRouterResult = await processProductWithOpenRouter(promptText, 'evaluate');
+      if (openRouterResult) {
+        return openRouterResult;
+      }
+      
+      // Fallback para NVIDIA NIM caso o OpenRouter falhe na avaliação
+      console.warn('[AI] OpenRouter falhou no modo evaluate. Tentando NVIDIA NIM...');
+      const nvidiaResult = await processProductWithNvidia(promptText);
+      if (nvidiaResult) {
+        return nvidiaResult;
+      }
+      
+      console.error('[AI] Todos os modelos de avaliação falharam.');
+      return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
 
+    // A partir daqui, é o modo 'caption' (legenda)
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn('[AI] GEMINI_API_KEY não configurada no ambiente.');
+      return { titulo: null, subtitulo: null, score: null, rawJson: null };
+    }
+
+    // Carrega prompt adequado ao modo caption
+    const [systemPrompt, substitutions] = await Promise.all([
+      buildDynamicSystemPrompt(),
+      prisma.aiWordSubstitution.findMany(),
+    ]);
+
     // Lista de modelos Gemini para tentar (fallback automático)
-    // Nota: gemini-2.0-flash foi descontinuado e removido pela Google (HTTP 404)
     const MODELS = [
       'gemini-2.5-flash',
       'gemini-1.5-flash'
@@ -576,13 +609,13 @@ Contexto atual:
     const genAI = new GoogleGenerativeAI(apiKey);
 
     for (const modelName of MODELS) {
-      console.log(`[AI] Chamando Gemini (${modelName}) diretamente para analisar: "${productName}"`);
+      console.log(`[AI] Chamando Gemini (${modelName}) diretamente para criar legenda para: "${productName}"`);
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
           generationConfig: {
             responseMimeType: 'application/json',
-            temperature: mode === 'caption' ? 1.1 : 0.3,
+            temperature: 1.1,
             topP: 0.95
           },
           systemInstruction: systemPrompt
@@ -594,7 +627,7 @@ Contexto atual:
         if (result.response.usageMetadata) {
           const { promptTokenCount, candidatesTokenCount } = result.response.usageMetadata;
           logAiUsage(
-            mode === 'caption' ? 'generateCaption' : 'evaluateProduct',
+            'generateCaption',
             modelName,
             'google',
             promptTokenCount || 0,
@@ -609,25 +642,23 @@ Contexto atual:
 
         const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedData = JSON.parse(cleanedText);
-        console.log(`[AI] Sucesso com modelo ${modelName} no modo ${mode}.`);
+        console.log(`[AI] Sucesso com modelo ${modelName} no modo caption.`);
 
         let finalTitulo = parsedData.titulo || null;
         let finalScore = parsedData.score !== undefined ? Number(parsedData.score) : null;
 
-        if (mode === 'caption') {
-          // Aplica substituições de palavras pós-geração
-          if (finalTitulo && substitutions.length > 0) {
-            finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
-          }
-          // Salva no histórico para avaliação posterior apenas se estiver gerando legenda
-          if (finalTitulo && productId) {
-            await saveCaptionHistory(productId, productName, finalTitulo, finalScore);
-          }
+        // Aplica substituições de palavras pós-geração
+        if (finalTitulo && substitutions.length > 0) {
+          finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
+        }
+        // Salva no histórico para avaliação posterior apenas se estiver gerando legenda
+        if (finalTitulo && productId) {
+          await saveCaptionHistory(productId, productName, finalTitulo, finalScore);
         }
 
         return {
           titulo: finalTitulo,
-          subtitulo: parsedData.analise || null, // Reaproveitando subtitulo para retornar a análise no modo evaluate
+          subtitulo: parsedData.analise || null,
           score: finalScore,
           rawJson: JSON.stringify(parsedData),
         };
@@ -637,21 +668,21 @@ Contexto atual:
       }
     }
 
-    // Se Gemini direto falhar → tenta OpenRouter (mesmo modelo, menor custo por token)
-    console.warn('[AI] Modelos Gemini direto falharam. Tentando OpenRouter...');
-    const openRouterResult = await processProductWithOpenRouter(promptText, mode);
+    // Se Gemini direto falhar → tenta OpenRouter (com modelo de legenda)
+    console.warn('[AI] Modelos Gemini direto falharam para legenda. Tentando OpenRouter...');
+    const openRouterResult = await processProductWithOpenRouter(promptText, 'caption');
     if (openRouterResult) {
       return openRouterResult;
     }
 
-    // Último recurso: NVIDIA NIM
-    console.warn('[AI] OpenRouter falhou. Tentando NVIDIA NIM como último recurso...');
+    // Último recurso para legenda: NVIDIA NIM
+    console.warn('[AI] OpenRouter falhou para legenda. Tentando NVIDIA NIM como último recurso...');
     const nvidiaResult = await processProductWithNvidia(promptText);
     if (nvidiaResult) {
       return nvidiaResult;
     }
 
-    console.error('[AI] Todos os modelos de IA falharam.');
+    console.error('[AI] Todos os modelos de IA falharam para legenda.');
     return { titulo: null, subtitulo: null, score: null, rawJson: null };
   } catch (error: any) {
     console.error('[AI] Erro geral ao processar produto:', error.message || error);
