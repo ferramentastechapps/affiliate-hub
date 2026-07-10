@@ -240,7 +240,7 @@ export function ProductDetail({ product }: { product: Product }) {
   // Forçar tag Prime se for Amazon
   const isAmazon = platformName === "Amazon" || (product.storeName || '').toLowerCase().includes('amazon') || !!product.links?.amazon;
   if (isAmazon) {
-    condicoesMsg = "👑 EXCLUSIVO MEMBROS PRIME 🔵";
+    condicoesMsg = "EXCLUSIVO MEMBROS PRIME";
   }
 
   return (
@@ -355,11 +355,7 @@ export function ProductDetail({ product }: { product: Product }) {
                   ? 'bg-gradient-to-r from-blue-900/40 to-blue-800/10 border-blue-500/30 text-blue-100' 
                   : 'bg-accent/5 border-accent/20 text-zinc-300'
               }`}>
-                {condicoesMsg.toLowerCase().includes('prime') ? (
-                  <div className="flex items-center justify-center min-w-[32px] h-[32px] rounded-full bg-blue-500/20 text-blue-400">
-                    <Crown size={20} weight="duotone" />
-                  </div>
-                ) : (
+                {!condicoesMsg.toLowerCase().includes('prime') && (
                   <span className="text-xl">↪️</span>
                 )}
                 <p className="font-semibold text-[15px] leading-snug">{condicoesMsg}</p>

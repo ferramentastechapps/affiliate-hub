@@ -262,7 +262,7 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
 
 
   if (isPrime) {
-    condicoesMsg = `👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵`;
+    condicoesMsg = `<b>EXCLUSIVO MEMBROS PRIME</b>`;
   } else {
     // Limpar texto padrão do scraper SÓ se não for prime
     const descLimpa = descSemCupom

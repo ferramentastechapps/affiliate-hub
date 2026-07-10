@@ -405,7 +405,7 @@ class TelegramNotifier:
             import re
             nome_lower = (produto.get('name') or '').lower()
             if 'exclusivo membros prime' in desc_lower or re.search(r'\bprime\b', nome_lower) or re.search(r'\bprime\b', desc_lower):
-                badges.append("👑 <b>EXCLUSIVO MEMBROS PRIME</b> 🔵")
+                badges.append("<b>EXCLUSIVO MEMBROS PRIME</b>")
             if 'programe e poupe' in desc_lower or 'subscribe' in desc_lower:
                 badges.append("🔄 <b>Programe e Poupe</b>")
             if badges:
