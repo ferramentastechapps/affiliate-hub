@@ -391,21 +391,16 @@ class TelegramNotifier:
             if cupom_extraido.upper() not in _invalidos:
                 cupom_msg = f"\n🎟️ <code>{cupom_extraido}</code>"
 
-        # Badge Amazon Prime / Programe e Poupe
+        # Badge Programe e Poupe (mantido)
         prime_msg = ""
         desc_lower = descricao_produto.lower()
         _eh_amazon = (
             links.get('amazon')
             or 'amazon' in (produto.get('storeName') or '').lower()
-            or 'exclusivo membros prime' in desc_lower
             or 'programe e poupe' in desc_lower
         )
         if _eh_amazon:
             badges = []
-            import re
-            nome_lower = (produto.get('name') or '').lower()
-            if 'exclusivo membros prime' in desc_lower or re.search(r'\bprime\b', nome_lower) or re.search(r'\bprime\b', desc_lower):
-                badges.append("<b>EXCLUSIVO MEMBROS PRIME</b>")
             if 'programe e poupe' in desc_lower or 'subscribe' in desc_lower:
                 badges.append("🔄 <b>Programe e Poupe</b>")
             if badges:
