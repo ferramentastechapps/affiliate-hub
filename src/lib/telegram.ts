@@ -250,29 +250,14 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   const desc = product.description || '';
   const descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
 
-  // Detectar Prime ANTES de qualquer limpeza, usando o texto raw
-  const descRawLower = descSemCupom.toLowerCase();
-  const nameRawLower = (product.name || '').toLowerCase();
-  const isAmazon = (
-    platform.toLowerCase() === 'amazon'
-    || (product.storeName || '').toLowerCase().includes('amazon')
-    || !!product.links?.amazon
-  );
-  const isPrime = isAmazon; // Todo produto Amazon é tratado como Exclusivo Membros Prime
-
-
-  if (isPrime) {
-    condicoesMsg = `<b>EXCLUSIVO MEMBROS PRIME</b>`;
-  } else {
-    // Limpar texto padrão do scraper SÓ se não for prime
-    const descLimpa = descSemCupom
-      .split('\n')
-      .filter(line => !/^Oferta (na|no) /i.test(line.trim()))
-      .join('\n')
-      .trim();
-    if (descLimpa && descLimpa !== 'Oferta encaminhada de grupos') {
-      condicoesMsg = `↪️ <i>${descLimpa}</i>`;
-    }
+  // Limpar texto padrão do scraper
+  const descLimpa = descSemCupom
+    .split('\n')
+    .filter(line => !/^Oferta (na|no) /i.test(line.trim()))
+    .join('\n')
+    .trim();
+  if (descLimpa && descLimpa !== 'Oferta encaminhada de grupos') {
+    condicoesMsg = `↪️ <i>${descLimpa}</i>`;
   }
   
   // Badge de queda de preço

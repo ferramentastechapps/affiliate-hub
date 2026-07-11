@@ -237,11 +237,6 @@ export function ProductDetail({ product }: { product: Product }) {
     condicoesMsg = descSemCupom;
   }
 
-  // Forçar tag Prime se for Amazon
-  const isAmazon = platformName === "Amazon" || (product.storeName || '').toLowerCase().includes('amazon') || !!product.links?.amazon;
-  if (isAmazon) {
-    condicoesMsg = "EXCLUSIVO MEMBROS PRIME";
-  }
 
   return (
     <main className="min-h-screen text-white pt-24 md:pt-28 pb-16">
@@ -350,18 +345,8 @@ export function ProductDetail({ product }: { product: Product }) {
             )}
 
             {condicoesMsg && (
-              <div className={`mb-8 flex items-center gap-3 p-4 rounded-xl border shadow-sm ${
-                condicoesMsg.toLowerCase().includes('prime') 
-                  ? 'bg-gradient-to-r from-blue-900/40 to-blue-800/10 border-blue-500/30 text-blue-100' 
-                  : 'bg-accent/5 border-accent/20 text-zinc-300'
-              }`}>
-                {condicoesMsg.toLowerCase().includes('prime') ? (
-                  <div className="flex items-center justify-center min-w-[32px] h-[32px] rounded-full bg-blue-500/20 text-blue-400">
-                    <Crown size={20} weight="duotone" />
-                  </div>
-                ) : (
-                  <span className="text-xl">↪️</span>
-                )}
+              <div className="mb-8 flex items-center gap-3 p-4 rounded-xl border shadow-sm bg-accent/5 border-accent/20 text-zinc-300">
+                <span className="text-xl">↪️</span>
                 <p className="font-semibold text-[15px] leading-snug">{condicoesMsg}</p>
               </div>
             )}
