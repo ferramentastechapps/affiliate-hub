@@ -53,6 +53,43 @@ async function logAiUsage(functionName: string, modelUsed: string, provider: str
   }
 }
 
+/**
+ * Limpa e converte a resposta em texto do modelo de IA para JSON de forma robusta.
+ * Lida com blocos de pensamento/raciocínio (<think>...</think>), marcações markdown e texto puro.
+ */
+export function cleanAndParseJson(text: string): any {
+  if (!text) return null;
+  
+  // 1. Remove tags de pensamento/raciocínio se presentes (comum em modelos de reasoning como Nemotron/DeepSeek)
+  let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  
+  // 2. Remove blocos de código markdown (```json ... ``` ou ``` ... ```)
+  cleanText = cleanText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (e) {
+    // 3. Tenta extrair a primeira estrutura JSON válida {...} usando expressão regular
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (innerError) {
+        console.warn('[AI] Falha ao parsear JSON extraído com regex:', innerError);
+      }
+    }
+    
+    // 4. Se todo parse falhar e for um texto não vazio que não parece JSON, trata-o como o título
+    // (comum em modo legenda quando o modelo responde apenas a frase)
+    if (cleanText.length > 0 && !cleanText.startsWith('{')) {
+      console.log('[AI] Resposta não-JSON recebida, tratando texto limpo diretamente como título.');
+      return { titulo: cleanText };
+    }
+    
+    throw e;
+  }
+}
+
 // ─── SYSTEM_PROMPT BASE (estático) ────────────────────────────────────────────
 // Este é o prompt base. Ele é ENRIQUECIDO dinamicamente em buildDynamicSystemPrompt()
 // com: exemplos aprovados, palavras bloqueadas, contextos/eventos ativos.
@@ -374,8 +411,7 @@ export async function processProductWithNvidia(
       return null;
     }
 
-    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsedData = JSON.parse(cleanedText);
+    const parsedData = cleanAndParseJson(responseText);
 
     return {
       titulo: parsedData.titulo || null,
@@ -486,8 +522,7 @@ export async function processProductWithOpenRouter(
       return null;
     }
 
-    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsedData = JSON.parse(cleanedText);
+    const parsedData = cleanAndParseJson(responseText);
 
     return {
       titulo: parsedData.titulo || null,
@@ -588,98 +623,137 @@ Contexto atual:
     }
 
     // A partir daqui, é o modo 'caption' (legenda)
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('[AI] GEMINI_API_KEY não configurada no ambiente.');
-      return { titulo: null, subtitulo: null, score: null, rawJson: null };
-    }
+    const captionProvider = process.env.AI_CAPTION_PROVIDER || 'gemini';
+    console.log(`[AI] Provedor de legenda configurado como prioridade: "${captionProvider}"`);
 
-    // Carrega prompt adequado ao modo caption
+    // Carrega prompt adequado ao modo caption e substituições
     const [systemPrompt, substitutions] = await Promise.all([
       buildDynamicSystemPrompt(),
       prisma.aiWordSubstitution.findMany(),
     ]);
 
-    // Lista de modelos Gemini para tentar (fallback automático)
-    const MODELS = [
-      'gemini-2.5-flash',
-      'gemini-1.5-flash'
-    ];
+    let result: {
+      titulo: string | null;
+      subtitulo: string | null;
+      score: number | null;
+      rawJson: string | null;
+    } | null = null;
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    // Helper: Tentativa via Gemini direta
+    const tryGemini = async () => {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.warn('[AI] GEMINI_API_KEY não configurada. Pulando Gemini direto.');
+        return null;
+      }
 
-    for (const modelName of MODELS) {
-      console.log(`[AI] Chamando Gemini (${modelName}) diretamente para criar legenda para: "${productName}"`);
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 1.1,
-            topP: 0.95
-          },
-          systemInstruction: systemPrompt
-        });
+      const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+      const genAI = new GoogleGenerativeAI(apiKey);
 
-        const result = await model.generateContent(promptText);
-        const responseText = result.response.text();
+      for (const modelName of MODELS) {
+        console.log(`[AI] Chamando Gemini (${modelName}) diretamente para criar legenda para: "${productName}"`);
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 1.1,
+              topP: 0.95
+            },
+            systemInstruction: systemPrompt
+          });
 
-        if (result.response.usageMetadata) {
-          const { promptTokenCount, candidatesTokenCount } = result.response.usageMetadata;
-          logAiUsage(
-            'generateCaption',
-            modelName,
-            'google',
-            promptTokenCount || 0,
-            candidatesTokenCount || 0
-          ).catch(console.error);
-        }
+          const res = await model.generateContent(promptText);
+          const responseText = res.response.text();
 
-        if (!responseText) {
-          console.warn(`[AI] Resposta vazia do modelo ${modelName} — tentando próximo.`);
+          if (res.response.usageMetadata) {
+            const { promptTokenCount, candidatesTokenCount } = res.response.usageMetadata;
+            logAiUsage(
+              'generateCaption',
+              modelName,
+              'google',
+              promptTokenCount || 0,
+              candidatesTokenCount || 0
+            ).catch(console.error);
+          }
+
+          if (!responseText) {
+            console.warn(`[AI] Resposta vazia do modelo ${modelName} — tentando próximo.`);
+            continue;
+          }
+
+          const parsedData = cleanAndParseJson(responseText);
+          console.log(`[AI] Sucesso com modelo ${modelName} no modo caption.`);
+
+          return {
+            titulo: parsedData.titulo || null,
+            subtitulo: parsedData.analise || null,
+            score: parsedData.score !== undefined ? Number(parsedData.score) : null,
+            rawJson: JSON.stringify(parsedData)
+          };
+        } catch (modelError: any) {
+          console.warn(`[AI] Erro no modelo ${modelName}: ${modelError.message || modelError}`);
           continue;
         }
+      }
+      return null;
+    };
 
-        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(cleanedText);
-        console.log(`[AI] Sucesso com modelo ${modelName} no modo caption.`);
+    // Helper: Tentativa via OpenRouter
+    const tryOpenRouter = async () => {
+      if (!process.env.OPENROUTER_API_KEY) {
+        console.warn('[AI] OPENROUTER_API_KEY não configurada. Pulando OpenRouter.');
+        return null;
+      }
+      console.log(`[AI] Tentando criar legenda via OpenRouter para: "${productName}"`);
+      return processProductWithOpenRouter(promptText, 'caption');
+    };
 
-        let finalTitulo = parsedData.titulo || null;
-        let finalScore = parsedData.score !== undefined ? Number(parsedData.score) : null;
+    // Helper: Tentativa via NVIDIA NIM
+    const tryNvidia = async () => {
+      if (!process.env.NVIDIA_API_KEY) {
+        console.warn('[AI] NVIDIA_API_KEY não configurada. Pulando NVIDIA.');
+        return null;
+      }
+      console.log(`[AI] Tentando criar legenda via NVIDIA NIM para: "${productName}"`);
+      return processProductWithNvidia(promptText);
+    };
 
-        // Aplica substituições de palavras pós-geração
-        if (finalTitulo && substitutions.length > 0) {
-          finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
+    // Define a ordem de prioridades
+    const order: (() => Promise<any>)[] = [];
+    if (captionProvider === 'openrouter') {
+      order.push(tryOpenRouter, tryGemini, tryNvidia);
+    } else if (captionProvider === 'nvidia') {
+      order.push(tryNvidia, tryGemini, tryOpenRouter);
+    } else {
+      order.push(tryGemini, tryOpenRouter, tryNvidia);
+    }
+
+    // Executa na ordem até obter sucesso
+    for (const fn of order) {
+      try {
+        result = await fn();
+        if (result && result.titulo) {
+          break;
         }
-        // Salva no histórico para avaliação posterior apenas se estiver gerando legenda
-        if (finalTitulo && productId) {
-          await saveCaptionHistory(productId, productName, finalTitulo, finalScore);
-        }
-
-        return {
-          titulo: finalTitulo,
-          subtitulo: parsedData.analise || null,
-          score: finalScore,
-          rawJson: JSON.stringify(parsedData),
-        };
-      } catch (modelError: any) {
-        console.warn(`[AI] Erro no modelo ${modelName}: ${modelError.message || modelError}`);
-        continue;
+      } catch (err: any) {
+        console.warn(`[AI] Falha na execução da função do pipeline de legenda:`, err.message || err);
       }
     }
 
-    // Se Gemini direto falhar → tenta OpenRouter (com modelo de legenda)
-    console.warn('[AI] Modelos Gemini direto falharam para legenda. Tentando OpenRouter...');
-    const openRouterResult = await processProductWithOpenRouter(promptText, 'caption');
-    if (openRouterResult) {
-      return openRouterResult;
-    }
-
-    // Último recurso para legenda: NVIDIA NIM
-    console.warn('[AI] OpenRouter falhou para legenda. Tentando NVIDIA NIM como último recurso...');
-    const nvidiaResult = await processProductWithNvidia(promptText);
-    if (nvidiaResult) {
-      return nvidiaResult;
+    // Aplica o pós-processamento de substituição e salva no histórico para o provedor vencedor
+    if (result && result.titulo) {
+      let finalTitulo = result.titulo;
+      if (substitutions.length > 0) {
+        finalTitulo = applyWordSubstitutions(finalTitulo, substitutions);
+      }
+      if (productId) {
+        await saveCaptionHistory(productId, productName, finalTitulo, result.score);
+      }
+      return {
+        ...result,
+        titulo: finalTitulo
+      };
     }
 
     console.error('[AI] Todos os modelos de IA falharam para legenda.');
