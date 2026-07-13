@@ -500,6 +500,34 @@ export async function getSecondaryLifestyleImage(links: Record<string, string | 
   return null;
 }
 
+export async function scrapeRetailerData(links: Record<string, string | undefined>): Promise<{ imageUrl: string | null; price: number | null }> {
+  const platformsToScrape = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'magalu', 'kabum'];
+  let targetUrl = '';
+  for (const platform of platformsToScrape) {
+    if (links[platform]) {
+      targetUrl = links[platform] as string;
+      break;
+    }
+  }
+
+  if (!targetUrl) {
+    return { imageUrl: null, price: null };
+  }
+
+  try {
+    console.log(`[Scraper-Varejista] Tentando extrair dados de: ${targetUrl}`);
+    const scraped = await scrapeProductFromUrl(targetUrl, true);
+    return {
+      imageUrl: scraped.imageUrl && !scraped.imageUrl.includes('placeholder') ? scraped.imageUrl : null,
+      price: scraped.price || null
+    };
+  } catch (e: any) {
+    console.error('[Scraper-Varejista] Falha ao raspar dados do varejista:', e.message || e);
+  }
+
+  return { imageUrl: null, price: null };
+}
+
 export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
   try {
     const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&iax=images&ia=images`;
