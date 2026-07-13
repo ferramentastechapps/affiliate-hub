@@ -79,6 +79,8 @@ $NVIDIA_KEY = $LocalEnv["NVIDIA_API_KEY"]
 $OPENROUTER_KEY = $LocalEnv["OPENROUTER_API_KEY"]
 $OPENROUTER_MODEL = $LocalEnv["OPENROUTER_EVALUATE_MODEL"]
 $PAGUE_MENOS_LOJA = $LocalEnv["PAGUE_MENOS_LOJA"]
+$AI_PROVIDER = $LocalEnv["AI_CAPTION_PROVIDER"]
+$OPENROUTER_CAP_MODEL = $LocalEnv["OPENROUTER_CAPTION_MODEL"]
 
 # O comando SSH reformulado e robusto para evitar quebra de linhas e skips.
 $sshCommand = @"
@@ -97,6 +99,9 @@ NVIDIA_KEY_VAL="$NVIDIA_KEY"
 OPENROUTER_KEY_VAL="$OPENROUTER_KEY"
 OPENROUTER_MODEL_VAL="$OPENROUTER_MODEL"
 PAGUE_MENOS_LOJA_VAL="$PAGUE_MENOS_LOJA"
+AI_PROVIDER_VAL="$AI_PROVIDER"
+OPENROUTER_CAP_MODEL_VAL="$OPENROUTER_CAP_MODEL"
+
 
 echo "⚙️ Sincronizando chaves locais para o VPS..."
 
@@ -190,6 +195,33 @@ if [ -n "$PAGUE_MENOS_LOJA_VAL" ]; then
     echo -e "\nPAGUE_MENOS_LOJA=\"$PAGUE_MENOS_LOJA_VAL\"" >> ~/affiliate-hub/bot/.env
   fi
 fi
+
+if [ -n "$AI_PROVIDER_VAL" ]; then
+  if grep -q 'AI_CAPTION_PROVIDER=' ~/affiliate-hub/.env; then
+    sed -i "s|AI_CAPTION_PROVIDER=.*|AI_CAPTION_PROVIDER=\"$AI_PROVIDER_VAL\"|g" ~/affiliate-hub/.env
+  else
+    echo "AI_CAPTION_PROVIDER=\"$AI_PROVIDER_VAL\"" >> ~/affiliate-hub/.env
+  fi
+  if grep -q 'AI_CAPTION_PROVIDER=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|AI_CAPTION_PROVIDER=.*|AI_CAPTION_PROVIDER=\"$AI_PROVIDER_VAL\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "AI_CAPTION_PROVIDER=\"$AI_PROVIDER_VAL\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
+if [ -n "$OPENROUTER_CAP_MODEL_VAL" ]; then
+  if grep -q 'OPENROUTER_CAPTION_MODEL=' ~/affiliate-hub/.env; then
+    sed -i "s|OPENROUTER_CAPTION_MODEL=.*|OPENROUTER_CAPTION_MODEL=\"$OPENROUTER_CAP_MODEL_VAL\"|g" ~/affiliate-hub/.env
+  else
+    echo "OPENROUTER_CAPTION_MODEL=\"$OPENROUTER_CAP_MODEL_VAL\"" >> ~/affiliate-hub/.env
+  fi
+  if grep -q 'OPENROUTER_CAPTION_MODEL=' ~/affiliate-hub/bot/.env; then
+    sed -i "s|OPENROUTER_CAPTION_MODEL=.*|OPENROUTER_CAPTION_MODEL=\"$OPENROUTER_CAP_MODEL_VAL\"|g" ~/affiliate-hub/bot/.env
+  else
+    echo "OPENROUTER_CAPTION_MODEL=\"$OPENROUTER_CAP_MODEL_VAL\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
 
 echo "💽 Verificando Memória SWAP para evitar travamento de RAM..."
 if ! swapon --show | grep -q "swapfile"; then
