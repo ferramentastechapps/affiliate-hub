@@ -4,7 +4,7 @@ import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
-import { getSecondaryLifestyleImage, searchDuckDuckGoImages } from '@/lib/scraper';
+import { getSecondaryLifestyleImage, searchDuckDuckGoImages, scrapeRetailerData } from '@/lib/scraper';
 import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
@@ -766,6 +766,7 @@ export async function POST(request: Request) {
       // Processamento da imagem se aprovado (obtendo imagem de lifestyle/secundária do varejista)
       let finalEnhancedImageUrl: string | null = product.enhancedImageUrl;
       let finalImageUrl: string = product.imageUrl;
+      let finalPrice: number | null = product.price;
       
       // DEBUG: Log do enhancedImageUrl recebido do scraper
       if (product.enhancedImageUrl) {
@@ -782,12 +783,15 @@ export async function POST(request: Request) {
       );
 
       // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
-      if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending') {
+      if (!finalEnhancedImageUrl || isAggregatorImage) {
         if (isAggregatorImage) {
           console.log(`[Webhook AI] Imagem do agregador detectada - buscando MELHOR do varejista...`);
         }
         // CRÍTICO: Usar resolvedUrls (links reais do varejista) ao invés de body.links (agregador)
-        const rawEnhancedUrl = await getSecondaryLifestyleImage(resolvedUrls || body.links || {});
+        const retailerData = await scrapeRetailerData(resolvedUrls || body.links || {});
+        const rawEnhancedUrl = retailerData.imageUrl;
+        const retailerPrice = retailerData.price;
+
         if (rawEnhancedUrl) {
           const savedRetailImage = await saveEnhancedImage(rawEnhancedUrl, false);
           if (savedRetailImage) {
@@ -811,60 +815,67 @@ export async function POST(request: Request) {
         } else {
           console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original.`);
           
-          if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
-            console.log(`[Webhook AI] 🚫 Imagem do Pechinchou detectada. Salvando localmente para evitar hotlink block...`);
+          if (isAggregatorImage) {
+            console.log(`[Webhook AI] 🔍 Buscando imagem alternativa de alta qualidade no DuckDuckGo para: ${product.name}`);
             try {
-              const savedLocalImage = await saveEnhancedImage(product.imageUrl, false);
-              if (savedLocalImage) {
-                finalImageUrl = savedLocalImage;
-                console.log(`[Webhook AI] ✅ Imagem do Pechinchou salva localmente com sucesso: ${savedLocalImage}`);
-              } else {
-                console.warn(`[Webhook AI] ⚠️ Falha ao baixar imagem do Pechinchou localmente. Tentando buscar substituta no DuckDuckGo...`);
-                const ddgResults = await searchDuckDuckGoImages(product.name);
-                if (ddgResults && ddgResults.length > 0) {
-                  const ddgUrl = ddgResults[0].image;
-                  const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
-                  if (savedDdgImage) {
-                    finalImageUrl = savedDdgImage;
-                    if (!finalEnhancedImageUrl) {
-                      finalEnhancedImageUrl = savedDdgImage;
-                    }
-                    console.log(`[Webhook AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
-                  } else {
-                    finalImageUrl = '';
-                  }
-                } else {
-                  console.warn(`[Webhook AI] ❌ Falha ao encontrar imagem substituta no DDG. Imagem ficará vazia.`);
-                  finalImageUrl = '';
+              const ddgResults = await searchDuckDuckGoImages(product.name);
+              if (ddgResults && ddgResults.length > 0) {
+                const ddgUrl = ddgResults[0].image;
+                const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
+                if (savedDdgImage) {
+                  finalImageUrl = savedDdgImage;
+                  console.log(`[Webhook AI] ✅ Imagem do agregador substituída com sucesso pelo DDG: ${savedDdgImage}`);
                 }
               }
             } catch (err) {
-              console.error(`[Webhook AI] ❌ Erro ao baixar ou buscar substituta no DDG:`, err);
-              finalImageUrl = '';
+              console.error(`[Webhook AI] ❌ Erro ao buscar substituta no DDG:`, err);
             }
+          }
+        }
+
+        // LÓGICA DE CORREÇÃO DE PREÇO
+        if (retailerPrice && product.price) {
+          const currentPrice = product.price;
+          // Se o preço do agregador é muito pequeno (< 15) e o preço do varejista é diferente e maior,
+          // ou se o preço do varejista é pelo menos 2 vezes maior que o do agregador (indica erro clássico de R$ 2 / R$ 3)
+          if ((currentPrice < 15 && retailerPrice > currentPrice) || (retailerPrice >= currentPrice * 2)) {
+            console.log(`[Webhook AI] 💰 Preço incorreto detectado! Agregador: R$ ${currentPrice} → Varejista: R$ ${retailerPrice}. Corrigindo...`);
+            finalPrice = retailerPrice;
           }
         }
       } else if (finalEnhancedImageUrl) {
         console.log(`[Webhook AI] USANDO enhancedImageUrl do scraper (PRIORIDADE): ${finalEnhancedImageUrl}`);
       }
 
-          await prisma.product.update({
-            where: { id: product.id },
-            data: {
-              aiScore: aiResult.score,
-              aiAnalysis: aiResult.rawJson,
-              imageUrl: finalImageUrl,
-              enhancedImageUrl: finalEnhancedImageUrl || undefined,
-              status: newStatus,
-              aiProcessed: true,
-              aiProcessedAt: new Date()
-            }
-          });
-          console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          aiScore: aiResult.score,
+          aiAnalysis: aiResult.rawJson,
+          imageUrl: finalImageUrl,
+          enhancedImageUrl: finalEnhancedImageUrl || undefined,
+          price: finalPrice !== null ? finalPrice : undefined,
+          status: newStatus,
+          aiProcessed: true,
+          aiProcessedAt: new Date()
+        }
+      });
+      console.log(`🤖 IA finalizou processamento do produto ${product.id}`);
 
-          if (body.links?.mercadoLivre) {
-            await fetchAndSaveMLReviews(product.id, body.links.mercadoLivre);
+      // Criar registro de histórico de preço se o preço foi corrigido
+      if (finalPrice && finalPrice !== product.price) {
+        await prisma.priceHistory.create({
+          data: {
+            productId: product.id,
+            price: finalPrice,
+            originalPrice: product.originalPrice
           }
+        });
+      }
+
+      if (body.links?.mercadoLivre) {
+        await fetchAndSaveMLReviews(product.id, body.links.mercadoLivre);
+      }
 
       // Se a IA aprovou o produto, disparar notificação push e publicar no Telegram!
       if (finalStatus === 'pending' && newStatus === 'active') {
