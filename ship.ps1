@@ -81,6 +81,7 @@ $OPENROUTER_MODEL = $LocalEnv["OPENROUTER_EVALUATE_MODEL"]
 $PAGUE_MENOS_LOJA = $LocalEnv["PAGUE_MENOS_LOJA"]
 $AI_PROVIDER = $LocalEnv["AI_CAPTION_PROVIDER"]
 $OPENROUTER_CAP_MODEL = $LocalEnv["OPENROUTER_CAPTION_MODEL"]
+$WEBSHARE_KEY = $LocalEnv["WEBSHARE_API_KEY"]
 
 # O comando SSH reformulado e robusto para evitar quebra de linhas e skips.
 $sshCommand = @"
@@ -101,6 +102,7 @@ OPENROUTER_MODEL_VAL="$OPENROUTER_MODEL"
 PAGUE_MENOS_LOJA_VAL="$PAGUE_MENOS_LOJA"
 AI_PROVIDER_VAL="$AI_PROVIDER"
 OPENROUTER_CAP_MODEL_VAL="$OPENROUTER_CAP_MODEL"
+WEBSHARE_KEY_VAL="$WEBSHARE_KEY"
 
 
 echo "⚙️ Sincronizando chaves locais para o VPS..."
@@ -219,6 +221,14 @@ if [ -n "$OPENROUTER_CAP_MODEL_VAL" ]; then
     sed -i "s|OPENROUTER_CAPTION_MODEL=.*|OPENROUTER_CAPTION_MODEL=\"$OPENROUTER_CAP_MODEL_VAL\"|g" ~/affiliate-hub/bot/.env
   else
     echo "OPENROUTER_CAPTION_MODEL=\"$OPENROUTER_CAP_MODEL_VAL\"" >> ~/affiliate-hub/bot/.env
+  fi
+fi
+
+if [ -n "$WEBSHARE_KEY_VAL" ]; then
+  if grep -q 'WEBSHARE_API_KEY=' ~/affiliate-hub/.env; then
+    sed -i "s|WEBSHARE_API_KEY=.*|WEBSHARE_API_KEY=\"$WEBSHARE_KEY_VAL\"|g" ~/affiliate-hub/.env
+  else
+    echo "WEBSHARE_API_KEY=\"$WEBSHARE_KEY_VAL\"" >> ~/affiliate-hub/.env
   fi
 fi
 

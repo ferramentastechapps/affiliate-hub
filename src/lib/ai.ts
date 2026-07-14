@@ -470,7 +470,8 @@ export async function processProductWithOpenRouter(
           { role: 'system', content: systemPrompt },
           { role: 'user', content: promptText }
         ],
-        temperature: mode === 'caption' ? 1.1 : 0.3
+        temperature: mode === 'caption' ? 1.1 : 0.3,
+        max_tokens: 1000
       };
 
       if (useJsonFormat) {

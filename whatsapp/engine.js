@@ -61,66 +61,155 @@ function loadState() {
 // Carrega o estado salvo imediatamente no início
 loadState();
 
-// Initialize WhatsApp Client
-const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        headless: true
-    },
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
-    }
-});
+const https = require('https');
 
-client.on('qr', (qr) => {
-    console.log('=========================================');
-    console.log('📱 ESCANEIE O QR CODE ABAIXO NO WHATSAPP:');
-    qrcode.generate(qr, { small: true });
-    console.log('=========================================');
-});
+// Helper para buscar proxy aleatório da Webshare
+function getWebshareProxy(apiKey) {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'proxy.webshare.io',
+            path: '/api/v2/proxy/list/?mode=direct&page=1&page_size=100',
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${apiKey}`
+            }
+        };
 
-client.on('ready', () => {
-    console.log('🤖 WhatsApp Engine Conectado e Pronto!');
-    isReady = true;
-});
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                if (res.statusCode !== 200) {
+                    return reject(new Error(`Status Code: ${res.statusCode}`));
+                }
+                try {
+                    const json = JSON.parse(data);
+                    const results = json.results || [];
+                    const validProxies = results.filter(p => p.valid === true);
+                    if (validProxies.length === 0) {
+                        return resolve(null);
+                    }
+                    const randomIndex = Math.floor(Math.random() * validProxies.length);
+                    const proxy = validProxies[randomIndex];
+                    resolve(proxy);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
 
-client.on('authenticated', () => {
-    console.log('✅ Autenticado com sucesso!');
-});
+        req.on('error', (err) => { reject(err); });
+        req.end();
+    });
+}
 
-client.on('auth_failure', msg => {
-    console.error('❌ Falha na autenticação:', msg);
-});
+// Declarar a variável client globalmente
+let client;
 
-// ── Reconexão automática em caso de desconexão ────────────────────────
-client.on('disconnected', (reason) => {
-    console.log('🔌 WhatsApp desconectado. Motivo:', reason);
-    isReady = false;
-    console.log('♻️ Tentando reconectar em 30 segundos...');
-    setTimeout(() => {
-        console.log('🔄 Reconectando WhatsApp...');
+// Função assíncrona de inicialização do WhatsApp
+async function initWhatsApp() {
+    let puppeteerArgs = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage'
+    ];
+    let proxyConfig = null;
+
+    const apiKey = process.env.WEBSHARE_API_KEY;
+    if (apiKey) {
+        console.log('🌐 Webshare API Key encontrada. Buscando proxy...');
         try {
-            client.initialize();
+            const proxy = await getWebshareProxy(apiKey);
+            if (proxy) {
+                console.log(`✅ Usando proxy Webshare: ${proxy.proxy_address}:${proxy.port}`);
+                puppeteerArgs.push(`--proxy-server=http://${proxy.proxy_address}:${proxy.port}`);
+                proxyConfig = proxy;
+            } else {
+                console.warn('⚠️ Nenhum proxy válido retornado pela Webshare. Iniciando sem proxy.');
+            }
         } catch (err) {
-            console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
+            console.error('❌ Erro ao buscar proxy da Webshare. Iniciando sem proxy. Erro:', err.message);
         }
-    }, 30000);
-});
-
-client.on('message', async (msg) => {
-    if (msg.body === '/grupo') {
-        try {
-            await msg.reply(`JID deste chat: ${msg.from}`);
-            console.log(`ℹ️ Comando /grupo respondido para ${msg.from}`);
-        } catch (e) {
-            console.error('Erro ao responder /grupo:', e.message);
-        }
+    } else {
+        console.log('ℹ️ Webshare API Key não configurada no .env. Iniciando sem proxy.');
     }
-});
 
-client.initialize();
+    client = new Client({
+        authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
+        puppeteer: {
+            args: puppeteerArgs,
+            headless: true
+        },
+        webVersionCache: {
+            type: 'remote',
+            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+        }
+    });
+
+    if (proxyConfig) {
+        client.on('puppeteer_page', async (page) => {
+            console.log(`🔐 Autenticando proxy para a página... (${proxyConfig.username})`);
+            try {
+                await page.authenticate({
+                    username: proxyConfig.username,
+                    password: proxyConfig.password
+                });
+            } catch (authErr) {
+                console.error('❌ Falha na autenticação do proxy no Puppeteer:', authErr.message);
+            }
+        });
+    }
+
+    client.on('qr', (qr) => {
+        console.log('=========================================');
+        console.log('📱 ESCANEIE O QR CODE ABAIXO NO WHATSAPP:');
+        qrcode.generate(qr, { small: true });
+        console.log('=========================================');
+    });
+
+    client.on('ready', () => {
+        console.log('🤖 WhatsApp Engine Conectado e Pronto!');
+        isReady = true;
+    });
+
+    client.on('authenticated', () => {
+        console.log('✅ Autenticado com sucesso!');
+    });
+
+    client.on('auth_failure', msg => {
+        console.error('❌ Falha na autenticação:', msg);
+    });
+
+    client.on('disconnected', (reason) => {
+        console.log('🔌 WhatsApp desconectado. Motivo:', reason);
+        isReady = false;
+        console.log('♻️ Tentando reconectar em 30 segundos...');
+        setTimeout(() => {
+            console.log('🔄 Reconectando WhatsApp...');
+            try {
+                client.initialize();
+            } catch (err) {
+                console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
+            }
+        }, 30000);
+    });
+
+    client.on('message', async (msg) => {
+        if (msg.body === '/grupo') {
+            try {
+                await msg.reply(`JID deste chat: ${msg.from}`);
+                console.log(`ℹ️ Comando /grupo respondido para ${msg.from}`);
+            } catch (e) {
+                console.error('Erro ao responder /grupo:', e.message);
+            }
+        }
+    });
+
+    client.initialize();
+}
+
+// Inicia o processo
+initWhatsApp();
 
 // Express Endpoint to receive messages from Python
 app.post('/send', (req, res) => {
