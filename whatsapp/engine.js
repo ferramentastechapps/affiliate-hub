@@ -134,7 +134,7 @@ async function initWhatsApp() {
         console.log('ℹ️ Webshare API Key não configurada no .env. Iniciando sem proxy.');
     }
 
-    client = new Client({
+    let clientOptions = {
         authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
         puppeteer: {
             args: puppeteerArgs,
@@ -144,21 +144,16 @@ async function initWhatsApp() {
             type: 'remote',
             remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
         }
-    });
+    };
 
     if (proxyConfig) {
-        client.on('puppeteer_page', async (page) => {
-            console.log(`🔐 Autenticando proxy para a página... (${proxyConfig.username})`);
-            try {
-                await page.authenticate({
-                    username: proxyConfig.username,
-                    password: proxyConfig.password
-                });
-            } catch (authErr) {
-                console.error('❌ Falha na autenticação do proxy no Puppeteer:', authErr.message);
-            }
-        });
+        clientOptions.proxyAuthentication = {
+            username: proxyConfig.username,
+            password: proxyConfig.password
+        };
     }
+
+    client = new Client(clientOptions);
 
     client.on('qr', (qr) => {
         console.log('=========================================');
