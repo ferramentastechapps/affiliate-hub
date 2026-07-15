@@ -464,6 +464,7 @@ export async function processProductWithOpenRouter(
     }
 
     // Schema json_schema para cada modo (compatível com hy3, hermes e outros modelos livres)
+    // NOTA: strict:false e sem additionalProperties para máxima compatibilidade com modelos grátis
     const captionSchema = {
       type: 'json_schema',
       json_schema: {
@@ -471,10 +472,8 @@ export async function processProductWithOpenRouter(
         schema: {
           type: 'object',
           properties: { titulo: { type: 'string' } },
-          required: ['titulo'],
-          additionalProperties: false
-        },
-        strict: true
+          required: ['titulo']
+        }
       }
     };
     const evaluateSchema = {
@@ -487,10 +486,8 @@ export async function processProductWithOpenRouter(
             score: { type: 'number' },
             analise: { type: 'string' }
           },
-          required: ['score', 'analise'],
-          additionalProperties: false
-        },
-        strict: true
+          required: ['score', 'analise']
+        }
       }
     };
 
