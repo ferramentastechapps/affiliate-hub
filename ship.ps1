@@ -63,7 +63,7 @@ Write-Host "Forneca a senha da VPS quando solicitado:" -ForegroundColor Yellow
 $LocalEnv = @{}
 if (Test-Path ".env") {
     Get-Content ".env" | ForEach-Object {
-        $line = $_.Trim()
+        $line = $_.Trim().Replace("`r", "")
         if ($line -and -not $line.StartsWith("#")) {
             $parts = $line.Split("=", 2)
             if ($parts.Length -eq 2) {
