@@ -463,6 +463,37 @@ export async function processProductWithOpenRouter(
       systemPrompt = await buildDynamicSystemPrompt();
     }
 
+    // Schema json_schema para cada modo (compatível com hy3, hermes e outros modelos livres)
+    const captionSchema = {
+      type: 'json_schema',
+      json_schema: {
+        name: 'caption_response',
+        schema: {
+          type: 'object',
+          properties: { titulo: { type: 'string' } },
+          required: ['titulo'],
+          additionalProperties: false
+        },
+        strict: true
+      }
+    };
+    const evaluateSchema = {
+      type: 'json_schema',
+      json_schema: {
+        name: 'evaluate_response',
+        schema: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            analise: { type: 'string' }
+          },
+          required: ['score', 'analise'],
+          additionalProperties: false
+        },
+        strict: true
+      }
+    };
+
     const fetchCompletion = async (useJsonFormat: boolean) => {
       const bodyPayload: any = {
         model,
@@ -475,7 +506,8 @@ export async function processProductWithOpenRouter(
       };
 
       if (useJsonFormat) {
-        bodyPayload.response_format = { type: 'json_object' };
+        // Usa json_schema (compatível com hy3, hermes, etc) ao invés de json_object
+        bodyPayload.response_format = mode === 'caption' ? captionSchema : evaluateSchema;
       }
 
       return fetch('https://openrouter.ai/api/v1/chat/completions', {
