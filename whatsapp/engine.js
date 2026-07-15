@@ -68,7 +68,7 @@ function getWebshareProxy(apiKey) {
     return new Promise((resolve, reject) => {
         const options = {
             hostname: 'proxy.webshare.io',
-            path: '/api/v2/proxy/list/?mode=direct&page=1&page_size=100',
+            path: '/api/v2/proxy/list/?mode=direct&page=1&page_size=100&country_code=BR',
             method: 'GET',
             headers: {
                 'Authorization': `Token ${apiKey}`
