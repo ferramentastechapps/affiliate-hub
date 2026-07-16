@@ -180,7 +180,25 @@ function extractPlatformDetailsFromUrl(url: string, platform: string): { platfor
     }
   }
   
-  return { platformId: null, platformType: null };
+function calculateWordSimilarity(name1: string, name2: string): number {
+  const getWords = (s: string) => new Set(
+    s.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove accents
+      .replace(/[^\w\s]/g, '')         // remove punctuation
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+  );
+  
+  const w1 = getWords(name1);
+  const w2 = getWords(name2);
+  
+  if (w1.size === 0 || w2.size === 0) return 0;
+  
+  const intersection = new Set([...w1].filter(x => w2.has(x)));
+  const union = new Set([...w1, ...w2]);
+  
+  return intersection.size / union.size;
 }
 
 export async function POST(request: Request) {
@@ -509,16 +527,26 @@ export async function POST(request: Request) {
 
     // Estágio 3 — nome nos últimos 7 dias entre ativos/aprovados (previne duplicata de produto recente de fonte diferente):
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const byNameRecent = await prisma.product.findFirst({
+    const recentActiveProducts = await prisma.product.findMany({
       where: {
-        name: { equals: name, mode: 'insensitive' },
         status: { in: ['active', 'approved'] },
         createdAt: { gte: sevenDaysAgo }
+      },
+      select: {
+        id: true,
+        name: true
       }
     });
-    if (byNameRecent) {
+
+    const duplicateBySimilarity = recentActiveProducts.find(p => {
+      const sim = calculateWordSimilarity(p.name, name);
+      return sim >= 0.80;
+    });
+
+    if (duplicateBySimilarity) {
+      console.log(`[Webhook] Produto duplicado detectado por similaridade de nome (Sim: ${(calculateWordSimilarity(duplicateBySimilarity.name, name) * 100).toFixed(1)}%): "${name}" similar a "${duplicateBySimilarity.name}"`);
       return NextResponse.json(
-        { error: 'Duplicate: same name in last 7 days', id: byNameRecent.id },
+        { error: `Duplicate: similar product name in last 7 days (${duplicateBySimilarity.name})`, id: duplicateBySimilarity.id },
         { status: 409 }
       );
     }
