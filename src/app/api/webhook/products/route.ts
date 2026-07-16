@@ -179,7 +179,9 @@ function extractPlatformDetailsFromUrl(url: string, platform: string): { platfor
       return { platformId: netshoesMatch[1], platformType: 'netshoes' };
     }
   }
-  
+  return { platformId: null, platformType: null };
+}
+
 function calculateWordSimilarity(name1: string, name2: string): number {
   const getWords = (s: string) => new Set(
     s.toLowerCase()
