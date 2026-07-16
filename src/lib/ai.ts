@@ -82,6 +82,11 @@ export function cleanAndParseJson(text: string): any {
     // 4. Se todo parse falhar e for um texto não vazio que não parece JSON, trata-o como o título
     // (comum em modo legenda quando o modelo responde apenas a frase)
     if (cleanText.length > 0 && !cleanText.startsWith('{')) {
+      // Mas se for uma resposta gigante, ou contendo regras/instruções, claramente é um raciocínio/conversa vazada.
+      if (cleanText.length > 150 || cleanText.includes('The user wants') || cleanText.includes('Rules:') || cleanText.includes('prohibited words')) {
+        console.warn('[AI] Resposta não-JSON com tamanho excessivo ou contendo regras. Descartando.');
+        return null;
+      }
       console.log('[AI] Resposta não-JSON recebida, tratando texto limpo diretamente como título.');
       return { titulo: cleanText };
     }
@@ -764,6 +769,13 @@ Contexto atual:
       try {
         result = await fn();
         if (result && result.titulo) {
+          const t = result.titulo.trim();
+          // Validação extra: se a legenda for gigante ou parecer um pensamento vazado, rejeita e tenta o próximo
+          if (t.length > 150 || t.split('\n').length > 2 || t.includes('The user wants') || t.includes('Rules:') || t.includes('prohibited words')) {
+            console.warn(`[AI] Legenda com cara de raciocínio vazado detectada do provedor. Descartando resultado e tentando fallback.`);
+            result = null;
+            continue;
+          }
           break;
         }
       } catch (err: any) {
