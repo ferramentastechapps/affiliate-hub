@@ -417,6 +417,7 @@ export async function processProductWithNvidia(
     }
 
     const parsedData = cleanAndParseJson(responseText);
+    if (!parsedData) return null;
 
     return {
       titulo: parsedData.titulo || null,
@@ -558,6 +559,7 @@ export async function processProductWithOpenRouter(
     }
 
     const parsedData = cleanAndParseJson(responseText);
+    if (!parsedData) return null;
 
     return {
       titulo: parsedData.titulo || null,
@@ -718,6 +720,10 @@ Contexto atual:
           }
 
           const parsedData = cleanAndParseJson(responseText);
+          if (!parsedData) {
+            console.warn(`[AI] Resposta limpa do modelo ${modelName} é nula/inválida.`);
+            continue;
+          }
           console.log(`[AI] Sucesso com modelo ${modelName} no modo caption.`);
 
           return {
