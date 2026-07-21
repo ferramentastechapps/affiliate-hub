@@ -36,28 +36,7 @@ import {
   TrendDown
 } from "@phosphor-icons/react";
 
-// Types
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl: string;
-  price?: number;
-  originalPrice?: number;
-  description?: string;
-  coupons?: { id: string; code: string; discount: string; platform: string }[];
-  alerts?: { userId: string }[];
-  links: Record<string, string | undefined>;
-  createdAt?: string;
-  clicks?: number;
-  votes?: { type: string, userId: string }[];
-  _count?: {
-    likes?: number;
-    dislikes?: number;
-    comments?: number;
-  };
-  shortId?: number;
-};
+import { Product } from "@/types/product";
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
   "Todas": Flame,
