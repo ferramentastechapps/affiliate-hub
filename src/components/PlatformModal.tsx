@@ -7,16 +7,7 @@ import { CouponModal } from "./CouponModal";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
 
-export type ProductLinks = {
-  amazon?: string;
-  aliexpress?: string;
-  shopee?: string;
-  mercadoLivre?: string;
-  tiktok?: string;
-  netshoes?: string;
-  magalu?: string;
-  kabum?: string;
-};
+import { ProductLinks } from "@/types/product";
 
 const categoryColors: Record<string, string> = {
   "Todas": "#f43f5e",

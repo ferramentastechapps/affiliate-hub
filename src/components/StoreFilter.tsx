@@ -24,19 +24,7 @@ const STORES = [
   { key: "magalu",       label: "Magalu",         domain: "magazineluiza.com.br", linkKey: "magalu",       color: "#0086ff", bgGlow: "rgba(0, 134, 255, 0.12)" },
 ];
 
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl: string;
-  price?: number;
-  originalPrice?: number;
-  description?: string;
-  coupons?: { id: string; code: string; discount: string; platform: string }[];
-  links: Record<string, string | undefined>;
-  createdAt?: string;
-  shortId?: number;
-};
+import { Product } from "@/types/product";
 
 
 

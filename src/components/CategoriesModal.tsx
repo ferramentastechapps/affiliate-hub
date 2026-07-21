@@ -54,19 +54,7 @@ const CATEGORIES = [
   { key: "diversos", label: "Diversos", icon: "🔖" },
 ];
 
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl: string;
-  price?: number;
-  originalPrice?: number;
-  description?: string;
-  coupons?: { id: string; code: string; discount: string; platform: string }[];
-  links: Record<string, string | undefined>;
-  createdAt?: string;
-  shortId?: number;
-};
+import { Product } from "@/types/product";
 
 
 
