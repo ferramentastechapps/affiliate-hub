@@ -159,9 +159,12 @@ export async function GET(request: Request) {
       orderByClause = { updatedAt: 'desc' }; // Mais recentes primeiro
     }
 
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : 200;
+
     const products = await prisma.product.findMany({
       where: whereClause,
-      take: 200, // Aumentado para 200 para ter mais massa de dados pros filtros que dependem de sort no front
+      take: limit,
       include: {
         links: true,
         productLinks: true,
