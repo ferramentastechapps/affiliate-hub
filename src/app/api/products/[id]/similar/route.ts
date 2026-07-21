@@ -23,12 +23,15 @@ export async function GET(
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     }
 
-    // Buscar todos os outros produtos ativos
+    // Buscar produtos ativos da mesma categoria (limite de 100 para otimização)
     const otherProducts = await prisma.product.findMany({
       where: {
         id: { not: id },
+        category: targetProduct.category,
         status: { in: ['active', 'approved'] }
       },
+      take: 100,
+      orderBy: { createdAt: 'desc' },
       include: {
         images: { orderBy: { order: 'asc' } },
         productLinks: true,

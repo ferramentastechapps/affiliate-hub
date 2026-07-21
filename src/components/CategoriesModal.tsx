@@ -124,18 +124,16 @@ export function CategoriesModal() {
     setLoading(true);
     setProducts([]);
 
-    fetch("/api/products")
+    const activeCatObj = CATEGORIES.find((c) => c.key === activeCategory);
+    const categoryName = activeCatObj?.label || "";
+
+    fetch(`/api/products?category=${encodeURIComponent(categoryName)}`)
       .then((r) => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
 
-        const activeCatObj = CATEGORIES.find((c) => c.key === activeCategory);
-        const filtered = data.filter((p) => {
-          return p.category === activeCatObj?.label;
-        });
-
         setProducts(
-          filtered.map((p) => ({
+          data.map((p) => ({
             id: p.id,
             shortId: p.shortId,
             name: p.name,

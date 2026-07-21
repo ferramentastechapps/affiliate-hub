@@ -126,7 +126,16 @@ export function DailyDeals() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const [filterType, setFilterType] = useState<'alertas' | 'destaques' | 'recentes' | 'menorPreco' | 'pontuados' | 'baratinho'>('recentes');
+
+  // Debounce search query to avoid hitting database on every keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchProducts();
@@ -150,7 +159,7 @@ export function DailyDeals() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [filterType, user?.id]);
+  }, [filterType, user?.id, selectedCategory, debouncedSearchQuery]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -187,7 +196,9 @@ export function DailyDeals() {
         setLoading(true);
       }
       const userParam = user?.id ? `&userId=${user.id}` : '';
-      const res = await fetch(`/api/products?filter=${filterType}${userParam}&_t=${Date.now()}`, { cache: "no-store" });
+      const categoryParam = selectedCategory && selectedCategory !== 'Todas' ? `&category=${encodeURIComponent(selectedCategory)}` : '';
+      const searchParam = debouncedSearchQuery ? `&search=${encodeURIComponent(debouncedSearchQuery)}` : '';
+      const res = await fetch(`/api/products?filter=${filterType}${userParam}${categoryParam}${searchParam}&_t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       
       if (data && data.length > 0) {

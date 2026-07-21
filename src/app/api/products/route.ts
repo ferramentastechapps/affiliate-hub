@@ -22,6 +22,67 @@ export async function GET(request: Request) {
       whereClause = { status: { in: ['active', 'approved'] } };
     }
 
+    const searchParam = searchParams.get('search') || searchParams.get('q');
+    const categoryParam = searchParams.get('category');
+    const storeParam = searchParams.get('store');
+
+    if (categoryParam && categoryParam !== 'Todas') {
+      whereClause.category = categoryParam;
+    }
+
+    if (storeParam) {
+      const storeMap: Record<string, string> = {
+        amazon: 'amazon',
+        mercadolivre: 'mercadoLivre',
+        shopee: 'shopee',
+        aliexpress: 'aliexpress',
+        tiktok: 'tiktok',
+        kabum: 'kabum',
+        magalu: 'magalu',
+        netshoes: 'netshoes'
+      };
+      const platformKey = storeMap[storeParam];
+      if (platformKey) {
+        const storeCondition = {
+          OR: [
+            { links: { [platformKey]: { not: null, notIn: [''] } } },
+            { productLinks: { some: { platform: platformKey, isActive: true } } }
+          ]
+        };
+        if (whereClause.AND) {
+          whereClause.AND.push(storeCondition);
+        } else {
+          whereClause.AND = [storeCondition];
+        }
+      }
+    }
+
+    if (searchParam) {
+      if (searchParam.toUpperCase() === 'CUPOM') {
+        whereClause.coupons = {
+          some: {
+            isActive: true,
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gte: new Date() } }
+            ]
+          }
+        };
+      } else {
+        const terms = searchParam.toLowerCase().split(/\s+/).filter(Boolean);
+        if (terms.length > 0) {
+          whereClause.AND = terms.map(term => ({
+            OR: [
+              { name: { contains: term, mode: 'insensitive' } },
+              { category: { contains: term, mode: 'insensitive' } },
+              { brand: { contains: term, mode: 'insensitive' } },
+              { description: { contains: term, mode: 'insensitive' } }
+            ]
+          }));
+        }
+      }
+    }
+
     const filterParam = searchParams.get('filter');
     const userIdParam = searchParams.get('userId');
     let orderByClause: any = { createdAt: 'desc' };
