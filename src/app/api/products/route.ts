@@ -92,7 +92,7 @@ export async function GET(request: Request) {
     } else if (filterParam === 'menorPreco') {
       whereClause.price = { gt: 0 };
       orderByClause = { price: 'asc' };
-    } else if (filterParam === 'pontuados') {
+    } else if (filterParam === 'emAlta' || filterParam === 'pontuados') {
       orderByClause = { clicks: 'desc' };
     } else if (filterParam === 'alertas') {
       if (userIdParam) {
