@@ -69,19 +69,12 @@ export function StoreFilter() {
     setLoading(true);
     setProducts([]);
 
-    fetch("/api/products")
+    fetch(`/api/products?store=${activeStore}`)
       .then(r => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
-        const store = STORES.find(s => s.key === activeStore);
-        if (!store) return;
 
-        const filtered = data.filter(p => {
-          const links = p.links || {};
-          return !!links[store.linkKey];
-        });
-
-        setProducts(filtered.map(p => ({
+        setProducts(data.map(p => ({
           id: p.id,
           shortId: p.shortId,
           name: p.name,

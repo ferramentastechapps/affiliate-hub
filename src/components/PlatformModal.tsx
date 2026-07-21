@@ -92,13 +92,11 @@ export function PlatformModal({ isOpen, onClose, product, onSelectRelated, autoF
     if (isOpen && product) {
       document.body.style.overflow = "hidden";
       
-      fetch('/api/products')
+      fetch(`/api/products/${product.id}/similar?limit=8`)
         .then(res => res.json())
         .then(data => {
             if (Array.isArray(data)) {
-                // Remove o produto atual
-                const filtered = data.filter((p: any) => p.id !== product.id);
-                setRelatedProducts(filtered);
+                setRelatedProducts(data);
             }
         })
         .catch(console.error);
