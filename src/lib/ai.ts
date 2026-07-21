@@ -3,10 +3,9 @@ import sharp from 'sharp';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramMessage } from '@/lib/telegram';
 
-// Cache para alerta de custos diários
-let dailyCostCache = 0;
-let lastResetDate = new Date().getDate();
+// Flag para evitar enviar múltiplos alertas no mesmo processo (o banco é a fonte da verdade)
 let alertSentToday = false;
+let lastAlertCheckDate = new Date().toISOString().slice(0, 10);
 
 // ─── HELPER PARA REGISTRAR USO DE TOKENS E CUSTOS ───────────────────────────
 async function logAiUsage(functionName: string, modelUsed: string, provider: string, inputTokens: number, outputTokens: number) {
@@ -17,23 +16,32 @@ async function logAiUsage(functionName: string, modelUsed: string, provider: str
     const outputCost = (outputTokens / 1_000_000) * 0.30;
     const costUSD = inputCost + outputCost;
 
-    // Lógica do Alerta Diário ($ 1.00)
-    const today = new Date().getDate();
-    if (today !== lastResetDate) {
-      dailyCostCache = 0;
-      lastResetDate = today;
+    // Lógica do Alerta Diário ($ 1.00) — usa o banco como fonte da verdade (não perde em restarts)
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (todayStr !== lastAlertCheckDate) {
+      // Novo dia: reseta a flag de alerta
       alertSentToday = false;
+      lastAlertCheckDate = todayStr;
     }
-    dailyCostCache += costUSD;
 
-    if (dailyCostCache > 1.00 && !alertSentToday) {
-      alertSentToday = true;
-      const adminChatId = process.env.TELEGRAM_CHAT_ID;
-      if (adminChatId) {
-        sendTelegramMessage(
-          adminChatId, 
-          `⚠️ <b>ALERTA DE CUSTO IA</b>\n\nO sistema já gastou mais de <b>$ 1.00</b> em tokens Gemini hoje.\nPara evitar custos excessivos, verifique se não há nenhum erro nos webhooks ou robôs enviando requisições em loop.`
-        ).catch(console.error);
+    if (!alertSentToday) {
+      // Consulta o custo total do dia no banco
+      const startOfDay = new Date(todayStr + 'T00:00:00.000Z');
+      const agg = await prisma.aiTokenLog.aggregate({
+        _sum: { costUSD: true },
+        where: { createdAt: { gte: startOfDay } },
+      });
+      const dailyCostFromDb = (agg._sum.costUSD ?? 0) + costUSD;
+
+      if (dailyCostFromDb > 1.00) {
+        alertSentToday = true;
+        const adminChatId = process.env.TELEGRAM_CHAT_ID;
+        if (adminChatId) {
+          sendTelegramMessage(
+            adminChatId,
+            `⚠️ <b>ALERTA DE CUSTO IA</b>\n\nO sistema já gastou <b>$ ${dailyCostFromDb.toFixed(3)}</b> em tokens de IA hoje.\nPara evitar custos excessivos, verifique se não há nenhum erro nos webhooks ou robôs enviando requisições em loop.`
+          ).catch(console.error);
+        }
       }
     }
 
