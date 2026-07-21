@@ -106,7 +106,7 @@ export function DailyDeals() {
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
-  const [filterType, setFilterType] = useState<'alertas' | 'destaques' | 'recentes' | 'menorPreco' | 'pontuados' | 'baratinho'>('recentes');
+  const [filterType, setFilterType] = useState<'alertas' | 'destaques' | 'recentes' | 'menorPreco' | 'emAlta' | 'baratinho'>('recentes');
 
   // Debounce search query to avoid hitting database on every keystroke
   useEffect(() => {
@@ -268,8 +268,8 @@ export function DailyDeals() {
         const bPrice = b.price || Infinity;
         return aPrice - bPrice;
       
-      case 'pontuados':
-        // Produtos com aiScore maior (simulado por clicks + desconto)
+      case 'emAlta':
+        // Produtos em alta (ordenados por cliques e engajamento)
         const aScore = (a.clicks || 0) * 10 + (a.originalPrice && a.price ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0);
         const bScore = (b.clicks || 0) * 10 + (b.originalPrice && b.price ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0);
         return bScore - aScore;
@@ -322,7 +322,7 @@ export function DailyDeals() {
           { key: 'destaques', label: 'Destaques', icon: <Star size={18} weight="regular" className="text-[#ff334b]" /> },
           { key: 'recentes', label: 'Recentes', icon: <Clock size={18} weight="regular" className="text-[#ff334b]" /> },
           { key: 'menorPreco', label: 'Menor Preço', icon: <TrendDown size={18} weight="regular" className="text-[#ff334b]" /> },
-          { key: 'pontuados', label: 'Mais Pontuados', icon: <Flame size={18} weight="regular" className="text-[#ff334b]" /> },
+          { key: 'emAlta', label: 'Em Alta', icon: <Flame size={18} weight="regular" className="text-[#ff334b]" /> },
           { key: 'baratinho', label: 'Baratinho', icon: <Tag size={18} weight="regular" className="text-[#ff334b]" /> },
         ].map((filter) => (
           <button
@@ -529,6 +529,11 @@ export function DailyDeals() {
                     {discount > 0 && (
                       <span className="absolute -top-1 -left-1 bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-md">
                         -{discount}%
+                      </span>
+                    )}
+                    {(filterType === 'emAlta' || (product.clicks && product.clicks > 15)) && (
+                      <span className="absolute top-1 right-1 bg-amber-500/90 backdrop-blur-sm text-zinc-950 font-black text-[9px] px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-0.5">
+                        🔥 EM ALTA
                       </span>
                     )}
                   </div>
