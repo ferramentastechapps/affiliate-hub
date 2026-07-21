@@ -94,6 +94,9 @@ export async function GET(request: Request) {
       orderByClause = { price: 'asc' };
     } else if (filterParam === 'emAlta' || filterParam === 'pontuados') {
       orderByClause = { clicks: 'desc' };
+    } else if (filterParam === 'destaques') {
+      // Ordenar por aiScore desc como proxy para hot deal (hotScore é calculado no map)
+      orderByClause = { aiScore: 'desc' };
     } else if (filterParam === 'alertas') {
       if (userIdParam) {
         // Obter categorias e palavras-chave do PushSubscription do usuário
@@ -184,10 +187,10 @@ export async function GET(request: Request) {
         votes: {
           select: { type: true, userId: true } // Pegamos o userId para que o front saiba se o usuário já curtiu
         },
-        priceHistory: filterParam === 'price-drops' ? {
-          orderBy: { createdAt: 'desc' },
-          take: 50 // Últimos 50 registros para análise
-        } : undefined,
+        priceHistory: {
+          orderBy: { createdAt: 'desc' as const },
+          take: filterParam === 'price-drops' ? 50 : 20 // Mais registros para price-drops, menos para hotScore
+        },
         _count: {
           select: {
             comments: true
@@ -197,15 +200,45 @@ export async function GET(request: Request) {
       orderBy: orderByClause
     });
     
-    // Mapear os votos para retornar a contagem separada
     const mappedProducts = products.map(p => {
       const likes = p.votes.filter(v => v.type === 'LIKE').length;
       const dislikes = p.votes.filter(v => v.type === 'DISLIKE').length;
-      
+
+      // ─── HOT DEAL SCORE ─────────────────────────────────────────────
+      // Calcula um score composto para ordenar "Destaques" com produtos realmente bons
+      const hasCoupon = p.coupons.length > 0;
+      const aiScore = p.aiScore ?? 0;
+
+      // Menor preço histórico: compara preço atual com o menor já registrado
+      let isLowestPriceEver = false;
+      let dropFromOriginal = 0;
+      if (p.price && p.originalPrice && p.originalPrice > p.price) {
+        dropFromOriginal = ((p.originalPrice - p.price) / p.originalPrice) * 100;
+      }
+      if (p.priceHistory && p.priceHistory.length > 0) {
+        const histMinPrice = Math.min(...p.priceHistory.map((h: any) => h.price));
+        if (p.price && p.price <= histMinPrice * 1.01) { // tolerância de 1%
+          isLowestPriceEver = true;
+        }
+      }
+
+      // Frescor: premia produtos recentes (últimas 24h = 10 pontos, caindo para 0 em 7 dias)
+      const hoursSinceCreation = p.createdAt
+        ? (Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)
+        : 999;
+      const freshnessScore = Math.max(0, 10 - (hoursSinceCreation / (7 * 24)) * 10);
+
+      const hotScore =
+        (aiScore * 2) +                              // até 20 pontos (aiScore 0-10)
+        (isLowestPriceEver ? 25 : 0) +              // +25 se for menor preço histórico
+        (hasCoupon ? 15 : 0) +                      // +15 se tiver cupom ativo
+        Math.min(dropFromOriginal * 0.5, 15) +      // até 15 pontos por desconto
+        freshnessScore;                              // até 10 pontos por frescor
+      // ────────────────────────────────────────────────────────────────
       // FASE 2 — Calcular dados de queda de preço
       let dropPercent = 0;
-      let lowestPrice30d = p.price;
-      let highestPrice30d = p.price;
+      let lowestPrice30d = p.price ?? 0;
+      let highestPrice30d = p.price ?? 0;
       
       if (filterParam === 'price-drops' && p.priceHistory && p.priceHistory.length > 0) {
         const now = new Date();
@@ -233,9 +266,13 @@ export async function GET(request: Request) {
           likes,
           dislikes
         },
+        // Hot Deal Score e flags para o front-end
+        hotScore: Math.round(hotScore * 10) / 10,
+        isLowestPriceEver,
+        hasCoupon,
         // Dados adicionais para price-drops
         ...(filterParam === 'price-drops' && {
-          dropPercent: Math.round(dropPercent * 10) / 10, // Arredonda para 1 casa decimal
+          dropPercent: Math.round(dropPercent * 10) / 10,
           lowestPrice30d,
           highestPrice30d
         })
@@ -260,6 +297,9 @@ export async function GET(request: Request) {
       finalProducts = finalProducts
         .filter((p: any) => p.dropPercent > 0)
         .sort((a: any, b: any) => b.dropPercent - a.dropPercent);
+    } else if (filterParam === 'destaques') {
+      // Ordenar por hotScore composto (calculado no map acima)
+      finalProducts = finalProducts.sort((a: any, b: any) => (b.hotScore ?? 0) - (a.hotScore ?? 0));
     }
 
     return NextResponse.json(finalProducts);

@@ -343,6 +343,7 @@ model ProductAlert {
   product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   userId         String
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetPrice    Float? // Preço alvo para notificação (ex: 299.90)
   threshold      Float? // % mínima de queda para notificar (ex: 5.0 = 5%)
   channel        String    @default("telegram") // "telegram", "push", "both"
   lastNotifiedAt DateTime? // evita spam — não notifica 2x no mesmo dia

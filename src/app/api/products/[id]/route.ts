@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth-utils';
+import { notifyProductIndexNow } from '@/lib/indexnow';
 
 export async function PUT(
   request: Request,
@@ -168,6 +169,11 @@ export async function PUT(
       }
     }
     
+    // Se produto foi aprovado, notifica mecanismos de busca para indexação imediata
+    if (status === 'active' && existingProduct.status !== 'active' && product.shortId) {
+      notifyProductIndexNow(product.shortId).catch(console.error);
+    }
+
     console.log('✅ Produto atualizado:', product.id);
     return NextResponse.json(product);
   } catch (error) {

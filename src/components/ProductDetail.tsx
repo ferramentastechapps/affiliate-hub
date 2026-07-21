@@ -8,6 +8,7 @@ import { CouponModal } from "./CouponModal";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
 import { PriceHistoryChart } from "./PriceHistoryChart";
+import { PriceComparator } from "./PriceComparator";
 import { AlertButton } from "./AlertButton";
 import { ProductReviews } from "./ProductReviews";
 
@@ -27,7 +28,16 @@ type Product = {
     shopee?: string | null;
     aliexpress?: string | null;
     tiktok?: string | null;
+    netshoes?: string | null;
+    magalu?: string | null;
+    kabum?: string | null;
   } | null;
+  productLinks?: Array<{
+    platform: string;
+    sourceUrl?: string | null;
+    affiliateUrl?: string | null;
+    generatedAffiliateUrl?: string | null;
+  }>;
   coupons?: Array<{
     code: string;
     description: string;
@@ -416,6 +426,14 @@ export function ProductDetail({ product }: { product: Product }) {
             </div>
 
             <PriceHistoryChart productId={product.id} />
+
+            {/* Comparador de Lojas */}
+            <PriceComparator
+              productLinks={product.productLinks}
+              legacyLinks={product.links}
+              currentPrice={product.price}
+              onLinkClick={(platform, url) => trackAffiliateClick(platform, product.name, url)}
+            />
           </div>
         </div>
 
