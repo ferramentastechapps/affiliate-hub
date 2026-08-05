@@ -796,7 +796,7 @@ class TelegramNotifier:
             w_text = re.sub(r'<i>(.*?)</i>', r'_\1_', w_text, flags=re.IGNORECASE)
             w_text = re.sub(r'<s>(.*?)</s>', r'~\1~', w_text, flags=re.IGNORECASE)
             w_text = re.sub(r'<code>(.*?)</code>', r'```\1```', w_text, flags=re.IGNORECASE)
-            w_text = re.sub(r'<a href=["\']?(.*?)["\']?>(.*?)</a>', r'\2', w_text, flags=re.IGNORECASE)
+            w_text = re.sub(r'<a href=["\']?(.*?)["\']?>(.*?)</a>', r'\2: \1', w_text, flags=re.IGNORECASE)
             whatsapp_text = re.sub(r'<.*?>', '', w_text)
             
             score_wpp = produto.get('qualityScore') or 0

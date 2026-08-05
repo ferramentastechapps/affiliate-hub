@@ -11,4 +11,14 @@ curl -s -o /dev/null -w "API Status: %{http_code}" -X POST http://127.0.0.1:3005
 "@
 
 $cleanCommand = $sshCommand -replace "`r", ""
-Write-Output $cleanCommand | ssh root@212.85.10.239 "bash"
+
+# Iniciar conexão SSH com a chave id_ed25519 se ela existir
+$sshKeyPath = "$env:USERPROFILE\.ssh\id_ed25519"
+if (Test-Path $sshKeyPath) {
+    Write-Host "Conectando com a chave SSH..." -ForegroundColor Yellow
+    Write-Output $cleanCommand | ssh -i "$sshKeyPath" root@212.85.10.239 "bash"
+} else {
+    Write-Host "Chave SSH não encontrada em $sshKeyPath. Tentando conexão padrão..." -ForegroundColor Yellow
+    Write-Output $cleanCommand | ssh root@212.85.10.239 "bash"
+}
+

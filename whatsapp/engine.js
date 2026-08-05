@@ -20,6 +20,7 @@ const fs = require('fs');
 
 // Global State
 let isReady = false;
+let latestQr = null;
 let messageQueue = []; // array of { score: number, message: string }
 let lastFlushTime = Date.now();
 
@@ -213,13 +214,16 @@ async function initWhatsApp() {
     client = new Client(clientOptions);
 
     client.on('qr', (qr) => {
+        latestQr = qr;
         console.log('=========================================');
         console.log('📱 ESCANEIE O QR CODE ABAIXO NO WHATSAPP:');
-        qrcode.generate(qr, { small: true });
+        console.log('👉 Ou abra no navegador: http://212.85.10.239:3006/qr');
         console.log('=========================================');
+        qrcode.generate(qr, { small: true });
     });
 
     client.on('ready', () => {
+        latestQr = null;
         console.log('🤖 WhatsApp Engine Conectado e Pronto!');
         isReady = true;
     });
@@ -274,8 +278,108 @@ app.post('/send', (req, res) => {
     messageQueue.push({ message, score: score || 0, imageUrl });
     saveState();
     console.log(`📥 Nova oferta recebida no balde (Score: ${score}). Total no balde: ${messageQueue.length}`);
+
+    // Dispara imediatamente se o WhatsApp estiver conectado!
+    if (isReady) {
+        console.log('⚡ Disparando oferta automaticamente para o WhatsApp...');
+        setTimeout(() => flushBucket(), 500);
+    }
     
     return res.status(200).json({ success: true, queued: true });
+});
+
+// Express Endpoint para exibir o QR Code em página web
+app.get('/qr', (req, res) => {
+    if (isReady) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>WhatsApp Conectado</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
+                    .card { background: #111b21; padding: 40px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 420px; width: 100%; border: 1px solid #222d34; }
+                    h2 { color: #00a884; margin-top: 0; font-size: 24px; }
+                    p { color: #8696a0; font-size: 15px; line-height: 1.5; }
+                    .icon { font-size: 48px; margin-bottom: 10px; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="icon">✅</div>
+                    <h2>WhatsApp Conectado!</h2>
+                    <p>O robô do WhatsApp está ativo e pronto para disparar ofertas no grupo.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
+    if (!latestQr) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta http-equiv="refresh" content="3">
+                <title>Aguardando QR Code</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
+                    .card { background: #111b21; padding: 40px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 420px; width: 100%; border: 1px solid #222d34; }
+                    h2 { color: #00a884; margin-top: 0; }
+                    p { color: #8696a0; font-size: 14px; }
+                    .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #00a884; border-radius: 50%; width: 44px; height: 44px; animation: spin 1s linear infinite; margin: 24px auto; }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>⏳ Gerando QR Code...</h2>
+                    <div class="spinner"></div>
+                    <p>O robô está iniciando a navegação. Esta página será atualizada automaticamente em 3 segundos.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
+    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(latestQr)}`;
+    return res.send(`
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="refresh" content="8">
+            <title>Conectar WhatsApp</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
+                .card { background: #111b21; padding: 32px 24px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 440px; width: 100%; border: 1px solid #222d34; }
+                img { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+                h2 { color: #00a884; margin-top: 0; margin-bottom: 12px; font-size: 22px; }
+                p { color: #8696a0; font-size: 14px; margin: 6px 0; line-height: 1.4; }
+                .step { background: #182229; padding: 12px; border-radius: 8px; font-size: 13px; color: #e9edef; margin-bottom: 16px; border-left: 4px solid #00a884; text-align: left; }
+                .warning { font-size: 12px; color: #f7a600; margin-top: 14px; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>📱 Conectar WhatsApp</h2>
+                <div class="step">
+                    <strong>Como conectar:</strong><br>
+                    1. Abra o WhatsApp no celular<br>
+                    2. Toque em <strong>Mais opções (⋮)</strong> ou <strong>Configurações</strong><br>
+                    3. Toque em <strong>Aparelhos conectados</strong> > <strong>Conectar um aparelho</strong>
+                </div>
+                <img src="${qrImgUrl}" alt="QR Code WhatsApp" width="300" height="300" />
+                <p class="warning">⚠️ O QR Code atualiza a cada 8 segundos automaticamente.</p>
+            </div>
+        </body>
+        </html>
+    `);
 });
 
 // Diagnóstico: lista os grupos disponíveis
@@ -290,66 +394,62 @@ app.get('/groups', async (req, res) => {
     }
 });
 
+let isFlushing = false;
 
 // ── Lógica do Balde (extraída em função reutilizável) ─────────────────────────
 async function flushBucket() {
+    if (isFlushing) {
+        console.log('⏳ Disparo do balde já está em andamento. Aguardando...');
+        return { skipped: true, reason: 'already_flushing' };
+    }
     if (!isReady) {
         console.log('⏳ WhatsApp ainda não está pronto. Pulando verificação do balde...');
         return { skipped: true, reason: 'not_ready' };
     }
 
-    // Horário de Brasília
-    const brTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-    const currentHour = brTime.getHours();
-
-    if (currentHour < 7) {
-        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Retendo ${messageQueue.length} oferta(s) para enviar às 07h.`);
-        // NÃO descartar a fila — manter as mensagens para enviar quando amanhecer
-        return { skipped: true, reason: 'out_of_hours' };
-    }
-
-    if (messageQueue.length === 0) {
-        console.log('😴 Balde vazio. Nenhuma oferta para enviar agora.');
-        return { skipped: true, reason: 'empty' };
-    }
-
-    if (!GROUP_NAME && !GROUP_ID) {
-        console.log(`⚠️ WHATSAPP_GROUP_NAME e WHATSAPP_GROUP_ID estão vazios no .env. Esvaziando o balde (${messageQueue.length} ofertas) sem enviar.`);
-        messageQueue = [];
-        saveState();
-        return { skipped: true, reason: 'no_group_configured' };
-    }
-
-    console.log(`🔄 Analisando ${messageQueue.length} ofertas no balde...`);
-    
-    messageQueue.sort((a, b) => b.score - a.score);
-    const bestOffer = messageQueue.shift(); // Remove from queue immediately
-
-    // Save state BEFORE sending to prevent poison-pill loop if puppeteer crashes
-    saveState();
-
-    const targetLabel = GROUP_ID ? `JID: ${GROUP_ID}` : `grupo '${GROUP_NAME}'`;
-    console.log(`🏆 Melhor oferta escolhida! Score: ${bestOffer.score}. Disparando para ${targetLabel}...`);
-
+    isFlushing = true;
     try {
-        let targetChatId = GROUP_ID;
+        while (messageQueue.length > 0) {
+            // Horário de Brasília
+            const brTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+            const currentHour = brTime.getHours();
 
-        if (!targetChatId) {
-            console.log(`🔍 Buscando ID do grupo pelo nome '${GROUP_NAME}'...`);
-            const chats = await client.getChats();
-            const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
-            if (group) {
-                targetChatId = group.id._serialized;
+            if (currentHour < 7) {
+                console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Retendo ${messageQueue.length} oferta(s) para enviar às 07h.`);
+                break;
             }
-        }
 
-        if (!targetChatId) {
-            console.error(`❌ Grupo '${GROUP_NAME}' não encontrado! Tem certeza que este WhatsApp está no grupo?`);
-            // We already removed it, no need to put it back.
-            return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
-        } else {
+            if (!GROUP_NAME && !GROUP_ID) {
+                console.log(`⚠️ WHATSAPP_GROUP_NAME e WHATSAPP_GROUP_ID estão vazios no .env. Retendo ${messageQueue.length} ofertas.`);
+                break;
+            }
+
+            console.log(`🔄 Analisando ${messageQueue.length} oferta(s) no balde...`);
+            
+            messageQueue.sort((a, b) => (b.score || 0) - (a.score || 0));
+            const bestOffer = messageQueue.shift(); // Remove from queue immediately
+            saveState();
+
+            const targetLabel = GROUP_ID ? `JID: ${GROUP_ID}` : `grupo '${GROUP_NAME}'`;
+            console.log(`🏆 Disparando oferta para ${targetLabel}...`);
+
+            let targetChatId = GROUP_ID;
+
+            if (!targetChatId) {
+                console.log(`🔍 Buscando ID do grupo pelo nome '${GROUP_NAME}'...`);
+                const chats = await client.getChats();
+                const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
+                if (group) {
+                    targetChatId = group.id._serialized;
+                }
+            }
+
+            if (!targetChatId) {
+                console.error(`❌ Grupo '${GROUP_NAME}' não encontrado!`);
+                break;
+            }
+
             if (bestOffer.imageUrl) {
-                // Baixar imagem em Node.js (NÃO no Puppeteer) para evitar timeout do CDP
                 console.log(`🖼️ Baixando imagem via Node.js: ${bestOffer.imageUrl}`);
                 const imgData = await downloadImageAsBase64(bestOffer.imageUrl);
                 
@@ -357,52 +457,48 @@ async function flushBucket() {
                     try {
                         const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
                         await client.sendMessage(targetChatId, media, { caption: bestOffer.message });
-                        console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
+                        console.log('🚀 Mensagem com imagem enviada com sucesso para o WhatsApp!');
                     } catch (imgErr) {
-                        // Se mesmo assim falhar ao enviar com mídia, reconectar e enviar só texto
                         console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
                         if (imgErr.message && imgErr.message.includes('timed out')) {
-                            console.log('🔄 Timeout no Puppeteer detectado. Forçando reconexão antes do fallback...');
+                            console.log('🔄 Timeout no Puppeteer detectado. Forçando reconexão...');
                             isReady = false;
                             try { await client.destroy(); } catch (e) { /* ignora */ }
                             setTimeout(() => {
-                                console.log('🔄 Reconectando WhatsApp após timeout de envio...');
+                                console.log('🔄 Reconectando WhatsApp após timeout...');
                                 client.initialize();
                             }, 5000);
                         }
-                        // Fallback: enviar só texto após esperar reconexão
-                        await new Promise(r => setTimeout(r, 8000));
+                        await new Promise(r => setTimeout(r, 6000));
                         try {
                             await client.sendMessage(targetChatId, bestOffer.message);
-                            console.log('🚀 Mensagem (somente texto, fallback) enviada com sucesso!');
+                            console.log('🚀 Mensagem (fallback somente texto) enviada com sucesso!');
                         } catch (textErr) {
                             console.error('❌ Falha também no fallback texto:', textErr.message);
                         }
                     }
                 } else {
-                    // Imagem não baixou — envia só texto
-                    console.log('⚠️ Imagem não disponível, enviando só texto.');
                     await client.sendMessage(targetChatId, bestOffer.message);
-                    console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+                    console.log('🚀 Mensagem (somente texto) enviada com sucesso!');
                 }
             } else {
                 await client.sendMessage(targetChatId, bestOffer.message);
-                console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+                console.log('🚀 Mensagem (somente texto) enviada com sucesso!');
             }
             
-            // Empty the rest of the bucket since we sent one
-            messageQueue = [];
             saveState();
-            console.log('🗑️ Balde esvaziado para a próxima rodada.');
-            return { success: true };
+
+            if (messageQueue.length > 0) {
+                console.log(`⏳ Aguardando 3 segundos para a próxima oferta da fila (${messageQueue.length} restante(s))...`);
+                await new Promise(r => setTimeout(r, 3000));
+            }
         }
     } catch (err) {
-        console.error('❌ Erro ao enviar mensagem:', err);
-        // We already popped the bad message. We also empty the rest to be safe.
-        messageQueue = [];
-        saveState();
-        return { success: false, error: err.message };
+        console.error('❌ Erro ao processar balde:', err);
+    } finally {
+        isFlushing = false;
     }
+    return { success: true };
 }
 
 // Ciclo automático com checagem de estado resiliente a reinicializações
