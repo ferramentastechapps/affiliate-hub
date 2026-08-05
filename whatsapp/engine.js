@@ -62,6 +62,59 @@ function loadState() {
 loadState();
 
 const https = require('https');
+const http = require('http');
+
+/**
+ * Baixa uma imagem via Node.js nativo (NÃO dentro do Puppeteer).
+ * Retorna null se falhar. Evita o erro "Runtime.callFunctionOn timed out".
+ */
+function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
+    return new Promise((resolve) => {
+        try {
+            const protocol = imageUrl.startsWith('https') ? https : http;
+            const req = protocol.get(imageUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'image/*,*/*'
+                },
+                timeout: timeoutMs
+            }, (res) => {
+                // Seguir redirecionamentos (301/302)
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    return resolve(downloadImageAsBase64(res.headers.location, timeoutMs));
+                }
+                if (res.statusCode !== 200) {
+                    console.warn(`⚠️ Download de imagem retornou status ${res.statusCode}: ${imageUrl}`);
+                    return resolve(null);
+                }
+                const contentType = res.headers['content-type'] || 'image/jpeg';
+                const mimeType = contentType.split(';')[0].trim();
+                const chunks = [];
+                res.on('data', chunk => chunks.push(chunk));
+                res.on('end', () => {
+                    const buffer = Buffer.concat(chunks);
+                    resolve({ base64: buffer.toString('base64'), mimeType });
+                });
+                res.on('error', (err) => {
+                    console.warn('⚠️ Erro ao ler stream da imagem:', err.message);
+                    resolve(null);
+                });
+            });
+            req.on('error', (err) => {
+                console.warn('⚠️ Erro ao baixar imagem:', err.message);
+                resolve(null);
+            });
+            req.on('timeout', () => {
+                req.destroy();
+                console.warn('⚠️ Timeout ao baixar imagem:', imageUrl);
+                resolve(null);
+            });
+        } catch (err) {
+            console.warn('⚠️ Exceção ao baixar imagem:', err.message);
+            resolve(null);
+        }
+    });
+}
 
 // Helper para buscar proxy aleatório da Webshare
 function getWebshareProxy(apiKey) {
@@ -111,12 +164,15 @@ async function initWhatsApp() {
     let puppeteerArgs = [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
     ];
     let proxyConfig = null;
 
     const apiKey = process.env.WEBSHARE_API_KEY;
-    if (apiKey) {
+    const disableProxy = process.env.DISABLE_WHATSAPP_PROXY === 'true';
+    if (apiKey && !disableProxy) {
         console.log('🌐 Webshare API Key encontrada. Buscando proxy...');
         try {
             const proxy = await getWebshareProxy(apiKey);
@@ -131,18 +187,19 @@ async function initWhatsApp() {
             console.error('❌ Erro ao buscar proxy da Webshare. Iniciando sem proxy. Erro:', err.message);
         }
     } else {
-        console.log('ℹ️ Webshare API Key não configurada no .env. Iniciando sem proxy.');
+        console.log('ℹ️ Proxy desativado ou API Key não configurada. Iniciando sem proxy.');
     }
 
     let clientOptions = {
         authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
         puppeteer: {
+            executablePath: '/root/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
             args: puppeteerArgs,
-            headless: true
+            headless: true,
+            protocolTimeout: 120000
         },
         webVersionCache: {
-            type: 'remote',
-            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+            type: 'none'
         }
     };
 
@@ -292,12 +349,39 @@ async function flushBucket() {
             return { success: false, error: `Grupo '${GROUP_NAME}' não encontrado` };
         } else {
             if (bestOffer.imageUrl) {
-                try {
-                    const media = await MessageMedia.fromUrl(bestOffer.imageUrl, { unsafeMime: true });
-                    await client.sendMessage(targetChatId, media, { caption: bestOffer.message });
-                    console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
-                } catch (imgErr) {
-                    console.error('❌ Erro ao enviar imagem via WhatsApp, enviando só texto:', imgErr.message);
+                // Baixar imagem em Node.js (NÃO no Puppeteer) para evitar timeout do CDP
+                console.log(`🖼️ Baixando imagem via Node.js: ${bestOffer.imageUrl}`);
+                const imgData = await downloadImageAsBase64(bestOffer.imageUrl);
+                
+                if (imgData) {
+                    try {
+                        const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
+                        await client.sendMessage(targetChatId, media, { caption: bestOffer.message });
+                        console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
+                    } catch (imgErr) {
+                        // Se mesmo assim falhar ao enviar com mídia, reconectar e enviar só texto
+                        console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
+                        if (imgErr.message && imgErr.message.includes('timed out')) {
+                            console.log('🔄 Timeout no Puppeteer detectado. Forçando reconexão antes do fallback...');
+                            isReady = false;
+                            try { await client.destroy(); } catch (e) { /* ignora */ }
+                            setTimeout(() => {
+                                console.log('🔄 Reconectando WhatsApp após timeout de envio...');
+                                client.initialize();
+                            }, 5000);
+                        }
+                        // Fallback: enviar só texto após esperar reconexão
+                        await new Promise(r => setTimeout(r, 8000));
+                        try {
+                            await client.sendMessage(targetChatId, bestOffer.message);
+                            console.log('🚀 Mensagem (somente texto, fallback) enviada com sucesso!');
+                        } catch (textErr) {
+                            console.error('❌ Falha também no fallback texto:', textErr.message);
+                        }
+                    }
+                } else {
+                    // Imagem não baixou — envia só texto
+                    console.log('⚠️ Imagem não disponível, enviando só texto.');
                     await client.sendMessage(targetChatId, bestOffer.message);
                     console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
                 }
