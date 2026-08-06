@@ -13,9 +13,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Histórico de mensagens inválido' }, { status: 400 });
     }
 
-    // 1. Buscar os produtos ativos mais recentes para servir de contexto (RAG simples)
-    const activeProducts = await prisma.product.findMany({
-      where: { status: { in: ['active', 'approved'] } },
+    const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
+
+    // Palavras irrelevantes para ignorar na busca direta
+    const STOP_WORDS = new Set([
+      'tem', 'qual', 'quais', 'voce', 'você', 'para', 'com', 'mais', 'bom', 'boa',
+      'esse', 'essa', 'este', 'esta', 'sobre', 'onde', 'como', 'quero', 'busca',
+      'procura', 'algum', 'alguma', 'link', 'desconto', 'oferta', 'promoção', 'site',
+      'preço', 'valor', 'barato', 'barata', 'indica', 'indicação', 'me'
+    ]);
+
+    const userWords = lastUserMsg
+      .replace(/[^\w\sà-úÀ-Ú]/gi, ' ')
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w: string) => w.length >= 3 && !STOP_WORDS.has(w));
+
+    // 1. Busca DIRETA no banco de dados pelas palavras enviadas pelo usuário
+    let searchedProducts: any[] = [];
+    if (userWords.length > 0) {
+      searchedProducts = await prisma.product.findMany({
+        where: {
+          status: { not: 'rejected' },
+          OR: userWords.flatMap((word: string) => [
+            { name: { contains: word, mode: 'insensitive' as const } },
+            { category: { contains: word, mode: 'insensitive' as const } },
+            { subcategory: { contains: word, mode: 'insensitive' as const } },
+            { brand: { contains: word, mode: 'insensitive' as const } },
+            { description: { contains: word, mode: 'insensitive' as const } },
+          ]),
+        },
+        select: {
+          shortId: true,
+          name: true,
+          price: true,
+          category: true,
+          description: true,
+          brand: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+    }
+
+    // 2. Buscar ofertas recentes para complementar o contexto
+    const recentProducts = await prisma.product.findMany({
+      where: { status: { not: 'rejected' } },
       select: {
         shortId: true,
         name: true,
@@ -25,8 +68,17 @@ export async function POST(request: Request) {
         brand: true,
       },
       orderBy: { createdAt: 'desc' },
-      take: 120, // Suficiente para caber no context window de forma leve
+      take: 80,
     });
+
+    // Mesclar sem duplicados (dando prioridade aos produtos encontrados na busca por palavra-chave)
+    const activeProductsMap = new Map();
+    [...searchedProducts, ...recentProducts].forEach((p) => {
+      if (!activeProductsMap.has(p.shortId)) {
+        activeProductsMap.set(p.shortId, p);
+      }
+    });
+    const activeProducts = Array.from(activeProductsMap.values());
 
     const productsContext = activeProducts
       .map(
@@ -37,7 +89,7 @@ export async function POST(request: Request) {
       )
       .join('\n');
 
-    // 2. Montar prompt do sistema
+    // 3. Montar prompt do sistema
     const systemInstruction = `Você é o "Jota", o assistente de compras inteligente oficial do Economizei.
 Seu objetivo é ajudar os usuários a encontrarem as melhores ofertas de tecnologia, informática, games, casa e outros produtos no site.
 
@@ -87,24 +139,21 @@ ${productsContext || 'Nenhuma oferta ativa no momento.'}
 
     // Fallback inteligente caso Gemini não responda ou chave não esteja configurada
     if (!responseText) {
-      const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
-      const queryWords = lastUserMsg.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
-
-      const matchedProducts = activeProducts.filter((p) => {
+      const matchedProducts = searchedProducts.length > 0 ? searchedProducts : activeProducts.filter((p) => {
         const nameLower = p.name.toLowerCase();
         const catLower = (p.category || '').toLowerCase();
         const descLower = (p.description || '').toLowerCase();
-        return queryWords.some((word: string) => nameLower.includes(word) || catLower.includes(word) || descLower.includes(word));
+        return userWords.some((word: string) => nameLower.includes(word) || catLower.includes(word) || descLower.includes(word));
       }).slice(0, 4);
 
       if (matchedProducts.length > 0) {
-        responseText = `Encontrei as seguintes ofertas relevantes no Economizei:\n\n` +
-          matchedProducts.map((p) => `• [${p.name}](/produto/${p.shortId}) por R$ ${p.price ? p.price.toFixed(2).replace('.', ',') : 'Ver preço'}`).join('\n\n') +
-          `\n\nClique no produto para conferir os detalhes e comprar com o melhor preço!`;
+        responseText = `Sim! Encontrei as seguintes opções no Economizei:\n\n` +
+          matchedProducts.map((p: any) => `• [${p.name}](/produto/${p.shortId}) por R$ ${p.price ? p.price.toFixed(2).replace('.', ',') : 'Ver preço'}`).join('\n\n') +
+          `\n\nClique no produto acima para ver todos os detalhes e o cupom!`;
       } else {
         const topProducts = activeProducts.slice(0, 3);
-        responseText = `Não encontrei exatamente esse item na busca direta, mas confira as melhores ofertas ativas do momento:\n\n` +
-          topProducts.map((p) => `• [${p.name}](/produto/${p.shortId}) por R$ ${p.price ? p.price.toFixed(2).replace('.', ',') : 'Ver preço'}`).join('\n\n');
+        responseText = `Não encontrei esse produto no momento, mas confira as melhores ofertas ativas do site:\n\n` +
+          topProducts.map((p: any) => `• [${p.name}](/produto/${p.shortId}) por R$ ${p.price ? p.price.toFixed(2).replace('.', ',') : 'Ver preço'}`).join('\n\n');
       }
     }
 
