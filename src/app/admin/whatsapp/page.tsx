@@ -164,11 +164,13 @@ export default function WhatsAppAdminPage() {
       if (res.ok && (data.success || data.queued || !data.error)) {
         setActionResult({
           success: true,
-          message: data.message || 'Ação solicitada com sucesso! Aguarde alguns segundos para atualização de status.',
+          message: data.message || 'Ação solicitada com sucesso!',
         });
         setTimeout(() => {
           fetchStatus();
-        }, 3000);
+          setConfirmAction(null);
+          setActionResult(null);
+        }, 1800);
       } else {
         setActionResult({
           success: false,
@@ -693,25 +695,40 @@ export default function WhatsAppAdminPage() {
             )}
 
             <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                onClick={() => {
-                  setConfirmAction(null);
-                  setActionResult(null);
-                }}
-                disabled={executing}
-                className="px-4 py-2 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-colors disabled:opacity-50"
-              >
-                Cancelar
-              </button>
+              {actionResult?.success ? (
+                <button
+                  onClick={() => {
+                    setConfirmAction(null);
+                    setActionResult(null);
+                    fetchStatus();
+                  }}
+                  className="px-5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors shadow"
+                >
+                  Fechar
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setConfirmAction(null);
+                      setActionResult(null);
+                    }}
+                    disabled={executing}
+                    className="px-4 py-2 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
 
-              <button
-                onClick={handleExecuteAction}
-                disabled={executing}
-                className={`px-4 py-2 text-xs font-semibold text-white rounded-xl transition-all flex items-center gap-2 shadow ${confirmAction.color} disabled:opacity-50`}
-              >
-                {executing && <ArrowsClockwise size={14} className="animate-spin" />}
-                <span>Confirmar e Executar</span>
-              </button>
+                  <button
+                    onClick={handleExecuteAction}
+                    disabled={executing}
+                    className={`px-4 py-2 text-xs font-semibold text-white rounded-xl transition-all flex items-center gap-2 shadow ${confirmAction.color} disabled:opacity-50`}
+                  >
+                    {executing && <ArrowsClockwise size={14} className="animate-spin" />}
+                    <span>{executing ? 'Executando...' : 'Confirmar e Executar'}</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
