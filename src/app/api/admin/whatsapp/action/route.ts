@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const res = await fetch(`${WHATSAPP_API_URL}${targetEndpoint}`, {
       method: 'POST',

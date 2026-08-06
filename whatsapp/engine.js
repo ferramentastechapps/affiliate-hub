@@ -336,55 +336,70 @@ async function initWhatsApp() {
     }
 }
 
-// Reconexão segura sem apagar autenticação
-async function safeReconnect() {
+// Reconexão segura assíncrona sem travar Express
+function safeReconnect() {
     addLog('info', 'Solicitação manual de reconexão iniciada...');
     isReady = false;
     connectionState = 'INITIALIZING';
     currentQrCode = null;
     latestQr = null;
-    try {
-        if (client) {
-            await client.destroy().catch(e => console.log('Destroy notice:', e.message));
+    
+    setImmediate(async () => {
+        try {
+            if (client) {
+                await Promise.race([
+                    client.destroy(),
+                    new Promise(r => setTimeout(r, 3000))
+                ]).catch(e => console.log('Destroy notice:', e.message));
+            }
+        } catch (err) {
+            console.log('Erro ao destruir cliente:', err.message);
         }
-    } catch (err) {
-        console.log('Erro ao destruir cliente:', err.message);
-    }
-    setTimeout(() => {
-        initWhatsApp();
-    }, 2000);
+        client = null;
+        setTimeout(() => {
+            initWhatsApp();
+        }, 1000);
+    });
 }
 
-// Reset de sessão (remove credenciais antigas para forçar novo QR code)
-async function resetSession() {
+// Reset de sessão assíncrono (remove credenciais sem travar Express)
+function resetSession() {
     addLog('warning', 'Reset completo de sessão solicitado. Apagando credenciais salvas...');
     isReady = false;
     connectionState = 'INITIALIZING';
     currentQrCode = null;
     latestQr = null;
-    try {
-        if (client) {
-            await client.destroy().catch(e => console.log('Destroy notice:', e.message));
+
+    setImmediate(async () => {
+        try {
+            if (client) {
+                await Promise.race([
+                    client.destroy(),
+                    new Promise(r => setTimeout(r, 3000))
+                ]).catch(e => console.log('Destroy notice:', e.message));
+            }
+        } catch (err) {
+            console.log('Erro ao destruir cliente:', err.message);
         }
-    } catch (err) {
-        console.log('Erro ao destruir cliente:', err.message);
-    }
-    const authPath = path.join(__dirname, '.wwebjs_auth');
-    const cachePath = path.join(__dirname, '.wwebjs_cache');
-    try {
-        if (fs.existsSync(authPath)) {
-            fs.rmSync(authPath, { recursive: true, force: true });
+        client = null;
+
+        const authPath = path.join(__dirname, '.wwebjs_auth');
+        const cachePath = path.join(__dirname, '.wwebjs_cache');
+        try {
+            if (fs.existsSync(authPath)) {
+                fs.rmSync(authPath, { recursive: true, force: true });
+            }
+            if (fs.existsSync(cachePath)) {
+                fs.rmSync(cachePath, { recursive: true, force: true });
+            }
+            addLog('info', 'Arquivos de sessão antigos removidos do disco.');
+        } catch (err) {
+            addLog('error', 'Erro ao remover diretório de sessão', err.message);
         }
-        if (fs.existsSync(cachePath)) {
-            fs.rmSync(cachePath, { recursive: true, force: true });
-        }
-        addLog('info', 'Arquivos de sessão antigos removidos do disco.');
-    } catch (err) {
-        addLog('error', 'Erro ao remover diretório de sessão', err.message);
-    }
-    setTimeout(() => {
-        initWhatsApp();
-    }, 2000);
+        setTimeout(() => {
+            initWhatsApp();
+        }, 1000);
+    });
 }
 
 // Inicia o processo
@@ -534,13 +549,13 @@ app.get('/status', (req, res) => {
 });
 
 // Solicita reconexão manual
-app.post('/reconnect', async (req, res) => {
+app.post('/reconnect', (req, res) => {
     safeReconnect();
     return res.status(200).json({ success: true, message: 'Reconexão iniciada' });
 });
 
 // Solicita reset da sessão (novo QR Code)
-app.post('/reset-session', async (req, res) => {
+app.post('/reset-session', (req, res) => {
     resetSession();
     return res.status(200).json({ success: true, message: 'Reset de sessão iniciado' });
 });
