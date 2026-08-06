@@ -9,7 +9,6 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { CategoriesModal } from "@/components/CategoriesModal";
 import { CouponsModal } from "@/components/CouponsModal";
 import { SplashScreen } from "@/components/SplashScreen";
-import { ShoppingAssistant } from "@/components/ShoppingAssistant";
 import Script from "next/script";
 
 const montserrat = Montserrat({
@@ -95,7 +94,6 @@ export default function RootLayout({
           <CouponsModal />
           <MobileBottomNav />
           <InstallBanner />
-          <ShoppingAssistant />
         </AuthProvider>
         <Script
           src="https://accounts.google.com/gsi/client"
