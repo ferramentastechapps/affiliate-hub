@@ -59,17 +59,15 @@ export function PriceComparator({ productLinks = [], legacyLinks, currentPrice, 
       }
     }
 
-    // Fallback para links legados
+    // Fallback para links legados — só campos de plataformas conhecidas
     if (legacyLinks) {
       const legacyMap: Record<string, string | null | undefined> = legacyLinks as any;
       for (const [key, url] of Object.entries(legacyMap)) {
+        // Ignora campos internos do Prisma que não são plataformas
+        if (!PLATFORM_META[key]) continue;
         if (url && !seen.has(key)) {
           seen.add(key);
-          const meta = PLATFORM_META[key] || {
-            label: key,
-            logo: `https://www.google.com/s2/favicons?domain=${key}.com&sz=64`,
-            color: "#ff334b",
-          };
+          const meta = PLATFORM_META[key];
           result.push({ platform: key, url, ...meta });
         }
       }

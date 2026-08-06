@@ -158,20 +158,41 @@ export function ProductDetail({ product }: { product: Product }) {
     window.open(`https://wa.me/?text=${text}`, '_blank');
   }
 
-  // Determine target platform
+  // Determine target platform — prefer productLinks over legacy links
+  const PLATFORM_LABELS: Record<string, string> = {
+    amazon: 'Amazon',
+    mercadoLivre: 'Mercado Livre',
+    shopee: 'Shopee',
+    aliexpress: 'AliExpress',
+    tiktok: 'TikTok',
+    magalu: 'Magalu',
+    kabum: 'KaBuM',
+    netshoes: 'Netshoes',
+  };
+  const KNOWN_LINK_FIELDS = Object.keys(PLATFORM_LABELS);
+
   let targetUrl = "";
   let platformName = "";
-  if (product.links?.amazon) { targetUrl = product.links.amazon; platformName = "Amazon"; }
-  else if (product.links?.mercadoLivre) { targetUrl = product.links.mercadoLivre; platformName = "Mercado Livre"; }
-  else if (product.links?.shopee) { targetUrl = product.links.shopee; platformName = "Shopee"; }
-  else if (product.links?.aliexpress) { targetUrl = product.links.aliexpress; platformName = "AliExpress"; }
-  else if (product.links?.tiktok) { targetUrl = product.links.tiktok; platformName = "TikTok"; }
-  else {
-    const values = Object.entries(product.links || {});
-    const firstValid = values.find(([k, v]) => typeof v === 'string' && v.length > 0);
-    if (firstValid) {
-      platformName = firstValid[0];
-      targetUrl = firstValid[1] as string;
+
+  // 1. Try productLinks (newer, more complete)
+  if (product.productLinks && product.productLinks.length > 0) {
+    const pl = product.productLinks[0];
+    const url = pl.generatedAffiliateUrl || pl.affiliateUrl || pl.sourceUrl;
+    if (url) {
+      targetUrl = url;
+      platformName = PLATFORM_LABELS[pl.platform] || pl.platform;
+    }
+  }
+
+  // 2. Fallback to known legacy link fields only
+  if (!targetUrl && product.links) {
+    for (const key of KNOWN_LINK_FIELDS) {
+      const val = (product.links as any)[key];
+      if (typeof val === 'string' && val.length > 0) {
+        targetUrl = val;
+        platformName = PLATFORM_LABELS[key] || key;
+        break;
+      }
     }
   }
 
