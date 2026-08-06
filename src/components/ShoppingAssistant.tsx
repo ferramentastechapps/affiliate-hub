@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatCircle, X, PaperPlaneRight, Sparkle, User, CaretDown } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 type Message = {
   role: "user" | "assistant";
@@ -10,6 +11,7 @@ type Message = {
 };
 
 export function ShoppingAssistant() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -103,15 +105,13 @@ export function ShoppingAssistant() {
       lastIndex = regex.lastIndex;
     }
 
-    if (lastIndex < content.length) {
-      parts.push(content.substring(lastIndex));
-    }
-
     return parts.length > 0 ? parts : content;
   };
 
+  if (pathname?.startsWith("/admin")) return null;
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-24 right-5 md:bottom-6 md:right-6 z-50 flex flex-col items-end">
       {/* Janela de Chat */}
       <AnimatePresence>
         {isOpen && (

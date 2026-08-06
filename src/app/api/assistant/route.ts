@@ -54,26 +54,59 @@ OFERTAS ATIVAS DO SITE ECONOMIZEI:
 ${productsContext || 'Nenhuma oferta ativa no momento.'}
 `;
 
-    // 3. Chamar Gemini
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: systemInstruction,
-    });
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY;
 
-    // Formatar histórico para o Gemini (roles suportados: user, model)
-    const geminiHistory = messages.map((m: any) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
+    let responseText = '';
 
-    // Remove a última mensagem para enviar como o prompt atual
-    const currentMessage = geminiHistory.pop();
-    const chat = model.startChat({
-      history: geminiHistory,
-    });
+    if (apiKey) {
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          systemInstruction: systemInstruction,
+        });
 
-    const result = await chat.sendMessage(currentMessage?.parts[0]?.text || 'Olá!');
-    const responseText = result.response.text();
+        // Formatar histórico para o Gemini (roles suportados: user, model)
+        const geminiHistory = messages.map((m: any) => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        }));
+
+        // Remove a última mensagem para enviar como o prompt atual
+        const currentMessage = geminiHistory.pop();
+        const chat = model.startChat({
+          history: geminiHistory,
+        });
+
+        const result = await chat.sendMessage(currentMessage?.parts[0]?.text || 'Olá!');
+        responseText = result.response.text();
+      } catch (geminiError: any) {
+        console.warn('[Assistant API] Gemini offline ou erro na API, usando busca nativa:', geminiError.message);
+      }
+    }
+
+    // Fallback inteligente caso Gemini não responda ou chave não esteja configurada
+    if (!responseText) {
+      const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
+      const queryWords = lastUserMsg.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+
+      const matchedProducts = activeProducts.filter((p) => {
+        const nameLower = p.name.toLowerCase();
+        const catLower = (p.category || '').toLowerCase();
+        const descLower = (p.description || '').toLowerCase();
+        return queryWords.some((word: string) => nameLower.includes(word) || catLower.includes(word) || descLower.includes(word));
+      }).slice(0, 4);
+
+      if (matchedProducts.length > 0) {
+        responseText = `Encontrei as seguintes ofertas relevantes no Economizei:\n\n` +
+          matchedProducts.map((p) => `• [${p.name}](/produto/${p.shortId}) por R$ ${p.price ? p.price.toFixed(2).replace('.', ',') : 'Ver preço'}`).join('\n\n') +
+          `\n\nClique no produto para conferir os detalhes e comprar com o melhor preço!`;
+      } else {
+        const topProducts = activeProducts.slice(0, 3);
+        responseText = `Não encontrei exatamente esse item na busca direta, mas confira as melhores ofertas ativas do momento:\n\n` +
+          topProducts.map((p) => `• [${p.name}](/produto/${p.shortId}) por R$ ${p.price ? p.price.toFixed(2).replace('.', ',') : 'Ver preço'}`).join('\n\n');
+      }
+    }
 
     return NextResponse.json({ response: responseText });
   } catch (error: any) {
