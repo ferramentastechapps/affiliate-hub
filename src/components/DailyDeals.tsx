@@ -525,11 +525,37 @@ export function DailyDeals() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Badge de Temperatura em Graus °🔥 */}
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-black text-[10px] border shadow-sm ${dealTemp.badgeBgClass}`}>
-                      <Flame size={12} weight="fill" className="animate-pulse" />
-                      <span>{dealTemp.formattedTemperature}</span>
-                    </span>
+                    {/* Etiqueta do Produto (EM ALTA, DESTAQUE, MENOR PREÇO, CUPOM ATIVO...) */}
+                    {(() => {
+                      let tagLabel = "DESTAQUE";
+                      let TagIcon = Star;
+                      let tagStyle = "bg-blue-500/15 text-blue-400 border-blue-500/30";
+
+                      if (displayCoupon) {
+                        tagLabel = "CUPOM ATIVO";
+                        TagIcon = Tag;
+                        tagStyle = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+                      } else if (discount >= 40) {
+                        tagLabel = "IMPERDÍVEL";
+                        TagIcon = Sparkle;
+                        tagStyle = "bg-purple-500/15 text-purple-400 border-purple-500/30";
+                      } else if (discount >= 20 || (product._count?.likes || 0) >= 3 || (product.clicks || 0) >= 15) {
+                        tagLabel = "EM ALTA";
+                        TagIcon = Flame;
+                        tagStyle = "bg-rose-500/15 text-rose-400 border-rose-500/30";
+                      } else if (discount > 0) {
+                        tagLabel = "MENOR PREÇO";
+                        TagIcon = TrendDown;
+                        tagStyle = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+                      }
+
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-black text-[10px] border shadow-sm tracking-tight ${tagStyle}`}>
+                          <TagIcon size={12} weight="fill" />
+                          <span>{tagLabel}</span>
+                        </span>
+                      );
+                    })()}
                     <span className="text-[#8e92a4] text-[10px] flex items-center gap-1">
                       <Clock size={10} weight="bold" /> {getTimeAgo(product.createdAt)}
                     </span>
