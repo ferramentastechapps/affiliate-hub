@@ -48,6 +48,18 @@ export function AiDealAssistant() {
     }
   }, [messages, isOpen]);
 
+  useEffect(() => {
+    const handleOpenAiAssistant = (e: Event) => {
+      const customEvent = e as CustomEvent<{ query?: string }>;
+      setIsOpen(true);
+      if (customEvent.detail?.query && customEvent.detail.query.trim()) {
+        handleSendMessage(customEvent.detail.query);
+      }
+    };
+    window.addEventListener("open-ai-assistant", handleOpenAiAssistant);
+    return () => window.removeEventListener("open-ai-assistant", handleOpenAiAssistant);
+  }, []);
+
   const quickPrompts = [
     "🔥 Melhores promoções de hoje",
     "📱 Smartphones até R$ 2.000",

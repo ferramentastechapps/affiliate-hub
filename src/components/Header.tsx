@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AuthButton } from "./AuthButton";
 import { AuthPanel } from "./AuthPanel";
 import { useState, useEffect } from "react";
-import { MagnifyingGlass, X } from "@phosphor-icons/react";
+import { MagnifyingGlass, X, Robot } from "@phosphor-icons/react";
 import { NotificationPreferencesModal } from "./NotificationPreferencesModal";
 import { usePathname } from "next/navigation";
 
@@ -21,6 +21,10 @@ export function Header() {
   const handleSearchChange = (val: string) => {
     setSearchVal(val);
     window.dispatchEvent(new CustomEvent("search-change", { detail: { query: val } }));
+  };
+
+  const handleOpenAiAssistant = () => {
+    window.dispatchEvent(new CustomEvent("open-ai-assistant", { detail: { query: searchVal } }));
   };
 
   useEffect(() => {
@@ -75,7 +79,7 @@ export function Header() {
             </AnimatePresence>
 
             {/* Ações direitas */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               {!mobileSearchOpen && (
                 <button
                   onClick={() => setMobileSearchOpen(true)}
@@ -85,6 +89,17 @@ export function Header() {
                   <MagnifyingGlass size={18} weight="bold" />
                 </button>
               )}
+
+              {/* Botão IA no Mobile */}
+              <button
+                type="button"
+                onClick={handleOpenAiAssistant}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white border border-white/20 shadow-md shrink-0 hover:brightness-110 transition-all cursor-pointer"
+                title="Assistente de Ofertas por IA"
+              >
+                <Robot size={18} weight="fill" />
+              </button>
+
               <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
             </div>
           </div>
@@ -102,24 +117,37 @@ export function Header() {
               <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-12 w-auto object-contain" />
             </motion.a>
 
-            {/* Barra de Busca */}
-            <form onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} className="relative w-full max-w-[500px]">
-              <input
-                type="search"
-                inputMode="search"
-                enterKeyHint="search"
-                value={searchVal}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full bg-white/5 border border-border-custom hover:border-white/10 focus:border-accent/50 focus:bg-white/8 focus:shadow-[0_0_0_3px_rgba(255,51,75,0.1)] rounded-xl py-2 pl-4 pr-11 text-white text-sm placeholder-text-secondary outline-none transition-all duration-200 appearance-none"
-                placeholder="Buscar um produto..."
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              </span>
-            </form>
+            {/* Barra de Busca + Botão IA Integrados */}
+            <div className="flex items-center gap-2 w-full max-w-[540px]">
+              <form onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} className="relative flex-1">
+                <input
+                  type="search"
+                  inputMode="search"
+                  enterKeyHint="search"
+                  value={searchVal}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full bg-white/5 border border-border-custom hover:border-white/10 focus:border-rose-500 focus:bg-white/8 focus:shadow-[0_0_0_3px_rgba(255,51,75,0.1)] rounded-xl py-2 pl-4 pr-11 text-white text-sm placeholder-text-secondary outline-none transition-all duration-200 appearance-none"
+                  placeholder="Buscar um produto..."
+                />
+                <button 
+                  type="submit"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-white transition-colors cursor-pointer"
+                >
+                  <MagnifyingGlass size={18} weight="bold" />
+                </button>
+              </form>
+
+              {/* Botão Assistente IA no Header */}
+              <button
+                type="button"
+                onClick={handleOpenAiAssistant}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:brightness-110 text-white font-black text-xs shadow-[0_0_15px_rgba(244,63,94,0.4)] border border-white/20 shrink-0 transition-all cursor-pointer"
+                title="Pedir ajuda para o Assistente por IA"
+              >
+                <Robot size={18} weight="fill" className="animate-bounce" />
+                <span className="hidden lg:inline">Assistente IA</span>
+              </button>
+            </div>
 
             {/* Nav + Auth */}
             <div className="flex items-center gap-6">
