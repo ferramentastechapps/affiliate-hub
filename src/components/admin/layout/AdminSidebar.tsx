@@ -19,7 +19,8 @@ import {
   Handshake,
   GearSix,
   Brain,
-  ListDashes
+  ListDashes,
+  Camera
 } from '@phosphor-icons/react';
 
 export function AdminSidebar() {
@@ -67,6 +68,7 @@ export function AdminSidebar() {
         { name: 'WhatsApp', path: '/admin/whatsapp', icon: ChatCircleDots },
         { name: 'Filas', path: '/admin/queues', icon: ListDashes },
         { name: 'IA Criativa', path: '/admin/ai-studio', icon: Brain },
+        { name: 'Social Studio', path: '/admin/social-studio', icon: Camera },
         { name: 'Notificações', path: '/admin/notifications', icon: Bell },
       ]
     },

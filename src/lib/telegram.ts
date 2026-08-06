@@ -253,7 +253,7 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   // Limpar texto padrão do scraper
   const descLimpa = descSemCupom
     .split('\n')
-    .filter(line => !/^Oferta (na|no) /i.test(line.trim()))
+    .filter((line: string) => !/^Oferta (na|no) /i.test(line.trim()))
     .join('\n')
     .trim();
   if (descLimpa && descLimpa !== 'Oferta encaminhada de grupos') {

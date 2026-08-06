@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useState } from "react";
-import { ProductLinks } from "./PlatformModal";
+import { ProductLinks } from "@/types/product";
 
 export type Product = {
   id: string;

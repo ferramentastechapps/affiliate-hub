@@ -26,15 +26,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [] });
     }
 
-    const orConditions = [];
+    const orConditions: any[] = [];
 
     if (categories.length > 0) {
       orConditions.push({ category: { in: categories } });
     }
 
     for (const kw of keywords) {
-      orConditions.push({ name: { contains: kw, mode: 'insensitive' } });
-      orConditions.push({ description: { contains: kw, mode: 'insensitive' } });
+      orConditions.push({ name: { contains: kw, mode: 'insensitive' as const } });
+      orConditions.push({ description: { contains: kw, mode: 'insensitive' as const } });
     }
 
     const products = await prisma.product.findMany({

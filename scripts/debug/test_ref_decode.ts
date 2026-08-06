@@ -16,8 +16,8 @@ function testDecode() {
       console.log(buf.toString('utf8').substring(0, 150));
       console.log('As Hex (first 20 bytes):');
       console.log(buf.toString('hex').substring(0, 40));
-    } catch (err) {
-      console.log('Base64 decode failed:', err.message);
+    } catch (err: any) {
+      console.log('Base64 decode failed:', err?.message);
     }
     
     // Try parts (split by '.')
@@ -27,8 +27,8 @@ function testDecode() {
       try {
         const payload = Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
         console.log('Part 2 payload:', payload);
-      } catch (err) {
-        console.log('Part 2 base64 decode failed:', err.message);
+      } catch (err: any) {
+        console.log('Part 2 base64 decode failed:', err?.message);
       }
     }
     console.log('-------------------------------------');

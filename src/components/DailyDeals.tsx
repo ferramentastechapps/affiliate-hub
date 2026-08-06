@@ -37,6 +37,8 @@ import {
 } from "@phosphor-icons/react";
 
 import { Product } from "@/types/product";
+import { calculateDealTemperature } from "@/lib/deal-temperature";
+import { PriceBadge } from "./PriceBadge";
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
   "Todas": Flame,
@@ -492,6 +494,17 @@ export function DailyDeals() {
 
             const badgeStyle = storeBadgeConfig[platformKey] || { bg: "#ff334b", text: "#ffffff", label: mainPlatformText };
 
+            const dealTemp = calculateDealTemperature({
+              price,
+              originalPrice,
+              likesCount: product._count?.likes,
+              dislikesCount: product._count?.dislikes,
+              clicksCount: product.clicks,
+              hasCoupon: !!displayCoupon,
+              isLowestPriceEver: (product as any).isLowestPriceEver,
+              createdAt: product.createdAt
+            });
+
             return (
               <motion.div
                 key={product.id}
@@ -501,7 +514,7 @@ export function DailyDeals() {
                 onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
                 className="group cursor-pointer glass-3d-card rounded-[16px] overflow-hidden flex flex-col relative z-0"
               >
-                {/* Header (Store Info) */}
+                {/* Header (Store Info & Termômetro) */}
                 <div className="p-3 pb-2 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
                   <div className="flex items-center gap-2">
                     <img src={mainPlatformLogo} className="w-5 h-5 rounded-full object-contain" />
@@ -510,9 +523,17 @@ export function DailyDeals() {
                       <ShieldCheck size={14} weight="fill" className="text-blue-500" />
                     </span>
                   </div>
-                  <span className="text-[#8e92a4] text-[10px] flex items-center gap-1">
-                    <Clock size={10} weight="bold" /> {getTimeAgo(product.createdAt)}
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {/* Badge de Temperatura em Graus °🔥 */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-black text-[10px] border shadow-sm ${dealTemp.badgeBgClass}`}>
+                      <Flame size={12} weight="fill" className="animate-pulse" />
+                      <span>{dealTemp.formattedTemperature}</span>
+                    </span>
+                    <span className="text-[#8e92a4] text-[10px] flex items-center gap-1">
+                      <Clock size={10} weight="bold" /> {getTimeAgo(product.createdAt)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Middle (Image + Info) */}
