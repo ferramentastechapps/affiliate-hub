@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Sua mensagem não pode estar vazia." }, { status: 400 });
     }
 
-    // 1. Buscar produtos ativos recentes no banco (até 30 itens mais recentes)
+    // 1. Buscar produtos ativos recentes no banco (até 30 itens)
     const activeProducts = await prisma.product.findMany({
       where: { status: "active" },
       orderBy: { createdAt: "desc" },
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
         category: true,
         price: true,
         originalPrice: true,
+        imageUrl: true,
         storeName: true,
         coupons: {
           select: { code: true, discount: true },
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // 3. Montar o contexto para a IA
+    // 3. Montar contexto para a IA
     const catalogContext = activeProducts.map(p => {
       const discount = p.originalPrice && p.price ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
       const couponCode = p.coupons?.[0]?.code ? ` [Cupom: ${p.coupons[0].code}]` : '';
@@ -55,58 +56,87 @@ export async function POST(req: NextRequest) {
     }).join("\n");
 
     const promptText = `Você é o "Assistente Economizei", o agente inteligente de ofertas e cupons da nossa plataforma.
-Sua missão é responder à dúvida do usuário de forma super amigável, direta, prestativa e entusiasmada (com tom natural brasileiro).
+Sua missão é responder à dúvida do usuário de forma amigável, direta e empolgada.
 
-Catálogo de Produtos Ativos no Nosso Banco de Dados:
+Catálogo de Produtos Ativos no Nosso Banco:
 ${catalogContext || "Nenhum produto em estoque no momento."}
 
 Cupons Disponíveis:
 ${couponsContext || "Nenhum cupom ativo no momento."}
 
-Instruções Importantes:
-1. Analise o pedido do usuário: "${query}"
-2. Se o usuário estiver procurando um tipo específico de produto ou cupom, identifique até 3 produtos mais adequados do catálogo acima.
-3. Responda em formato JSON com o seguinte esquema estrito:
+Instruções:
+1. Analise a mensagem do usuário: "${query}"
+2. Se o usuário busca ofertas ou cupons, escolha até 3 produtos mais relevantes do catálogo acima.
+3. Responda estritamente em JSON com o formato:
 {
-  "replyText": "Sua resposta formatada amigável em Markdown com emojis. Seja direto e diga por que os produtos recomendados valem a pena.",
-  "recommendedProductIds": ["id_ou_shortId_do_produto_1", "id_ou_shortId_do_produto_2"]
-}
+  "replyText": "Resposta curta e amigável em Markdown recomendando as ofertas.",
+  "recommendedProductIds": ["id_ou_shortId_1", "id_ou_shortId_2"]
+}`;
 
-Observação: Inclua apenas IDs de produtos que REALMENTE estejam no catálogo fornecido acima. Se nenhum for relevante, retorne recommendedProductIds como [].`;
+    let replyText = "";
+    let recommendedIds: string[] = [];
 
-    // 4. Acionar Gemini via GEMINI_API_KEY
+    // 4. Chamada ao Gemini com fallback inteligente
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-        generationConfig: { responseMimeType: "application/json" }
-      });
-
-      const aiRes = await model.generateContent(promptText);
-      const rawText = aiRes.response.text();
       try {
-        const parsed = JSON.parse(rawText);
-        return NextResponse.json(parsed);
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: "gemini-2.5-flash",
+          generationConfig: { responseMimeType: "application/json" }
+        });
+
+        const aiRes = await model.generateContent(promptText);
+        const parsed = JSON.parse(aiRes.response.text());
+        replyText = parsed.replyText || "";
+        recommendedIds = Array.isArray(parsed.recommendedProductIds) ? parsed.recommendedProductIds.map(String) : [];
       } catch (err) {
-        console.warn("[AI Assistant] Resposta não-JSON do Gemini, tentando parse alternativo", rawText);
+        console.warn("[AI Assistant] Gemini fallback acionado", err);
       }
     }
 
-    // Fallback simples caso IA não esteja configurada ou falhe
+    // 5. Filtro de produtos recomendados direto no Backend
     const lowerQuery = query.toLowerCase();
-    const matches = activeProducts.filter(p => p.name.toLowerCase().includes(lowerQuery) || p.category.toLowerCase().includes(lowerQuery));
-    const matchedIds = matches.slice(0, 3).map(p => String(p.shortId || p.id));
+    let matchedProducts = activeProducts.filter(p => 
+      recommendedIds.includes(p.id) || 
+      recommendedIds.includes(String(p.shortId))
+    );
+
+    // Se a IA não retornou IDs válidos, fazer busca por palavra-chave no catálogo
+    if (matchedProducts.length === 0) {
+      const terms = lowerQuery.split(/\s+/).filter(t => t.length > 2);
+      matchedProducts = activeProducts.filter(p => {
+        if (lowerQuery.includes("promoc") || lowerQuery.includes("oferta") || lowerQuery.includes("hoje")) return true;
+        const text = `${p.name} ${p.category} ${p.storeName || ''}`.toLowerCase();
+        return terms.some(term => text.includes(term));
+      }).slice(0, 3);
+    }
+
+    if (!replyText) {
+      replyText = matchedProducts.length > 0 
+        ? `Separei as melhores ofertas para o seu pedido! Confira os destaques abaixo:`
+        : `Confira as promoções em destaque disponíveis no momento:`;
+    }
+
+    // Formatar produtos para o frontend com todos os campos visuais necessários
+    const recommendedProducts = matchedProducts.map(p => ({
+      id: p.id,
+      shortId: p.shortId,
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      originalPrice: p.originalPrice,
+      imageUrl: p.imageUrl,
+      storeName: p.storeName
+    }));
 
     return NextResponse.json({
-      replyText: matches.length > 0 
-        ? `Encontrei ${matches.length} oferta(s) incríveis relacionadas ao que você buscou! Confira abaixo os detalhes:`
-        : `Não encontrei nenhuma oferta exatamente igual a "${query}" no momento, mas confira as nossas promoções em destaque na home!`,
-      recommendedProductIds: matchedIds
+      replyText,
+      recommendedProducts
     });
 
   } catch (error: any) {
     console.error("[AI Assistant API Error]", error);
-    return NextResponse.json({ error: "Erro ao processar consulta com o assistente de ofertas." }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao processar mensagem do assistente." }, { status: 500 });
   }
 }
