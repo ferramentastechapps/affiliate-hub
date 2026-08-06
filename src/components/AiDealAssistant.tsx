@@ -136,24 +136,45 @@ export function AiDealAssistant() {
 
   return (
     <>
-      {/* Botão Flutuante Principal — Ocultado no Scroll Down & Posicionado mais alto */}
+      {/* Cápsula de Busca IA Flutuante (Design Ultra Profissional Glassmorphic) */}
       <AnimatePresence>
         {isButtonVisible && !isOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-20 md:bottom-12 right-4 md:right-8 z-40 flex items-center gap-2.5 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black px-4 py-3 rounded-full shadow-[0_0_30px_rgba(244,63,94,0.5)] border-2 border-white/20 hover:brightness-110 transition-all cursor-pointer"
+          <motion.div
+            initial={{ y: 30, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 30, opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-20 md:bottom-10 right-4 md:right-8 z-40"
           >
-            <div className="relative flex items-center justify-center">
-              <Robot size={24} weight="fill" className="animate-bounce text-white" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-zinc-950"></span>
-            </div>
-            <span className="text-xs md:text-sm font-black tracking-tight">O que você procura hoje?</span>
-          </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setIsOpen(true)}
+              className="group flex items-center gap-3 bg-zinc-950/85 hover:bg-zinc-900/95 backdrop-blur-2xl text-white px-4 py-2.5 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/15 hover:border-rose-500/50 transition-all duration-300 cursor-pointer"
+            >
+              {/* Ícone com Gradiente Neon & Indicador Pulsante */}
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 via-rose-600 to-amber-500 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.4)] relative shrink-0">
+                <Sparkle size={18} weight="fill" className="text-white animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-zinc-950"></span>
+              </div>
+
+              {/* Texto Principal com Estilização Elegante */}
+              <div className="flex flex-col text-left">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider text-rose-400 flex items-center gap-1">
+                  Busca Inteligente <Sparkle size={10} weight="fill" />
+                </span>
+                <span className="text-xs md:text-sm font-bold text-zinc-100 group-hover:text-white transition-colors">
+                  O que você procura hoje?
+                </span>
+              </div>
+
+              {/* Badge da IA / Ícone de Seta de Atalho */}
+              <div className="ml-1 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-zinc-400 group-hover:text-rose-400 group-hover:border-rose-500/30 text-xs font-black transition-all flex items-center gap-1">
+                <span>IA</span>
+                <ArrowRight size={12} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
 
