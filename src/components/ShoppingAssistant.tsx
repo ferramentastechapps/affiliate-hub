@@ -111,7 +111,7 @@ export function ShoppingAssistant() {
   if (pathname?.startsWith("/admin")) return null;
 
   return (
-    <div className="fixed bottom-24 right-5 md:bottom-6 md:right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-18 right-4 md:bottom-6 md:right-6 z-50 flex flex-col items-end">
       {/* Janela de Chat */}
       <AnimatePresence>
         {isOpen && (
@@ -120,7 +120,7 @@ export function ShoppingAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            className="w-[92vw] sm:w-[400px] h-[550px] bg-[#0c0d12]/95 border border-white/5 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl mb-4"
+            className="w-[92vw] sm:w-[400px] h-[520px] bg-[#0c0d12]/95 border border-white/5 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl mb-3"
           >
             {/* Header */}
             <div className="p-5 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
@@ -230,9 +230,9 @@ export function ShoppingAssistant() {
       {/* Botão de Abrir/Fechar */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-[#ff334b] hover:bg-[#d9223a] text-white rounded-full flex items-center justify-center shadow-xl shadow-[#ff334b]/20 hover:scale-105 active:scale-95 transition-all"
+        className="w-12 h-12 md:w-14 md:h-14 bg-[#ff334b] hover:bg-[#d9223a] text-white rounded-full flex items-center justify-center shadow-xl shadow-[#ff334b]/20 hover:scale-105 active:scale-95 transition-all"
       >
-        <ChatCircle size={28} weight="fill" />
+        <ChatCircle size={24} weight="fill" className="md:w-[28px] md:h-[28px]" />
       </button>
     </div>
   );
