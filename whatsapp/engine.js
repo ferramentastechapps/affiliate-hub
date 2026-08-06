@@ -1,8 +1,12 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const qrcodeTerminal = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -16,13 +20,35 @@ const GROUP_NAME = process.env.WHATSAPP_GROUP_NAME || "";
 const GROUP_ID = process.env.WHATSAPP_GROUP_ID || "";
 const DELAY_MINUTES = parseInt(process.env.WHATSAPP_DELAY_MINUTES || "30", 10);
 
-const fs = require('fs');
-
 // Global State
 let isReady = false;
-let latestQr = null;
-let messageQueue = []; // array of { score: number, message: string }
+let connectionState = 'DISCONNECTED'; // 'DISCONNECTED' | 'INITIALIZING' | 'NEED_QR' | 'CONNECTED'
+let latestQr = null; // Raw string QR code for legacy /qr endpoint
+let currentQrCode = null; // DataURL string (data:image/png;base64,...) for Admin UI
+let messageQueue = []; // array of { score: number, message: string, imageUrl?: string }
 let lastFlushTime = Date.now();
+let lastError = null;
+let readyAt = null;
+let flushCount = 0;
+let errorCount = 0;
+let isFlushing = false;
+const logsBuffer = []; // array of { timestamp, level, message, details }
+
+// Ring buffer logger
+function addLog(level, message, details = null) {
+    const entry = {
+        timestamp: new Date().toISOString(),
+        level, // 'info' | 'warning' | 'error' | 'critical'
+        message,
+        details: details ? (typeof details === 'object' ? JSON.stringify(details) : String(details)) : null
+    };
+    logsBuffer.push(entry);
+    if (logsBuffer.length > 50) {
+        logsBuffer.shift();
+    }
+    const icon = level === 'critical' ? '🔴' : level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
+    console.log(`${icon} [${entry.timestamp}] ${message}`, details ? details : '');
+}
 
 const STATE_FILE = path.join(__dirname, 'state.json');
 
@@ -36,6 +62,7 @@ function saveState() {
         fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
     } catch (err) {
         console.error('❌ Erro ao salvar estado em disco:', err.message);
+        addLog('error', 'Erro ao salvar estado em disco', err.message);
     }
 }
 
@@ -48,12 +75,14 @@ function loadState() {
             messageQueue = state.messageQueue || [];
             lastFlushTime = state.lastFlushTime || Date.now();
             console.log(`📂 Estado carregado do disco: ${messageQueue.length} oferta(s) pendente(s), último disparo há ${Math.round((Date.now() - lastFlushTime) / 60000)} minutos.`);
+            addLog('info', `Estado carregado do disco: ${messageQueue.length} ofertas pendentes.`);
         } else {
             messageQueue = [];
             lastFlushTime = Date.now();
         }
     } catch (err) {
         console.error('❌ Erro ao carregar estado do disco:', err.message);
+        addLog('error', 'Erro ao carregar estado do disco', err.message);
         messageQueue = [];
         lastFlushTime = Date.now();
     }
@@ -61,9 +90,6 @@ function loadState() {
 
 // Carrega o estado salvo imediatamente no início
 loadState();
-
-const https = require('https');
-const http = require('http');
 
 /**
  * Baixa uma imagem via Node.js nativo (NÃO dentro do Puppeteer).
@@ -80,7 +106,6 @@ function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
                 },
                 timeout: timeoutMs
             }, (res) => {
-                // Seguir redirecionamentos (301/302)
                 if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                     return resolve(downloadImageAsBase64(res.headers.location, timeoutMs));
                 }
@@ -158,10 +183,13 @@ function getWebshareProxy(apiKey) {
 }
 
 // Declarar a variável client globalmente
-let client;
+let client = null;
 
 // Função assíncrona de inicialização do WhatsApp
 async function initWhatsApp() {
+    connectionState = 'INITIALIZING';
+    addLog('info', 'Inicializando serviço de WhatsApp...');
+
     let puppeteerArgs = [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -181,24 +209,32 @@ async function initWhatsApp() {
                 console.log(`✅ Usando proxy Webshare: ${proxy.proxy_address}:${proxy.port}`);
                 puppeteerArgs.push(`--proxy-server=http://${proxy.proxy_address}:${proxy.port}`);
                 proxyConfig = proxy;
+                addLog('info', `Proxy Webshare ativado: ${proxy.proxy_address}:${proxy.port}`);
             } else {
                 console.warn('⚠️ Nenhum proxy válido retornado pela Webshare. Iniciando sem proxy.');
             }
         } catch (err) {
             console.error('❌ Erro ao buscar proxy da Webshare. Iniciando sem proxy. Erro:', err.message);
+            addLog('warning', 'Falha ao obter proxy da Webshare. Iniciando sem proxy.', err.message);
         }
     } else {
         console.log('ℹ️ Proxy desativado ou API Key não configurada. Iniciando sem proxy.');
     }
 
+    const customChromePath = '/root/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
+    let puppeteerConfig = {
+        args: puppeteerArgs,
+        headless: true,
+        protocolTimeout: 120000
+    };
+
+    if (fs.existsSync(customChromePath)) {
+        puppeteerConfig.executablePath = customChromePath;
+    }
+
     let clientOptions = {
         authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
-        puppeteer: {
-            executablePath: '/root/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
-            args: puppeteerArgs,
-            headless: true,
-            protocolTimeout: 120000
-        },
+        puppeteer: puppeteerConfig,
         webVersionCache: {
             type: 'none'
         }
@@ -213,39 +249,70 @@ async function initWhatsApp() {
 
     client = new Client(clientOptions);
 
-    client.on('qr', (qr) => {
-        latestQr = qr;
+    client.on('qr', async (qr) => {
         console.log('=========================================');
         console.log('📱 ESCANEIE O QR CODE ABAIXO NO WHATSAPP:');
-        console.log('👉 Ou abra no navegador: http://212.85.10.239:3006/qr');
+        qrcodeTerminal.generate(qr, { small: true });
         console.log('=========================================');
-        qrcode.generate(qr, { small: true });
+
+        latestQr = qr;
+        connectionState = 'NEED_QR';
+        isReady = false;
+        try {
+            currentQrCode = await QRCode.toDataURL(qr);
+        } catch (err) {
+            console.error('Erro ao converter QR Code para DataURL:', err.message);
+        }
+        addLog('warning', 'Novo QR Code gerado! Aguardando escaneamento no aplicativo WhatsApp.');
     });
 
     client.on('ready', () => {
-        latestQr = null;
         console.log('🤖 WhatsApp Engine Conectado e Pronto!');
         isReady = true;
+        connectionState = 'CONNECTED';
+        currentQrCode = null;
+        latestQr = null;
+        lastError = null;
+        readyAt = new Date().toISOString();
+        addLog('info', 'WhatsApp Engine conectado e pronto para uso.');
     });
 
     client.on('authenticated', () => {
         console.log('✅ Autenticado com sucesso!');
+        connectionState = 'INITIALIZING';
+        currentQrCode = null;
+        latestQr = null;
+        addLog('info', 'Sessão autenticada com sucesso.');
     });
 
     client.on('auth_failure', msg => {
         console.error('❌ Falha na autenticação:', msg);
+        isReady = false;
+        connectionState = 'DISCONNECTED';
+        currentQrCode = null;
+        latestQr = null;
+        lastError = `Falha na autenticação: ${msg}`;
+        errorCount++;
+        addLog('critical', 'Falha de autenticação do WhatsApp.', msg);
     });
 
     client.on('disconnected', (reason) => {
         console.log('🔌 WhatsApp desconectado. Motivo:', reason);
         isReady = false;
+        connectionState = 'DISCONNECTED';
+        currentQrCode = null;
+        latestQr = null;
+        lastError = `Desconectado: ${reason}`;
+        errorCount++;
+        addLog('error', `WhatsApp desconectado. Motivo: ${reason}`);
         console.log('♻️ Tentando reconectar em 30 segundos...');
         setTimeout(() => {
             console.log('🔄 Reconectando WhatsApp...');
             try {
-                client.initialize();
+                if (client) client.initialize();
             } catch (err) {
                 console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
+                addLog('error', 'Erro ao reinicializar cliente WhatsApp', err.message);
             }
         }, 30000);
     });
@@ -261,13 +328,71 @@ async function initWhatsApp() {
         }
     });
 
-    client.initialize();
+    try {
+        client.initialize();
+    } catch (err) {
+        console.error('❌ Erro durante client.initialize():', err.message);
+        addLog('critical', 'Erro ao inicializar cliente WhatsApp', err.message);
+    }
+}
+
+// Reconexão segura sem apagar autenticação
+async function safeReconnect() {
+    addLog('info', 'Solicitação manual de reconexão iniciada...');
+    isReady = false;
+    connectionState = 'INITIALIZING';
+    currentQrCode = null;
+    latestQr = null;
+    try {
+        if (client) {
+            await client.destroy().catch(e => console.log('Destroy notice:', e.message));
+        }
+    } catch (err) {
+        console.log('Erro ao destruir cliente:', err.message);
+    }
+    setTimeout(() => {
+        initWhatsApp();
+    }, 2000);
+}
+
+// Reset de sessão (remove credenciais antigas para forçar novo QR code)
+async function resetSession() {
+    addLog('warning', 'Reset completo de sessão solicitado. Apagando credenciais salvas...');
+    isReady = false;
+    connectionState = 'INITIALIZING';
+    currentQrCode = null;
+    latestQr = null;
+    try {
+        if (client) {
+            await client.destroy().catch(e => console.log('Destroy notice:', e.message));
+        }
+    } catch (err) {
+        console.log('Erro ao destruir cliente:', err.message);
+    }
+    const authPath = path.join(__dirname, '.wwebjs_auth');
+    const cachePath = path.join(__dirname, '.wwebjs_cache');
+    try {
+        if (fs.existsSync(authPath)) {
+            fs.rmSync(authPath, { recursive: true, force: true });
+        }
+        if (fs.existsSync(cachePath)) {
+            fs.rmSync(cachePath, { recursive: true, force: true });
+        }
+        addLog('info', 'Arquivos de sessão antigos removidos do disco.');
+    } catch (err) {
+        addLog('error', 'Erro ao remover diretório de sessão', err.message);
+    }
+    setTimeout(() => {
+        initWhatsApp();
+    }, 2000);
 }
 
 // Inicia o processo
 initWhatsApp();
 
-// Express Endpoint to receive messages from Python
+// ── Express Endpoints ──────────────────────────────────────────────────
+
+// Endpoint para receber ofertas do bot Python
 app.post('/send', (req, res) => {
     const { message, score, imageUrl } = req.body;
     
@@ -278,17 +403,17 @@ app.post('/send', (req, res) => {
     messageQueue.push({ message, score: score || 0, imageUrl });
     saveState();
     console.log(`📥 Nova oferta recebida no balde (Score: ${score}). Total no balde: ${messageQueue.length}`);
-
-    // Dispara imediatamente se o WhatsApp estiver conectado!
+    addLog('info', `Nova oferta recebida no balde (Score: ${score}). Total: ${messageQueue.length}`);
+    
     if (isReady) {
         console.log('⚡ Disparando oferta automaticamente para o WhatsApp...');
         setTimeout(() => flushBucket(), 500);
     }
-    
+
     return res.status(200).json({ success: true, queued: true });
 });
 
-// Express Endpoint para exibir o QR Code em página web
+// Endpoint legado para exibir o QR Code em HTML
 app.get('/qr', (req, res) => {
     if (isReady) {
         return res.send(`
@@ -382,73 +507,124 @@ app.get('/qr', (req, res) => {
     `);
 });
 
+// Status detalhado em JSON para o painel Admin
+app.get('/status', (req, res) => {
+    const brTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const currentHour = brTime.getHours();
+
+    return res.status(200).json({
+        isReady,
+        status: connectionState,
+        qrCode: currentQrCode,
+        queueLength: messageQueue.length,
+        queue: messageQueue.slice(0, 10),
+        lastFlushTime: lastFlushTime ? new Date(lastFlushTime).toISOString() : null,
+        flushCount,
+        errorCount,
+        lastError,
+        readyAt,
+        groupConfigured: {
+            name: GROUP_NAME || null,
+            id: GROUP_ID || null
+        },
+        delayMinutes: DELAY_MINUTES,
+        outsideSchedule: currentHour < 7,
+        logs: logsBuffer.slice(-30).reverse()
+    });
+});
+
+// Solicita reconexão manual
+app.post('/reconnect', async (req, res) => {
+    safeReconnect();
+    return res.status(200).json({ success: true, message: 'Reconexão iniciada' });
+});
+
+// Solicita reset da sessão (novo QR Code)
+app.post('/reset-session', async (req, res) => {
+    resetSession();
+    return res.status(200).json({ success: true, message: 'Reset de sessão iniciado' });
+});
+
+// Retorna histórico de logs
+app.get('/logs', (req, res) => {
+    return res.status(200).json({ logs: logsBuffer.slice(-50).reverse() });
+});
+
 // Diagnóstico: lista os grupos disponíveis
 app.get('/groups', async (req, res) => {
-    if (!isReady) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
+    if (!isReady || !client) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
     try {
         const chats = await client.getChats();
         const groups = chats.filter(c => c.isGroup).map(c => ({ name: c.name, id: c.id._serialized }));
         return res.status(200).json({ groups });
     } catch (err) {
+        addLog('error', 'Erro ao obter grupos do WhatsApp', err.message);
         return res.status(500).json({ error: err.message });
     }
 });
 
-let isFlushing = false;
-
-// ── Lógica do Balde (extraída em função reutilizável) ─────────────────────────
+// ── Lógica do Balde ───────────────────────────────────────────────────
 async function flushBucket() {
     if (isFlushing) {
         console.log('⏳ Disparo do balde já está em andamento. Aguardando...');
         return { skipped: true, reason: 'already_flushing' };
     }
-    if (!isReady) {
+    if (!isReady || !client) {
         console.log('⏳ WhatsApp ainda não está pronto. Pulando verificação do balde...');
         return { skipped: true, reason: 'not_ready' };
     }
 
+    const brTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const currentHour = brTime.getHours();
+
+    if (currentHour < 7) {
+        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Retendo ${messageQueue.length} oferta(s) para enviar às 07h.`);
+        return { skipped: true, reason: 'out_of_hours' };
+    }
+
+    if (messageQueue.length === 0) {
+        console.log('😴 Balde vazio. Nenhuma oferta para enviar agora.');
+        return { skipped: true, reason: 'empty' };
+    }
+
+    if (!GROUP_NAME && !GROUP_ID) {
+        console.log(`⚠️ WHATSAPP_GROUP_NAME e WHATSAPP_GROUP_ID estão vazios no .env. Esvaziando o balde (${messageQueue.length} ofertas) sem enviar.`);
+        addLog('warning', `Grupo não configurado no .env. Balde esvaziado (${messageQueue.length} ofertas).`);
+        messageQueue = [];
+        saveState();
+        return { skipped: true, reason: 'no_group_configured' };
+    }
+
     isFlushing = true;
+    console.log(`🔄 Analisando ${messageQueue.length} ofertas no balde...`);
+    
+    messageQueue.sort((a, b) => b.score - a.score);
+    const bestOffer = messageQueue.shift();
+
+    saveState();
+
+    const targetLabel = GROUP_ID ? `JID: ${GROUP_ID}` : `grupo '${GROUP_NAME}'`;
+    console.log(`🏆 Melhor oferta escolhida! Score: ${bestOffer.score}. Disparando para ${targetLabel}...`);
+    addLog('info', `Enviando melhor oferta (Score: ${bestOffer.score}) para ${targetLabel}...`);
+
     try {
-        while (messageQueue.length > 0) {
-            // Horário de Brasília
-            const brTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-            const currentHour = brTime.getHours();
+        let targetChatId = GROUP_ID;
 
-            if (currentHour < 7) {
-                console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Retendo ${messageQueue.length} oferta(s) para enviar às 07h.`);
-                break;
+        if (!targetChatId) {
+            console.log(`🔍 Buscando ID do grupo pelo nome '${GROUP_NAME}'...`);
+            const chats = await client.getChats();
+            const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
+            if (group) {
+                targetChatId = group.id._serialized;
             }
+        }
 
-            if (!GROUP_NAME && !GROUP_ID) {
-                console.log(`⚠️ WHATSAPP_GROUP_NAME e WHATSAPP_GROUP_ID estão vazios no .env. Retendo ${messageQueue.length} ofertas.`);
-                break;
-            }
-
-            console.log(`🔄 Analisando ${messageQueue.length} oferta(s) no balde...`);
-            
-            messageQueue.sort((a, b) => (b.score || 0) - (a.score || 0));
-            const bestOffer = messageQueue.shift(); // Remove from queue immediately
-            saveState();
-
-            const targetLabel = GROUP_ID ? `JID: ${GROUP_ID}` : `grupo '${GROUP_NAME}'`;
-            console.log(`🏆 Disparando oferta para ${targetLabel}...`);
-
-            let targetChatId = GROUP_ID;
-
-            if (!targetChatId) {
-                console.log(`🔍 Buscando ID do grupo pelo nome '${GROUP_NAME}'...`);
-                const chats = await client.getChats();
-                const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
-                if (group) {
-                    targetChatId = group.id._serialized;
-                }
-            }
-
-            if (!targetChatId) {
-                console.error(`❌ Grupo '${GROUP_NAME}' não encontrado!`);
-                break;
-            }
-
+        if (!targetChatId) {
+            const errStr = `Grupo '${GROUP_NAME}' não encontrado`;
+            console.error(`❌ ${errStr}! Tem certeza que este WhatsApp está no grupo?`);
+            addLog('error', errStr);
+            return { success: false, error: errStr };
+        } else {
             if (bestOffer.imageUrl) {
                 console.log(`🖼️ Baixando imagem via Node.js: ${bestOffer.imageUrl}`);
                 const imgData = await downloadImageAsBase64(bestOffer.imageUrl);
@@ -457,51 +633,63 @@ async function flushBucket() {
                     try {
                         const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
                         await client.sendMessage(targetChatId, media, { caption: bestOffer.message });
-                        console.log('🚀 Mensagem com imagem enviada com sucesso para o WhatsApp!');
+                        console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
+                        addLog('info', 'Mensagem com imagem enviada com sucesso!');
                     } catch (imgErr) {
                         console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
+                        addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', imgErr.message);
                         if (imgErr.message && imgErr.message.includes('timed out')) {
-                            console.log('🔄 Timeout no Puppeteer detectado. Forçando reconexão...');
+                            console.log('🔄 Timeout no Puppeteer detectado. Forçando reconexão antes do fallback...');
                             isReady = false;
+                            connectionState = 'INITIALIZING';
                             try { await client.destroy(); } catch (e) { /* ignora */ }
                             setTimeout(() => {
-                                console.log('🔄 Reconectando WhatsApp após timeout...');
-                                client.initialize();
+                                console.log('🔄 Reconectando WhatsApp após timeout de envio...');
+                                initWhatsApp();
                             }, 5000);
                         }
-                        await new Promise(r => setTimeout(r, 6000));
+                        await new Promise(r => setTimeout(r, 8000));
                         try {
                             await client.sendMessage(targetChatId, bestOffer.message);
-                            console.log('🚀 Mensagem (fallback somente texto) enviada com sucesso!');
+                            console.log('🚀 Mensagem (somente texto, fallback) enviada com sucesso!');
+                            addLog('info', 'Mensagem (fallback texto) enviada com sucesso!');
                         } catch (textErr) {
                             console.error('❌ Falha também no fallback texto:', textErr.message);
+                            addLog('error', 'Falha também no fallback de texto', textErr.message);
                         }
                     }
                 } else {
+                    console.log('⚠️ Imagem não disponível, enviando só texto.');
                     await client.sendMessage(targetChatId, bestOffer.message);
-                    console.log('🚀 Mensagem (somente texto) enviada com sucesso!');
+                    console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+                    addLog('info', 'Mensagem (somente texto) enviada com sucesso!');
                 }
             } else {
                 await client.sendMessage(targetChatId, bestOffer.message);
-                console.log('🚀 Mensagem (somente texto) enviada com sucesso!');
+                console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+                addLog('info', 'Mensagem (somente texto) enviada com sucesso!');
             }
             
+            messageQueue = [];
             saveState();
-
-            if (messageQueue.length > 0) {
-                console.log(`⏳ Aguardando 3 segundos para a próxima oferta da fila (${messageQueue.length} restante(s))...`);
-                await new Promise(r => setTimeout(r, 3000));
-            }
+            flushCount++;
+            console.log('🗑️ Balde esvaziado para a próxima rodada.');
+            return { success: true };
         }
     } catch (err) {
-        console.error('❌ Erro ao processar balde:', err);
+        console.error('❌ Erro ao enviar mensagem:', err);
+        lastError = `Erro ao enviar: ${err.message}`;
+        errorCount++;
+        addLog('error', 'Erro ao enviar mensagem para o grupo', err.message);
+        messageQueue = [];
+        saveState();
+        return { success: false, error: err.message };
     } finally {
         isFlushing = false;
     }
-    return { success: true };
 }
 
-// Ciclo automático com checagem de estado resiliente a reinicializações
+// Ciclo automático do balde
 setInterval(async () => {
     const elapsed = Date.now() - lastFlushTime;
     const intervalMs = DELAY_MINUTES * 60 * 1000;
@@ -511,37 +699,41 @@ setInterval(async () => {
         saveState();
         await flushBucket();
     }
-}, 20 * 1000); // Checa a cada 20 segundos
+}, 20 * 1000);
 
-// ── Health Check periódico para detectar Chrome/Puppeteer travado ──────
+// Health Check periódico
 setInterval(async () => {
-    if (isReady) {
+    if (isReady && client) {
         try {
             const state = await client.getState();
             if (state !== 'CONNECTED') {
                 console.log(`⚠️ Health Check: estado do WhatsApp = '${state}'. Forçando reconexão...`);
+                addLog('warning', `Health Check: Estado '${state}'. Forçando reconexão...`);
                 isReady = false;
+                connectionState = 'INITIALIZING';
                 try { await client.destroy(); } catch (e) { /* ignora */ }
                 setTimeout(() => {
                     console.log('🔄 Reconectando WhatsApp após health check...');
-                    client.initialize();
+                    initWhatsApp();
                 }, 5000);
             }
         } catch (err) {
             console.log('⚠️ Health Check: WhatsApp não responde. Forçando reconexão...', err.message);
+            addLog('error', 'Health Check: WhatsApp não respondeu. Forçando reconexão...', err.message);
             isReady = false;
+            connectionState = 'INITIALIZING';
             try { await client.destroy(); } catch (e) { /* ignora */ }
             setTimeout(() => {
                 console.log('🔄 Reconectando WhatsApp após health check falho...');
-                client.initialize();
+                initWhatsApp();
             }, 5000);
         }
     } else {
-        console.log('💤 Health Check: WhatsApp não está pronto (isReady=false). Aguardando reconexão...');
+        console.log('💤 Health Check: WhatsApp não está pronto (isReady=false).');
     }
-}, 5 * 60 * 1000); // Health check a cada 5 minutos
+}, 5 * 60 * 1000);
 
-// Flush manual (para testes ou admin)
+// Flush manual via HTTP POST
 app.post('/flush', async (req, res) => {
     lastFlushTime = Date.now();
     saveState();
@@ -552,4 +744,5 @@ app.post('/flush', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 API interna do WhatsApp rodando na porta ${PORT}`);
     console.log(`⏱️ Tempo de janela (balde): ${DELAY_MINUTES} minutos`);
+    addLog('info', `Servidor Express do WhatsApp ativo na porta ${PORT}`);
 });

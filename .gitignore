@@ -1,7 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+**/node_modules
+whatsapp/.wwebjs_auth
+whatsapp/.wwebjs_cache
+whatsapp/state.json
 /.pnp
 .pnp.*
 .yarn/*
