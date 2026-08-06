@@ -159,19 +159,13 @@ export function AiDealAssistant() {
               </div>
 
               {/* Texto Principal com Estilização Elegante */}
-              <div className="flex flex-col text-left">
+              <div className="flex flex-col text-left pr-1">
                 <span className="text-[10px] uppercase font-extrabold tracking-wider text-rose-400 flex items-center gap-1">
                   Busca Inteligente <Sparkle size={10} weight="fill" />
                 </span>
                 <span className="text-xs md:text-sm font-bold text-zinc-100 group-hover:text-white transition-colors">
                   O que você procura hoje?
                 </span>
-              </div>
-
-              {/* Badge da IA / Ícone de Seta de Atalho */}
-              <div className="ml-1 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-zinc-400 group-hover:text-rose-400 group-hover:border-rose-500/30 text-xs font-black transition-all flex items-center gap-1">
-                <span>IA</span>
-                <ArrowRight size={12} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
               </div>
             </motion.button>
           </motion.div>

@@ -44,72 +44,88 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // 3. Montar contexto para a IA
-    const catalogContext = activeProducts.map(p => {
-      const discount = p.originalPrice && p.price ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
-      const couponCode = p.coupons?.[0]?.code ? ` [Cupom: ${p.coupons[0].code}]` : '';
-      return `- ID: ${p.id} | ShortID: ${p.shortId} | Nome: ${p.name} | Cat: ${p.category} | Preço: R$ ${p.price} (Original: R$ ${p.originalPrice || p.price}, ${discount}% OFF)${couponCode}`;
-    }).join("\n");
+    const lowerQuery = query.toLowerCase();
+    const cleanQuery = query.replace(/[^\w\s\dÁ-ÿ]/gi, " ").trim();
+    const searchTerms = cleanQuery.toLowerCase().split(/\s+/).filter(t => t.length > 2);
 
-    const couponsContext = activeCoupons.map(c => {
-      return `- Cupom ${c.code} (${c.platform}): ${c.discount} - ${c.description}`;
-    }).join("\n");
+    // 3. Filtro flexível por categoria e palavras-chave
+    let matchedProducts = activeProducts.filter(p => {
+      const text = `${p.name} ${p.category || ''} ${p.storeName || ''}`.toLowerCase();
 
-    const promptText = `Você é o "Assistente Economizei", o agente inteligente de ofertas e cupons da nossa plataforma.
-Sua missão é responder à dúvida do usuário de forma amigável, direta e empolgada.
-
-Catálogo de Produtos Ativos no Nosso Banco:
-${catalogContext || "Nenhum produto em estoque no momento."}
-
-Cupons Disponíveis:
-${couponsContext || "Nenhum cupom ativo no momento."}
-
-Instruções:
-1. Analise a mensagem do usuário: "${query}"
-2. Se o usuário busca ofertas ou cupons, escolha até 3 produtos mais relevantes do catálogo acima.
-3. Responda estritamente em JSON com o formato:
-{
-  "replyText": "Resposta curta e amigável em Markdown recomendando as ofertas.",
-  "recommendedProductIds": ["id_ou_shortId_1", "id_ou_shortId_2"]
-}`;
+      if (lowerQuery.includes("smart") || lowerQuery.includes("celular") || lowerQuery.includes("phone") || lowerQuery.includes("iphone") || lowerQuery.includes("samsung") || lowerQuery.includes("xiaomi") || lowerQuery.includes("motorola")) {
+        return text.includes("celular") || text.includes("phone") || text.includes("iphone") || text.includes("samsung") || text.includes("xiaomi") || text.includes("motorola") || p.category?.toLowerCase().includes("eletrônicos") || text.includes("redmi") || text.includes("galaxy");
+      }
+      if (lowerQuery.includes("cupom") || lowerQuery.includes("desconto") || lowerQuery.includes("promoc") || lowerQuery.includes("hoje") || lowerQuery.includes("oferta")) {
+        return true;
+      }
+      return searchTerms.some(term => text.includes(term));
+    });
 
     let replyText = "";
-    let recommendedIds: string[] = [];
+    let aiProductIds: string[] = [];
 
-    // 4. Chamada ao Gemini com fallback inteligente
+    // 4. Chamada à IA Gemini (usando o modelo oficial gemini-1.5-flash)
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       try {
+        const catalogContext = activeProducts.map(p => {
+          const discount = p.originalPrice && p.price ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
+          return `- ID: ${p.id} | ShortID: ${p.shortId} | Nome: ${p.name} | Cat: ${p.category} | Preço: R$ ${p.price} (${discount}% OFF)`;
+        }).join("\n");
+
+        const couponsContext = activeCoupons.map(c => `- Cupom ${c.code} (${c.platform}): ${c.discount} - ${c.description}`).join("\n");
+
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-          model: "gemini-2.5-flash",
+          model: "gemini-1.5-flash",
           generationConfig: { responseMimeType: "application/json" }
         });
 
+        const promptText = `Você é o "Assistente Economizei", agente de ofertas da nossa plataforma.
+Responda ao usuário ("${query}") recomendando produtos e cupons do nosso banco.
+
+Produtos no Banco:
+${catalogContext || "Nenhum produto."}
+
+Cupons no Banco:
+${couponsContext || "Nenhum cupom."}
+
+Responda ESTRITAMENTE em JSON:
+{
+  "replyText": "Texto curto amigável recomendando as ofertas.",
+  "recommendedProductIds": ["id_1", "id_2"]
+}`;
+
         const aiRes = await model.generateContent(promptText);
         const parsed = JSON.parse(aiRes.response.text());
-        replyText = parsed.replyText || "";
-        recommendedIds = Array.isArray(parsed.recommendedProductIds) ? parsed.recommendedProductIds.map(String) : [];
+        if (parsed.replyText) replyText = parsed.replyText;
+        if (Array.isArray(parsed.recommendedProductIds)) {
+          aiProductIds = parsed.recommendedProductIds.map(String);
+        }
       } catch (err) {
         console.warn("[AI Assistant] Gemini fallback acionado", err);
       }
     }
 
-    // 5. Filtro de produtos recomendados direto no Backend
-    const lowerQuery = query.toLowerCase();
-    let matchedProducts = activeProducts.filter(p => 
-      recommendedIds.includes(p.id) || 
-      recommendedIds.includes(String(p.shortId))
-    );
+    // Se a IA indicou produtos válidos
+    if (aiProductIds.length > 0) {
+      const aiSelectedProducts = activeProducts.filter(p => aiProductIds.includes(p.id) || aiProductIds.includes(String(p.shortId)));
+      if (aiSelectedProducts.length > 0) {
+        matchedProducts = aiSelectedProducts;
+      }
+    }
 
-    // Se a IA não retornou IDs válidos, fazer busca por palavra-chave no catálogo
+    // FALLBACK DE SEGURANÇA: Garantir que SEMPRE haja até 4 produtos retornados
     if (matchedProducts.length === 0) {
-      const terms = lowerQuery.split(/\s+/).filter(t => t.length > 2);
-      matchedProducts = activeProducts.filter(p => {
-        if (lowerQuery.includes("promoc") || lowerQuery.includes("oferta") || lowerQuery.includes("hoje")) return true;
-        const text = `${p.name} ${p.category} ${p.storeName || ''}`.toLowerCase();
-        return terms.some(term => text.includes(term));
-      }).slice(0, 3);
+      matchedProducts = activeProducts.slice(0, 4);
+    } else {
+      matchedProducts = matchedProducts.slice(0, 4);
+    }
+
+    // Tratar respostas específicas de cupons
+    if (lowerQuery.includes("cupom") && activeCoupons.length > 0) {
+      const topCouponsText = activeCoupons.slice(0, 3).map(c => `🎫 **${c.code}** (${c.platform}): ${c.discount} - ${c.description}`).join("\n");
+      replyText = `Aqui estão os principais cupons ativos no momento:\n\n${topCouponsText}\n\nE confira também estas ofertas em destaque:`;
     }
 
     if (!replyText) {
@@ -118,7 +134,6 @@ Instruções:
         : `Confira as promoções em destaque disponíveis no momento:`;
     }
 
-    // Formatar produtos para o frontend com todos os campos visuais necessários
     const recommendedProducts = matchedProducts.map(p => ({
       id: p.id,
       shortId: p.shortId,
