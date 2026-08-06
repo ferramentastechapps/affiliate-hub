@@ -8,6 +8,7 @@ import { getSecondaryLifestyleImage, searchDuckDuckGoImages, scrapeRetailerData 
 import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
+import { detectSmartCategory } from '@/lib/category-detector';
 
 async function processProductAffiliates(productData: { links?: Record<string, string | undefined>, status?: string }) {
   const links = productData.links || {};
@@ -634,10 +635,12 @@ export async function POST(request: Request) {
       }
     }
 
+    const finalCategory = detectSmartCategory(body.name, body.description, body.category);
+
     const product = await prisma.product.create({
       data: {
         name: body.name,
-        category: body.category,
+        category: finalCategory,
         subcategory: body.subcategory || null,
         brand: body.brand || null,
         model: body.model || null,
