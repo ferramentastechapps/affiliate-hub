@@ -29,6 +29,8 @@ export function AiDealAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputQuery, setInputQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isButtonVisible, setIsButtonVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -39,6 +41,22 @@ export function AiDealAssistant() {
   ]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Ocultar o botão flutuante ao rolar para baixo (scroll down) e reexibir ao rolar para cima
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsButtonVisible(false);
+      } else {
+        setIsButtonVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   useEffect(() => {
     if (isOpen) {
@@ -118,21 +136,26 @@ export function AiDealAssistant() {
 
   return (
     <>
-      {/* Botão Flutuante Principal */}
-      <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 md:bottom-8 right-4 z-40 flex items-center gap-2.5 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black px-4 py-3 rounded-full shadow-[0_0_30px_rgba(244,63,94,0.5)] border-2 border-white/20 hover:brightness-110 transition-all"
-      >
-        <div className="relative flex items-center justify-center">
-          <Robot size={24} weight="fill" className="animate-bounce text-white" />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-zinc-950"></span>
-        </div>
-        <span className="text-xs md:text-sm font-bold tracking-wide">Assistente IA</span>
-      </motion.button>
+      {/* Botão Flutuante Principal — Ocultado no Scroll Down & Posicionado mais alto */}
+      <AnimatePresence>
+        {isButtonVisible && !isOpen && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-20 md:bottom-12 right-4 md:right-8 z-40 flex items-center gap-2.5 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white font-black px-4 py-3 rounded-full shadow-[0_0_30px_rgba(244,63,94,0.5)] border-2 border-white/20 hover:brightness-110 transition-all cursor-pointer"
+          >
+            <div className="relative flex items-center justify-center">
+              <Robot size={24} weight="fill" className="animate-bounce text-white" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-zinc-950"></span>
+            </div>
+            <span className="text-xs md:text-sm font-black tracking-tight">O que você procura hoje?</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Modal / Backdrop overlay */}
       <AnimatePresence>
