@@ -236,7 +236,8 @@ async function initWhatsApp() {
         authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
         puppeteer: puppeteerConfig,
         webVersionCache: {
-            type: 'none'
+            type: 'remote',
+            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html'
         }
     };
 
