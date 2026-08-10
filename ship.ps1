@@ -343,11 +343,11 @@ $DeployScript = ".deploy.sh"
 Set-Content -Path $DeployScript -Value ($sshCommand -replace "`r", "") -Encoding UTF8
 
 Write-Host "Transferindo script de deploy e build para a VPS..." -ForegroundColor Cyan
-scp -i "$env:USERPROFILE\.ssh\id_rsa" next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
-scp -i "$env:USERPROFILE\.ssh\id_rsa" $DeployScript root@212.85.10.239:~/deploy.sh
+scp next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
+scp $DeployScript root@212.85.10.239:~/deploy.sh
 
 Write-Host "Executando script na VPS..." -ForegroundColor Cyan
-ssh -i "$env:USERPROFILE\.ssh\id_rsa" root@212.85.10.239 "bash ~/deploy.sh && rm ~/deploy.sh"
+ssh root@212.85.10.239 "bash ~/deploy.sh && rm ~/deploy.sh"
 
 # Limpa o arquivo local
 Remove-Item $DeployScript -ErrorAction SilentlyContinue
