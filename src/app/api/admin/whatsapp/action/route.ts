@@ -12,7 +12,7 @@ async function getAdminPayload() {
   return payload;
 }
 
-const WHATSAPP_API_URL = process.env.WHATSAPP_ENGINE_URL || 'http://localhost:3006';
+const WHATSAPP_API_URL = process.env.WHATSAPP_ENGINE_URL || 'http://127.0.0.1:3006';
 
 export async function POST(request: NextRequest) {
   const payload = await getAdminPayload();

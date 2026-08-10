@@ -13,7 +13,7 @@ async function getAdminPayload() {
 }
 
 const PROCESS_NAME = 'whatsapp-engine';
-const WHATSAPP_API_URL = process.env.WHATSAPP_ENGINE_URL || 'http://localhost:3006';
+const WHATSAPP_API_URL = process.env.WHATSAPP_ENGINE_URL || 'http://127.0.0.1:3006';
 
 function getPm2Status() {
   try {
