@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Robot, X, PaperPlaneRight, Sparkle, ArrowRight, Flame, ShoppingBagOpen } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 interface ProductItem {
   id: string;
@@ -26,6 +26,12 @@ interface ChatMessage {
 
 export function AiDealAssistant() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [inputQuery, setInputQuery] = useState("");
   const [loading, setLoading] = useState(false);
