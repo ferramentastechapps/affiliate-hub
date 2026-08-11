@@ -525,9 +525,6 @@ app.get('/qr', (req, res) => {
 
 // Status detalhado em JSON para o painel Admin
 app.get('/status', (req, res) => {
-    const brTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const currentHour = brTime.getHours();
-
     return res.status(200).json({
         isReady,
         status: connectionState,
@@ -544,7 +541,7 @@ app.get('/status', (req, res) => {
             id: GROUP_ID || null
         },
         delayMinutes: DELAY_MINUTES,
-        outsideSchedule: currentHour < 7,
+        outsideSchedule: false,
         logs: logsBuffer.slice(-30).reverse()
     });
 });
@@ -590,13 +587,6 @@ async function flushBucket() {
         return { skipped: true, reason: 'not_ready' };
     }
 
-    const brTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const currentHour = brTime.getHours();
-
-    if (currentHour < 7) {
-        console.log(`🌙 Fora do horário de disparo (${currentHour}h em Brasília). Retendo ${messageQueue.length} oferta(s) para enviar às 07h.`);
-        return { skipped: true, reason: 'out_of_hours' };
-    }
 
     if (messageQueue.length === 0) {
         console.log('😴 Balde vazio. Nenhuma oferta para enviar agora.');
