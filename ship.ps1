@@ -255,13 +255,20 @@ npm install
 echo "🗄️  Sincronizando schema do banco de dados..."
 npx prisma migrate deploy
 
-echo "🔄 Executando script de swap de imagens no banco..."
-node swap_images.js
+if [ -f swap_images.js ]; then
+  echo "🔄 Executando script de swap de imagens no banco..."
+  node swap_images.js || true
+fi
 
 echo "📦 Extraindo build pré-compilado..."
 rm -rf .next
 rm -f public/sw.js public/workbox-*.js public/fallback-*.js public/swe-worker-*.js public/worker-*.js
-tar -xzf next_build.tar.gz
+if [ -f ~/next_build.tar.gz ]; then
+  mv ~/next_build.tar.gz ~/affiliate-hub/next_build.tar.gz
+fi
+if [ -f next_build.tar.gz ]; then
+  tar -xzf next_build.tar.gz
+fi
 
 echo "🔍 Verificando integridade do build..."
 if [ ! -f ".next/BUILD_ID" ]; then
@@ -338,16 +345,16 @@ pm2 status
 echo "🌐 Next.js rodando em http://127.0.0.1:3005"
 "@
 
-# Salva o script em um arquivo temporário local
+# Salva o script em um arquivo temporário local sem BOM
 $DeployScript = ".deploy.sh"
-Set-Content -Path $DeployScript -Value ($sshCommand -replace "`r", "") -Encoding UTF8
+[System.IO.File]::WriteAllText($DeployScript, ($sshCommand -replace "`r", ""), (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "Transferindo script de deploy e build para a VPS..." -ForegroundColor Cyan
-scp next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
-scp $DeployScript root@212.85.10.239:~/deploy.sh
+scp -i "$env:USERPROFILE\.ssh\id_ed25519" next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
+scp -i "$env:USERPROFILE\.ssh\id_ed25519" $DeployScript root@212.85.10.239:~/deploy.sh
 
 Write-Host "Executando script na VPS..." -ForegroundColor Cyan
-ssh root@212.85.10.239 "bash ~/deploy.sh && rm ~/deploy.sh"
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519" root@212.85.10.239 "bash ~/deploy.sh && rm -f ~/deploy.sh"
 
 # Limpa o arquivo local
 Remove-Item $DeployScript -ErrorAction SilentlyContinue
