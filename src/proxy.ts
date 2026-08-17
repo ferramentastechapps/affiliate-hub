@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'economizei-super-secret-jwt-key-2026-f6c684a41738ecbc';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.API_SECRET_KEY || 'economizei-super-secret-jwt-key-2026-f6c684a41738ecbc';
 
 async function verifyJwtSignature(token: string): Promise<any | null> {
   try {
