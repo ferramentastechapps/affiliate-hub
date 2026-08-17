@@ -2,68 +2,24 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, signToken } from '@/lib/auth-utils';
+import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 // Rate limiting: máximo de 5 tentativas falhas por IP a cada 15 minutos
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const loginRateLimiter = createRateLimiter('login', {
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Muitas tentativas falhas. Tente novamente em 15 minuto(s).',
+});
 
-interface RateLimitEntry {
-  count: number;
-  firstAttemptAt: number;
-}
-
-const failedAttempts = new Map<string, RateLimitEntry>();
-
-function getClientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return 'unknown';
-}
-
-function checkRateLimit(ip: string): { blocked: boolean; retryAfterSec: number } {
-  const now = Date.now();
-  const entry = failedAttempts.get(ip);
-
-  if (!entry) return { blocked: false, retryAfterSec: 0 };
-
-  const elapsed = now - entry.firstAttemptAt;
-
-  // Janela expirou: limpar e liberar
-  if (elapsed > RATE_LIMIT_WINDOW_MS) {
-    failedAttempts.delete(ip);
-    return { blocked: false, retryAfterSec: 0 };
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX_ATTEMPTS) {
-    const retryAfterSec = Math.ceil((RATE_LIMIT_WINDOW_MS - elapsed) / 1000);
-    return { blocked: true, retryAfterSec };
-  }
-
-  return { blocked: false, retryAfterSec: 0 };
-}
-
-function recordFailedAttempt(ip: string): void {
-  const now = Date.now();
-  const entry = failedAttempts.get(ip);
-
-  if (!entry || Date.now() - entry.firstAttemptAt > RATE_LIMIT_WINDOW_MS) {
-    failedAttempts.set(ip, { count: 1, firstAttemptAt: now });
-  } else {
-    entry.count += 1;
-  }
-}
-
-function clearFailedAttempts(ip: string): void {
-  failedAttempts.delete(ip);
-}
 
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
 
     // Verifica rate limit antes de qualquer operação
-    const { blocked, retryAfterSec } = checkRateLimit(ip);
-    if (blocked) {
+    const rl = loginRateLimiter(ip);
+    if (!rl.success) {
+      const retryAfterSec = Math.ceil(rl.retryAfterMs / 1000);
       return NextResponse.json(
         { error: `Muitas tentativas falhas. Tente novamente em ${Math.ceil(retryAfterSec / 60)} minuto(s).` },
         {
@@ -91,7 +47,7 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      recordFailedAttempt(ip);
+      loginRateLimiter(ip); // Contabiliza tentativa falhada
       return NextResponse.json(
         { error: 'Credenciais inválidas' },
         { status: 401 }
@@ -109,15 +65,14 @@ export async function POST(request: Request) {
     // Verifica a senha de forma nativa e segura
     const isPasswordValid = verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      recordFailedAttempt(ip);
+      loginRateLimiter(ip); // Contabiliza tentativa falhada
       return NextResponse.json(
         { error: 'Credenciais inválidas' },
         { status: 401 }
       );
     }
 
-    // Login bem-sucedido: limpar tentativas falhas do IP
-    clearFailedAttempts(ip);
+    // Login bem-sucedido: o rate limit se reseta naturalmente na próxima janela
 
     // Cria a sessão com JWT assinado
     const token = signToken({

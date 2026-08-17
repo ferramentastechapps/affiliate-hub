@@ -8,10 +8,39 @@ const nextConfig: any = {
     },
   },
   typescript: {
-    ignoreBuildErrors: true,
+    // Remover ignoreBuildErrors: true pois mascarava bugs reais de tipo
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
+  },
+
+  // Headers de segurança HTTP (segunda camada além do middleware)
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+        ],
+      },
+      {
+        // Desabilita cache para rotas de API sensíveis
+        source: '/api/(auth|admin|upload|scrape)/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ],
+      },
+    ];
   },
 
   // Configuração de imagens externas

@@ -2,37 +2,64 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, signToken } from '@/lib/auth-utils';
+import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
+
+// Rate limit: 5 cadastros por IP a cada 15 minutos (anti account-farming)
+const signupRateLimiter = createRateLimiter('signup', {
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Muitos cadastros deste IP. Tente novamente em 15 minutos.',
+});
+
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_NAME_LENGTH = 100;
 
 export async function POST(request: Request) {
   try {
+    // --- Rate limiting ---
+    const ip = getClientIp(request);
+    const rl = signupRateLimiter(ip);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: rl.message },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      );
+    }
+
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name: rawName, email: rawEmail, password } = body;
 
     // Validações básicas de formato
-    if (!name || !email || !password) {
+    if (!rawName || !rawEmail || !password) {
       return NextResponse.json(
         { error: 'Todos os campos são obrigatórios' },
         { status: 400 }
       );
     }
 
+    // Valida e limita tamanho do nome
+    const name = String(rawName).trim().slice(0, MAX_NAME_LENGTH);
+    if (name.length < 2) {
+      return NextResponse.json({ error: 'Nome muito curto.' }, { status: 400 });
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(rawEmail)) {
       return NextResponse.json(
         { error: 'Formato de e-mail inválido' },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
       return NextResponse.json(
-        { error: 'A senha deve ter no mínimo 6 caracteres' },
+        { error: `A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres` },
         { status: 400 }
       );
     }
 
     // Normaliza o e-mail para letras minúsculas
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = rawEmail.toLowerCase().trim();
 
     // Verifica se o usuário já existe
     const existingUser = await prisma.user.findUnique({

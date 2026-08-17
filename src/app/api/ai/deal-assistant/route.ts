@@ -1,13 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createRateLimiter, getClientIp, sanitizeInput } from "@/lib/rate-limit";
+
+// Rate limit: 10 mensagens por minuto por IP (evita abuso de fatura da IA)
+const aiRateLimiter = createRateLimiter('ai-assistant', {
+  windowMs: 60 * 1000,
+  max: 10,
+  message: 'Muitas mensagens. Aguarde 1 minuto antes de enviar mais.',
+});
+
+const MAX_QUERY_LENGTH = 500;
 
 export async function POST(req: NextRequest) {
   try {
-    const { query } = await req.json();
+    // --- Rate limiting ---
+    const ip = getClientIp(req);
+    const rl = aiRateLimiter(ip);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: rl.message },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      );
+    }
 
-    if (!query || typeof query !== "string") {
+    const { query: rawQuery } = await req.json();
+
+    if (!rawQuery || typeof rawQuery !== "string") {
       return NextResponse.json({ error: "Sua mensagem não pode estar vazia." }, { status: 400 });
+    }
+
+    // --- Sanitiza e limita o input do usuário ---
+    const query = sanitizeInput(rawQuery, MAX_QUERY_LENGTH);
+    if (query.length === 0) {
+      return NextResponse.json({ error: "Mensagem inválida." }, { status: 400 });
     }
 
     // 1. Buscar produtos ativos recentes no banco (até 30 itens)
