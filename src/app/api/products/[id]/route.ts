@@ -245,3 +245,50 @@ export async function DELETE(
     );
   }
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { enhancedImageUrl, imageUrl, price, status, name, category } = body;
+
+    const existingProduct = await prisma.product.findUnique({
+      where: { id }
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json(
+        { error: 'Produto não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    const dataToUpdate: any = {};
+    if (enhancedImageUrl !== undefined) dataToUpdate.enhancedImageUrl = enhancedImageUrl;
+    if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl;
+    if (price !== undefined) dataToUpdate.price = price;
+    if (status !== undefined) dataToUpdate.status = status;
+    if (name !== undefined) dataToUpdate.name = name;
+    if (category !== undefined) dataToUpdate.category = category;
+
+    const product = await prisma.product.update({
+      where: { id },
+      data: dataToUpdate
+    });
+
+    console.log('✅ Produto atualizado via PATCH:', product.id);
+    return NextResponse.json({ success: true, product });
+  } catch (error) {
+    console.error('❌ Erro no PATCH produto:', error);
+    return NextResponse.json(
+      { 
+        error: 'Erro ao atualizar produto',
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      }, 
+      { status: 500 }
+    );
+  }
+}

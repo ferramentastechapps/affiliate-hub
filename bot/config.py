@@ -18,6 +18,8 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')         # Chat de aprovação (
 TELEGRAM_PROMO_GROUP_ID = os.getenv('TELEGRAM_PROMO_GROUP_ID')  # Grupo onde publica as promos aprovadas
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+SHOPEE_APP_ID = os.getenv('SHOPEE_APP_ID')
+SHOPEE_APP_SECRET = os.getenv('SHOPEE_APP_SECRET')
 
 # Configurações de busca
 SEARCH_INTERVAL_MINUTES = int(os.getenv('SEARCH_INTERVAL_MINUTES', 15))  # Alterado de 5 para 15 (reduz 67% dos ciclos)

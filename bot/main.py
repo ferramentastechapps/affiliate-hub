@@ -300,7 +300,12 @@ class PromotionBot:
                             print(f'🟢 → Fila LIFESTYLE: {candidato["produto"].get("name")[:50]}')
                         else:
                             self.fila_sem_lifestyle.append(candidato)
-                            print(f'🟡 → Fila SEM LIFESTYLE (aguardando admin): {candidato["produto"].get("name")[:50]}')
+                            print(f'🟡 → Fila SEM LIFESTYLE (enviando para Telegram admin): {candidato["produto"].get("name")[:50]}')
+                            try:
+                                self.telegram.enviar_sync('produto_sem_lifestyle', candidato['produto'])
+                                time.sleep(2)
+                            except Exception as e_tg:
+                                print(f'⚠️ Erro ao notificar produto sem lifestyle no Telegram: {e_tg}')
                         
                         produtos_adicionados += 1
                     

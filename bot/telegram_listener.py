@@ -73,18 +73,40 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
     await notifier.publicar_no_grupo(produto, platform, affiliate_link, foto_file_id, custom_caption)
 
 async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Intercepta fotos com legenda e redireciona para /aprovar ou /tiktok se necessário."""
+    """Intercepta fotos (com ou sem legenda) e processa comandos ou respostas de lifestyle."""
     caption = update.message.caption or ''
-    print(f'📸 Foto recebida com legenda: {caption}')
+    print(f'📸 Foto recebida (legenda: "{caption}")')
     
     if caption.strip().startswith('/aprovar'):
         await handle_aprovar_command(update, context)
+        return
+    elif caption.strip().startswith('/foto'):
+        await handle_foto_command(update, context)
+        return
     elif caption.strip().startswith('/tiktok'):
         # Popula context.args a partir da legenda
         partes = caption.split()
         context.args = partes[1:]
         await handle_tiktok_command(update, context)
-    else:
+        return
+
+    # Se a foto foi enviada em resposta a uma mensagem do bot com ID do produto
+    if update.message.reply_to_message:
+        reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
+        match = re.search(r'🆔\s*ID:\s*([a-zA-Z0-9_-]+)', reply_text)
+        if not match:
+            match = re.search(r'ID_DO_PRODUTO:\s*([a-zA-Z0-9_-]+)', reply_text)
+        if not match:
+            match = re.search(r'/foto\s+([a-zA-Z0-9_-]+)', reply_text)
+            
+        if match:
+            produto_id = match.group(1).strip()
+            print(f'📸 Foto recebida em resposta ao produto ID: {produto_id}')
+            context.args = [produto_id]
+            await handle_foto_command(update, context)
+            return
+
+    if caption:
         print(f'📸 Foto com legenda recebida (não é comando), tentando processar como promo...')
         await handle_forwarded_or_text_promo(update, context)
 
@@ -1021,18 +1043,26 @@ async def handle_pendentes_command(update: Update, context: ContextTypes.DEFAULT
     await update.message.reply_text("\n".join(linhas), parse_mode='HTML')
 
 async def handle_foto_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/foto [ID] [URL_OPCIONAL]"""
+    """/foto [ID] [URL_OPCIONAL] ou Foto enviada em resposta"""
     if str(update.effective_chat.id) != str(TELEGRAM_CHAT_ID):
         return
         
     args = context.args or []
+    if not args and not update.message.caption:
+        if update.message.reply_to_message:
+            reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
+            match = re.search(r'🆔\s*ID:\s*([a-zA-Z0-9_-]+)', reply_text)
+            if not match:
+                match = re.search(r'ID_DO_PRODUTO:\s*([a-zA-Z0-9_-]+)', reply_text)
+            if match:
+                args = [match.group(1).strip()]
+
     if not args and not update.message.caption:
         await update.message.reply_text("❌ Informe o ID do produto. Exemplo: /foto abc123 https://...")
         return
         
     produto_id = None
     if not args and update.message.caption:
-        # Se for foto com legenda e o comando for /foto
         caption_parts = update.message.caption.split()
         if len(caption_parts) > 1:
             produto_id = caption_parts[1]
@@ -1045,23 +1075,13 @@ async def handle_foto_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         
     from main import PromotionBot
     bot_instance = PromotionBot()
+    bot_instance._sync_state_if_needed()
     
-    # Buscar na fila
-    candidato = None
-    for item in bot_instance.fila_sem_lifestyle:
-        if item.get('produto', {}).get('id') == produto_id:
-            candidato = item
-            break
-            
-    if not candidato:
-        await update.message.reply_text("❌ Produto não encontrado na fila sem lifestyle. Use /pendentes para ver os disponíveis.")
-        return
-        
     foto_url = None
     if update.message.photo:
         foto_file = await context.bot.get_file(update.message.photo[-1].file_id)
         foto_url = foto_file.file_path
-    elif len(args) > 1:
+    elif len(args) > 1 and args[1].startswith('http'):
         foto_url = args[1]
     elif update.message.reply_to_message and update.message.reply_to_message.photo:
         foto_file = await context.bot.get_file(update.message.reply_to_message.photo[-1].file_id)
@@ -1071,30 +1091,67 @@ async def handle_foto_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ Envie uma foto ou informe a URL da imagem lifestyle. Exemplo: /foto abc123 https://...")
         return
         
+    msg_status = await update.message.reply_text("⏳ Associando foto lifestyle...")
+
     # Chamar API para atualizar o produto
     try:
         import requests
         from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY
         api_url = f"{AFFILIATE_HUB_URL.rstrip('/')}/api/products/{produto_id}"
-        resp = requests.patch(api_url, json={'enhancedImageUrl': foto_url}, headers={'Authorization': f'Bearer {AFFILIATE_HUB_API_KEY}'})
+        resp = requests.patch(
+            api_url,
+            json={'enhancedImageUrl': foto_url},
+            headers={'Authorization': f'Bearer {AFFILIATE_HUB_API_KEY}'},
+            timeout=15
+        )
         if resp.status_code != 200:
             print(f"⚠️ Aviso: falha ao atualizar API {resp.status_code}")
     except Exception as e:
         print(f"⚠️ Erro ao chamar API: {e}")
         
-    # Remover da fila sem lifestyle
-    bot_instance.fila_sem_lifestyle.remove(candidato)
-    
-    # Atualizar candidato e mover para lifestyle
+    # Buscar na fila sem lifestyle
+    candidato = None
+    for item in list(bot_instance.fila_sem_lifestyle):
+        if item.get('produto', {}).get('id') == produto_id:
+            candidato = item
+            bot_instance.fila_sem_lifestyle.remove(item)
+            break
+            
     import time
-    candidato['produto']['enhancedImageUrl'] = foto_url
-    candidato['added_at'] = time.time()
+    if candidato:
+        candidato['produto']['enhancedImageUrl'] = foto_url
+        candidato['added_at'] = time.time()
+        bot_instance.fila_lifestyle.append(candidato)
+    else:
+        resultado = api.buscar_produto(produto_id)
+        if resultado and resultado.get('success'):
+            p_data = resultado.get('product', {})
+            p_data['enhancedImageUrl'] = foto_url
+            links = p_data.get('links', {}) or {}
+            plat = 'amazon'
+            aff_link = None
+            for p_name in ['amazon', 'shopee', 'mercadoLivre', 'aliexpress', 'magalu', 'kabum', 'netshoes', 'tiktok']:
+                if links.get(p_name):
+                    plat = p_name
+                    aff_link = links.get(p_name)
+                    break
+            candidato = {
+                'produto': p_data,
+                'platform': plat,
+                'affiliate_link': aff_link or p_data.get('imageUrl'),
+                'added_at': time.time()
+            }
+            bot_instance.fila_lifestyle.append(candidato)
     
-    bot_instance.fila_lifestyle.append(candidato)
     bot_instance._save_state()
     
-    nome = candidato.get('produto', {}).get('name', '')[:30]
-    await update.message.reply_text(f"✅ Foto lifestyle associada! '{nome}...' movido para a fila de publicação. Será postado na próxima janela de 5 min.")
+    nome_prod = candidato.get('produto', {}).get('name', '')[:40] if candidato else produto_id
+    await msg_status.edit_text(
+        f"✅ <b>Foto lifestyle associada com sucesso!</b>\n\n"
+        f"📦 <b>{nome_prod}...</b>\n"
+        f"🚀 <i>Movido para a fila de publicação do grupo (janela de 5 min).</i>",
+        parse_mode='HTML'
+    )
 
 async def handle_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de ajuda"""
@@ -1104,6 +1161,13 @@ async def handle_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 <b>/aprovar [ID] [LINK]</b>
 Aprova um produto e adiciona seu link de afiliado
 Exemplo: <code>/aprovar clxyz123 https://amzn.to/abc</code>
+
+<b>/foto [ID] [URL_OPCIONAL]</b>
+Adiciona foto lifestyle a um produto pendente e move para a fila do grupo
+Exemplo: <code>/foto clxyz123 https://exemplo.com/foto.jpg</code> (ou envie uma foto com legenda <code>/foto clxyz123</code>)
+
+<b>/pendentes</b>
+Lista os produtos que estão aguardando foto lifestyle
 
 <b>/rejeitar [ID]</b>
 Rejeita um produto (não aparecerá no site)
@@ -1115,25 +1179,6 @@ Exemplo: <code>/tiktok https://tiktok.com/@loja/video/123 Bolsa_Feminina 39.90 M
 
 <b>/help</b>
 Mostra esta mensagem de ajuda
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>📋 Fluxo de Aprovação:</b>
-
-1️⃣ Robô encontra produto no Promobit
-2️⃣ Envia para você com ID_DO_PRODUTO
-3️⃣ Você usa /aprovar com SEU link
-4️⃣ Produto aparece no site com SEU link
-
-<b>🎵 TikTok Shop:</b>
-Use /tiktok para adicionar produtos rapidamente!
-Envie a foto junto com o comando.
-
-<b>🔗 Plataformas Suportadas:</b>
-• Amazon (amzn.to, amazon.com.br)
-• Shopee (shopee.com.br, shope.ee)
-• AliExpress (aliexpress.com)
-• Mercado Livre (mercadolivre.com.br)
-• TikTok Shop (tiktok.com)
 """
     await update.message.reply_text(help_text, parse_mode='HTML')
 
@@ -1145,15 +1190,16 @@ def run_listener():
     print("🤖 Telegram Listener Iniciado!")
     print("📋 Comandos disponíveis:")
     print("   /aprovar [ID] [LINK] - Aprovar produto")
+    print("   /foto [ID] [URL] - Adicionar foto lifestyle")
+    print("   /pendentes - Ver produtos aguardando foto")
     print("   /rejeitar [ID] - Rejeitar produto")
     print("   /help - Ajuda")
     print("="*60)
     
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # IMPORTANTE: Foto com legenda /aprovar DEVE vir ANTES do CommandHandler
-    # para capturar fotos com legenda antes de processar como comando de texto
-    app.add_handler(MessageHandler(filters.PHOTO & filters.CAPTION, handle_foto_com_legenda))
+    # Interceptar fotos (com legenda, sem legenda ou reply)
+    app.add_handler(MessageHandler(filters.PHOTO, handle_foto_com_legenda))
 
     # Comandos de texto
     app.add_handler(CommandHandler("aprovar", handle_aprovar_command))

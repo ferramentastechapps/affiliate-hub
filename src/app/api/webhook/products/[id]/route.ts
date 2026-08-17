@@ -68,12 +68,13 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { imageUrl, status, name, category, price } = body;
+    const { imageUrl, enhancedImageUrl, status, name, category, price } = body;
 
     const product = await prisma.product.update({
       where: { id },
       data: {
         imageUrl: imageUrl || undefined,
+        enhancedImageUrl: enhancedImageUrl || undefined,
         status: status || undefined,
         name: name || undefined,
         category: category || undefined,

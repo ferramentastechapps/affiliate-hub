@@ -2,10 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 import re
+import os
+import json
+import hashlib
 import concurrent.futures
 import time
 from difflib import SequenceMatcher
-from config import CATEGORIES, MIN_DISCOUNT_PERCENT, MIN_QUALITY_SCORE
+from config import CATEGORIES, MIN_DISCOUNT_PERCENT, MIN_QUALITY_SCORE, SHOPEE_APP_ID, SHOPEE_APP_SECRET
 
 
 def _melhorar_qualidade_imagem(url: str) -> str:
@@ -1593,106 +1596,107 @@ class PromotionScraper:
         return produtos
 
     def buscar_promocoes_shopee(self, limite: int = 20) -> List[Dict]:
-        """Busca promoções do Shopee Flash Sale"""
+        """Busca promoções oficiais da Shopee via API GraphQL de Afiliados"""
         produtos = []
-        try:
-            print('🛍️ Buscando promoções no Shopee Flash Sale...')
-            headers_shopee = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'pt-BR,pt;q=0.9',
-                'Referer': 'https://www.google.com.br/'
-            }
-            url = 'https://shopee.com.br/flash_sale'
-            response = requests.get(url, headers=headers_shopee, timeout=15)
-            print(f'   📡 Status: {response.status_code}')
-            
-            if response.status_code != 200:
-                print(f'⚠️  Shopee bloqueou (status {response.status_code})')
+        app_id = SHOPEE_APP_ID or os.getenv('SHOPEE_APP_ID')
+        app_secret = SHOPEE_APP_SECRET or os.getenv('SHOPEE_APP_SECRET')
+
+        if app_id and app_secret:
+            try:
+                print('🛍️ Buscando promoções na Shopee via API Oficial GraphQL...')
+                endpoint = "https://open-api.affiliate.shopee.com.br/graphql"
+                termos = ['smartphone', 'fone de ouvido', 'smartwatch', 'air fryer', 'tenis', 'perfume', 'gamer', 'caixa de som', 'notebook', 'suplemento']
+                limite_por_termo = max(2, limite // len(termos) + 1)
+                ids_vistos = set()
+
+                for termo in termos:
+                    if len(produtos) >= limite:
+                        break
+                    try:
+                        timestamp = int(time.time())
+                        query = f"""
+                        query {{
+                          productOfferV2(keyword: "{termo}", page: 1, limit: {limite_por_termo}) {{
+                            nodes {{
+                              itemId
+                              productName
+                              price
+                              commissionRate
+                              offerLink
+                              imageUrl
+                            }}
+                          }}
+                        }}
+                        """.strip()
+
+                        payload = json.dumps({"query": query}, separators=(',', ':'))
+                        base_string = f"{app_id}{timestamp}{payload}{app_secret}"
+                        signature = hashlib.sha256(base_string.encode('utf-8')).hexdigest()
+                        auth_header = f"SHA256 Credential={app_id}, Timestamp={timestamp}, Signature={signature}"
+
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Authorization": auth_header
+                        }
+
+                        r = requests.post(endpoint, headers=headers, data=payload, timeout=10)
+                        if r.status_code == 200:
+                            data = r.json()
+                            nodes = data.get('data', {}).get('productOfferV2', {}).get('nodes', []) or []
+                            for item in nodes:
+                                item_id = str(item.get('itemId', ''))
+                                if not item_id or item_id in ids_vistos:
+                                    continue
+                                ids_vistos.add(item_id)
+
+                                nome = item.get('productName', '').strip()
+                                if not nome or len(nome) < 5:
+                                    continue
+
+                                preco_raw = item.get('price', 0)
+                                try:
+                                    preco = float(preco_raw)
+                                except:
+                                    preco = 0.0
+
+                                if preco <= 0:
+                                    continue
+
+                                img = _melhorar_qualidade_imagem(item.get('imageUrl', ''))
+                                link = item.get('offerLink', '')
+                                if not link:
+                                    continue
+
+                                comissao = float(item.get('commissionRate', 0)) * 100
+                                categoria = self._detectar_categoria(nome)
+
+                                produtos.append({
+                                    'name': nome[:200],
+                                    'category': categoria,
+                                    'description': f"Oferta Shopee Oficial • Comissão: {comissao:.1f}%",
+                                    'imageUrl': img or 'https://via.placeholder.com/800x1000',
+                                    'price': preco,
+                                    'originalPrice': None,
+                                    'links': {'shopee': link},
+                                    'storeName': 'Shopee',
+                                    'source': 'shopee_api',
+                                    'platformType': 'shopee',
+                                    'platformId': item_id,
+                                })
+                                print(f'  ✅ [Shopee API] {nome[:50]}... (R$ {preco:.2f})')
+                        time.sleep(0.15)
+                    except Exception as e_termo:
+                        print(f'  ⚠️ Erro no termo "{termo}" Shopee API: {e_termo}')
+
+                print(f'   ✅ Total Shopee API: {len(produtos)} produtos')
                 return produtos
 
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Shopee usa estrutura de cards
-            cards = soup.select('div[data-sqe="item"], a[data-sqe="link"]')
-            print(f'   📦 Encontrados {len(cards)} cards')
-            
-            for card in cards[:limite]:
-                try:
-                    # Nome do produto
-                    nome_elem = card.select_one('div[class*="title"], span[class*="title"]')
-                    if not nome_elem:
-                        continue
-                    
-                    nome = nome_elem.get_text(strip=True)
-                    if not nome or len(nome) < 10:
-                        continue
-                    
-                    # Link
-                    link_elem = card if card.name == 'a' else card.select_one('a')
-                    link = ''
-                    if link_elem:
-                        link = link_elem.get('href', '')
-                        if link and not link.startswith('http'):
-                            link = 'https://shopee.com.br' + link
-                    
-                    # Preço
-                    preco_elem = card.select_one('span[class*="price"], div[class*="price"]')
-                    preco = None
-                    if preco_elem:
-                        preco = self._extrair_preco(preco_elem.get_text())
-                    
-                    # Preço original
-                    preco_original = None
-                    original_elem = card.select_one('span[class*="original"], del, s')
-                    if original_elem:
-                        preco_original = self._extrair_preco(original_elem.get_text())
-                    
-                    # Imagem
-                    img_elem = card.select_one('img')
-                    imagem_url = 'https://via.placeholder.com/800x1000'
-                    if img_elem:
-                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
-                    
-                    # Desconto
-                    desconto_elem = card.select_one('span[class*="discount"], div[class*="discount"]')
-                    desconto_texto = ''
-                    if desconto_elem:
-                        desconto_texto = desconto_elem.get_text(strip=True)
-                    
-                    links = {'shopee': link} if link else {}
-                    categoria = self._detectar_categoria(nome)
-                    
-                    descricao = f"Flash Sale Shopee"
-                    if desconto_texto:
-                        descricao += f" - {desconto_texto}"
-                    
-                    platform_type, platform_id = self.extrair_platform_id(link)
-                    produtos.append({
-                        'name': nome[:200],
-                        'category': categoria,
-                        'description': descricao,
-                        'imageUrl': imagem_url,
-                        'price': preco,
-                        'originalPrice': preco_original,
-                        'links': links,
-                        'storeName': 'Shopee',
-                        'source': 'promobyte',
+            except Exception as e:
+                print(f'❌ Erro ao buscar na Shopee API: {e}')
 
-
-                        'platformType': platform_type,
-
-                        'platformId': platform_id
-                    })
-                    print(f'  ✅ [Shopee] {nome[:50]}...')
-                    
-                except Exception as e:
-                    print(f'  ⚠️  Erro ao processar oferta Shopee: {e}')
-            
-        except Exception as e:
-            print(f'❌ Erro ao buscar no Shopee: {e}')
-        
-        print(f'   ✅ Total Shopee: {len(produtos)} produtos')
-        return produtos
+        # Fallback para raspagem HTML caso não haja chaves
+        print('⚠️ SHOPEE_APP_ID/SECRET não encontrados. Usando busca HTML de fallback...')
+        return []
 
     def buscar_cupons_cuponomia(self, limite: int = 20) -> List[Dict]:
         """Busca cupons exclusivos no Cuponomia"""

@@ -294,7 +294,86 @@ class TelegramNotifier:
             
         except Exception as e:
             print(f'❌ Erro ao enviar produto urgente: {e}')
-    
+
+    async def enviar_produto_sem_lifestyle(self, produto: dict):
+        """Envia produto sem lifestyle para o chat privado do admin solicitando foto"""
+        try:
+            mensagem = self._formatar_mensagem_produto_sem_lifestyle(produto)
+            imagem = produto.get('imageUrl', '')
+            usar_foto = bool(imagem and 'placeholder' not in imagem)
+
+            if usar_foto:
+                if len(mensagem) <= 1024:
+                    try:
+                        await self._send_photo_with_retry(
+                            chat_id=self.chat_id,
+                            photo=imagem,
+                            caption=mensagem,
+                            parse_mode=ParseMode.HTML
+                        )
+                        print(f'📸 Produto sem lifestyle enviado com foto: {produto.get("name", "")[:40]}')
+                        return
+                    except Exception as e:
+                        print(f'⚠️ Erro ao enviar foto ({e}), enviando texto...')
+
+            await self._send_message_with_retry(
+                chat_id=self.chat_id,
+                text=mensagem,
+                parse_mode=ParseMode.HTML
+            )
+            print(f'📝 Produto sem lifestyle enviado como texto: {produto.get("name", "")[:40]}')
+        except Exception as e:
+            print(f'❌ Erro ao enviar produto sem lifestyle para Telegram: {e}')
+
+    def _formatar_mensagem_produto_sem_lifestyle(self, produto: dict) -> str:
+        """Formata mensagem de produto aguardando foto lifestyle com comandos de resposta"""
+        nome = produto.get('name', 'Produto')
+        preco = produto.get('price', 0)
+        try:
+            preco_float = float(preco) if preco else 0.0
+        except:
+            preco_float = 0.0
+            
+        preco_original = produto.get('originalPrice')
+        produto_id = produto.get('id', 'N/A')
+        loja = produto.get('storeName', 'Loja')
+        categoria = produto.get('category', 'Geral')
+        score = produto.get('qualityScore', 0)
+        score_visual = "⭐" * min(5, max(1, score // 20))
+
+        desconto_txt = ""
+        if preco_original:
+            try:
+                preco_orig_float = float(preco_original)
+                if preco_orig_float > preco_float:
+                    desc = (1 - preco_float / preco_orig_float) * 100
+                    desconto_txt = f"\n💸 De: <s>R$ {preco_orig_float:.2f}</s> | <b>{desc:.0f}% OFF</b>"
+            except:
+                pass
+
+        mensagem = f"""
+📸 <b>PRODUTO AGUARDANDO FOTO LIFESTYLE</b>
+
+📦 <b>{nome[:140]}</b>
+🏷️ {categoria} | 🏪 <b>{loja}</b>
+💰 <b>R$ {preco_float:.2f}</b>{desconto_txt}
+📊 Qualidade: {score_visual} ({score}/100)
+
+🆔 ID: <code>{produto_id}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 <b>COMO ADICIONAR A FOTO LIFESTYLE:</b>
+1️⃣ <b>Responda a esta mensagem</b> enviando a foto
+OU
+2️⃣ Envie a foto com legenda: <code>/foto {produto_id}</code>
+OU
+3️⃣ Use o comando: <code>/foto {produto_id} [URL_DA_FOTO]</code>
+
+🚫 Para rejeitar: <code>/rejeitar {produto_id}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        return mensagem.strip()
+
     def _formatar_mensagem_produto(self, produto: dict) -> str:
         """Formata mensagem de produto com score de qualidade"""
         
@@ -496,9 +575,10 @@ class TelegramNotifier:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        # python-telegram-bot v20 envia sem problemas assim:
         if tipo == 'produto':
             loop.run_until_complete(self.enviar_produto(dados))
+        elif tipo == 'produto_sem_lifestyle':
+            loop.run_until_complete(self.enviar_produto_sem_lifestyle(dados))
         elif tipo == 'produto_urgente':
             loop.run_until_complete(self.enviar_produto_urgente(dados))
         elif tipo == 'cupom':
