@@ -19,11 +19,25 @@ const uploadRateLimiter = createRateLimiter('upload', {
 
 export async function POST(request: Request) {
   try {
-    // --- Autenticação: apenas admins e moderadores ---
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    const payload = sessionToken ? verifyToken(sessionToken) : null;
-    if (!payload || !['admin', 'moderator'].includes(payload.role)) {
+    // --- Autenticação: sessão admin/moderador OU x-api-key válida ---
+    const apiKey = request.headers.get('x-api-key');
+    const validKey = process.env.API_SECRET_KEY || process.env.AFFILIATE_HUB_API_KEY;
+    const isApiKeyValid = apiKey && validKey && apiKey === validKey;
+
+    let isAuthenticated = isApiKeyValid;
+
+    if (!isAuthenticated) {
+      try {
+        const cookieStore = await cookies();
+        const sessionToken = cookieStore.get('session')?.value;
+        const payload = sessionToken ? verifyToken(sessionToken) : null;
+        if (payload && ['admin', 'moderator'].includes(payload.role)) {
+          isAuthenticated = true;
+        }
+      } catch {}
+    }
+
+    if (!isAuthenticated) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
@@ -35,6 +49,11 @@ export async function POST(request: Request) {
         { error: rl.message },
         { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
       );
+    }
+
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return NextResponse.json({ error: 'Content-Type deve ser multipart/form-data.' }, { status: 400 });
     }
 
     const formData = await request.formData();

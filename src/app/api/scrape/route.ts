@@ -31,11 +31,25 @@ const scrapeRateLimiter = createRateLimiter('scrape', {
 
 export async function POST(request: Request) {
   try {
-    // --- Autenticação: apenas admins e moderadores ---
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
-    const sessionPayload = sessionToken ? verifyToken(sessionToken) : null;
-    if (!sessionPayload || !['admin', 'moderator'].includes(sessionPayload.role)) {
+    // --- Autenticação: sessão admin/moderador OU x-api-key válida ---
+    const apiKey = request.headers.get('x-api-key');
+    const validKey = process.env.API_SECRET_KEY || process.env.AFFILIATE_HUB_API_KEY;
+    const isApiKeyValid = apiKey && validKey && apiKey === validKey;
+
+    let isAuthenticated = isApiKeyValid;
+
+    if (!isAuthenticated) {
+      try {
+        const cookieStore = await cookies();
+        const sessionToken = cookieStore.get('session')?.value;
+        const sessionPayload = sessionToken ? verifyToken(sessionToken) : null;
+        if (sessionPayload && ['admin', 'moderator'].includes(sessionPayload.role)) {
+          isAuthenticated = true;
+        }
+      } catch {}
+    }
+
+    if (!isAuthenticated) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
@@ -49,7 +63,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido no corpo da requisição.' }, { status: 400 });
+    }
     const { url } = body;
     
     if (!url) {
