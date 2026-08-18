@@ -4,11 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { verifyPassword, signToken } from '@/lib/auth-utils';
 import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
-// Rate limiting: máximo de 5 tentativas falhas por IP a cada 15 minutos
+// Rate limiting: máximo de 10 tentativas por IP a cada 15 minutos
 const loginRateLimiter = createRateLimiter('login', {
   windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: 'Muitas tentativas falhas. Tente novamente em 15 minuto(s).',
+  max: 10,
+  message: 'Muitas tentativas de login. Tente novamente em 15 minuto(s).',
 });
 
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
 
     // Busca o usuário no banco de dados
     const user = await prisma.user.findUnique({
@@ -47,7 +47,6 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      loginRateLimiter(ip); // Contabiliza tentativa falhada
       return NextResponse.json(
         { error: 'Credenciais inválidas' },
         { status: 401 }
@@ -65,7 +64,6 @@ export async function POST(request: Request) {
     // Verifica a senha de forma nativa e segura
     const isPasswordValid = verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      loginRateLimiter(ip); // Contabiliza tentativa falhada
       return NextResponse.json(
         { error: 'Credenciais inválidas' },
         { status: 401 }

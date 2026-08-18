@@ -56,8 +56,12 @@ export function verifyPassword(password: string, storedHash: string): boolean {
     if (!salt || !hash) return false;
 
     const verifyHash = crypto.pbkdf2Sync(password, salt, iterations, PBKDF2_KEYLEN, PBKDF2_DIGEST).toString('hex');
+    const hashBuf = Buffer.from(hash, 'hex');
+    const verifyBuf = Buffer.from(verifyHash, 'hex');
+    if (hashBuf.length !== verifyBuf.length) return false;
+
     // timingSafeEqual para evitar timing attacks
-    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(verifyHash, 'hex'));
+    return crypto.timingSafeEqual(hashBuf, verifyBuf);
   } catch (error) {
     console.error('Erro na verificação de senha:', error);
     return false;
