@@ -74,7 +74,10 @@ async def publicar_no_grupo(context, produto: dict, platform: str, affiliate_lin
 
 async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Intercepta fotos (com ou sem legenda) e processa comandos ou respostas de lifestyle."""
-    caption = update.message.caption or ''
+    msg = update.message or update.channel_post or update.edited_message
+    if not msg:
+        return
+    caption = msg.caption or ''
     print(f'📸 Foto recebida (legenda: "{caption}")')
     
     if caption.strip().startswith('/aprovar'):
@@ -91,8 +94,8 @@ async def handle_foto_com_legenda(update: Update, context: ContextTypes.DEFAULT_
         return
 
     # Se a foto foi enviada em resposta a uma mensagem do bot com ID do produto
-    if update.message.reply_to_message:
-        reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
+    if msg.reply_to_message:
+        reply_text = msg.reply_to_message.text or msg.reply_to_message.caption or ""
         match = re.search(r'🆔\s*ID:\s*([a-zA-Z0-9_-]+)', reply_text)
         if not match:
             match = re.search(r'ID_DO_PRODUTO:\s*([a-zA-Z0-9_-]+)', reply_text)
@@ -264,11 +267,14 @@ async def handle_rejeitar_command(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Processa textos (encaminhados ou não) que contenham link para cadastrar como pendente"""
-    text = update.message.text or update.message.caption or ""
+    msg = update.message or update.channel_post or update.edited_message
+    if not msg:
+        return
+    text = msg.text or msg.caption or ""
     
     # Se for uma resposta a uma mensagem (o handle_reply cuida disso)
-    if update.message.reply_to_message:
-        reply_text = update.message.reply_to_message.text or update.message.reply_to_message.caption or ""
+    if msg.reply_to_message:
+        reply_text = msg.reply_to_message.text or msg.reply_to_message.caption or ""
         if "ID_DO_PRODUTO:" in reply_text or "🆔 ID:" in reply_text:
             # Deixa o handle_reply normal processar
             return await handle_reply(update, context)
@@ -282,7 +288,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
     if 'http' not in text.lower():
         return
         
-    msg_status = await update.message.reply_text("⏳ Analisando oferta encaminhada...")
+    msg_status = await msg.reply_text("⏳ Analisando oferta encaminhada...")
     
     import json
     import requests

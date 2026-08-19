@@ -10,6 +10,17 @@ const http = require('http');
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
+// Process Crash Protection
+process.on('uncaughtException', (err) => {
+    console.error('💥 Uncaught Exception capturada:', err ? err.message : err);
+    try { addLog('critical', 'Uncaught Exception no WhatsApp Engine', err ? err.message : String(err)); } catch (_) {}
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 Unhandled Rejection capturada:', reason);
+    try { addLog('error', 'Unhandled Rejection no WhatsApp Engine', String(reason)); } catch (_) {}
+});
+
 const app = express();
 app.use(express.json());
 
@@ -644,21 +655,12 @@ async function flushBucket() {
                     } catch (imgErr) {
                         console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
                         addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', imgErr.message);
-                        if (imgErr.message && imgErr.message.includes('timed out')) {
-                            console.log('🔄 Timeout no Puppeteer detectado. Forçando reconexão antes do fallback...');
-                            isReady = false;
-                            connectionState = 'INITIALIZING';
-                            try { await client.destroy(); } catch (e) { /* ignora */ }
-                            setTimeout(() => {
-                                console.log('🔄 Reconectando WhatsApp após timeout de envio...');
-                                initWhatsApp();
-                            }, 5000);
-                        }
-                        await new Promise(r => setTimeout(r, 8000));
                         try {
-                            await client.sendMessage(targetChatId, bestOffer.message);
-                            console.log('🚀 Mensagem (somente texto, fallback) enviada com sucesso!');
-                            addLog('info', 'Mensagem (fallback texto) enviada com sucesso!');
+                            if (client && isReady) {
+                                await client.sendMessage(targetChatId, bestOffer.message);
+                                console.log('🚀 Mensagem (somente texto, fallback) enviada com sucesso!');
+                                addLog('info', 'Mensagem (fallback texto) enviada com sucesso!');
+                            }
                         } catch (textErr) {
                             console.error('❌ Falha também no fallback texto:', textErr.message);
                             addLog('error', 'Falha também no fallback de texto', textErr.message);
