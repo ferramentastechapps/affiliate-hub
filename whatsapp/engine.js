@@ -236,6 +236,7 @@ async function initWhatsApp() {
     let puppeteerConfig = {
         args: puppeteerArgs,
         headless: true,
+        timeout: 120000,
         protocolTimeout: 120000
     };
 
@@ -321,7 +322,12 @@ async function initWhatsApp() {
         setTimeout(() => {
             console.log('🔄 Reconectando WhatsApp...');
             try {
-                if (client) client.initialize();
+                if (client) {
+                    client.initialize().catch(err => {
+                        console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
+                        addLog('error', 'Erro ao reinicializar cliente WhatsApp', err.message);
+                    });
+                }
             } catch (err) {
                 console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
                 addLog('error', 'Erro ao reinicializar cliente WhatsApp', err.message);
@@ -340,12 +346,17 @@ async function initWhatsApp() {
         }
     });
 
-    try {
-        client.initialize();
-    } catch (err) {
+    client.initialize().catch((err) => {
         console.error('❌ Erro durante client.initialize():', err.message);
         addLog('critical', 'Erro ao inicializar cliente WhatsApp', err.message);
-    }
+        isReady = false;
+        connectionState = 'DISCONNECTED';
+        lastError = err.message;
+        console.log('🔄 Tentando reinicializar WhatsApp em 10 segundos...');
+        setTimeout(() => {
+            safeReconnect();
+        }, 10000);
+    });
 }
 
 // Reconexão segura assíncrona sem travar Express
