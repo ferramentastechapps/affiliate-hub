@@ -12,7 +12,7 @@ export async function PATCH(
     const body = await request.json();
     
     // Extrait campos permitidos
-    const { category, brand, platformProductId, isFixed, imageUrl, updateSourceUrl, updateAffiliateUrl, platform, userRating } = body;
+    const { category, brand, platformProductId, isFixed, imageUrl, enhancedImageUrl, updateSourceUrl, updateAffiliateUrl, platform, userRating } = body;
 
     const dataToUpdate: any = {};
     if (category !== undefined) dataToUpdate.category = category;
@@ -21,7 +21,9 @@ export async function PATCH(
     if (isFixed !== undefined) dataToUpdate.isFixed = isFixed;
     if (imageUrl !== undefined) {
       dataToUpdate.imageUrl = imageUrl;
-      dataToUpdate.enhancedImageUrl = imageUrl;
+    }
+    if (enhancedImageUrl !== undefined) {
+      dataToUpdate.enhancedImageUrl = enhancedImageUrl;
     }
     if (userRating !== undefined) {
       dataToUpdate.userRating = userRating !== null ? parseInt(userRating) : null;
@@ -50,6 +52,7 @@ export async function PATCH(
         platformProductId: true,
         isFixed: true,
         imageUrl: true,
+        enhancedImageUrl: true,
         updatedAt: true
       }
     });
