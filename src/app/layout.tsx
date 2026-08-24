@@ -10,6 +10,7 @@ import { CategoriesModal } from "@/components/CategoriesModal";
 import { CouponsModal } from "@/components/CouponsModal";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AiDealAssistant } from "@/components/AiDealAssistant";
+import { PwaUpdater } from "@/components/PwaUpdater";
 import Script from "next/script";
 
 const montserrat = Montserrat({
@@ -96,6 +97,7 @@ export default function RootLayout({
           <MobileBottomNav />
           <InstallBanner />
           <AiDealAssistant />
+          <PwaUpdater />
         </AuthProvider>
         <Script
           src="https://accounts.google.com/gsi/client"
