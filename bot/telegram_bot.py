@@ -544,12 +544,43 @@ OU
         return mensagem.strip()
 
     
+    def _get_affiliate_link_for_platform(self, platform: str) -> str:
+        """Retorna o link de afiliado direto para a plataforma do cupom."""
+        from config import (
+            AFFILIATE_HUB_URL,
+        )
+        import os
+        p = platform.lower()
+        base_url = AFFILIATE_HUB_URL.rstrip('/')
+
+        if 'amazon' in p:
+            amazon_tag = os.getenv('AMAZON_TAG', 'economizei00-20')
+            return f"https://www.amazon.com.br/s?tag={amazon_tag}"
+        elif 'shopee' in p:
+            shopee_id = os.getenv('SHOPEE_APP_ID', '')
+            # Link de perfil de afiliado Shopee
+            return f"https://shopee.com.br/m/{shopee_id}" if shopee_id else f"{base_url}/cupons"
+        elif 'magalu' in p or 'magazine' in p:
+            shop = os.getenv('MAGALU_SHOP', 'jotashopindica')
+            return f"https://www.magazineluiza.com.br/parceiro/{shop}/"
+        elif 'mercado' in p or 'mercadolivre' in p or 'ml' == p:
+            ml_word = os.getenv('MERCADOLIVRE_WORD', 'economizeicomjota')
+            return f"https://mercadolivre.com/sec/{ml_word}"
+        elif 'aliexpress' in p or 'ali' in p:
+            return "https://s.click.aliexpress.com/e/_c2RQDHy9"
+        elif 'kabum' in p:
+            return "https://www.awin1.com/cread.php?awinmid=105497&awinaffid=2934481"
+        elif 'netshoes' in p:
+            return f"{base_url}/cupons"
+        else:
+            return f"{base_url}/cupons"
+
     def _formatar_mensagem_cupom(self, cupom: dict) -> str:
-        """Formata mensagem de cupom"""
+        """Formata mensagem de cupom para o chat de aprovação (resumo simples)"""
         expira = ""
         if cupom.get('expiresAt'):
             expira = f"\n⏰ Expira em: {cupom['expiresAt'][:10]}"
-        
+
         mensagem = f"""
 🎫 <b>NOVO CUPOM!</b>
 
@@ -560,7 +591,6 @@ OU
 
 🌐 Ver mais: {AFFILIATE_HUB_URL}
 """
-        
         return mensagem.strip()
     
     def enviar_sync(self, tipo: str, dados: dict):
@@ -910,37 +940,101 @@ OU
             print(f'❌ Erro ao publicar no grupo: {e}')
 
     async def publicar_cupom_grupo(self, cupom: dict):
-        """Publica o cupom diretamente no grupo de promoções."""
+        """Publica o cupom no grupo de promoções com link de afiliado direto."""
         from config import TELEGRAM_PROMO_GROUP_ID, AFFILIATE_HUB_URL
         if not TELEGRAM_PROMO_GROUP_ID:
             print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação de cupom no grupo.')
             return
-            
-        expira = ""
-        if cupom.get('expiresAt'):
-            expira = f"\n⏰ Expira em: {cupom['expiresAt'][:10]}"
-        
+
+        import os
+        from datetime import datetime, timezone
+
         base_url = AFFILIATE_HUB_URL.rstrip('/')
-        link_cupom = f"{base_url}/cupons"
-            
-        mensagem = f"""
-🎫 <b>CUPOM RELÂMPAGO!</b>
+        platform     = cupom.get('platform', '')
+        code         = cupom.get('code', '')
+        description  = cupom.get('description', '')
+        discount     = cupom.get('discount', '')
+        min_purchase = cupom.get('minPurchaseValue')
+        expires_at   = cupom.get('expiresAt')
+        categories   = cupom.get('applicableCategories', '')
 
-🏷️ <b>{cupom.get('platform', '')}</b>
-📝 {cupom.get('description', '')}
-💰 <b>{cupom.get('discount', '')}</b>
+        # ── Emoji da plataforma ───────────────────────────────────────────────
+        plat_lower = platform.lower()
+        if 'amazon' in plat_lower:
+            plat_emoji = '🟠 Amazon'
+        elif 'shopee' in plat_lower:
+            plat_emoji = '🟠 Shopee'
+        elif 'magalu' in plat_lower or 'magazine' in plat_lower:
+            plat_emoji = '🔵 Magalu'
+        elif 'mercado' in plat_lower:
+            plat_emoji = '🟡 Mercado Livre'
+        elif 'aliexpress' in plat_lower:
+            plat_emoji = '🔴 AliExpress'
+        elif 'kabum' in plat_lower:
+            plat_emoji = '🔵 Kabum'
+        elif 'netshoes' in plat_lower:
+            plat_emoji = '🟣 Netshoes'
+        else:
+            plat_emoji = f'🏪 {platform}'
 
-💳 Use o cupom: <code>{cupom.get('code')}</code>{expira}
+        # ── Urgência: expira em menos de 24h ─────────────────────────────────
+        urgencia = ''
+        expira_linha = ''
+        if expires_at:
+            try:
+                # Suporta formatos com e sem timezone
+                exp_str = expires_at[:19].replace('T', ' ')
+                exp_dt  = datetime.strptime(exp_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                diff_h  = (exp_dt - datetime.now(timezone.utc)).total_seconds() / 3600
+                if diff_h <= 24:
+                    urgencia = '🔥 <b>EXPIRA HOJE!</b> Corre!\n'
+                elif diff_h <= 72:
+                    urgencia = '⚡ <b>Oferta por tempo limitado!</b>\n'
+                expira_linha = f'\n⏰ <b>Válido até:</b> {expires_at[:10]}'
+            except Exception:
+                expira_linha = f'\n⏰ <b>Válido até:</b> {expires_at[:10]}'
 
-🔗 <a href="{link_cupom}">Ver todos os cupons no site</a>
-"""
+        # ── Pedido mínimo ─────────────────────────────────────────────────────
+        min_linha = ''
+        if min_purchase and float(min_purchase) > 0:
+            min_linha = f'\n💵 <b>Pedido mínimo:</b> R$ {float(min_purchase):.2f}'
+
+        # ── Categorias ────────────────────────────────────────────────────────
+        cat_linha = ''
+        if categories:
+            cat_linha = f'\n📦 <b>Válido em:</b> {categories}'
+
+        # ── Link de afiliado direto da plataforma ─────────────────────────────
+        affiliate_link = self._get_affiliate_link_for_platform(platform)
+        link_site      = f'{base_url}/cupons'
+
+        # ── Monta mensagem no estilo dos grandes grupos de afiliados ──────────
+        mensagem = (
+            f'{urgencia}'
+            f'🎫 <b>CUPOM RELÂMPAGO!</b>\n'
+            f'\n'
+            f'{plat_emoji}\n'
+            f'📋 {description}\n'
+            f'💰 <b>Desconto: {discount}</b>'
+            f'{min_linha}'
+            f'{cat_linha}'
+            f'{expira_linha}\n'
+            f'\n'
+            f'💳 <b>Cupom:</b> <code>{code}</code>\n'
+            f'   <i>(toque no código para copiar)</i>\n'
+            f'\n'
+            f'👉 <a href="{affiliate_link}">ACESSAR {platform.upper()} COM AFILIADO</a>\n'
+            f'\n'
+            f'📲 <a href="{link_site}">Ver mais cupons no Economizei</a>'
+        )
+
         try:
             await self._send_message_with_retry(
                 chat_id=TELEGRAM_PROMO_GROUP_ID,
-                text=mensagem.strip(),
+                text=mensagem,
                 parse_mode='HTML'
             )
-            print(f'📢 Cupom publicado no grupo: {cupom["code"]}')
+            print(f'📢 Cupom publicado no grupo com afiliado: {code} → {affiliate_link}')
         except Exception as e:
             print(f'❌ Erro ao publicar cupom no grupo: {e}')
 
