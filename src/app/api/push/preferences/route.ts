@@ -5,21 +5,36 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get('endpoint');
+    const userId   = searchParams.get('userId');
 
-    if (!endpoint) {
-      return NextResponse.json({ error: 'Endpoint não fornecido' }, { status: 400 });
+    if (!endpoint && !userId) {
+      return NextResponse.json({ error: 'Forneça endpoint ou userId' }, { status: 400 });
     }
 
-    const subscription = await prisma.pushSubscription.findUnique({
-      where: { endpoint },
-      select: { preferences: true }
-    });
+    let subscription = null;
+
+    // 1ª tentativa: busca pela subscription do endpoint
+    if (endpoint) {
+      subscription = await prisma.pushSubscription.findUnique({
+        where: { endpoint },
+        select: { preferences: true },
+      });
+    }
+
+    // 2ª tentativa (fallback): busca a subscription mais recente do usuário
+    if (!subscription && userId) {
+      subscription = await prisma.pushSubscription.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: { preferences: true },
+      });
+    }
 
     if (!subscription) {
       return NextResponse.json({ error: 'Subscription não encontrada' }, { status: 404 });
     }
 
-    // Retorna as preferências ou um padrão "all: true" se for antiga sem prefs
+    // Retorna as preferências ou um padrão se for antiga sem prefs
     const prefs = subscription.preferences || { all: true, categories: [] };
 
     return NextResponse.json({ preferences: prefs });
@@ -31,18 +46,64 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { endpoint, preferences } = await request.json();
+    const { endpoint, userId, preferences } = await request.json();
 
-    if (!endpoint || !preferences) {
-      return NextResponse.json({ error: 'Endpoint ou preferências ausentes' }, { status: 400 });
+    if (!preferences) {
+      return NextResponse.json({ error: 'Preferências ausentes' }, { status: 400 });
     }
 
-    const subscription = await prisma.pushSubscription.update({
-      where: { endpoint },
-      data: { preferences }
-    });
+    if (!endpoint && !userId) {
+      return NextResponse.json({ error: 'Forneça endpoint ou userId' }, { status: 400 });
+    }
 
-    return NextResponse.json({ success: true, preferences: subscription.preferences });
+    let subscription = null;
+
+    // 1ª tentativa: atualiza pelo endpoint
+    if (endpoint) {
+      try {
+        subscription = await prisma.pushSubscription.update({
+          where: { endpoint },
+          data: { preferences },
+        });
+      } catch {
+        // Se o endpoint não existe (subscription perdida), tenta fallback pelo userId
+        if (userId) {
+          subscription = await prisma.pushSubscription.findFirst({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (subscription) {
+            subscription = await prisma.pushSubscription.update({
+              where: { id: subscription.id },
+              data: { preferences },
+            });
+          }
+        }
+      }
+    } else if (userId) {
+      // Sem endpoint: atualiza a subscription mais recente do usuário
+      const existing = await prisma.pushSubscription.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existing) {
+        subscription = await prisma.pushSubscription.update({
+          where: { id: existing.id },
+          data: { preferences },
+        });
+      }
+    }
+
+    if (!subscription) {
+      // Nenhuma subscription encontrada — retorna 200 mesmo assim pois o
+      // localStorage já salvou localmente. A subscription será criada quando
+      // o usuário ativar as notificações.
+      return NextResponse.json({ success: true, persisted: false });
+    }
+
+    return NextResponse.json({ success: true, persisted: true, preferences: subscription.preferences });
   } catch (error) {
     console.error('Erro ao atualizar preferências:', error);
     return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 });

@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, BellRinging, CheckCircle, ClockCounterClockwise, ArrowRight } from '@phosphor-icons/react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, BellRinging, CheckCircle, ClockCounterClockwise, ArrowRight, FloppyDisk, Spinner } from '@phosphor-icons/react';
 import Link from 'next/link';
+import { useAuth } from './AuthProvider';
+
+// Chave usada no localStorage para cache local das preferências
+const LS_KEY = 'push_preferences_cache';
+
+interface PreferencesData {
+  categories: string[];
+  customInterests: string[];
+}
 
 interface NotificationPreferencesModalProps {
   isOpen: boolean;
@@ -10,49 +19,124 @@ interface NotificationPreferencesModalProps {
   mode: 'install' | 'edit';
 }
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+// ── Helpers de localStorage ───────────────────────────────────────────────────
+
+function loadFromLocalStorage(): PreferencesData | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as PreferencesData;
+  } catch {
+    return null;
+  }
+}
+
+function saveToLocalStorage(prefs: PreferencesData) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(prefs));
+  } catch {
+    // quota exceeded ou modo privado – ignora silenciosamente
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function NotificationPreferencesModal({ isOpen, onClose, mode }: NotificationPreferencesModalProps) {
+  const { user } = useAuth();
+
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customInterests, setCustomInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [subscriptionEndpoint, setSubscriptionEndpoint] = useState<string | null>(null);
 
-  // Carrega categorias dinâmicas
+  // ── Carrega categorias dinâmicas ──────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
-    
+
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
         if (data.categories) setAllCategories(data.categories);
       })
       .catch(console.error);
+  }, [isOpen]);
 
-    if (mode === 'edit') {
-      setIsLoading(true);
-      navigator.serviceWorker.ready.then(async (registration) => {
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          setSubscriptionEndpoint(subscription.endpoint);
-          const res = await fetch(`/api/push/preferences?endpoint=${encodeURIComponent(subscription.endpoint)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.preferences) {
-              setSelectedCategories(data.preferences.categories || []);
-              setCustomInterests(data.preferences.customInterests || []);
-            }
-          }
-        }
-        setIsLoading(false);
-      });
-    } else {
+  // ── Carrega preferências ao abrir o modal ─────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // 1️⃣ Carrega do localStorage imediatamente (resposta instantânea)
+    const cached = loadFromLocalStorage();
+    if (cached) {
+      setSelectedCategories(cached.categories ?? []);
+      setCustomInterests(cached.customInterests ?? []);
+    } else if (mode === 'install') {
       setSelectedCategories([]);
       setCustomInterests([]);
     }
-  }, [isOpen, mode]);
 
-  // Bloqueia o scroll da página (fundo) quando o modal está aberto
+    // 2️⃣ Em paralelo, busca do servidor (fonte da verdade)
+    setIsLoading(true);
+
+    const fetchFromServer = async () => {
+      try {
+        // Tenta obter subscription ativa
+        let endpoint: string | null = null;
+        if ('serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            const sub = await registration.pushManager.getSubscription();
+            if (sub) {
+              endpoint = sub.endpoint;
+              setSubscriptionEndpoint(endpoint);
+            }
+          } catch (swErr) {
+            console.warn('[Preferences] Service worker não disponível:', swErr);
+          }
+        }
+
+        // Monta a URL de busca — usa endpoint ou userId como fallback
+        let url: string | null = null;
+        if (endpoint) {
+          url = `/api/push/preferences?endpoint=${encodeURIComponent(endpoint)}`;
+        } else if (user?.id) {
+          url = `/api/push/preferences?userId=${encodeURIComponent(user.id)}`;
+        }
+
+        if (url) {
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.preferences) {
+              const serverPrefs: PreferencesData = {
+                categories: data.preferences.categories ?? [],
+                customInterests: data.preferences.customInterests ?? [],
+              };
+              // Atualiza estado e cache local com dados do servidor
+              setSelectedCategories(serverPrefs.categories);
+              setCustomInterests(serverPrefs.customInterests);
+              saveToLocalStorage(serverPrefs);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Preferences] Falha ao buscar do servidor:', err);
+        // Mantém o que foi carregado do localStorage
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFromServer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user?.id]);
+
+  // ── Bloqueia o scroll da página quando o modal está aberto ────────────────
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -63,6 +147,8 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  // ── Utilitários ───────────────────────────────────────────────────────────
 
   const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -91,14 +177,15 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
       applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     });
 
-    setSubscriptionEndpoint(subscription.endpoint);
-    
-    // Create initial subscription on server
+    const newEndpoint = subscription.endpoint;
+    setSubscriptionEndpoint(newEndpoint);
+
+    // Registra a nova subscription no servidor
     await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: subscription.endpoint,
+        endpoint: newEndpoint,
         keys: {
           p256dh: subscription.toJSON().keys?.p256dh,
           auth: subscription.toJSON().keys?.auth,
@@ -106,29 +193,73 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
         preferences: { all: false, couponsOnly: false, categories: [], customInterests: [] }
       }),
     });
-    
-    return subscription.endpoint;
+
+    return newEndpoint;
   };
 
-  const savePreferences = async (newCats: string[], newInterests: string[]) => {
-    const endpoint = await ensureSubscription();
-    if (!endpoint) return;
+  // ── Salvar preferências (localStorage + servidor) ─────────────────────────
+  const savePreferences = useCallback(async (newCats: string[], newInterests: string[]) => {
+    const prefs: PreferencesData = { categories: newCats, customInterests: newInterests };
 
-    await fetch('/api/push/preferences', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        endpoint, 
-        preferences: { all: false, couponsOnly: false, categories: newCats, customInterests: newInterests } 
-      })
-    });
-  };
+    // Persiste localmente de imediato
+    saveToLocalStorage(prefs);
+    setSaveStatus('saving');
+
+    try {
+      // Tenta obter endpoint; se não houver e usuário estiver logado, usa userId
+      let endpoint = subscriptionEndpoint;
+
+      if (!endpoint && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const sub = await registration.pushManager.getSubscription();
+          if (sub) {
+            endpoint = sub.endpoint;
+            setSubscriptionEndpoint(endpoint);
+          }
+        } catch { /* sw indisponível */ }
+      }
+
+      // Se houver interação pela primeira vez, pede subscription
+      if (!endpoint && !user?.id) {
+        endpoint = await ensureSubscription();
+        if (!endpoint) {
+          setSaveStatus('error');
+          return;
+        }
+      }
+
+      const body: Record<string, unknown> = {
+        preferences: { all: false, couponsOnly: false, ...prefs },
+      };
+      if (endpoint) body.endpoint = endpoint;
+      if (user?.id) body.userId = user.id;
+
+      const res = await fetch('/api/push/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error('[Preferences] Falha ao salvar no servidor:', err);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptionEndpoint, user?.id]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const toggleCategory = (category: string) => {
-    const newCats = selectedCategories.includes(category) 
+    const newCats = selectedCategories.includes(category)
       ? selectedCategories.filter(c => c !== category)
       : [...selectedCategories, category];
-    
+
     setSelectedCategories(newCats);
     savePreferences(newCats, customInterests);
   };
@@ -156,7 +287,7 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-start sm:items-center justify-center p-4 pt-16 sm:pt-4 animate-fade-in">
       <div className="bg-[#121214] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden animate-slide-up relative flex flex-col max-h-[80dvh] sm:max-h-[85vh] shadow-2xl">
-        
+
         {/* Header */}
         <div className="flex flex-col shrink-0 bg-white/5 border-b border-white/10">
           <div className="flex justify-between items-center p-5">
@@ -168,12 +299,30 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
                 Alertas Personalizados
               </h2>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Indicador de status de salvamento */}
+              {saveStatus === 'saving' && (
+                <span className="flex items-center gap-1 text-zinc-400 text-xs animate-pulse">
+                  <Spinner size={14} className="animate-spin" />
+                  Salvando
+                </span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="flex items-center gap-1 text-green-400 text-xs">
+                  <FloppyDisk size={14} weight="fill" />
+                  Salvo
+                </span>
+              )}
+              {saveStatus === 'error' && (
+                <span className="text-red-400 text-xs">Falha ao salvar</span>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -198,102 +347,109 @@ export function NotificationPreferencesModal({ isOpen, onClose, mode }: Notifica
 
         {/* Tab: Settings */}
         <div className="p-5 flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-          {mode === 'install' && !subscriptionEndpoint && (
+          {isLoading && selectedCategories.length === 0 && customInterests.length === 0 && (
+            <div className="flex items-center gap-2 text-zinc-500 text-sm mb-4">
+              <Spinner size={14} className="animate-spin" />
+              Carregando suas preferências...
+            </div>
+          )}
+
+          {mode === 'install' && !subscriptionEndpoint && !isLoading && (
             <div className="bg-orange-500/10 border border-orange-500/30 text-orange-400 p-3 rounded-xl text-xs mb-5">
-                Configure seus alertas! Ao selecionar o primeiro item, pediremos permissão para te notificar. As configurações são salvas automaticamente.
-              </div>
-            )}
-
-            {/* Custom Interests */}
-            <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">
-              Termos Escolhidos (Marcas ou Produtos)
-            </h3>
-            <p className="text-zinc-500 text-[11px] mb-3 leading-relaxed">
-              Digite marcas ou produtos de seu interesse (ex: "iphone", "tenis nike") para receber alertas.
-            </p>
-            
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newInterest}
-                onChange={(e) => setNewInterest(e.target.value)}
-                placeholder="Ex: ps5, jbl, geladeira..."
-                className="flex-1 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 py-2 rounded-xl text-base sm:text-xs placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddInterest();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleAddInterest}
-                className="bg-zinc-800 hover:bg-zinc-750 text-white text-xs font-semibold px-4 py-2 rounded-xl border border-zinc-700 transition-colors cursor-pointer"
-              >
-                Adicionar
-              </button>
+              Configure seus alertas! Ao selecionar o primeiro item, pediremos permissão para te notificar. As configurações são salvas automaticamente.
             </div>
+          )}
 
-            {(customInterests.length > 0 || selectedCategories.length > 0) && (
-              <div className="flex flex-wrap gap-1.5 mb-8 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-                {customInterests.map((interest) => (
-                  <span
-                    key={interest}
-                    className="inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs px-2.5 py-1.5 rounded-md"
-                  >
-                    <span className="font-medium">{interest}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveInterest(interest)}
-                      className="text-orange-500/50 hover:text-orange-400 ml-0.5 cursor-pointer flex items-center justify-center"
-                    >
-                      <X size={12} weight="bold" />
-                    </button>
-                  </span>
-                ))}
-                
-                {selectedCategories.map((cat) => (
-                  <span
-                    key={`top-${cat}`}
-                    className="inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs px-2.5 py-1.5 rounded-md"
-                  >
-                    <span className="font-medium capitalize">{cat}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleCategory(cat)}
-                      className="text-orange-500/50 hover:text-orange-400 ml-0.5 cursor-pointer flex items-center justify-center"
-                    >
-                      <X size={12} weight="bold" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+          {/* Custom Interests */}
+          <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">
+            Termos Escolhidos (Marcas ou Produtos)
+          </h3>
+          <p className="text-zinc-500 text-[11px] mb-3 leading-relaxed">
+            Digite marcas ou produtos de seu interesse (ex: &quot;iphone&quot;, &quot;tenis nike&quot;) para receber alertas.
+          </p>
 
-            {/* Categories */}
-            <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">
-              Sugestões de Categorias
-            </h3>
-            
-            <div className="flex flex-wrap gap-2 pb-5">
-              {allCategories.length === 0 ? (
-                <p className="text-zinc-500 text-sm">Carregando categorias...</p>
-              ) : (
-                allCategories.filter(cat => !selectedCategories.includes(cat)).map(cat => {
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => toggleCategory(cat)}
-                      className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
-                    >
-                      <span className="capitalize">{cat}</span>
-                    </button>
-                  )
-                })
-              )}
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              value={newInterest}
+              onChange={(e) => setNewInterest(e.target.value)}
+              placeholder="Ex: ps5, jbl, geladeira..."
+              className="flex-1 bg-zinc-900 border border-zinc-800 text-zinc-200 px-3 py-2 rounded-xl text-base sm:text-xs placeholder-zinc-600 focus:outline-none focus:border-orange-500 transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddInterest();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleAddInterest}
+              className="bg-zinc-800 hover:bg-zinc-750 text-white text-xs font-semibold px-4 py-2 rounded-xl border border-zinc-700 transition-colors cursor-pointer"
+            >
+              Adicionar
+            </button>
+          </div>
+
+          {(customInterests.length > 0 || selectedCategories.length > 0) && (
+            <div className="flex flex-wrap gap-1.5 mb-8 max-h-32 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+              {customInterests.map((interest) => (
+                <span
+                  key={interest}
+                  className="inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs px-2.5 py-1.5 rounded-md"
+                >
+                  <span className="font-medium">{interest}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveInterest(interest)}
+                    className="text-orange-500/50 hover:text-orange-400 ml-0.5 cursor-pointer flex items-center justify-center"
+                  >
+                    <X size={12} weight="bold" />
+                  </button>
+                </span>
+              ))}
+
+              {selectedCategories.map((cat) => (
+                <span
+                  key={`top-${cat}`}
+                  className="inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs px-2.5 py-1.5 rounded-md"
+                >
+                  <span className="font-medium capitalize">{cat}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    className="text-orange-500/50 hover:text-orange-400 ml-0.5 cursor-pointer flex items-center justify-center"
+                  >
+                    <X size={12} weight="bold" />
+                  </button>
+                </span>
+              ))}
             </div>
+          )}
+
+          {/* Categories */}
+          <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">
+            Sugestões de Categorias
+          </h3>
+
+          <div className="flex flex-wrap gap-2 pb-5">
+            {allCategories.length === 0 ? (
+              <p className="text-zinc-500 text-sm">Carregando categorias...</p>
+            ) : (
+              allCategories.filter(cat => !selectedCategories.includes(cat)).map(cat => {
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
+                  >
+                    <span className="capitalize">{cat}</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
         </div>
 
       </div>
