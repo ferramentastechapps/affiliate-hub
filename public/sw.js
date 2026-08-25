@@ -7,7 +7,7 @@
  * - Suporte a Push Notifications e ações de notificação
  */
 
-const CACHE_NAME = 'economizei-cache-v2';
+const CACHE_NAME = 'economizei-cache-v3';
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_ASSETS = [
@@ -70,15 +70,16 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // A. Rotas de API sensíveis / autenticação / admin -> Somente Rede (sem cache)
+  // A. Rotas de Admin, APIs sensíveis / autenticação -> Somente Rede Direta (sem cache de SW)
   if (
+    url.pathname.startsWith('/admin') ||
     url.pathname.startsWith('/api/auth') ||
     url.pathname.startsWith('/api/admin') ||
     url.pathname.startsWith('/api/upload') ||
     url.pathname.startsWith('/api/scrape') ||
     url.pathname.startsWith('/api/webhook')
   ) {
-    return; // Deixa o navegador lidar normalmente via rede
+    return; // Deixa o navegador lidar normalmente via rede sem interceptação
   }
 
   // B. Páginas e Navegação (HTML) -> Network-First com fallback para cache/offline

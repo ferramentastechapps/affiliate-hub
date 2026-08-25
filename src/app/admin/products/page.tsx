@@ -1,5 +1,8 @@
 import { ProductsTab } from '@/components/admin/ProductsTab';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function ProductsPage() {
   return (
     <div className="space-y-6">

@@ -29,11 +29,12 @@ const nextConfig: any = {
         ],
       },
       {
-        // Desabilita cache para rotas de API sensíveis
-        source: '/api/(auth|admin|upload|scrape)/(.*)',
+        // Desabilita cache para rotas de Admin e APIs sensíveis
+        source: '/(admin|admin/:path*|api/auth/:path*|api/admin/:path*|api/upload/:path*|api/scrape/:path*)',
         headers: [
-          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, max-age=0' },
           { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
     ];
