@@ -1,23 +1,38 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { saveEnhancedImage } from '@/lib/storage';
 import { validateApiKey } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth-utils';
 
 /**
  * POST /api/scrape/save-image
  * Baixa uma imagem de uma URL e a salva permanentemente em /public/enhanced/.
- * Usado pelo bot do Telegram para persistir fotos lifestyle dos admins,
- * que de outra forma expirariam como URLs temporarias do Telegram.
  */
 export async function POST(request: Request) {
-  // Aceitar tanto com api-key quanto sem (chamada local do bot na mesma maquina)
+  // Aceitar tanto com api-key quanto sem (chamada local do bot ou sessão de admin)
   const forwarded = request.headers.get('x-forwarded-for');
   const isLocal = !forwarded || forwarded.startsWith('127.') || forwarded.startsWith('::1');
 
-  if (!isLocal) {
+  let isAuthenticated = isLocal;
+
+  if (!isAuthenticated) {
     const authOk = await validateApiKey(request);
-    if (!authOk) {
-      return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 });
+    if (authOk) {
+      isAuthenticated = true;
+    } else {
+      try {
+        const cookieStore = await cookies();
+        const sessionToken = cookieStore.get('session')?.value;
+        const payload = sessionToken ? verifyToken(sessionToken) : null;
+        if (payload && ['admin', 'moderator'].includes(payload.role)) {
+          isAuthenticated = true;
+        }
+      } catch {}
     }
+  }
+
+  if (!isAuthenticated) {
+    return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 });
   }
 
   try {

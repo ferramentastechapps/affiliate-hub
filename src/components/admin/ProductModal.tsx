@@ -43,8 +43,12 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
   const [reprocessStatus, setReprocessStatus] = useState({ aiProcessed: false, affiliateProcessed: false, aiProcessedAt: null as string | null });
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [detectingCategory, setDetectingCategory] = useState(false);
+  const [siteImgError, setSiteImgError] = useState(false);
+  const [lifestyleImgError, setLifestyleImgError] = useState(false);
 
   useEffect(() => {
+    setSiteImgError(false);
+    setLifestyleImgError(false);
     if (product) {
       setFormData({
         name: product.name || "",
@@ -679,7 +683,10 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                       <input
                         type="text"
                         value={formData.imageUrl}
-                        onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
+                        onChange={e => {
+                          setFormData({ ...formData, imageUrl: e.target.value });
+                          setSiteImgError(false);
+                        }}
                         placeholder="https://..."
                         className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200 text-xs outline-none focus:border-emerald-500 transition"
                       />
@@ -688,12 +695,19 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                 </div>
 
                 <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950/80 h-32 flex items-center justify-center relative mt-2">
-                  {formData.imageUrl ? (
-                    <img src={formData.imageUrl} alt="Site Preview" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
+                  {formData.imageUrl && !siteImgError ? (
+                    <img 
+                      src={formData.imageUrl} 
+                      alt="Site Preview" 
+                      className="w-full h-full object-contain p-1" 
+                      onError={() => setSiteImgError(true)} 
+                    />
                   ) : (
-                    <div className="text-zinc-650 flex flex-col items-center gap-1">
-                      <ImageIcon size={20} />
-                      <span className="text-[10px]">Sem foto do site</span>
+                    <div className="text-zinc-500 flex flex-col items-center gap-1 p-2 text-center">
+                      <ImageIcon size={22} className="text-zinc-600" />
+                      <span className="text-[11px] font-medium">
+                        {formData.imageUrl ? "⚠️ Foto não carregou" : "Sem foto do site"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -719,7 +733,10 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                       <input
                         type="text"
                         value={formData.enhancedImageUrl}
-                        onChange={e => setFormData({ ...formData, enhancedImageUrl: e.target.value })}
+                        onChange={e => {
+                          setFormData({ ...formData, enhancedImageUrl: e.target.value });
+                          setLifestyleImgError(false);
+                        }}
                         placeholder="https://..."
                         className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-zinc-200 text-xs outline-none focus:border-indigo-500 transition"
                       />
@@ -728,12 +745,19 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                 </div>
 
                 <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950/80 h-32 flex items-center justify-center relative mt-2">
-                  {formData.enhancedImageUrl ? (
-                    <img src={formData.enhancedImageUrl} alt="Group Preview" className="w-full h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
+                  {formData.enhancedImageUrl && !lifestyleImgError ? (
+                    <img 
+                      src={formData.enhancedImageUrl} 
+                      alt="Group Preview" 
+                      className="w-full h-full object-contain p-1" 
+                      onError={() => setLifestyleImgError(true)} 
+                    />
                   ) : (
-                    <div className="text-zinc-650 flex flex-col items-center gap-1">
-                      <ImageIcon size={20} />
-                      <span className="text-[10px]">Sem foto lifestyle</span>
+                    <div className="text-zinc-500 flex flex-col items-center gap-1 p-2 text-center">
+                      <Camera size={22} className="text-zinc-600" />
+                      <span className="text-[11px] font-medium">
+                        {formData.enhancedImageUrl ? "⚠️ Foto não carregou" : "Sem foto lifestyle"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -765,13 +789,20 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
             {images.length > 0 ? (
               <div className="grid grid-cols-4 gap-3">
                 {images.map((img, idx) => (
-                  <div key={idx} className={`relative group aspect-square rounded-lg overflow-hidden border-2 ${formData.imageUrl === img.url ? 'border-emerald-500' : formData.enhancedImageUrl === img.url ? 'border-indigo-500' : 'border-zinc-800'}`}>
-                    <img src={img.url} alt="Galeria" className="w-full h-full object-cover" />
+                  <div key={idx} className={`relative group aspect-square rounded-lg overflow-hidden border-2 bg-zinc-950 ${formData.imageUrl === img.url ? 'border-emerald-500' : formData.enhancedImageUrl === img.url ? 'border-indigo-500' : 'border-zinc-800'}`}>
+                    <img 
+                      src={img.url} 
+                      alt="Galeria" 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.opacity = '0.3';
+                      }}
+                    />
                     <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1">
-                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, imageUrl: img.url }))} className="w-full py-0.5 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium">
+                      <button type="button" onClick={() => { setFormData(prev => ({ ...prev, imageUrl: img.url })); setSiteImgError(false); }} className="w-full py-0.5 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium">
                         Usar no Site
                       </button>
-                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, enhancedImageUrl: img.url }))} className="w-full py-0.5 text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium">
+                      <button type="button" onClick={() => { setFormData(prev => ({ ...prev, enhancedImageUrl: img.url })); setLifestyleImgError(false); }} className="w-full py-0.5 text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium">
                         Usar no Grupo
                       </button>
                       <button type="button" onClick={() => removeImage(idx)} className="w-full py-0.5 text-[9px] bg-red-900/40 hover:bg-red-900 text-red-300 rounded font-medium">
@@ -784,7 +815,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-zinc-500 italic">Nenhuma imagem na galeria. Use o upload ou busque alternativas.</p>
+              <p className="text-sm text-zinc-500 italic">Nenhuma imagem na galeria. Use o upload ou busque alternativas abaixo.</p>
             )}
           </div>
 
@@ -803,17 +834,29 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
             {showAlternativeImages && (
               <>
                 {alternativeImages.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1.5 bg-zinc-950/70 border border-zinc-800 rounded-lg">
+                  <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto p-1.5 bg-zinc-950/70 border border-zinc-800 rounded-lg">
                     {alternativeImages.map((img, idx) => (
                       <div key={idx} className="aspect-square relative rounded-md overflow-hidden bg-zinc-900 border border-zinc-800 group transition-all hover:scale-[1.03]">
-                        <img src={img.thumbnail || img.image} alt={img.title || "Imagem alternativa"} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }} />
-                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 items-center justify-center p-1">
+                        <img 
+                          src={img.thumbnail || img.image} 
+                          alt={img.title || "Imagem alternativa"} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer" 
+                          onError={(e) => {
+                            const el = e.target as HTMLImageElement;
+                            if (img.image && !el.src.includes(encodeURIComponent(img.image))) {
+                              el.src = img.image;
+                            }
+                          }} 
+                        />
+                        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 items-center justify-center p-1">
                           <button type="button" onClick={() => {
                             if (!images.some(i => i.url === img.image)) {
                               setImages(prev => [...prev, { url: img.image, isPrimary: false }]);
                             }
                             setFormData(prev => ({ ...prev, imageUrl: img.image }));
-                          }} className="w-full py-0.5 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium">
+                            setSiteImgError(false);
+                          }} className="w-full py-1 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium shadow">
                             Usar no Site
                           </button>
                           <button type="button" onClick={() => {
@@ -821,7 +864,8 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
                               setImages(prev => [...prev, { url: img.image, isPrimary: false }]);
                             }
                             setFormData(prev => ({ ...prev, enhancedImageUrl: img.image }));
-                          }} className="w-full py-0.5 text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium">
+                            setLifestyleImgError(false);
+                          }} className="w-full py-1 text-[9px] bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium shadow">
                             Usar no Grupo
                           </button>
                         </div>

@@ -914,7 +914,12 @@ export function ProductsTab() {
                       className="w-16 h-16 rounded-xl overflow-hidden bg-white flex items-center justify-center shrink-0 border-2 border-emerald-500/40 hover:border-emerald-500 transition-colors shadow"
                       title="Foto do Site (Fundo Branco) - Clique para ver galeria"
                     >
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain p-1" />
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name} 
+                        className="w-full h-full object-contain p-1" 
+                        onError={(e) => { (e.target as HTMLElement).style.opacity = '0.3'; }} 
+                      />
                     </button>
                     <span className="absolute -top-1.5 -left-1.5 bg-emerald-600 text-white font-bold text-[8px] px-1 py-0.2 rounded shadow uppercase tracking-wider">
                       Site
@@ -930,7 +935,12 @@ export function ProductsTab() {
                           className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-950 flex items-center justify-center shrink-0 border-2 border-indigo-500/60 hover:border-indigo-400 transition-colors shadow"
                           title="Foto Lifestyle do Grupo - Clique para gerenciar"
                         >
-                          <img src={product.enhancedImageUrl!} alt="Lifestyle" className="w-full h-full object-cover" />
+                          <img 
+                            src={product.enhancedImageUrl!} 
+                            alt="Lifestyle" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => { (e.target as HTMLElement).style.opacity = '0.3'; }} 
+                          />
                         </button>
                         <span className="absolute -top-1.5 -left-1.5 bg-indigo-600 text-white font-bold text-[8px] px-1 py-0.2 rounded shadow uppercase tracking-wider flex items-center gap-0.5">
                           <Sparkle size={8} weight="fill" /> Life

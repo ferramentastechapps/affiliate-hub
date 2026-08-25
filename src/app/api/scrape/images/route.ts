@@ -16,13 +16,20 @@ export async function GET(request: Request) {
     console.log(`[Images-Search] Buscando imagens no DDG para: "${query}"`);
     const results = await searchDuckDuckGoImages(query);
     
-    // Mapear apenas os campos que o frontend precisa
-    const formattedResults = results.map(item => ({
-      title: item.title,
-      image: item.image,
-      thumbnail: item.thumbnail,
-      url: item.url
-    })).filter(item => item.image); // Garantir que tem imagem
+    // Mapear apenas os campos que o frontend precisa com proxy seguro
+    const formattedResults = results.map(item => {
+      const rawThumb = item.thumbnail || item.image;
+      const proxiedThumb = rawThumb && rawThumb.startsWith('http') 
+        ? `/api/proxy-image?url=${encodeURIComponent(rawThumb)}` 
+        : rawThumb;
+
+      return {
+        title: item.title,
+        image: item.image,
+        thumbnail: proxiedThumb,
+        url: item.url
+      };
+    }).filter(item => item.image); // Garantir que tem imagem
     
     console.log(`[Images-Search] Retornando ${formattedResults.length} imagens.`);
     return NextResponse.json(formattedResults);
