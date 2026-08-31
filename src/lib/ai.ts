@@ -444,7 +444,8 @@ export async function processProductWithNvidia(
  */
 export async function processProductWithOpenRouter(
   promptText: string,
-  mode: 'evaluate' | 'caption' = 'evaluate'
+  mode: 'evaluate' | 'caption' = 'evaluate',
+  modelOverride?: string
 ): Promise<{
   titulo: string | null;
   subtitulo: string | null;
@@ -462,9 +463,11 @@ export async function processProductWithOpenRouter(
     authHeader = `Bearer ${authHeader}`;
   }
 
-  const model = mode === 'caption'
-    ? (process.env.OPENROUTER_CAPTION_MODEL || 'google/gemini-2.5-flash')
-    : (process.env.OPENROUTER_EVALUATE_MODEL || 'tencent/hy3:free');
+  const model = modelOverride ?? (
+    mode === 'caption'
+      ? (process.env.OPENROUTER_CAPTION_MODEL || 'google/gemini-2.5-flash')
+      : (process.env.OPENROUTER_EVALUATE_MODEL || 'nvidia/nemotron-3.5-lightning:free')
+  );
 
   try {
     console.log(`[AI-OpenRouter] Chamando OpenRouter com o modelo ${model} no modo ${mode}...`);
@@ -648,21 +651,30 @@ Contexto atual:
 - Hora: ${timeStr} (horário de Brasília)
 - Fim de semana: ${weekendStr}`;
 
-    // SE O MODO FOR AVALIAÇÃO (EVALUATE), CHAMA DIRETAMENTE O OPENROUTER
+    // SE O MODO FOR AVALIAÇÃO (EVALUATE), TENTA 3 MODELOS GRATUITOS VIA OPENROUTER EM SEQUÊNCIA
     if (mode === 'evaluate') {
-      console.log(`[AI] Modo 'evaluate' acionado. Chamando OpenRouter diretamente para avaliar: "${productName}"`);
-      const openRouterResult = await processProductWithOpenRouter(promptText, 'evaluate');
-      if (openRouterResult) {
-        return openRouterResult;
+      const EVALUATE_MODELS = [
+        'nvidia/nemotron-3.5-lightning:free',
+        'cohere/north-mini-code:free',
+        'dots-studio/dots-3-note-preview:free',
+      ];
+
+      for (const evalModel of EVALUATE_MODELS) {
+        console.log(`[AI] Modo 'evaluate': tentando OpenRouter (${evalModel}) para: "${productName}"`);
+        const openRouterResult = await processProductWithOpenRouter(promptText, 'evaluate', evalModel);
+        if (openRouterResult && openRouterResult.score !== null) {
+          return openRouterResult;
+        }
+        console.warn(`[AI] Modelo ${evalModel} falhou ou retornou score nulo. Tentando próximo...`);
       }
-      
-      // Fallback para NVIDIA NIM caso o OpenRouter falhe na avaliação
-      console.warn('[AI] OpenRouter falhou no modo evaluate. Tentando NVIDIA NIM...');
+
+      // Fallback para NVIDIA NIM caso todos os modelos OpenRouter falhem
+      console.warn('[AI] Todos os modelos OpenRouter falharam no evaluate. Tentando NVIDIA NIM...');
       const nvidiaResult = await processProductWithNvidia(promptText);
       if (nvidiaResult) {
         return nvidiaResult;
       }
-      
+
       console.error('[AI] Todos os modelos de avaliação falharam.');
       return { titulo: null, subtitulo: null, score: null, rawJson: null };
     }
