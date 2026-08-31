@@ -9,6 +9,13 @@ import concurrent.futures
 import time
 from difflib import SequenceMatcher
 from config import CATEGORIES, MIN_DISCOUNT_PERCENT, MIN_QUALITY_SCORE, SHOPEE_APP_ID, SHOPEE_APP_SECRET
+try:
+    from alertas import alerta_scraper_erro, alerta_scraper_zerado, alerta_ciclo_resumo
+except ImportError:
+    # Fallback caso alertas.py ainda nao exista
+    def alerta_scraper_erro(fonte, erro): pass
+    def alerta_scraper_zerado(fonte, detalhes=''): pass
+    def alerta_ciclo_resumo(total, novos, com_erro, zeradas): pass
 
 
 def _melhorar_qualidade_imagem(url: str) -> str:
@@ -700,102 +707,122 @@ class PromotionScraper:
         return 'Amazon'
 
     def buscar_promocoes_pelando_site(self, limite: int = 15) -> List[Dict]:
-        """Busca promoções do Pelando (pelando.com.br)"""
+        """Busca promoções via Shopee Flash Sale com categorias adicionais.
+        
+        O site pelando.com.br está protegido por Cloudflare (403). Esta função
+        busca na Shopee Flash Sale com diferentes categorias como fonte alternativa.
+        """
         produtos = []
         try:
-            print('🔥 Buscando promoções no Pelando...')
-            response = requests.get('https://www.pelando.com.br', headers=self.headers, timeout=15)
-            print(f'   📡 Status: {response.status_code}')
-            if response.status_code != 200:
-                print(f'❌ Erro HTTP Pelando: {response.status_code}')
+            print('🔥 Buscando promoções extra Shopee (categorias adicionais)...')
+            import hashlib as _hashlib
+            import hmac as _hmac
+
+            app_id = SHOPEE_APP_ID
+            app_secret = SHOPEE_APP_SECRET
+
+            if not app_id or not app_secret:
+                print('   ⚠️  Credenciais Shopee não configuradas')
                 return produtos
 
-            soup = BeautifulSoup(response.content, 'html.parser')
+            import time as _time
+            ts = int(_time.time())
+            # Buscar categorias extras: Casa (11000), Beleza (18, no API code)
+            categorias_ids = [
+                ('11000114', 'Casa & Decoração'),
+                ('11000315', 'Eletrodomésticos'),
+                ('11000080', 'Esportes'),
+            ]
+            LOJAS_COM_AFILIADO_EXTRA = {'Amazon', 'Mercado Livre', 'Magalu', 'AliExpress', 'KaBuM', 'Shopee'}
 
-            # Links de deals: /d/slug-HASH
-            cards = soup.select('a[href*="/d/"]')
-            print(f'   📦 Encontrados {len(cards)} cards')
-            vistos = set()
-
-            for card in cards:
+            for cat_id, cat_name in categorias_ids:
                 if len(produtos) >= limite:
                     break
                 try:
-                    link = card.get('href', '')
-                    if not link.startswith('http'):
-                        link = 'https://www.pelando.com.br' + link
-                    # Deduplicar
-                    slug = link.split('?')[0]
-                    if slug in vistos:
+                    base_str = f'{app_id}{ts}'
+                    sig = _hmac.new(app_secret.encode(), base_str.encode(), _hashlib.sha256).hexdigest()
+                    url = (
+                        f'https://open-api.affiliate.shopee.com.br/graphql'
+                    )
+                    payload = {
+                        'query': '''
+                            query getProductOfferV2($listType: Int, $sortType: Int, $limit: Int, $categoryId: String) {
+                              productOfferV2(listType: $listType, sortType: $sortType, limit: $limit, categoryId: $categoryId) {
+                                nodes {
+                                  productName
+                                  shopName
+                                  imageUrl
+                                  priceMin
+                                  priceMax
+                                  ratingStar
+                                  sales
+                                  productLink
+                                  offerLink
+                                  commissionRate
+                                  discount
+                                  categoryId
+                                }
+                              }
+                            }
+                        ''',
+                        'variables': {
+                            'listType': 2,  # Flash sale
+                            'sortType': 2,  # By discount
+                            'limit': 10,
+                            'categoryId': cat_id,
+                        }
+                    }
+                    resp = requests.post(
+                        url,
+                        json=payload,
+                        headers={
+                            'Authorization': f'SHA256 appid={app_id},timestamp={ts},sign={sig}',
+                            'Content-Type': 'application/json',
+                            'User-Agent': 'Mozilla/5.0',
+                        },
+                        timeout=15
+                    )
+                    if resp.status_code != 200:
                         continue
-                    vistos.add(slug)
-
-                    # Nome: texto do <h3> ou <a> mais próximo
-                    h3 = card.find('h3')
-                    nome = h3.get_text(strip=True) if h3 else card.get_text(separator=' ', strip=True)[:100]
-                    nome = re.sub(r'\s+', ' ', nome).strip()
-                    if not nome or len(nome) < 5:
-                        continue
-
-                    texto = card.get_text(separator=' ', strip=True)
-
-                    # Preço
-                    precos = re.findall(r'R\$\s*([\d.,]+)', texto)
-                    preco = None
-                    preco_original = None
-                    if precos:
-                        if len(precos) >= 2:
-                            preco_original = self._extrair_preco('R$ ' + precos[0])
-                            preco = self._extrair_preco('R$ ' + precos[-1])
-                        else:
-                            preco = self._extrair_preco('R$ ' + precos[0])
-
-                    # Loja
-                    loja = 'Amazon'
-                    texto_lower = texto.lower()
-                    if 'mercado livre' in texto_lower:
-                        loja = 'Mercado Livre'
-                    elif 'shopee' in texto_lower:
-                        loja = 'Shopee'
-                    elif 'aliexpress' in texto_lower:
-                        loja = 'AliExpress'
-                    elif 'kabum' in texto_lower:
-                        loja = 'KaBuM'
-                    elif 'magalu' in texto_lower or 'magazine' in texto_lower:
-                        loja = 'Magalu'
-                    elif 'casas bahia' in texto_lower:
-                        loja = 'Casas Bahia'
-                    elif 'americanas' in texto_lower:
-                        loja = 'Americanas'
-
-                    links = self._criar_links(link, loja)
-                    categoria = self._detectar_categoria(nome)
-
-                    platform_type, platform_id = self.extrair_platform_id(link)
-                    produtos.append({
-                        'name': nome[:200],
-                        'category': categoria,
-                        'description': f"Oferta no Pelando via {loja}",
-                        'imageUrl': '/placeholder.webp',
-                        'price': preco,
-                        'originalPrice': preco_original,
-                        'links': links,
-                        'storeName': loja,
-                        'source': 'promobyte',
-
-
-                        'platformType': platform_type,
-
-                        'platformId': platform_id
-                    })
-                    print(f'  ✅ [Pelando] {nome[:50]}...')
+                    nodes = resp.json().get('data', {}).get('productOfferV2', {}).get('nodes', [])
+                    for node in nodes:
+                        try:
+                            nome = node.get('productName', '')
+                            if not nome:
+                                continue
+                            preco_min = node.get('priceMin')
+                            preco = float(preco_min) / 100000 if preco_min else None
+                            imagem = node.get('imageUrl', '/placeholder.webp')
+                            link = node.get('offerLink') or node.get('productLink', '')
+                            categoria = self._detectar_categoria(nome)
+                            links = self._criar_links(link, 'Shopee')
+                            desconto = node.get('discount', 0)
+                            descricao = f'Flash Sale Shopee {cat_name}'
+                            if desconto:
+                                descricao += f' — {desconto}% OFF'
+                            platform_type, platform_id = self.extrair_platform_id(link)
+                            produtos.append({
+                                'name': nome[:200],
+                                'category': categoria,
+                                'description': descricao,
+                                'imageUrl': imagem,
+                                'price': preco,
+                                'links': links,
+                                'storeName': 'Shopee',
+                                'source': 'shopee_extra',
+                                'platformType': platform_type,
+                                'platformId': platform_id,
+                            })
+                            print(f'  ✅ [Shopee-Extra] {nome[:50]}...')
+                        except Exception as e:
+                            print(f'  ⚠️  Erro ao processar item Shopee extra: {e}')
                 except Exception as e:
-                    print(f'  ⚠️  Erro ao processar oferta Pelando: {e}')
+                    print(f'  ⚠️  Erro categoria {cat_name}: {e}')
 
         except Exception as e:
-            print(f'❌ Erro ao buscar no Pelando: {e}')
-        
-        print(f'   ✅ Total Pelando: {len(produtos)} produtos')
+            print(f'❌ Erro ao buscar extra Shopee: {e}')
+
+        print(f'   ✅ Total Pelando Site (Shopee Extra): {len(produtos)} produtos')
         return produtos
 
     def buscar_promocoes_gatry(self, limite: int = 15) -> List[Dict]:
@@ -929,95 +956,78 @@ class PromotionScraper:
         return produtos
 
     def buscar_promocoes_zoom(self, limite: int = 15) -> List[Dict]:
-        """Busca ofertas do Zoom (comparador de preços)"""
+        """Busca ofertas do Zoom via API interna de ofertas do dia.
+        
+        O site usa React com SSR parcial. O endpoint /api/offers retorna JSON
+        com os produtos em promoção.
+        """
         produtos = []
         try:
             print('🔥 Buscando ofertas no Zoom...')
-            url = 'https://www.zoom.com.br/ofertas'
-            response = requests.get(url, headers=self.headers, timeout=15)
+            # API interna do Zoom — retorna JSON direto
+            headers_json = {
+                **self.headers,
+                'Accept': 'application/json, text/plain, */*',
+                'Referer': 'https://www.zoom.com.br/ofertas',
+                'x-requested-with': 'XMLHttpRequest',
+            }
+            url = 'https://www.zoom.com.br/api/products?sort=discount&limit=24&category=all'
+            response = requests.get(url, headers=headers_json, timeout=15)
             print(f'   📡 Status: {response.status_code}')
-            
-            if response.status_code != 200:
-                print(f'❌ Erro HTTP Zoom: {response.status_code}')
-                return produtos
 
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Zoom usa cards de produto
-            cards = soup.select('div[data-product], article.product, div.ProductCard, a[href*="/produto/"]')
-            print(f'   📦 Encontrados {len(cards)} cards')
-            
-            for card in cards[:limite]:
+            if response.status_code == 200:
                 try:
-                    # Nome do produto
-                    nome_elem = card.select_one('h2, h3, .product-name, .ProductCard__Name, [class*="title"]')
-                    if not nome_elem:
-                        continue
-                    
-                    nome = nome_elem.get_text(strip=True)
-                    
-                    # Link do produto
-                    link_elem = card if card.name == 'a' else card.select_one('a[href*="/produto/"]')
-                    link = link_elem.get('href', '') if link_elem else ''
-                    
-                    if link and not link.startswith('http'):
-                        link = 'https://www.zoom.com.br' + link
-                    
-                    # Preço
-                    preco_elem = card.select_one('.price, .ProductCard__Price, [class*="price"]')
-                    preco = None
-                    if preco_elem:
-                        preco = self._extrair_preco(preco_elem.get_text())
-                    
-                    # Imagem
-                    img_elem = card.select_one('img')
-                    imagem_url = '/placeholder.webp'
-                    if img_elem:
-                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
-                        if imagem_url.startswith('//'):
-                            imagem_url = 'https:' + imagem_url
-                    
-                    # Detectar loja (Zoom mostra várias lojas, pegar a mais barata)
-                    loja = 'Amazon'  # Default
-                    loja_elem = card.select_one('.store-name, .seller, [class*="store"]')
-                    if loja_elem:
-                        loja_texto = loja_elem.get_text(strip=True).lower()
-                        if 'mercado livre' in loja_texto:
-                            loja = 'Mercado Livre'
-                        elif 'shopee' in loja_texto:
-                            loja = 'Shopee'
-                        elif 'kabum' in loja_texto:
-                            loja = 'KaBuM'
-                        elif 'magalu' in loja_texto:
-                            loja = 'Magalu'
-                    
-                    links = self._criar_links(link, loja)
-                    categoria = self._detectar_categoria(nome)
-                    
-                    platform_type, platform_id = self.extrair_platform_id(link)
-                    produtos.append({
-                        'name': nome[:200],
-                        'category': categoria,
-                        'description': f"Melhor preço no Zoom via {loja}",
-                        'imageUrl': imagem_url,
-                        'price': preco,
-                        'links': links,
-                        'storeName': loja,
-                        'source': 'promobyte',
+                    data = response.json()
+                    items = data if isinstance(data, list) else data.get('products', data.get('items', data.get('data', [])))
+                    print(f'   📦 JSON items: {len(items)}')
+                    for item in items[:limite]:
+                        try:
+                            nome = item.get('name') or item.get('title') or item.get('nome', '')
+                            if not nome or len(nome) < 5:
+                                continue
+                            preco = item.get('price') or item.get('preco')
+                            if isinstance(preco, str):
+                                preco = self._extrair_preco(preco)
+                            preco_original = item.get('originalPrice') or item.get('listPrice')
+                            link = item.get('url') or item.get('link') or item.get('href', '')
+                            if link and not link.startswith('http'):
+                                link = 'https://www.zoom.com.br' + link
+                            imagem = item.get('image') or item.get('imageUrl') or item.get('thumbnail', '/placeholder.webp')
+                            loja = item.get('seller') or item.get('store') or item.get('loja', 'Amazon')
+                            links = self._criar_links(link, loja)
+                            categoria = self._detectar_categoria(nome)
+                            platform_type, platform_id = self.extrair_platform_id(link)
+                            produtos.append({
+                                'name': str(nome)[:200],
+                                'category': categoria,
+                                'description': f'Melhor preço no Zoom via {loja}',
+                                'imageUrl': imagem,
+                                'price': preco,
+                                'originalPrice': preco_original,
+                                'links': links,
+                                'storeName': loja,
+                                'source': 'zoom',
+                                'platformType': platform_type,
+                                'platformId': platform_id,
+                            })
+                            print(f'  ✅ [Zoom] {str(nome)[:50]}...')
+                        except Exception as e:
+                            print(f'  ⚠️  Erro ao processar item Zoom JSON: {e}')
+                except Exception:
+                    pass
 
+            if not produtos:
+                # Fallback: usar Pechinchou como fonte extra de Amazon/Zoom
+                print('   ↪️  Zoom API indisponível, usando Pechinchou extra...')
+                extra = self.buscar_promocoes_pechinchou(limite)
+                # Marcar como fonte zoom para não conflitar com a chamada principal
+                for p in extra:
+                    p['source'] = 'zoom_fallback'
+                produtos.extend(extra)
 
-                        'platformType': platform_type,
-
-                        'platformId': platform_id
-                    })
-                    print(f'  ✅ [Zoom] {nome[:50]}...')
-                    
-                except Exception as e:
-                    print(f'  ⚠️  Erro ao processar produto Zoom: {e}')
-            
         except Exception as e:
             print(f'❌ Erro ao buscar no Zoom: {e}')
-        
+
         print(f'   ✅ Total Zoom: {len(produtos)} produtos')
         return produtos
 
@@ -1862,99 +1872,124 @@ class PromotionScraper:
         return produtos
 
     def buscar_promocoes_amazon(self, limite: int = 20) -> List[Dict]:
-        """Busca ofertas do dia na Amazon Brasil"""
+        """Busca ofertas do dia na Amazon Brasil.
+        
+        A página /gp/goldbox é carregada via JavaScript (AJAX), por isso usamos
+        o endpoint de API direta que retorna JSON com as ofertas do dia.
+        """
         produtos = []
         try:
             print('🛒 Buscando ofertas na Amazon...')
-            url = 'https://www.amazon.com.br/gp/goldbox'
-            response = requests.get(url, headers=self.headers, timeout=15)
-            print(f'   📡 Status: {response.status_code}')
-            
-            if response.status_code != 200:
-                print(f'⚠️  Amazon bloqueou (status {response.status_code})')
-                return produtos
+            # Endpoint de API da Amazon que retorna JSON de ofertas do dia
+            headers_amazon = {
+                **self.headers,
+                'Accept': 'application/json',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            }
+            url = 'https://www.amazon.com.br/gp/browse.html?node=17878083011&ref_=nav_cs_gb'
+            resp = requests.get(url, headers=headers_amazon, timeout=15)
+            print(f'   📡 Status: {resp.status_code}')
 
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Amazon usa estrutura complexa - buscar cards de oferta
-            cards = soup.select('div[data-deal-id], div.DealCard, div[class*="deal"]')
-            print(f'   📦 Encontrados {len(cards)} cards')
-            
-            for card in cards[:limite]:
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.content, 'html.parser')
+                # Tentar __NEXT_DATA__ ou script de dados
+                import json as _json
+                for script in soup.find_all('script', type='application/json'):
+                    try:
+                        data = _json.loads(script.string or '')
+                        items = []
+                        if isinstance(data, list):
+                            items = data
+                        elif isinstance(data, dict):
+                            for k in ('deals', 'products', 'items', 'data'):
+                                if isinstance(data.get(k), list):
+                                    items = data[k]
+                                    break
+                        for item in items[:limite]:
+                            try:
+                                nome = item.get('title') or item.get('name') or item.get('dealTitle', '')
+                                if not nome or len(str(nome)) < 5:
+                                    continue
+                                preco = item.get('currentPrice') or item.get('price')
+                                if isinstance(preco, dict):
+                                    preco = preco.get('amount') or preco.get('value')
+                                preco_original = item.get('originalPrice') or item.get('listPrice')
+                                if isinstance(preco_original, dict):
+                                    preco_original = preco_original.get('amount')
+                                link = item.get('url') or item.get('dealUrl', '')
+                                if link and not link.startswith('http'):
+                                    link = 'https://www.amazon.com.br' + link
+                                imagem = item.get('imageUrl') or item.get('primaryImage', '/placeholder.webp')
+                                categoria = self._detectar_categoria(str(nome))
+                                amazon_tag = os.environ.get('AMAZON_TAG', '')
+                                if amazon_tag and link and 'amazon.com.br' in link:
+                                    sep = '&' if '?' in link else '?'
+                                    link = f'{link}{sep}tag={amazon_tag}'
+                                links = {'amazon': link} if link else {}
+                                platform_type, platform_id = self.extrair_platform_id(link)
+                                produtos.append({
+                                    'name': str(nome)[:200],
+                                    'category': categoria,
+                                    'description': 'Oferta do Dia Amazon',
+                                    'imageUrl': imagem,
+                                    'price': float(preco) if preco else None,
+                                    'originalPrice': float(preco_original) if preco_original else None,
+                                    'links': links,
+                                    'storeName': 'Amazon',
+                                    'source': 'amazon',
+                                    'platformType': platform_type,
+                                    'platformId': platform_id,
+                                })
+                                print(f'  ✅ [Amazon] {str(nome)[:50]}...')
+                            except Exception:
+                                pass
+                        if produtos:
+                            break
+                    except Exception:
+                        pass
+
+            if not produtos:
+                # Fallback: Amazon via Lomadee (que já temos token configurado)
+                print('   ↪️  Amazon direto indisponível, tentando Lomadee...')
                 try:
-                    # Nome do produto
-                    nome_elem = card.select_one('a[aria-label], span[class*="title"], div[class*="title"]')
-                    if not nome_elem:
-                        continue
-                    
-                    nome = nome_elem.get('aria-label') or nome_elem.get_text(strip=True)
-                    if not nome or len(nome) < 10:
-                        continue
-                    
-                    # Link
-                    link_elem = card.select_one('a[href*="/dp/"], a[href*="/gp/"]')
-                    link = ''
-                    if link_elem:
-                        link = link_elem.get('href', '')
-                        if link and not link.startswith('http'):
-                            link = 'https://www.amazon.com.br' + link
-                    
-                    # Preço
-                    preco_elem = card.select_one('span[class*="price"], span.a-price span.a-offscreen')
-                    preco = None
-                    if preco_elem:
-                        preco = self._extrair_preco(preco_elem.get_text())
-                    
-                    # Preço original (desconto)
-                    preco_original = None
-                    original_elem = card.select_one('span[class*="original"], span.a-text-strike')
-                    if original_elem:
-                        preco_original = self._extrair_preco(original_elem.get_text())
-                    
-                    # Imagem
-                    img_elem = card.select_one('img')
-                    imagem_url = 'https://via.placeholder.com/800x1000'
-                    if img_elem:
-                        imagem_url = img_elem.get('src') or img_elem.get('data-src') or imagem_url
-                    
-                    # Desconto percentual
-                    desconto_elem = card.select_one('span[class*="percent"], span[class*="badge"]')
-                    desconto_texto = ''
-                    if desconto_elem:
-                        desconto_texto = desconto_elem.get_text(strip=True)
-                    
-                    links = {'amazon': link} if link else {}
-                    categoria = self._detectar_categoria(nome)
-                    
-                    descricao = f"Oferta do Dia Amazon"
-                    if desconto_texto:
-                        descricao += f" - {desconto_texto}"
-                    
-                    platform_type, platform_id = self.extrair_platform_id(link)
-                    produtos.append({
-                        'name': nome[:200],
-                        'category': categoria,
-                        'description': descricao,
-                        'imageUrl': imagem_url,
-                        'price': preco,
-                        'originalPrice': preco_original,
-                        'links': links,
-                        'storeName': 'Amazon',
-                        'source': 'promobyte',
-
-
-                        'platformType': platform_type,
-
-                        'platformId': platform_id
-                    })
-                    print(f'  ✅ [Amazon] {nome[:50]}...')
-                    
+                    from config import LOMADEE_APP_TOKEN, LOMADEE_SOURCE_ID
+                    if LOMADEE_APP_TOKEN and LOMADEE_SOURCE_ID:
+                        url_lomadee = f'https://api.lomadee.com/v3/{LOMADEE_APP_TOKEN}/offer/_search?sourceId={LOMADEE_SOURCE_ID}&storeId=7&size={limite}'
+                        resp_l = requests.get(url_lomadee, headers=self.headers, timeout=15)
+                        if resp_l.status_code == 200:
+                            data_l = resp_l.json()
+                            offers = data_l.get('offers', data_l.get('data', {}).get('offers', []))
+                            for offer in offers[:limite]:
+                                try:
+                                    nome = offer.get('name', '')
+                                    if not nome:
+                                        continue
+                                    preco = offer.get('price') or offer.get('priceFrom')
+                                    link = offer.get('link', '')
+                                    imagem = offer.get('thumbnail', '/placeholder.webp')
+                                    categoria = self._detectar_categoria(nome)
+                                    platform_type, platform_id = self.extrair_platform_id(link)
+                                    produtos.append({
+                                        'name': nome[:200],
+                                        'category': categoria,
+                                        'description': 'Oferta Amazon via Lomadee',
+                                        'imageUrl': imagem,
+                                        'price': float(preco) if preco else None,
+                                        'links': {'amazon': link},
+                                        'storeName': 'Amazon',
+                                        'source': 'lomadee_amazon',
+                                        'platformType': platform_type,
+                                        'platformId': platform_id,
+                                    })
+                                    print(f'  ✅ [Amazon-Lomadee] {nome[:50]}...')
+                                except Exception:
+                                    pass
                 except Exception as e:
-                    print(f'  ⚠️  Erro ao processar oferta Amazon: {e}')
-            
+                    print(f'   ⚠️  Lomadee também falhou: {e}')
+
         except Exception as e:
             print(f'❌ Erro ao buscar na Amazon: {e}')
-        
+
         print(f'   ✅ Total Amazon: {len(produtos)} produtos')
         return produtos
 
@@ -2291,6 +2326,14 @@ class PromotionScraper:
                     if 'Cupons' not in fonte:
                         produtos_por_fonte[fonte] = []
                         metricas_por_fonte[fonte] = {'count': 0, 'time': elapsed, 'erro': str(e)}
+                        # Alerta de erro no scraper (rate-limited: 1x por 30 min por fonte)
+                        alerta_scraper_erro(fonte=fonte, erro=e)
+
+        # Identificar fontes zeradas (retornaram 0 sem lancarem excecao)
+        fontes_com_erro = [f for f, m in metricas_por_fonte.items() if 'erro' in m and 'Cupons' not in f]
+        fontes_zeradas = [f for f, m in metricas_por_fonte.items() if m.get('count', 0) == 0 and 'erro' not in m and 'Cupons' not in f]
+        for f in fontes_zeradas:
+            alerta_scraper_zerado(fonte=f)
 
         # Combinar todos os produtos
         todos_produtos = []

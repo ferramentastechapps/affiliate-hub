@@ -1191,8 +1191,33 @@ Mostra esta mensagem de ajuda
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'❌ Erro no telegram_listener: {context.error}')
 
+def _build_app():
+    """Constrói e configura a aplicação Telegram."""
+    import asyncio
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+
+    app.add_handler(MessageHandler(filters.PHOTO, handle_foto_com_legenda))
+    app.add_handler(CommandHandler("aprovar", handle_aprovar_command))
+    app.add_handler(CommandHandler("rejeitar", handle_rejeitar_command))
+    app.add_handler(CommandHandler("tiktok", handle_tiktok_command))
+    app.add_handler(CommandHandler("pendentes", handle_pendentes_command))
+    app.add_handler(CommandHandler("foto", handle_foto_command))
+    app.add_handler(CommandHandler("help", handle_help_command))
+    app.add_handler(CommandHandler("start", handle_help_command))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_forwarded_or_text_promo))
+    app.add_error_handler(error_handler)
+    return app
+
+
 def run_listener():
-    """Inicia o listener do Telegram"""
+    """Inicia o listener do Telegram com reconexão automática e backoff exponencial.
+
+    O erro "Conflict: terminated by other getUpdates request" ocorre quando o
+    processo reinicia muito rápido e o Telegram ainda tem a sessão de polling
+    anterior aberta. O backoff dá tempo para o servidor liberar a sessão.
+    """
+    import time as _time
+
     print("🤖 Telegram Listener Iniciado!")
     print("📋 Comandos disponíveis:")
     print("   /aprovar [ID] [LINK] - Aprovar produto")
@@ -1201,35 +1226,58 @@ def run_listener():
     print("   /rejeitar [ID] - Rejeitar produto")
     print("   /help - Ajuda")
     print("="*60)
-    
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Interceptar fotos (com legenda, sem legenda ou reply)
-    app.add_handler(MessageHandler(filters.PHOTO, handle_foto_com_legenda))
+    # Backoff: começa em 30s, dobra a cada falha, teto de 300s (5 min)
+    backoff = 30
+    MAX_BACKOFF = 300
+    attempt = 0
 
-    # Comandos de texto
-    app.add_handler(CommandHandler("aprovar", handle_aprovar_command))
-    app.add_handler(CommandHandler("rejeitar", handle_rejeitar_command))
-    app.add_handler(CommandHandler("tiktok", handle_tiktok_command))
-    app.add_handler(CommandHandler("pendentes", handle_pendentes_command))
-    app.add_handler(CommandHandler("foto", handle_foto_command))
-    app.add_handler(CommandHandler("help", handle_help_command))
-    app.add_handler(CommandHandler("start", handle_help_command))
+    while True:
+        attempt += 1
+        try:
+            print(f"🔄 [Listener] Tentativa #{attempt} de conexão com o Telegram...")
+            app = _build_app()
+            # drop_pending_updates=True: descarta mensagens acumuladas durante downtime
+            # e garante que esta instância assuma o controle sobre qualquer outra anterior
+            app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+            # run_polling só retorna em shutdown limpo — resetar backoff
+            backoff = 30
+            attempt = 0
+            print("✅ [Listener] Polling encerrado normalmente. Reiniciando em 5s...")
+            _time.sleep(5)
+        except KeyboardInterrupt:
+            print('\n\n👋 Listener finalizado pelo usuário')
+            break
+        except Exception as e:
+            err_str = str(e)
+            # "Conflict" indica sessão anterior ainda ativa no Telegram
+            # "Bad Gateway" / "ReadError" indica instabilidade de rede
+            is_conflict = 'Conflict' in err_str
+            is_network = any(x in err_str for x in ('Bad Gateway', 'ReadError', 'Connection', 'Timeout'))
 
-    # Mensagens de texto gerais (Pode ser encaminhado, texto puro ou reply)
-    # Se for uma reply "ID_DO_PRODUTO", o handle_forwarded_or_text_promo repassa pro handle_reply.
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_forwarded_or_text_promo))
-    
-    app.add_error_handler(error_handler)
+            if is_conflict:
+                wait = min(backoff * 2, MAX_BACKOFF)
+                print(f"⚠️  [Listener] Conflito de instância detectado. Aguardando {wait}s para o Telegram liberar a sessão anterior...")
+                try:
+                    from alertas import alerta_telegram_conflito
+                    alerta_telegram_conflito(detalhes=f"Tentativa #{attempt} falhou por conflito. Esperando {wait}s.")
+                except Exception:
+                    pass
+            elif is_network:
+                wait = min(backoff, MAX_BACKOFF)
+                print(f"⚠️  [Listener] Erro de rede ({e}). Reconectando em {wait}s...")
+            else:
+                wait = min(backoff, MAX_BACKOFF)
+                print(f"❌ [Listener] Erro inesperado: {e}. Reiniciando em {wait}s...")
+                try:
+                    from alertas import alerta_crash_fatal
+                    alerta_crash_fatal(e, contexto='telegram_listener')
+                except Exception:
+                    pass
 
-    # Inicia o polling — drop_pending_updates garante que este listener
-    # assuma o controle mesmo se outro processo Bot() estava ativo antes
-    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+            _time.sleep(wait)
+            backoff = min(backoff * 2, MAX_BACKOFF)
+
 
 if __name__ == '__main__':
-    try:
-        run_listener()
-    except KeyboardInterrupt:
-        print('\n\n👋 Listener finalizado pelo usuário')
-    except Exception as e:
-        print(f'\n❌ Erro fatal: {e}')
+    run_listener()

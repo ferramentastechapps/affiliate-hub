@@ -46,10 +46,21 @@ class AffiliateHubAPI:
             print(f'   [API] ID retornado: {data.get("product", {}).get("id", "NÃO ENCONTRADO")}')
             return data
         except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response else 0
             print(f'❌ Erro HTTP ao adicionar produto: {e} | Resposta: {e.response.text[:300] if e.response else "sem resposta"}')
+            try:
+                from alertas import alerta_api_hub_falhou
+                alerta_api_hub_falhou(status_code=status, endpoint='/api/webhook/products')
+            except Exception:
+                pass
             return None
         except Exception as e:
             print(f'❌ Erro ao adicionar produto: {e}')
+            try:
+                from alertas import alerta_crash_fatal
+                alerta_crash_fatal(e, contexto='adicionar_produto')
+            except Exception:
+                pass
             return None
     
     def adicionar_produtos_lote(self, produtos: List[Dict]) -> Optional[Dict]:
@@ -65,6 +76,15 @@ class AffiliateHubAPI:
             )
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response else 0
+            print(f'❌ Erro HTTP ao adicionar lote: {e}')
+            try:
+                from alertas import alerta_api_hub_falhou
+                alerta_api_hub_falhou(status_code=status, endpoint='PUT /api/webhook/products')
+            except Exception:
+                pass
+            return None
         except Exception as e:
             print(f'❌ Erro ao adicionar produtos em lote: {e}')
             return None

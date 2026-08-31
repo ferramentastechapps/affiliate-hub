@@ -11,6 +11,12 @@ from telegram_bot import TelegramNotifier
 from scrapers import PromotionScraper
 from config import SEARCH_INTERVAL_MINUTES, TELEGRAM_POST_INTERVAL_MINUTES
 from metadata_utils import enriquecer_produto
+from alertas import (
+    alerta_dedup_saturado,
+    alerta_crash_fatal,
+    alerta_ciclo_resumo,
+    alerta_api_hub_falhou,
+)
 
 import json
 from pathlib import Path
@@ -109,10 +115,25 @@ class PromotionBot:
             
     def _save_state(self):
         try:
+            # Limitar o cache de dedup a 5.000 produtos e 2.000 cupons (rolling window)
+            # Evita que o estado cresça indefinidamente e bloqueie produtos novos
+            MAX_PRODUTOS_ESTADO = 5000
+            MAX_CUPONS_ESTADO = 2000
+            produtos_lista = list(self.produtos_enviados)
+            if len(produtos_lista) > MAX_PRODUTOS_ESTADO:
+                # Mantém os mais recentes (últimos N da lista)
+                produtos_lista = produtos_lista[-MAX_PRODUTOS_ESTADO:]
+                self.produtos_enviados = set(produtos_lista)
+                print(f'🧹 [Estado] Cache de produtos truncado para {MAX_PRODUTOS_ESTADO} entradas')
+            cupons_lista = list(self.cupons_enviados)
+            if len(cupons_lista) > MAX_CUPONS_ESTADO:
+                cupons_lista = cupons_lista[-MAX_CUPONS_ESTADO:]
+                self.cupons_enviados = set(cupons_lista)
+
             with open(self.state_file, 'w', encoding='utf-8') as f:
                 json.dump({
-                    'produtos': list(self.produtos_enviados),
-                    'cupons': list(self.cupons_enviados),
+                    'produtos': produtos_lista,
+                    'cupons': cupons_lista,
                     'fila_lifestyle': self.fila_lifestyle,
                     'fila_sem_lifestyle': self.fila_sem_lifestyle,
                     'fila_manual': self.fila_manual,
@@ -193,11 +214,15 @@ class PromotionBot:
                 if c['code'] not in self.cupons_enviados
             ]
             
-            # Log de deduplicação
+            # Log de deduplicacao
             total_bruto = len(produtos)
             taxa_dedup = (produtos_duplicados / total_bruto * 100) if total_bruto > 0 else 0
             print(f'📊 [Dedup] {total_bruto} encontrados | {produtos_duplicados} duplicados ({taxa_dedup:.1f}%) | {len(produtos_novos)} novos para processar')
             print(f'✨ Novos: {len(produtos_novos)} produtos e {len(cupons_novos)} cupons')
+
+            # Alerta se 100% dos produtos sao duplicatas (indica problema persistente)
+            if total_bruto > 0 and len(produtos_novos) == 0:
+                alerta_dedup_saturado(total=total_bruto, novos=0)
             
             # 3. Adicionar produtos no site e escolher um para o grupo
             if produtos_novos:
@@ -354,6 +379,7 @@ class PromotionBot:
             
         except Exception as e:
             print(f'\n❌ Erro na busca: {e}')
+            alerta_crash_fatal(e, contexto='executar_busca')
     
     def iniciar_modo_agendado(self):
         """Inicia o robô em modo agendado"""
@@ -574,3 +600,4 @@ if __name__ == '__main__':
         print('\n\n👋 Robô finalizado pelo usuário')
     except Exception as e:
         print(f'\n❌ Erro fatal: {e}')
+        alerta_crash_fatal(e, contexto='main_entry')
