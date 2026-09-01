@@ -5,54 +5,50 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Tag } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
 
-const CATEGORIES = [
-  // Eletrônicos e Tech
-  { key: "smartphones", label: "Smartphones", icon: "📱" },
-  { key: "smart-tvs", label: "Smart TVs", icon: "📺" },
-  { key: "fones-de-ouvido", label: "Fones de Ouvido", icon: "🎧" },
-  { key: "caixas-de-som", label: "Caixas de Som", icon: "🔊" },
-  { key: "smartwatches", label: "Smartwatches", icon: "⌚" },
-  { key: "cameras", label: "Câmeras", icon: "📷" },
-  { key: "tablets", label: "Tablets", icon: "🗂️" },
-  // Informática e Games
-  { key: "notebooks", label: "Notebooks", icon: "💻" },
-  { key: "pcs-e-desktops", label: "PCs e Desktops", icon: "🖥️" },
-  { key: "monitores", label: "Monitores", icon: "🖱️" },
-  { key: "perifericos", label: "Periféricos", icon: "⌨️" },
-  { key: "ssd-hds-memoria", label: "SSD, HDs e Memória", icon: "💾" },
-  { key: "consoles-e-games", label: "Consoles e Games", icon: "🎮" },
-  // Casa e Eletrodomésticos
+const RAW_CATEGORIES = [
   { key: "air-fryers", label: "Air Fryers", icon: "🍟" },
+  { key: "ar-condicionado", label: "Ar Condicionado", icon: "❄️" },
+  { key: "aspiradores", label: "Aspiradores", icon: "🌀" },
+  { key: "automotivo", label: "Automotivo", icon: "🚗" },
+  { key: "bebes-criancas", label: "Bebês e Crianças", icon: "👶" },
+  { key: "bicicletas-esporte", label: "Bicicletas e Esporte", icon: "🚴" },
+  { key: "bolsas-acessorios", label: "Bolsas e Acessórios", icon: "👜" },
+  { key: "cafe-bebidas", label: "Café e Bebidas", icon: "☕" },
   { key: "cafeteiras", label: "Cafeteiras", icon: "☕" },
+  { key: "caixas-de-som", label: "Caixas de Som", icon: "🔊" },
+  { key: "cameras", label: "Câmeras", icon: "📷" },
+  { key: "cervejas-vinhos", label: "Cervejas e Vinhos", icon: "🍺" },
+  { key: "chocolates-doces", label: "Chocolates e Doces", icon: "🍫" },
+  { key: "consoles-e-games", label: "Consoles e Games", icon: "🎮" },
+  { key: "diversos", label: "Diversos", icon: "🔖" },
+  { key: "ferramentas", label: "Ferramentas", icon: "🔧" },
+  { key: "fones-de-ouvido", label: "Fones de Ouvido", icon: "🎧" },
   { key: "geladeiras", label: "Geladeiras e Freezers", icon: "🧊" },
   { key: "lavadoras", label: "Lavadoras", icon: "🫧" },
-  { key: "micro-ondas", label: "Micro-ondas", icon: "📡" },
-  { key: "aspiradores", label: "Aspiradores", icon: "🌀" },
-  { key: "ar-condicionado", label: "Ar Condicionado", icon: "❄️" },
-  // Moda e Acessórios
-  { key: "tenis-calcados", label: "Tênis e Calçados", icon: "👟" },
-  { key: "roupas-moda", label: "Roupas e Moda", icon: "👕" },
-  { key: "bolsas-acessorios", label: "Bolsas e Acessórios", icon: "👜" },
-  // Saúde e Beleza
-  { key: "perfumes", label: "Perfumes", icon: "🌺" },
-  { key: "maquiagem-pele", label: "Maquiagem e Pele", icon: "💄" },
-  { key: "shampoo-cabelo", label: "Shampoo e Cabelo", icon: "💆" },
-  // Esporte e Suplementos
-  { key: "whey-suplementos", label: "Whey e Suplementos", icon: "💪" },
-  { key: "bicicletas-esporte", label: "Bicicletas e Esporte", icon: "🚴" },
-  // Supermercado
-  { key: "chocolates-doces", label: "Chocolates e Doces", icon: "🍫" },
-  { key: "cafe-bebidas", label: "Café e Bebidas", icon: "☕" },
-  { key: "cervejas-vinhos", label: "Cervejas e Vinhos", icon: "🍺" },
-  // Outros
   { key: "livros-ereaders", label: "Livros e eReaders", icon: "📚" },
-  { key: "bebes-criancas", label: "Bebês e Crianças", icon: "👶" },
+  { key: "maquiagem-pele", label: "Maquiagem e Pele", icon: "💄" },
+  { key: "micro-ondas", label: "Micro-ondas", icon: "📡" },
+  { key: "monitores", label: "Monitores", icon: "🖥️" },
+  { key: "notebooks", label: "Notebooks", icon: "💻" },
+  { key: "pcs-e-desktops", label: "PCs e Desktops", icon: "🖥️" },
+  { key: "perfumes", label: "Perfumes", icon: "🌺" },
+  { key: "perifericos", label: "Periféricos", icon: "⌨️" },
   { key: "pet", label: "Pet", icon: "🐾" },
-  { key: "ferramentas", label: "Ferramentas", icon: "🔧" },
-  { key: "automotivo", label: "Automotivo", icon: "🚗" },
+  { key: "roupas-moda", label: "Roupas e Moda", icon: "👕" },
+  { key: "shampoo-cabelo", label: "Shampoo e Cabelo", icon: "💆" },
+  { key: "smartphones", label: "Smartphones", icon: "📱" },
+  { key: "smart-tvs", label: "Smart TVs", icon: "📺" },
+  { key: "smartwatches", label: "Smartwatches", icon: "⌚" },
+  { key: "ssd-hds-memoria", label: "SSD, HDs e Memória", icon: "💾" },
+  { key: "tablets", label: "Tablets", icon: "📱" },
+  { key: "tenis-calcados", label: "Tênis e Calçados", icon: "👟" },
   { key: "viagem", label: "Viagem", icon: "✈️" },
-  { key: "diversos", label: "Diversos", icon: "🔖" },
+  { key: "whey-suplementos", label: "Whey e Suplementos", icon: "💪" },
 ];
+
+const CATEGORIES = [...RAW_CATEGORIES].sort((a, b) =>
+  a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" })
+);
 
 type Product = {
   id: string;
