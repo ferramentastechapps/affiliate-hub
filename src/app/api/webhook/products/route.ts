@@ -231,21 +231,47 @@ export async function POST(request: Request) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     const isCouponCategory = body.category?.toLowerCase().includes('cupom');
     const isCouponName = body.name?.toLowerCase().includes('cupom');
+    const isExplicitCoupon = body.isCoupon === true;
     
-    if (isCouponCategory || isCouponName) {
+    if (isCouponCategory || isCouponName || isExplicitCoupon) {
       console.log(`[Webhook] 🎟️ Interceptado como CUPOM avulso: ${body.name}`);
       
-      let extractedCode = "CUPOM";
-      let extractedDiscount = body.price ? `R$ ${body.price}` : "OFF";
+      let extractedCode = body.couponCode || "";
+      let extractedDiscount = body.discount || (body.price ? `R$ ${body.price} OFF` : "Desconto Especial");
+      let minPurchase = body.minPurchaseValue ? Number(body.minPurchaseValue) : null;
+      let rules = body.rules || body.applicableCategories || null;
       
-      // Tentar extrair código e desconto
-      if (body.description?.includes('🎟️ CUPOM:')) {
-        extractedCode = body.description.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
+      // Stopwords para evitar códigos falsos
+      const invalidCodes = new Set([
+        'CUPOM', 'CUPONS', 'CODIGO', 'CODIGOS', 'DESCONTO', 'OFF', 'LIBERADO', 'LIBERADA',
+        'DISPONIVEL', 'ESPECIAL', 'EXCLUSIVO', 'NOVO', 'NOVA', 'SHOPEE', 'AMAZON', 'MERCADOLIVRE',
+        'ALIEXPRESS', 'MAGALU', 'KABUM', 'NETSHOES', 'CARTEIRA', 'LINK', 'CANAL', 'DIRETO', 'COPIE'
+      ]);
+
+      // Tentar extrair código da descrição se não foi passado diretamente
+      if (!extractedCode && body.description) {
+        if (body.description.includes('🎟️ CUPOM:')) {
+          const part = body.description.split('🎟️ CUPOM:')[1].split('\n')[0].trim().toUpperCase();
+          if (!invalidCodes.has(part) && part.length >= 3) {
+            extractedCode = part;
+          }
+        }
+        if (!extractedCode) {
+          const matchCode = body.description.match(/(?:cupom|c[oó]digo|coupon|code)\s*[:=]\s*([A-Z0-9_-]{3,20})/i);
+          if (matchCode) {
+            const part = matchCode[1].trim().toUpperCase();
+            if (!invalidCodes.has(part)) extractedCode = part;
+          }
+        }
       }
-      
-      const discountMatch = body.name?.match(/(\d+%|R\$\s?\d+)/);
-      if (discountMatch) {
-        extractedDiscount = discountMatch[1] + (discountMatch[1].includes('%') ? " OFF" : "");
+
+      if (!extractedCode) {
+        extractedCode = "VER NO LINK";
+      }
+
+      const discountMatch = body.name?.match(/(\d+%\s*OFF|R\$\s?\d+\s*OFF|\d+%|R\$\s?\d+)/i);
+      if (discountMatch && extractedDiscount === "Desconto Especial") {
+        extractedDiscount = discountMatch[1] + (!discountMatch[1].toUpperCase().includes('OFF') ? " OFF" : "");
       }
 
       // Determinar plataforma
@@ -257,18 +283,27 @@ export async function POST(request: Request) {
       else if (bodyStr.includes('aliexpress') || body.links?.aliexpress) platform = 'aliexpress';
       else if (bodyStr.includes('magalu') || body.links?.magalu) platform = 'magalu';
       
+      let platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
+      if (platform === 'mercadolivre') platformLabel = 'Mercado Livre';
+      else if (platform === 'magalu') platformLabel = 'Magazine Luiza';
+      else if (platform === 'aliexpress') platformLabel = 'AliExpress';
+
+      const cleanTitle = `Cupom ${platformLabel} ${extractedDiscount}`;
+
       const coupon = await prisma.coupon.create({
         data: {
           code: extractedCode,
-          description: body.name,
+          description: cleanTitle,
           discount: extractedDiscount,
           platform: platform,
+          minPurchaseValue: minPurchase,
+          applicableCategories: rules,
           isActive: true
         }
       });
       
-      // Se for Amazon, ML ou Shopee, disparar
-      if (['amazon', 'mercadolivre', 'shopee'].includes(platform)) {
+      // Se for Amazon, ML, Shopee, AliExpress ou Magalu, disparar para redes sociais
+      if (['amazon', 'mercadolivre', 'shopee', 'aliexpress', 'magalu'].includes(platform)) {
         let affiliateLink = "";
         let originalLink = "";
         
@@ -291,7 +326,7 @@ export async function POST(request: Request) {
         });
       }
       
-      return NextResponse.json({ success: true, message: 'Cupom interceptado e salvo', coupon }, { status: 201 });
+      return NextResponse.json({ success: true, message: 'Cupom interceptado e salvo', coupon, isCoupon: true }, { status: 201 });
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

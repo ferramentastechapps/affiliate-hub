@@ -14,34 +14,53 @@ export async function publishCouponToSocials(coupon: any, affiliateLink: string)
   const whatsappToken = await prisma.systemConfig.findUnique({ where: { key: 'whatsapp_api_token' } });
   
   let platformName = coupon.platform.charAt(0).toUpperCase() + coupon.platform.slice(1);
-  if (coupon.platform === 'mercadolivre') platformName = 'Mercado Livre';
-  else if (coupon.platform === 'magalu') platformName = 'Magazine Luiza';
-  else if (coupon.platform === 'aliexpress') platformName = 'AliExpress';
+  const pLower = coupon.platform.toLowerCase();
+  if (pLower === 'mercadolivre' || pLower === 'mercado_livre') platformName = 'Mercado Livre';
+  else if (pLower === 'magalu' || pLower === 'magazineluiza') platformName = 'Magazine Luiza';
+  else if (pLower === 'aliexpress') platformName = 'AliExpress';
 
-  let limitsText = "";
-  if (coupon.minPurchaseValue || coupon.maxDiscountValue || coupon.applicableCategories) {
-    const limits = [];
-    if (coupon.minPurchaseValue) limits.push(`Acima de R$ ${formatCurrency(coupon.minPurchaseValue)}`);
-    if (coupon.maxDiscountValue) limits.push(`Limite de R$ ${formatCurrency(coupon.maxDiscountValue)} de desconto`);
-    if (coupon.applicableCategories) limits.push(`Válido para: ${coupon.applicableCategories}`);
-    
-    limitsText = "\n⚠️ <b>Regras:</b>\n- " + limits.join("\n- ");
+  const discountText = coupon.discount ? String(coupon.discount).trim() : 'Desconto Especial';
+  const cleanDiscount = (discountText.toUpperCase().includes('OFF') || discountText.toUpperCase().includes('DESCONTO') || discountText.toUpperCase().includes('GRÁTIS') || discountText.toUpperCase().includes('GRATIS'))
+    ? discountText
+    : `${discountText} OFF`;
+
+  let conditionTelegram = "";
+  let conditionWhatsApp = "";
+
+  if (coupon.minPurchaseValue && Number(coupon.minPurchaseValue) > 0) {
+    conditionTelegram = `\n📌 <b>Condição:</b> Acima de R$ ${formatCurrency(coupon.minPurchaseValue)}`;
+    conditionWhatsApp = `\n📌 *Condição:* Acima de R$ ${formatCurrency(coupon.minPurchaseValue)}`;
+  } else if (coupon.applicableCategories && coupon.applicableCategories.trim()) {
+    conditionTelegram = `\n📌 <b>Regra:</b> ${coupon.applicableCategories.trim()}`;
+    conditionWhatsApp = `\n📌 *Regra:* ${coupon.applicableCategories.trim()}`;
   }
 
-  const message = `
+  // Telegram HTML Message
+  const telegramMessage = `
 🔥 <b>NOVO CUPOM ${platformName.toUpperCase()}!</b>
 
-🎟️ <b>${coupon.discount}</b>
-🏷️ Código: <code>${coupon.code}</code>
-${coupon.description && coupon.description !== 'CUPOM' ? `\n📝 ${coupon.description}\n` : ''}${limitsText}
+🏷️ <b>Cupom:</b> <code>${coupon.code}</code> <i>(toque para copiar)</i>
+💰 <b>Desconto:</b> <b>${cleanDiscount}</b>${conditionTelegram}
 
+👇 <i>Acesse o link e adicione o cupom na sua carteira:</i>
 🔗 <b>Resgate aqui:</b> ${affiliateLink}
+  `.trim();
+
+  // WhatsApp Message
+  const whatsappMessage = `
+🔥 *NOVO CUPOM ${platformName.toUpperCase()}!*
+
+🏷️ *Cupom:* \`${coupon.code}\` _(toque para copiar)_
+💰 *Desconto:* *${cleanDiscount}*${conditionWhatsApp}
+
+👇 _Acesse o link e adicione o cupom na sua carteira:_
+🔗 *Resgate aqui:* ${affiliateLink}
   `.trim();
 
   // Disparo para Telegram
   if (telegramGroupId) {
     try {
-      await sendTelegramMessage(telegramGroupId, message);
+      await sendTelegramMessage(telegramGroupId, telegramMessage);
       console.log(`[Socials] Cupom ${coupon.code} enviado para o Telegram`);
     } catch (err) {
       console.error(`[Socials] Erro ao enviar cupom para Telegram:`, err);
@@ -51,16 +70,11 @@ ${coupon.description && coupon.description !== 'CUPOM' ? `\n📝 ${coupon.descri
   // Disparo para WhatsApp
   if (whatsappUrl?.value && whatsappToken?.value) {
     try {
-      const whatsappMsg = message
-        .replace(/<b>(.*?)<\/b>/g, '*$1*') // Convert HTML bold to WhatsApp bold
-        .replace(/<code>(.*?)<\/code>/g, '`$1`') // Convert HTML code to WhatsApp code
-        .replace(/<i>(.*?)<\/i>/g, '_$1_'); // Convert HTML italic to WhatsApp italic
-
       await fetch(whatsappUrl.value, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: whatsappMsg,
+          message: whatsappMessage,
           token: whatsappToken.value,
         }),
       });
@@ -70,3 +84,4 @@ ${coupon.description && coupon.description !== 'CUPOM' ? `\n📝 ${coupon.descri
     }
   }
 }
+

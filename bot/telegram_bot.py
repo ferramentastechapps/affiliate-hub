@@ -1009,23 +1009,17 @@ OU
         link_site      = f'{base_url}/cupons'
 
         # ── Monta mensagem no estilo dos grandes grupos de afiliados ──────────
+        clean_discount = discount if (discount.upper().endswith('OFF') or 'DESCONTO' in discount.upper()) else f"{discount} OFF"
         mensagem = (
             f'{urgencia}'
-            f'🎫 <b>CUPOM RELÂMPAGO!</b>\n'
-            f'\n'
-            f'{plat_emoji}\n'
-            f'📋 {description}\n'
-            f'💰 <b>Desconto: {discount}</b>'
+            f'🔥 <b>NOVO CUPOM {platform.upper()}!</b>\n\n'
+            f'🏷️ <b>Cupom:</b> <code>{code}</code> <i>(toque para copiar)</i>\n'
+            f'💰 <b>Desconto:</b> <b>{clean_discount}</b>'
             f'{min_linha}'
             f'{cat_linha}'
-            f'{expira_linha}\n'
-            f'\n'
-            f'💳 <b>Cupom:</b> <code>{code}</code>\n'
-            f'   <i>(toque no código para copiar)</i>\n'
-            f'\n'
-            f'👉 <a href="{affiliate_link}">ACESSAR {platform.upper()} COM AFILIADO</a>\n'
-            f'\n'
-            f'📲 <a href="{link_site}">Ver mais cupons no Economizei</a>'
+            f'{expira_linha}\n\n'
+            f'👇 <i>Acesse o link e adicione o cupom na sua carteira:</i>\n'
+            f'🔗 <b>Resgate aqui:</b> {affiliate_link}'
         )
 
         try:

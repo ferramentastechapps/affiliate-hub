@@ -94,7 +94,7 @@ COUPON_PATTERNS = [
     r'código[:\s]*\*?([A-Z0-9_-]{4,20})\*?',
 ]
 
-# Palavras que NÃO são cupons
+# Palavras que NÃO são cupons (Blacklist expandida de termos comuns)
 NAO_CUPOM = {
     'WIFI', 'HDMI', 'USB', 'SSD', 'RAM', 'CPU', 'GPU', 'LED', 'LCD',
     'UHD', 'FHD', 'QHD', 'HDR', 'PS4', 'PS5', 'PS3', 'OLED', 'QLED',
@@ -103,7 +103,18 @@ NAO_CUPOM = {
     'SAMSUNG', 'APPLE', 'SONY', 'ASUS', 'INTEL', 'NVIDIA', 'AMD',
     'LENOVO', 'XIAOMI', 'MOTOROLA', 'LOGITECH', 'GALAXY', 'IPHONE',
     'BLACK', 'WHITE', 'FRIDAY', 'GRATIS', 'FREE', 'PROMO', 'OFERTA',
-    'CUPOM', 'CODIGO', 'DESCONTO', 'OFF', 'PIX', 'CARTAO', 'BOLETO',
+    'CUPOM', 'CUPONS', 'CODIGO', 'CODIGOS', 'DESCONTO', 'DESCONTOS', 'OFF',
+    'PIX', 'CARTAO', 'BOLETO', 'LIBERADO', 'LIBERADA', 'LIBERADOS',
+    'DISPONIVEL', 'DISPONIVEIS', 'ESPECIAL', 'EXCLUSIVO', 'EXCLUSIVA',
+    'EXCLUSIVOS', 'IMPERDIVEL', 'ATIVO', 'ATIVA', 'ATIVOS', 'NOVO', 'NOVA',
+    'NOVOS', 'PRIMEIRA', 'COMPRA', 'COMPRAS', 'CLIENTE', 'CLIENTES',
+    'SHOPEE', 'MERCADOLIVRE', 'AMAZON', 'ALIEXPRESS', 'MAGALU', 'KABUM',
+    'NETSHOES', 'CARTEIRA', 'LINK', 'CANAL', 'DIRETO', 'COPIE', 'COLE',
+    'TODOS', 'SELECIONADOS', 'VENDEDOR', 'OFICIAL', 'FRETE', 'PRIME',
+    'HOJE', 'AGORA', 'CORRE', 'ATENCAO', 'ALERTA', 'ALERTAS', 'APROVEITE',
+    'VALIDO', 'VALIDA', 'VALIDOS', 'PAGINA', 'PRODUTO', 'PRODUTOS',
+    'RESGATE', 'ACESSE', 'CONFIRA', 'AJUDANDO', 'DIRETO', 'SEU', 'SUA',
+    'AQUI', 'VEJA', 'SHOP', 'PARA', 'COM', 'SEM'
 }
 
 LOJA_MAP = {
@@ -176,16 +187,92 @@ def extrair_urls(texto: str) -> list:
     return urls_limpas
 
 
-def extrair_cupom(texto: str) -> Optional[str]:
-    """Extrai código de cupom do texto da mensagem."""
-    texto_upper = texto.upper()
-    for pattern in COUPON_PATTERNS:
-        match = re.search(pattern, texto_upper, re.IGNORECASE)
-        if match:
-            codigo = match.group(1).upper().strip()
-            if codigo not in NAO_CUPOM and len(codigo) >= 4:
-                return codigo
-    return None
+def extrair_detalhes_cupom(texto: str, platform: str = 'Shopee') -> dict:
+    """Extrai de forma ultra-precisa código, desconto e regras do cupom."""
+    texto_limpo = texto.strip()
+    linhas = [l.strip() for l in texto_limpo.split('\n') if l.strip()]
+
+    codigo = None
+
+    # Prioridade 1: Linha com emoji de ticket/cupom seguida EXATAMENTE por 1 palavra (ex: "🎟️ OFERTA20AF")
+    for linha in linhas:
+        if any(em in linha for em in ['🎟️', '🎟', '🏷️', '🏷', '🎫', '🔖']):
+            linha_sem_emoji = re.sub(r'[^\w\d\s_-]', '', linha).strip()
+            palavras = linha_sem_emoji.split()
+            if len(palavras) == 1:
+                p_up = palavras[0].upper()
+                if 3 <= len(p_up) <= 25 and p_up not in NAO_CUPOM:
+                    codigo = p_up
+                    break
+            elif len(palavras) == 2:
+                for p in palavras:
+                    p_up = p.upper()
+                    if 3 <= len(p_up) <= 25 and p_up not in NAO_CUPOM:
+                        codigo = p_up
+                        break
+            if codigo:
+                break
+
+    # Prioridade 2: Padrão explícito "cupom: CODIGO" ou "código: CODIGO"
+    if not codigo:
+        matches = re.findall(r'(?:cupom|c[oó]digo|coupon|code)\s*[:= ]\s*([A-Z0-9_-]{3,25})', texto_limpo, re.IGNORECASE)
+        for m in matches:
+            m_up = m.upper().strip()
+            if m_up not in NAO_CUPOM and len(m_up) >= 3:
+                codigo = m_up
+                break
+
+    # Prioridade 3: Linha isolada contendo palavra com letras E números (ex: "OFERTA20AF", "MELI20")
+    if not codigo:
+        for linha in linhas:
+            linha_pura = re.sub(r'[^\w\d_-]', '', linha).strip()
+            if ' ' not in linha_pura:
+                up = linha_pura.upper()
+                if 4 <= len(up) <= 25 and up not in NAO_CUPOM and any(ch.isdigit() for ch in up):
+                    codigo = up
+                    break
+
+    # Extrair valor do desconto (R$ XX OFF ou XX% OFF)
+    desconto = None
+    match_desc = re.search(r'(R\$\s*[\d.,]+\s*OFF|\d+\s*%\s*OFF|R\$\s*[\d.,]+\s*(?:de\s+)?desconto|\d+\s*%\s*(?:de\s+)?desconto|frete\s+gr[aá]tis)', texto_limpo, re.IGNORECASE)
+    if match_desc:
+        desconto = match_desc.group(1).strip().upper()
+        desconto = re.sub(r'\s+', ' ', desconto)
+        if not desconto.endswith('OFF') and 'DESCONTO' not in desconto and 'GRÁTIS' not in desconto and 'GRATIS' not in desconto:
+            desconto = f"{desconto} OFF"
+    elif codigo:
+        match_rs = re.search(r'R\$\s*([\d.,]+)', texto_limpo)
+        if match_rs:
+            desconto = f"R$ {match_rs.group(1)} OFF"
+
+    # Extrair regras / valor mínimo
+    regras = None
+    min_val = None
+    match_min = re.search(r'(acima\s+de\s+R\$\s*[\d.,]+|a\s+partir\s+de\s+R\$\s*[\d.,]+|m[ií]nimo\s+(?:de\s+)?R\$\s*[\d.,]+|em\s+compras\s+acima\s+de\s+R\$\s*[\d.,]+)', texto_limpo, re.IGNORECASE)
+    if match_min:
+        regras = match_min.group(1).strip().capitalize()
+        val_match = re.search(r'R\$\s*([\d.,]+)', regras, re.IGNORECASE)
+        if val_match:
+            try:
+                min_val = float(val_match.group(1).replace('.', '').replace(',', '.'))
+            except Exception:
+                pass
+    elif re.search(r'exclusivo\s+(?:no\s+)?app', texto_limpo, re.IGNORECASE):
+        regras = "Exclusivo no App"
+    elif re.search(r'membros\s+prime', texto_limpo, re.IGNORECASE):
+        regras = "Exclusivo Membros Prime"
+    elif re.search(r'produtos\s+selecionados', texto_limpo, re.IGNORECASE):
+        regras = "Produtos Selecionados"
+
+    is_coupon_post = bool(codigo or 'CUPOM' in texto_limpo.upper())
+
+    return {
+        'codigo': codigo,
+        'desconto': desconto or 'Desconto Especial',
+        'regras': regras,
+        'min_val': min_val,
+        'is_coupon_post': is_coupon_post
+    }
 
 
 def extrair_preco(texto: str) -> Optional[float]:
@@ -290,58 +377,82 @@ class TelegramGroupMonitor:
         except Exception:
             url_resolvida = url_original
 
-        # Extrair informações da mensagem
-        cupom = extrair_cupom(msg_text)
-        preco = extrair_preco(msg_text)
-        desconto = extrair_desconto(msg_text)
-        nome = gerar_nome_produto(msg_text, platform)
+        loja = LOJA_MAP.get(platform, 'Amazon')
+        links = self.scraper._criar_links(url_resolvida, loja)
 
-        # Extrair platformId
+        # Extrair plataforma / id
         try:
             platform_type, platform_id = self.scraper.extrair_platform_id(url_resolvida)
         except Exception:
             platform_type, platform_id = platform, None
 
-        # Criar estrutura de links de afiliado
-        loja = LOJA_MAP.get(platform, 'Amazon')
-        links = self.scraper._criar_links(url_resolvida, loja)
+        # Análise de Cupom
+        detalhes_cupom = extrair_detalhes_cupom(msg_text, platform)
 
-        # Montar descrição
-        descricao_partes = [f'📢 Oferta capturada do grupo de cupons — {loja}']
-        if desconto:
-            descricao_partes.append(f'🔥 {desconto}% OFF')
-        if cupom:
-            descricao_partes.append(f'🎟️ CUPOM: {cupom}')
-        descricao = '\n'.join(descricao_partes)
+        if detalhes_cupom['is_coupon_post'] and detalhes_cupom['codigo']:
+            # 🎟️ É UM CUPOM DE DESCONTO DIRETO
+            log.info(f"   🎟️ Detectado como CUPOM: Código {detalhes_cupom['codigo']} | {detalhes_cupom['desconto']}")
+            
+            nome_cupom = f"Cupom {loja} {detalhes_cupom['desconto']}"
+            descricao_cupom = f"🎟️ CUPOM: {detalhes_cupom['codigo']}\n💰 Desconto: {detalhes_cupom['desconto']}"
+            if detalhes_cupom['regras']:
+                descricao_cupom += f"\n📌 Condição: {detalhes_cupom['regras']}"
 
-        # Categoria automática
-        try:
-            categoria = self.scraper._detectar_categoria(nome)
-        except Exception:
-            categoria = 'Diversos'
+            produto = {
+                'name': nome_cupom,
+                'category': 'Cupons de Desconto',
+                'description': descricao_cupom,
+                'imageUrl': '/placeholder.webp',
+                'price': detalhes_cupom['min_val'] or 0,
+                'links': links,
+                'storeName': loja,
+                'source': 'telegram_monitor',
+                'externalId': f'tgmon_cupom_{msg_id}',
+                'platformType': platform_type or platform,
+                'platformId': platform_id or str(msg_id),
+                'autoApprove': True,
+                'isCoupon': True,
+                'couponCode': detalhes_cupom['codigo'],
+                'discount': detalhes_cupom['desconto'],
+                'minPurchaseValue': detalhes_cupom['min_val'],
+                'rules': detalhes_cupom['regras'],
+            }
+        else:
+            # 📦 É UM PRODUTO CONVENCIONAL
+            preco = extrair_preco(msg_text)
+            desconto = extrair_desconto(msg_text)
+            nome = gerar_nome_produto(msg_text, platform)
 
-        # Montar payload do produto
-        produto = {
-            'name': nome,
-            'category': categoria,
-            'description': descricao,
-            'imageUrl': '/placeholder.webp',
-            'price': preco,
-            'links': links,
-            'storeName': loja,
-            'source': 'telegram_monitor',
-            'externalId': f'tgmon_{msg_id}',
-            'platformType': platform_type or platform,
-            'platformId': platform_id or str(msg_id),
-            'autoApprove': True,
-        }
-        if cupom:
-            produto['couponCode'] = cupom
-        if desconto:
-            produto['discountPercent'] = desconto
+            descricao_partes = [f'📢 Oferta capturada do grupo de cupons — {loja}']
+            if desconto:
+                descricao_partes.append(f'🔥 {desconto}% OFF')
+            if detalhes_cupom['codigo']:
+                descricao_partes.append(f"🎟️ CUPOM: {detalhes_cupom['codigo']}")
+            descricao = '\n'.join(descricao_partes)
 
-        log.info(f'   📦 Produto: {nome[:60]}')
-        log.info(f'   💰 Preço: R${preco} | Cupom: {cupom} | Desconto: {desconto}%')
+            try:
+                categoria = self.scraper._detectar_categoria(nome)
+            except Exception:
+                categoria = 'Diversos'
+
+            produto = {
+                'name': nome,
+                'category': categoria,
+                'description': descricao,
+                'imageUrl': '/placeholder.webp',
+                'price': preco,
+                'links': links,
+                'storeName': loja,
+                'source': 'telegram_monitor',
+                'externalId': f'tgmon_{msg_id}',
+                'platformType': platform_type or platform,
+                'platformId': platform_id or str(msg_id),
+                'autoApprove': True,
+            }
+            if detalhes_cupom['codigo']:
+                produto['couponCode'] = detalhes_cupom['codigo']
+            if desconto:
+                produto['discountPercent'] = desconto
 
         # Enviar para a API do Affiliate Hub
         try:
@@ -351,8 +462,12 @@ class TelegramGroupMonitor:
                 produto_id = produto_criado.get('id')
                 log.info(f'   ✅ Produto adicionado! ID: {produto_id}')
 
-                # Publicar diretamente no grupo de promoções
-                await self._publicar_no_grupo(produto_criado, platform, links, cupom)
+                # Se for cupom interceptado, o webhook social já fez a publicação elegante
+                if resultado.get('isCoupon') or produto.get('isCoupon'):
+                    log.info('   🎉 Cupom publicado nas redes sociais com layout profissional!')
+                else:
+                    # Publicar produto convencional no grupo de promoções
+                    await self._publicar_no_grupo(produto_criado, platform, links, detalhes_cupom.get('codigo'))
 
                 # Marcar como processado
                 self.dedup.marcar(chave_dedup)
