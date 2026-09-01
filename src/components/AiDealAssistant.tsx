@@ -115,6 +115,10 @@ export function AiDealAssistant() {
 
       const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error(data.error || "Erro no assistente");
+      }
+
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "ai",

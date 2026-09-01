@@ -33,17 +33,14 @@ interface RateLimitResult {
 // Armazenamento global de rate limits (por namespace)
 const stores = new Map<string, Map<string, RateLimitEntry>>();
 
-// Cleanup automático a cada 5 minutos para evitar vazamento de memória
+// Cleanup automático a cada 5 minutos para limpar apenas chaves expiradas (sem deletar o namespace)
 setInterval(() => {
   const now = Date.now();
-  for (const [namespace, store] of stores.entries()) {
+  for (const store of stores.values()) {
     for (const [key, entry] of store.entries()) {
       if (now - entry.firstRequestAt > 60 * 60 * 1000) {
         store.delete(key);
       }
-    }
-    if (store.size === 0) {
-      stores.delete(namespace);
     }
   }
 }, 5 * 60 * 1000);
@@ -63,23 +60,31 @@ export function createRateLimiter(namespace: string, options: RateLimitOptions =
   }
 
   return function checkLimit(identifier: string): RateLimitResult {
-    const store = stores.get(namespace)!;
-    const now = Date.now();
-    const entry = store.get(identifier);
+    try {
+      let store = stores.get(namespace);
+      if (!store) {
+        store = new Map<string, RateLimitEntry>();
+        stores.set(namespace, store);
+      }
+      const now = Date.now();
+      const entry = store.get(identifier);
 
-    if (!entry || now - entry.firstRequestAt > windowMs) {
-      store.set(identifier, { count: 1, firstRequestAt: now, lastRequestAt: now });
-      return { success: true, remaining: max - 1, retryAfterMs: 0 };
+      if (!entry || now - entry.firstRequestAt > windowMs) {
+        store.set(identifier, { count: 1, firstRequestAt: now, lastRequestAt: now });
+        return { success: true, remaining: max - 1, retryAfterMs: 0 };
+      }
+
+      if (entry.count >= max) {
+        const retryAfterMs = windowMs - (now - entry.firstRequestAt);
+        return { success: false, remaining: 0, retryAfterMs, message };
+      }
+
+      entry.count += 1;
+      entry.lastRequestAt = now;
+      return { success: true, remaining: max - entry.count, retryAfterMs: 0 };
+    } catch {
+      return { success: true, remaining: max, retryAfterMs: 0 };
     }
-
-    if (entry.count >= max) {
-      const retryAfterMs = windowMs - (now - entry.firstRequestAt);
-      return { success: false, remaining: 0, retryAfterMs, message };
-    }
-
-    entry.count += 1;
-    entry.lastRequestAt = now;
-    return { success: true, remaining: max - entry.count, retryAfterMs: 0 };
   };
 }
 
@@ -88,14 +93,20 @@ export function createRateLimiter(namespace: string, options: RateLimitOptions =
  * Funciona com Nginx/Caddy como proxy reverso.
  */
 export function getClientIp(request: Request): string {
-  const realIp = request.headers.get('x-real-ip');
-  if (realIp) return realIp.trim();
+  try {
+    if (!request || !request.headers) return 'unknown';
 
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
+    const realIp = request.headers.get('x-real-ip');
+    if (realIp) return realIp.trim();
 
-  const cfIp = request.headers.get('cf-connecting-ip');
-  if (cfIp) return cfIp.trim();
+    const forwarded = request.headers.get('x-forwarded-for');
+    if (forwarded) return forwarded.split(',')[0].trim();
+
+    const cfIp = request.headers.get('cf-connecting-ip');
+    if (cfIp) return cfIp.trim();
+  } catch {
+    return 'unknown';
+  }
 
   return 'unknown';
 }
