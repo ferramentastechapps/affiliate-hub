@@ -176,10 +176,26 @@ export function DailyDeals() {
       if (!silent) {
         setLoading(true);
       }
+      let extraAlertsParam = '';
+      if (filterType === 'alertas') {
+        try {
+          const cached = localStorage.getItem('push_preferences_cache');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed.customInterests && Array.isArray(parsed.customInterests) && parsed.customInterests.length > 0) {
+              extraAlertsParam += `&keywords=${encodeURIComponent(parsed.customInterests.join(','))}`;
+            }
+            if (parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+              extraAlertsParam += `&categories=${encodeURIComponent(parsed.categories.join(','))}`;
+            }
+          }
+        } catch {}
+      }
+
       const userParam = user?.id ? `&userId=${user.id}` : '';
       const categoryParam = selectedCategory && selectedCategory !== 'Todas' ? `&category=${encodeURIComponent(selectedCategory)}` : '';
       const searchParam = debouncedSearchQuery ? `&search=${encodeURIComponent(debouncedSearchQuery)}` : '';
-      const res = await fetch(`/api/products?filter=${filterType}${userParam}${categoryParam}${searchParam}&_t=${Date.now()}`, { cache: "no-store" });
+      const res = await fetch(`/api/products?filter=${filterType}${userParam}${categoryParam}${searchParam}${extraAlertsParam}&_t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       
       if (data && data.length > 0) {
@@ -236,12 +252,7 @@ export function DailyDeals() {
       }
     }
 
-    let matchesAlert = true;
-    if (filterType === 'alertas') {
-      matchesAlert = p.alerts?.some((al: any) => al.userId === user?.id) || false;
-    }
-
-    return matchesCategory && matchesSearch && matchesAlert;
+    return matchesCategory && matchesSearch;
   });
 
   // Aplicar ordenação baseada no filtro selecionado

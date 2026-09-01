@@ -60,7 +60,7 @@ export function filterSubscribers<T extends Subscriber>(
   const { category, categories, productName, hasCoupon } = criteria;
 
   return subscriptions.filter((sub) => {
-    // Regra 1: Sem preferências definidas (legado) -> Recebe sempre.
+    // Regra 1: Sem preferências definidas (legado ou recém-instalado) -> Recebe sempre.
     if (!sub.preferences) {
       return true;
     }
@@ -72,10 +72,8 @@ export function filterSubscribers<T extends Subscriber>(
       return true;
     }
 
-    // Regra 3 (Alerta de Palavras-Chave): tem prioridade sobre couponsOnly (Regra 4) de forma intencional.
-    // Um interesse explícito por palavra-chave é um sinal mais forte que a preferência geral de "só cupons" —
-    // se o usuário diz que quer saber de "iphone", ele recebe o alerta mesmo sem cupom associado.
-    if (productName && prefs.customInterests && Array.isArray(prefs.customInterests)) {
+    // Regra 3 (Alerta de Palavras-Chave): tem prioridade sobre couponsOnly (Regra 4)
+    if (productName && prefs.customInterests && Array.isArray(prefs.customInterests) && prefs.customInterests.length > 0) {
       const hasKeywordMatch = prefs.customInterests.some((interest) =>
         matchKeyword(productName, interest)
       );
@@ -90,7 +88,7 @@ export function filterSubscribers<T extends Subscriber>(
     }
 
     // Regra 5: Categorias Específicas -> Verifica se a categoria está no array de categorias do assinante.
-    if (prefs.categories && Array.isArray(prefs.categories)) {
+    if (prefs.categories && Array.isArray(prefs.categories) && prefs.categories.length > 0) {
       if (category && prefs.categories.includes(category)) {
         return true;
       }
@@ -99,8 +97,16 @@ export function filterSubscribers<T extends Subscriber>(
       }
     }
 
-    // Regra 6: Fallback Geral (Disparos sem categoria, lista de categorias ou cupom associados) ->
-    // Recebe sempre se o assinante não tiver restrição exclusiva de cupons.
+    // Regra 6: Padrão PWA aberto (se não tiver categorias nem palavras-chave restritivas e all não for false)
+    const hasSpecificCats = Array.isArray(prefs.categories) && prefs.categories.length > 0;
+    const hasSpecificInterests = Array.isArray(prefs.customInterests) && prefs.customInterests.length > 0;
+
+    if (!hasSpecificCats && !hasSpecificInterests) {
+      // O usuário não selecionou filtros restritivos -> recebe tudo
+      return !prefs.couponsOnly || !!hasCoupon;
+    }
+
+    // Regra 7: Fallback Geral (Disparos sem categoria associada)
     if (!category && (!categories || categories.length === 0) && !hasCoupon) {
       return !prefs.couponsOnly;
     }

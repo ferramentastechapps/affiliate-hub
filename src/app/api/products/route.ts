@@ -98,59 +98,66 @@ export async function GET(request: Request) {
       // Ordenar por aiScore desc como proxy para hot deal (hotScore é calculado no map)
       orderByClause = { aiScore: 'desc' };
     } else if (filterParam === 'alertas') {
+      const keywordsParam = searchParams.get('keywords');
+      const categoriesParam = searchParams.get('categories');
+      const endpointParam = searchParams.get('endpoint');
+      
+      let pushCategories: string[] = [];
+      let pushKeywords: string[] = [];
+      
+      if (keywordsParam) {
+        pushKeywords.push(...keywordsParam.split(',').map(k => k.trim()).filter(Boolean));
+      }
+      if (categoriesParam) {
+        pushCategories.push(...categoriesParam.split(',').map(c => c.trim()).filter(Boolean));
+      }
+
+      if (endpointParam) {
+        const epSub = await prisma.pushSubscription.findUnique({
+          where: { endpoint: endpointParam }
+        });
+        if (epSub?.preferences) {
+          const p = epSub.preferences as any;
+          if (Array.isArray(p.categories)) pushCategories.push(...p.categories);
+          if (Array.isArray(p.customInterests)) pushKeywords.push(...p.customInterests);
+        }
+      }
+
       if (userIdParam) {
-        // Obter categorias e palavras-chave do PushSubscription do usuário
         const pushSubs = await prisma.pushSubscription.findMany({
           where: { userId: userIdParam }
         });
-        
-        let pushCategories: string[] = [];
-        let pushKeywords: string[] = [];
-        
         for (const sub of pushSubs) {
           if (sub.preferences) {
             const prefs = sub.preferences as any;
-            if (prefs.categories && Array.isArray(prefs.categories)) {
-              pushCategories.push(...prefs.categories);
-            }
-            if (prefs.customInterests && Array.isArray(prefs.customInterests)) {
-              pushKeywords.push(...prefs.customInterests);
-            }
+            if (Array.isArray(prefs.categories)) pushCategories.push(...prefs.categories);
+            if (Array.isArray(prefs.customInterests)) pushKeywords.push(...prefs.customInterests);
           }
         }
-        
-        // Mantém a lógica antiga de ProductAlert por segurança
-        const userAlerts = await prisma.productAlert.findMany({
-          where: { userId: userIdParam },
-          include: { product: { select: { category: true } } }
-        });
-        
-        // Only include categories explicitly subscribed in Push Preferences
-        const alertedCategories = [...new Set([...pushCategories])] as string[];
-        
-        const orConditions: any[] = [];
-        
-        if (alertedCategories.length > 0) {
-          orConditions.push({ category: { in: alertedCategories } });
-        }
-        
-        if (userAlerts.length > 0) {
-          orConditions.push({ alerts: { some: { userId: userIdParam } } });
-        }
-        
-        // Adiciona as keywords no OR
-        for (const kw of pushKeywords) {
-          orConditions.push({ name: { contains: kw, mode: 'insensitive' } });
-          orConditions.push({ description: { contains: kw, mode: 'insensitive' } });
-        }
-        
-        if (orConditions.length > 0) {
-          whereClause.OR = orConditions;
-        } else {
-          whereClause.id = 'none'; // Sem alertas configurados
-        }
+      }
+
+      const uniqueCategories = [...new Set(pushCategories)];
+      const uniqueKeywords = [...new Set(pushKeywords)];
+      
+      const orConditions: any[] = [];
+      
+      if (uniqueCategories.length > 0) {
+        orConditions.push({ category: { in: uniqueCategories } });
+      }
+      if (userIdParam) {
+        orConditions.push({ alerts: { some: { userId: userIdParam } } });
+      }
+      for (const kw of uniqueKeywords) {
+        orConditions.push({ name: { contains: kw, mode: 'insensitive' } });
+        orConditions.push({ description: { contains: kw, mode: 'insensitive' } });
+      }
+
+      if (orConditions.length > 0) {
+        whereClause.OR = orConditions;
       } else {
-        whereClause.alerts = { some: {} }; // Fallback
+        // Se o usuário ainda não cadastrou alertas específicos, mostra os destaques mais relevantes
+        whereClause.status = { in: ['active', 'approved'] };
+        orderByClause = { clicks: 'desc' };
       }
     } else if (filterParam === 'price-drops') {
       // FASE 2 — Filtro de produtos com queda de preço

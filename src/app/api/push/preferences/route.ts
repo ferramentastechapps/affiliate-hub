@@ -63,37 +63,34 @@ export async function PATCH(request: NextRequest) {
       try {
         subscription = await prisma.pushSubscription.update({
           where: { endpoint },
-          data: { preferences },
+          data: { 
+            preferences,
+            userId: userId || undefined 
+          },
         });
       } catch {
         // Se o endpoint não existe (subscription perdida), tenta fallback pelo userId
         if (userId) {
+          await prisma.pushSubscription.updateMany({
+            where: { userId },
+            data: { preferences },
+          });
           subscription = await prisma.pushSubscription.findFirst({
             where: { userId },
             orderBy: { createdAt: 'desc' },
           });
-
-          if (subscription) {
-            subscription = await prisma.pushSubscription.update({
-              where: { id: subscription.id },
-              data: { preferences },
-            });
-          }
         }
       }
     } else if (userId) {
-      // Sem endpoint: atualiza a subscription mais recente do usuário
-      const existing = await prisma.pushSubscription.findFirst({
+      // Sem endpoint: atualiza TODAS as subscriptions do usuário
+      await prisma.pushSubscription.updateMany({
+        where: { userId },
+        data: { preferences },
+      });
+      subscription = await prisma.pushSubscription.findFirst({
         where: { userId },
         orderBy: { createdAt: 'desc' },
       });
-
-      if (existing) {
-        subscription = await prisma.pushSubscription.update({
-          where: { id: existing.id },
-          data: { preferences },
-        });
-      }
     }
 
     if (!subscription) {
