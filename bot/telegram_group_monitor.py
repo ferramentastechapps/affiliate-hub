@@ -561,22 +561,32 @@ async def setup_interativo():
     await client.disconnect()
 
 
+def extrair_cupom(texto: str) -> Optional[str]:
+    """Helper de compatibilidade que retorna apenas o código do cupom."""
+    detalhes = extrair_detalhes_cupom(texto)
+    return detalhes.get('codigo')
+
+
 async def main():
     if '--setup' in sys.argv:
         await setup_interativo()
         return
 
     if '--test' in sys.argv:
-        # Modo de teste: simula uma mensagem sem conectar ao Telegram
-        log.info('🧪 Modo de teste...')
-        # Instanciar sem Telethon para testar a lógica de extração
-        cupom = extrair_cupom('Amazon 🔥 Fone JBL Tune 510BT por R$ 149,90 — 40% OFF! Cupom: FONE20')
-        preco = extrair_preco('Amazon 🔥 Fone JBL Tune 510BT por R$ 149,90 — 40% OFF!')
-        urls = extrair_urls('https://amzn.to/3xyz123 confira essa oferta')
-        log.info(f'Cupom detectado: {cupom}')
-        log.info(f'Preço detectado: {preco}')
-        log.info(f'URLs detectadas: {urls}')
-        log.info(f'Plataforma: {detectar_plataforma(urls[0]) if urls else None}')
+        # Modo de teste: simula mensagens e testa a lógica de extração
+        log.info('🧪 Modo de teste de extração...')
+        
+        # Teste 1: Shopee do print
+        msg_shopee = """🎟️ ALERTA DE CUPONS BR 🛍️🛒📦\n‼️😱 CUPOM LIBERADO NA SHOPEE\n\n🎟️ OFERTA20AF\n\nR$20 OFF ACIMA DE R$79\n\n🔗 COPIE O CÓDIGO E COLE DIRETO NA SUA CARTEIRA\nhttps://s.shopee.com.br/8KU0GhQsgc"""
+        res_shopee = extrair_detalhes_cupom(msg_shopee, 'Shopee')
+        log.info(f'Shopee Teste: {res_shopee}')
+        
+        # Teste 2: Produto comum com cupom
+        msg_prod = 'Amazon 🔥 Fone JBL Tune 510BT por R$ 149,90 — 40% OFF! Cupom: FONE20\nhttps://amzn.to/3xyz123'
+        res_prod = extrair_detalhes_cupom(msg_prod, 'Amazon')
+        preco = extrair_preco(msg_prod)
+        urls = extrair_urls(msg_prod)
+        log.info(f'Produto Teste: Cupom={res_prod["codigo"]} | Preço=R${preco} | URLs={urls}')
         return
 
     monitor = TelegramGroupMonitor()
