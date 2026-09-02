@@ -15,8 +15,7 @@ import {
   ArrowRight, 
   Tag,
   Plus,
-  Fire,
-  Percent,
+  Ticket,
   MagnifyingGlass,
   ArrowsClockwise
 } from '@phosphor-icons/react';
@@ -27,8 +26,6 @@ const LS_KEY = 'push_preferences_cache';
 const LS_STATUS_DISMISSED_KEY = 'push_device_status_dismissed';
 
 interface PreferencesData {
-  all?: boolean;
-  couponsOnly?: boolean;
   categories: string[];
   customInterests: string[];
 }
@@ -72,8 +69,6 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
   const [categorySearch, setCategorySearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customInterests, setCustomInterests] = useState<string[]>([]);
-  const [receiveAll, setReceiveAll] = useState<boolean>(true);
-  const [couponsOnly, setCouponsOnly] = useState<boolean>(false);
   const [newInterest, setNewInterest] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [subscriptionEndpoint, setSubscriptionEndpoint] = useState<string | null>(null);
@@ -81,7 +76,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isTestingPush, setIsTestingPush] = useState(false);
   const [testSuccess, setTestSuccess] = useState<string | null>(null);
-  const [isStatusDismissed, setIsStatusDismissed] = useState<boolean>(true); // Padrão seguro
+  const [isStatusDismissed, setIsStatusDismissed] = useState<boolean>(true);
   const [matchingProducts, setMatchingProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
@@ -140,8 +135,6 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
     if (cached) {
       setSelectedCategories(cached.categories ?? []);
       setCustomInterests(cached.customInterests ?? []);
-      setReceiveAll(cached.all ?? true);
-      setCouponsOnly(cached.couponsOnly ?? false);
     }
 
     // 2. Busca do servidor
@@ -169,15 +162,11 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
             const data = await res.json();
             if (data.preferences) {
               const serverPrefs: PreferencesData = {
-                all: data.preferences.all ?? true,
-                couponsOnly: data.preferences.couponsOnly ?? false,
                 categories: data.preferences.categories ?? [],
                 customInterests: data.preferences.customInterests ?? [],
               };
               setSelectedCategories(serverPrefs.categories);
               setCustomInterests(serverPrefs.customInterests);
-              setReceiveAll(serverPrefs.all ?? true);
-              setCouponsOnly(serverPrefs.couponsOnly ?? false);
               saveToLocalStorage(serverPrefs);
             }
           }
@@ -282,8 +271,6 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
       setIsSubscribedOnDevice(true);
 
       const prefs: PreferencesData = {
-        all: receiveAll,
-        couponsOnly,
         categories: selectedCategories,
         customInterests,
       };
@@ -319,7 +306,6 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
       return;
     }
 
-    // 1. Marca imediatamente como dispensado para que o card nunca mais apareça
     setIsStatusDismissed(true);
     try {
       localStorage.setItem(LS_STATUS_DISMISSED_KEY, 'true');
@@ -359,10 +345,8 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
 
   // ── Salvar Preferências ───────────────────────────────────────────────────
   const savePreferences = useCallback(
-    async (newCats: string[], newInterests: string[], newAll: boolean, newCoupons: boolean) => {
+    async (newCats: string[], newInterests: string[]) => {
       const prefs: PreferencesData = {
-        all: newAll,
-        couponsOnly: newCoupons,
         categories: newCats,
         customInterests: newInterests,
       };
@@ -411,7 +395,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
       : [...selectedCategories, category];
 
     setSelectedCategories(newCats);
-    savePreferences(newCats, customInterests, receiveAll, couponsOnly);
+    savePreferences(newCats, customInterests);
   };
 
   const handleAddInterestValue = (value: string) => {
@@ -421,7 +405,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
     if (!customInterests.includes(trimmed)) {
       const newInterests = [...customInterests, trimmed];
       setCustomInterests(newInterests);
-      savePreferences(selectedCategories, newInterests, receiveAll, couponsOnly);
+      savePreferences(selectedCategories, newInterests);
     }
   };
 
@@ -433,19 +417,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
   const handleRemoveInterest = (interest: string) => {
     const newInterests = customInterests.filter((i) => i !== interest);
     setCustomInterests(newInterests);
-    savePreferences(selectedCategories, newInterests, receiveAll, couponsOnly);
-  };
-
-  const toggleReceiveAll = () => {
-    const newVal = !receiveAll;
-    setReceiveAll(newVal);
-    savePreferences(selectedCategories, customInterests, newVal, couponsOnly);
-  };
-
-  const toggleCouponsOnly = () => {
-    const newVal = !couponsOnly;
-    setCouponsOnly(newVal);
-    savePreferences(selectedCategories, customInterests, receiveAll, newVal);
+    savePreferences(selectedCategories, newInterests);
   };
 
   // Categorias filtradas pela busca
@@ -855,7 +827,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
           )}
 
           {/* ══════════════════════════════════════════════════════════════════════
-              TAB 2: CONFIGURAR GOSTOS (Termos, Toggles e Categorias)
+              TAB 2: CONFIGURAR GOSTOS (Termos e Categorias)
              ══════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'gostos' && (
             <motion.div
@@ -865,58 +837,18 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
               exit={{ opacity: 0, x: 8 }}
               className="space-y-4"
             >
-              {/* Toggles Rápidos de Modo de Recebimento */}
-              <div className="bg-zinc-900/50 border border-white/[0.08] rounded-2xl p-4 space-y-3.5">
-                {/* Toggle: Todas as Ofertas */}
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Fire size={14} weight="fill" className="text-amber-400" />
-                      <span>Receber todas as super promoções</span>
-                    </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Alerta sobre todas as quedas de preço e ofertas quentes.
-                    </p>
-                  </div>
-                  <button
-                    onClick={toggleReceiveAll}
-                    type="button"
-                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 ${
-                      receiveAll ? 'bg-amber-500' : 'bg-zinc-700'
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        receiveAll ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
+              {/* Informativo Visual de Notificações de Cupons */}
+              <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-500/20 rounded-2xl p-3.5 flex items-start gap-3 shadow-sm">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+                  <Ticket size={18} weight="fill" />
                 </div>
-
-                {/* Toggle: Apenas Cupons */}
-                <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/[0.06]">
-                  <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Percent size={14} weight="bold" className="text-orange-400" />
-                      <span>Apenas cupons de desconto</span>
-                    </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Notificar exclusivamente quando houver cupom disponível.
-                    </p>
-                  </div>
-                  <button
-                    onClick={toggleCouponsOnly}
-                    type="button"
-                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 ${
-                      couponsOnly ? 'bg-orange-500' : 'bg-zinc-700'
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                        couponsOnly ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-200">
+                    Cupons e Alertas Inteligentes
+                  </h4>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+                    Você receberá todos os cupons de desconto automaticamente, além de ser alertado exclusivamente quando surgirem ofertas dos seus termos e categorias escolhidos abaixo.
+                  </p>
                 </div>
               </div>
 
