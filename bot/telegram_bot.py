@@ -20,12 +20,24 @@ def html_to_whatsapp_md(text: str) -> str:
     text = re.sub(r'<.*?>', '', text) # remove any remaining HTML tags
     return text
 
+def _normalizar_url_imagem(url: str) -> str:
+    """Garante que a URL da imagem seja absoluta com esquema http/https."""
+    if not url or not isinstance(url, str):
+        return ''
+    url = url.strip()
+    if url.startswith('/'):
+        from config import AFFILIATE_HUB_URL
+        base = (AFFILIATE_HUB_URL or 'http://127.0.0.1:3005').rstrip('/')
+        return f"{base}{url}"
+    return url
+
 def _baixar_imagem_bytes(url: str, timeout: int = 30) -> bytes | None:
     """
     Baixa a imagem da URL e retorna os bytes.
     Usa headers de browser para evitar bloqueio por CDNs de ML, Amazon, Shopee.
     Retorna None se falhar.
     """
+    url = _normalizar_url_imagem(url)
     if not url or 'placeholder' in url:
         return None
     try:
@@ -73,9 +85,10 @@ class TelegramNotifier:
     async def _send_photo_with_retry(self, **kwargs):
         """Envia foto via URL ou bytes. Tenta baixar em bytes primeiro para melhor qualidade."""
         photo = kwargs.get('photo')
-        # Se photo é uma string (URL), tenta baixar os bytes para evitar
-        # a dupla compressão que o Telegram aplica a URLs externas.
+        # Se photo é uma string (URL), normaliza para URL absoluta e tenta baixar os bytes
         if isinstance(photo, str):
+            photo = _normalizar_url_imagem(photo)
+            kwargs['photo'] = photo
             img_bytes = _baixar_imagem_bytes(photo)
             if img_bytes:
                 # Detectar extensão para nomear o arquivo corretamente
@@ -89,7 +102,7 @@ class TelegramNotifier:
                 kwargs['photo'] = InputFile(io.BytesIO(img_bytes), filename=f'produto.{ext}')
                 print(f'📥 Imagem baixada ({len(img_bytes)//1024}KB) — enviando em alta qualidade')
             else:
-                print(f'⚠️ Não foi possível baixar imagem, usando URL direta (qualidade reduzida)')
+                print(f'⚠️ Não foi possível baixar imagem, usando URL direta: {photo[:80]}')
 
         while True:
             try:
@@ -103,8 +116,10 @@ class TelegramNotifier:
     async def _send_document_with_retry(self, **kwargs):
         """Envia imagem como DOCUMENTO (sem compressão) para preservar qualidade original."""
         document = kwargs.get('document')
-        # Se document é uma string (URL), baixa os bytes
+        # Se document é uma string (URL), normaliza e baixa os bytes
         if isinstance(document, str):
+            document = _normalizar_url_imagem(document)
+            kwargs['document'] = document
             img_bytes = _baixar_imagem_bytes(document)
             if img_bytes:
                 # Detectar extensão para nomear o arquivo corretamente

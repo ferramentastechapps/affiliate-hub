@@ -9,10 +9,11 @@ from config import AFFILIATE_HUB_URL, AFFILIATE_HUB_API_KEY, WEBHOOK_SECRET
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class AffiliateHubAPI:
-    """Cliente para API do Affiliate Hub"""
+    """Cliente resiliente para API do Affiliate Hub com fallback para localhost"""
     
     def __init__(self):
         self.base_url = AFFILIATE_HUB_URL.rstrip('/')
+        self.fallback_url = 'http://127.0.0.1:3005'
         self.headers = {
             'Content-Type': 'application/json',
             'x-api-key': AFFILIATE_HUB_API_KEY
@@ -29,16 +30,29 @@ class AffiliateHubAPI:
             
         return headers, payload_bytes
 
+    def _request(self, method: str, path: str, headers: dict = None, data: bytes = None, timeout: int = 30) -> requests.Response:
+        """Faz a requisição para a URL principal e, se falhar por rede/timeout, tenta o fallback local"""
+        req_headers = headers if headers is not None else self.headers.copy()
+        url = f"{self.base_url}{path}"
+        try:
+            return requests.request(method, url, headers=req_headers, data=data, timeout=timeout, verify=False)
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            if self.base_url != self.fallback_url:
+                fallback_url = f"{self.fallback_url}{path}"
+                print(f"⚠️ [API] Timeout/falha em {url}. Tentando fallback local: {fallback_url}")
+                return requests.request(method, fallback_url, headers=req_headers, data=data, timeout=timeout, verify=False)
+            raise e
+
     def adicionar_produto(self, produto: Dict) -> Optional[Dict]:
         """Adiciona um produto único"""
         try:
             headers, payload_bytes = self._get_headers_with_signature(produto)
-            response = requests.post(
-                f'{self.base_url}/api/webhook/products',
+            response = self._request(
+                'POST',
+                '/api/webhook/products',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             print(f'   [API] Status: {response.status_code} | Body: {response.text[:300]}')
             response.raise_for_status()
@@ -67,12 +81,12 @@ class AffiliateHubAPI:
         """Adiciona múltiplos produtos"""
         try:
             headers, payload_bytes = self._get_headers_with_signature({'products': produtos})
-            response = requests.put(
-                f'{self.base_url}/api/webhook/products',
+            response = self._request(
+                'PUT',
+                '/api/webhook/products',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=60
             )
             response.raise_for_status()
             return response.json()
@@ -93,12 +107,12 @@ class AffiliateHubAPI:
         """Adiciona um cupom único"""
         try:
             headers, payload_bytes = self._get_headers_with_signature(cupom)
-            response = requests.post(
-                f'{self.base_url}/api/webhook/coupons',
+            response = self._request(
+                'POST',
+                '/api/webhook/coupons',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             response.raise_for_status()
             return response.json()
@@ -110,12 +124,12 @@ class AffiliateHubAPI:
         """Adiciona múltiplos cupons"""
         try:
             headers, payload_bytes = self._get_headers_with_signature({'coupons': cupons})
-            response = requests.put(
-                f'{self.base_url}/api/webhook/coupons',
+            response = self._request(
+                'PUT',
+                '/api/webhook/coupons',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             response.raise_for_status()
             return response.json()
@@ -132,12 +146,12 @@ class AffiliateHubAPI:
                 'link': link
             }
             headers, payload_bytes = self._get_headers_with_signature(payload)
-            response = requests.patch(
-                f'{self.base_url}/api/webhook/products',
+            response = self._request(
+                'PATCH',
+                '/api/webhook/products',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             response.raise_for_status()
             return response.json()
@@ -152,12 +166,12 @@ class AffiliateHubAPI:
         """
         try:
             headers, payload_bytes = self._get_headers_with_signature(produto)
-            response = requests.post(
-                f'{self.base_url}/api/webhook/products',
+            response = self._request(
+                'POST',
+                '/api/webhook/products',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             response.raise_for_status()
             return response.json()
@@ -169,7 +183,6 @@ class AffiliateHubAPI:
         """Aprova um produto pendente e adiciona o link de afiliado"""
         try:
             print(f'🔄 Enviando requisição de aprovação...')
-            print(f'   URL: {self.base_url}/api/webhook/products/approve')
             print(f'   Produto ID: {produto_id}')
             print(f'   Plataforma: {platform}')
             print(f'   Link: {affiliate_link}')
@@ -186,20 +199,16 @@ class AffiliateHubAPI:
                 print(f'   ImageUrl: {image_url}')
             
             headers, payload_bytes = self._get_headers_with_signature(payload)
-            print(f'   Headers: {headers}')
             
-            response = requests.post(
-                f'{self.base_url}/api/webhook/products/approve',
+            response = self._request(
+                'POST',
+                '/api/webhook/products/approve',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             
-            print(f'📥 Resposta recebida:')
-            print(f'   Status Code: {response.status_code}')
-            print(f'   Response Text: {response.text[:500]}')
-            
+            print(f'📥 Resposta recebida: {response.status_code} | {response.text[:300]}')
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -215,12 +224,12 @@ class AffiliateHubAPI:
                 'productId': produto_id
             }
             headers, payload_bytes = self._get_headers_with_signature(payload)
-            response = requests.post(
-                f'{self.base_url}/api/webhook/products/reject',
+            response = self._request(
+                'POST',
+                '/api/webhook/products/reject',
                 headers=headers,
                 data=payload_bytes,
-                timeout=60,
-                verify=False
+                timeout=45
             )
             response.raise_for_status()
             return response.json()
@@ -234,11 +243,11 @@ class AffiliateHubAPI:
             headers = self.headers.copy()
             if WEBHOOK_SECRET:
                 headers['x-webhook-secret'] = WEBHOOK_SECRET
-            response = requests.get(
-                f'{self.base_url}/api/webhook/products/{produto_id}',
+            response = self._request(
+                'GET',
+                f'/api/webhook/products/{produto_id}',
                 headers=headers,
-                timeout=30,
-                verify=False
+                timeout=20
             )
             response.raise_for_status()
             return response.json()
@@ -253,12 +262,12 @@ class AffiliateHubAPI:
                 'imageUrl': image_url
             }
             headers, payload_bytes = self._get_headers_with_signature(payload)
-            response = requests.put(
-                f'{self.base_url}/api/webhook/products/{produto_id}',
+            response = self._request(
+                'PUT',
+                f'/api/webhook/products/{produto_id}',
                 headers=headers,
                 data=payload_bytes,
-                timeout=30,
-                verify=False
+                timeout=20
             )
             response.raise_for_status()
             return response.json()
