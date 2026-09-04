@@ -206,6 +206,9 @@ async function initWhatsApp() {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-extensions',
         '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
     ];
     let proxyConfig = null;
@@ -236,8 +239,8 @@ async function initWhatsApp() {
     let puppeteerConfig = {
         args: puppeteerArgs,
         headless: true,
-        timeout: 120000,
-        protocolTimeout: 120000
+        timeout: 300000,
+        protocolTimeout: 300000
     };
 
     if (fs.existsSync(customChromePath)) {
@@ -246,6 +249,7 @@ async function initWhatsApp() {
 
     let clientOptions = {
         authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
+        authTimeoutMs: 0,
         puppeteer: puppeteerConfig,
         webVersionCache: {
             type: 'remote',
@@ -307,6 +311,10 @@ async function initWhatsApp() {
         lastError = `Falha na autenticação: ${msg}`;
         errorCount++;
         addLog('critical', 'Falha de autenticação do WhatsApp.', msg);
+        console.log('♻️ Reiniciando cliente em 10 segundos...');
+        setTimeout(() => {
+            safeReconnect();
+        }, 10000);
     });
 
     client.on('disconnected', (reason) => {
@@ -318,21 +326,10 @@ async function initWhatsApp() {
         lastError = `Desconectado: ${reason}`;
         errorCount++;
         addLog('error', `WhatsApp desconectado. Motivo: ${reason}`);
-        console.log('♻️ Tentando reconectar em 30 segundos...');
+        console.log('♻️ Tentando reconectar de forma limpa em 15 segundos...');
         setTimeout(() => {
-            console.log('🔄 Reconectando WhatsApp...');
-            try {
-                if (client) {
-                    client.initialize().catch(err => {
-                        console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
-                        addLog('error', 'Erro ao reinicializar cliente WhatsApp', err.message);
-                    });
-                }
-            } catch (err) {
-                console.error('❌ Erro ao reinicializar cliente WhatsApp:', err.message);
-                addLog('error', 'Erro ao reinicializar cliente WhatsApp', err.message);
-            }
-        }, 30000);
+            safeReconnect();
+        }, 15000);
     });
 
     client.on('message', async (msg) => {
