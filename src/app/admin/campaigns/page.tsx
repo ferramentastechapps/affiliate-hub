@@ -18,8 +18,10 @@ import {
   CheckCircle,
   CircleDashed,
   DeviceMobile,
+  ChartBar,
 } from '@phosphor-icons/react';
 import { useToastContext } from '@/components/ToastProvider';
+import { CampaignAnalyticsTab } from '@/components/admin/CampaignAnalyticsTab';
 
 interface Campaign {
   id: string;
@@ -67,6 +69,7 @@ export default function CampaignsPage() {
   
   const [channelFilter, setChannelFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState<'list' | 'analytics'>('list');
 
   // Modals
   const [showModal, setShowModal] = useState(false);
@@ -255,21 +258,53 @@ export default function CampaignsPage() {
         <div>
           <h1 className="text-3xl font-bold text-zinc-100 flex items-center gap-3">
             <Megaphone className="w-8 h-8 text-indigo-400" weight="duotone" />
-            Campanhas
+            Campanhas & Notificações
           </h1>
-          <p className="text-zinc-400 mt-1">Gerencie mensagens em lote e notificações multi-canal.</p>
+          <p className="text-zinc-400 mt-1">Gerencie mensagens em lote, notificações multi-canal e métricas de conversão.</p>
         </div>
+        {activeTab === 'list' && (
+          <button
+            onClick={openNewModal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Campanha
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-zinc-800 pb-3">
         <button
-          onClick={openNewModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-sm transition-colors"
+          onClick={() => setActiveTab('list')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            activeTab === 'list'
+              ? 'bg-indigo-600 text-white shadow-lg'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+          }`}
         >
-          <Plus className="w-4 h-4" />
-          Nova Campanha
+          <Megaphone className="w-4 h-4" />
+          Campanhas ({total})
+        </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            activeTab === 'analytics'
+              ? 'bg-indigo-600 text-white shadow-lg'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+          }`}
+        >
+          <ChartBar className="w-4 h-4" />
+          Relatórios & Analytics
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      {activeTab === 'analytics' ? (
+        <CampaignAnalyticsTab />
+      ) : (
+        <>
+          {/* Filters */}
+          <div className="flex gap-3 flex-wrap">
         <select
           value={channelFilter}
           onChange={(e) => { setChannelFilter(e.target.value); setPage(1); }}
@@ -434,6 +469,8 @@ export default function CampaignsPage() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Modal Nova/Editar Campanha */}
       {showModal && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check, Bell, ThumbsUp, ThumbsDown, WhatsappLogo, ChatText, PaperPlaneRight, User, Crown } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, ShieldCheck, Tag, Copy, Check, Bell, ThumbsUp, ThumbsDown, WhatsappLogo, ChatText, PaperPlaneRight, User, Crown, Heart } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CouponModal } from "./CouponModal";
@@ -50,10 +50,21 @@ type Product = {
   }>;
 };
 
-export function ProductDetail({ product }: { product: Product }) {
+type LowestPriceInfo = {
+  isLowest: boolean;
+  days: number;
+  minPrice: number;
+  maxPrice: number;
+  savings: number;
+} | null;
+
+export function ProductDetail({ product, lowestPriceInfo }: { product: Product; lowestPriceInfo?: LowestPriceInfo }) {
   const router = useRouter();
   const { user } = useAuth();
   
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -68,6 +79,61 @@ export function ProductDetail({ product }: { product: Product }) {
   const [visibleRelatedCount, setVisibleRelatedCount] = useState(10);
   
   const commentsRef = useRef<HTMLDivElement>(null);
+
+  // Inicializa estado de favoritos (localStorage para visitantes + API se logado)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("economizei_favorites");
+      if (stored) {
+        const ids: string[] = JSON.parse(stored);
+        if (ids.includes(product.id)) {
+          setIsFavorited(true);
+        }
+      }
+    } catch {}
+
+    if (user) {
+      fetch(`/api/favorites?productId=${product.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (typeof data.isFavorited === 'boolean') {
+            setIsFavorited(data.isFavorited);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [product.id, user]);
+
+  async function handleToggleFavorite() {
+    setFavLoading(true);
+    const nextState = !isFavorited;
+    setIsFavorited(nextState);
+
+    try {
+      const stored = localStorage.getItem("economizei_favorites");
+      let ids: string[] = stored ? JSON.parse(stored) : [];
+      if (nextState) {
+        if (!ids.includes(product.id)) ids.push(product.id);
+      } else {
+        ids = ids.filter(id => id !== product.id);
+      }
+      localStorage.setItem("economizei_favorites", JSON.stringify(ids));
+      window.dispatchEvent(new CustomEvent("favorites-updated", { detail: { count: ids.length } }));
+    } catch {}
+
+    if (user) {
+      try {
+        await fetch('/api/favorites', {
+          method: nextState ? 'POST' : 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: product.id }),
+        });
+      } catch (err) {
+        console.error("Erro ao sincronizar favorito:", err);
+      }
+    }
+    setFavLoading(false);
+  }
 
   // Load related products, votes and comments
   useEffect(() => {
@@ -354,9 +420,30 @@ export function ProductDetail({ product }: { product: Product }) {
           {/* Details Section */}
           <div className="p-6 md:p-8 lg:p-10 flex flex-col w-full md:w-7/12">
             <span className="text-sm font-bold text-accent uppercase tracking-widest bg-accent/10 w-fit px-3 py-1 rounded-full">{product.category}</span>
-            <h1 className="text-xl md:text-2xl tracking-tight text-[#8e92a4] font-normal uppercase mt-4 mb-6 leading-tight">
+            <h1 className="text-xl md:text-2xl tracking-tight text-[#8e92a4] font-normal uppercase mt-4 mb-4 leading-tight">
               {product.name}
             </h1>
+
+            {/* Badge de Menor Preço em X Dias */}
+            {lowestPriceInfo?.isLowest && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="mb-5 inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-teal-500/15 border border-teal-500/30 text-teal-300 shadow-[0_4px_16px_rgba(20,184,166,0.15)] w-fit"
+              >
+                <span className="text-base">🏆</span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-black tracking-tight leading-tight">
+                    Menor preço em {lowestPriceInfo.days} dias!
+                  </span>
+                  {lowestPriceInfo.savings > 0 && (
+                    <span className="text-[10px] text-teal-200/80 font-medium">
+                      Economize até {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lowestPriceInfo.savings)} vs valor mais alto registrado
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )}
             
             {price > 0 ? (
               <div className="flex flex-row items-center gap-4 mb-8">
@@ -427,7 +514,21 @@ export function ProductDetail({ product }: { product: Product }) {
             )}
 
             <div className="flex justify-between items-center mt-6 px-2">
-              <AlertButton productId={product.id} />
+              <div className="flex items-center gap-2">
+                <AlertButton productId={product.id} />
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={favLoading}
+                  title={isFavorited ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                  className={`p-3 rounded-2xl transition-all flex items-center justify-center ${
+                    isFavorited
+                      ? "text-rose-400 bg-rose-500/20 border border-rose-500/30 shadow-[0_4px_20px_rgba(244,63,94,0.25)] scale-105"
+                      : "text-zinc-400 bg-white/5 hover:bg-white/10 hover:text-rose-400 border border-white/5"
+                  }`}
+                >
+                  <Heart size={24} weight={isFavorited ? "fill" : "regular"} className={isFavorited ? "text-rose-500" : ""} />
+                </button>
+              </div>
 
               <div className="flex items-center gap-4 bg-white/5 px-4 py-2.5 rounded-2xl">
                 <button onClick={() => handleVote('LIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'LIKE' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}>
@@ -450,6 +551,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
             {/* Comparador de Lojas */}
             <PriceComparator
+              productId={product.id}
               productLinks={product.productLinks}
               legacyLinks={product.links}
               currentPrice={product.price}

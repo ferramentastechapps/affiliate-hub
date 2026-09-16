@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "@phosphor-icons/react";
+import { ArrowUpRight, Heart } from "@phosphor-icons/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProductLinks } from "@/types/product";
 
 export type Product = {
@@ -25,7 +25,43 @@ type ProductCardProps = {
 
 export function ProductCard({ product, onClick }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const fallbackImage = "/placeholder.webp";
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("economizei_favorites");
+      if (stored) {
+        const ids: string[] = JSON.parse(stored);
+        if (ids.includes(product.id)) setIsFavorited(true);
+      }
+    } catch {}
+  }, [product.id]);
+
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextState = !isFavorited;
+    setIsFavorited(nextState);
+
+    try {
+      const stored = localStorage.getItem("economizei_favorites");
+      let ids: string[] = stored ? JSON.parse(stored) : [];
+      if (nextState) {
+        if (!ids.includes(product.id)) ids.push(product.id);
+      } else {
+        ids = ids.filter(id => id !== product.id);
+      }
+      localStorage.setItem("economizei_favorites", JSON.stringify(ids));
+      window.dispatchEvent(new CustomEvent("favorites-updated", { detail: { count: ids.length } }));
+
+      // Sincroniza com servidor em segundo plano
+      fetch("/api/favorites", {
+        method: nextState ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      }).catch(() => {});
+    } catch {}
+  };
 
   return (
     <motion.div
@@ -45,6 +81,19 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     >
       {/* Aspect Ratio Container for Masonry effect */}
       <div className="relative aspect-[4/5] w-full bg-white overflow-hidden shrink-0 rounded-t-[2.4rem]">
+        {/* Favorite button */}
+        <button
+          onClick={handleToggleFavorite}
+          title={isFavorited ? "Remover dos favoritos" : "Salvar nos favoritos"}
+          className={`absolute top-4 right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md border transition-all ${
+            isFavorited
+              ? "bg-rose-500/30 text-rose-400 border-rose-500/50 shadow-md scale-105"
+              : "bg-black/40 text-white/70 border-white/10 hover:text-white hover:bg-black/60"
+          }`}
+        >
+          <Heart size={18} weight={isFavorited ? "fill" : "bold"} />
+        </button>
+
         {/* Next.js Image com otimização automática */}
         <Image
           src={imageError ? fallbackImage : product.imageUrl}

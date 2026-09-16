@@ -38,8 +38,9 @@
     "print_*.ts",
     "verificar-*.ts",
     "adicionar-cupons-teste.ts",
-    "test-cupons-db.ts",
     "resolve.ts",
-    "extract_json_data.ts"
+    "extract_json_data.ts",
+    "scripts",
+    "evolution.ts"
   ]
 }

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AuthButton } from "./AuthButton";
 import { AuthPanel } from "./AuthPanel";
 import { useState, useEffect } from "react";
-import { MagnifyingGlass, X, Robot } from "@phosphor-icons/react";
+import { MagnifyingGlass, X, Robot, Heart } from "@phosphor-icons/react";
 import { NotificationPreferencesModal } from "./NotificationPreferencesModal";
 import { usePathname } from "next/navigation";
 
@@ -79,15 +79,24 @@ export function Header() {
             </AnimatePresence>
 
             {/* Ações direitas */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               {!mobileSearchOpen && (
-                <button
-                  onClick={() => setMobileSearchOpen(true)}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-text-secondary hover:text-white transition-colors"
-                  aria-label="Buscar"
-                >
-                  <MagnifyingGlass size={18} weight="bold" />
-                </button>
+                <>
+                  <a
+                    href="/wishlist"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-rose-400 hover:bg-white/10 transition-colors"
+                    aria-label="Favoritos"
+                  >
+                    <Heart size={18} weight="fill" />
+                  </a>
+                  <button
+                    onClick={() => setMobileSearchOpen(true)}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-text-secondary hover:text-white transition-colors"
+                    aria-label="Buscar"
+                  >
+                    <MagnifyingGlass size={18} weight="bold" />
+                  </button>
+                </>
               )}
               <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
             </div>
@@ -131,6 +140,7 @@ export function Header() {
                 <NavLink href="#inicio" active>Início</NavLink>
                 <NavLink href="#categorias">Categorias</NavLink>
                 <NavLink href="/cupons">Cupons</NavLink>
+                <NavLink href="/wishlist">Favoritos</NavLink>
                 <NavLink href="#footer">Comunidade</NavLink>
               </nav>
               <div className="flex items-center shrink-0 gap-2">
@@ -151,9 +161,9 @@ export function Header() {
 
 function NavLink({ href, children, active }: { href: string; children: React.ReactNode; active?: boolean }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // Se for link de cupons, redireciona para a página
-    if (href === "#cupons" || href === "/cupons") {
-      window.location.href = "/cupons";
+    // Se for link de cupons ou favoritos, redireciona para a página
+    if (href === "#cupons" || href === "/cupons" || href === "/wishlist") {
+      window.location.href = href;
       return;
     }
     

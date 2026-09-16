@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const isNumeric = /^\d+$/.test(id);
     const product = await prisma.product.findUnique({
-      where: isNumeric ? { shortId: parseInt(id) } : { id },
+      where: isNumeric ? { shortId: parseInt(id, 10) } : { id },
       include: { links: true }
     });
 
@@ -52,16 +52,52 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // ─── JSON-LD Schema.org Builder ──────────────────────────────────────────────
 function buildProductJsonLd(product: any): object {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br';
-  const productUrl = `${siteUrl}/produto/${product.shortId}`;
+  const productUrl = `${siteUrl}/produto/${product.shortId || product.id}`;
 
-  // Determina o link de compra (prioridade: amazon > mercadoLivre > shopee > primeiro disponível)
   const links = product.links || {};
   const productLinks = product.productLinks || [];
-  const getPlatformUrl = (platform: string) => {
-    const pl = productLinks.find((l: any) => l.platform === platform && (l.affiliateUrl || l.generatedAffiliateUrl));
-    return pl ? (pl.affiliateUrl || pl.generatedAffiliateUrl) : links[platform] || null;
-  };
-  const offerUrl = getPlatformUrl('amazon') || getPlatformUrl('mercadoLivre') || getPlatformUrl('shopee') || productUrl;
+  
+  // Lista todas as ofertas disponíveis por loja
+  const offersList: any[] = [];
+  const validUntilDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  if (productLinks.length > 0) {
+    for (const pl of productLinks) {
+      const url = pl.generatedAffiliateUrl || pl.affiliateUrl || pl.sourceUrl;
+      if (url) {
+        offersList.push({
+          '@type': 'Offer',
+          url,
+          priceCurrency: 'BRL',
+          price: product.price ? product.price.toFixed(2) : undefined,
+          priceValidUntil: validUntilDate,
+          itemCondition: 'https://schema.org/NewCondition',
+          availability: 'https://schema.org/InStock',
+          seller: {
+            '@type': 'Organization',
+            name: pl.platform ? pl.platform.charAt(0).toUpperCase() + pl.platform.slice(1) : 'Economizei',
+          },
+        });
+      }
+    }
+  }
+
+  // Se não houver productLinks, usa links legados
+  if (offersList.length === 0 && product.price) {
+    offersList.push({
+      '@type': 'Offer',
+      url: links.amazon || links.mercadoLivre || links.shopee || productUrl,
+      priceCurrency: 'BRL',
+      price: product.price.toFixed(2),
+      priceValidUntil: validUntilDate,
+      itemCondition: 'https://schema.org/NewCondition',
+      availability: 'https://schema.org/InStock',
+      seller: {
+        '@type': 'Organization',
+        name: 'Economizei',
+      },
+    });
+  }
 
   const jsonLd: any = {
     '@context': 'https://schema.org/',
@@ -71,19 +107,20 @@ function buildProductJsonLd(product: any): object {
     image: [product.imageUrl],
     url: productUrl,
     category: product.category,
+    sku: product.platformId || product.platformProductId || String(product.shortId || product.id),
   };
 
-  // Marca (se disponível)
+  // Marca
   if (product.brand) {
     jsonLd.brand = { '@type': 'Brand', name: product.brand };
   }
 
-  // Modelo (se disponível)
+  // Modelo
   if (product.model) {
     jsonLd.model = product.model;
   }
 
-  // Avaliações (se houver reviewScore)
+  // Avaliação média agregada
   if (product.reviewScore && product.reviewCount) {
     jsonLd.aggregateRating = {
       '@type': 'AggregateRating',
@@ -94,21 +131,37 @@ function buildProductJsonLd(product: any): object {
     };
   }
 
-  // Oferta de preço (se houver preço)
-  if (product.price) {
-    jsonLd.offers = {
-      '@type': 'Offer',
-      url: offerUrl,
-      priceCurrency: 'BRL',
-      price: product.price.toFixed(2),
-      priceValidUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      itemCondition: 'https://schema.org/NewCondition',
-      availability: 'https://schema.org/InStock',
-      seller: {
-        '@type': 'Organization',
-        name: 'Economizei',
+  // Avaliações individuais (reviews)
+  if (product.reviews && product.reviews.length > 0) {
+    jsonLd.review = product.reviews.map((rev: any) => ({
+      '@type': 'Review',
+      author: {
+        '@type': 'Person',
+        name: rev.authorName || 'Cliente Verificado',
       },
+      datePublished: rev.publishedAt ? new Date(rev.publishedAt).toISOString().slice(0, 10) : undefined,
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: rev.rating.toString(),
+        bestRating: '5',
+        worstRating: '1',
+      },
+      reviewBody: rev.comment || '',
+    }));
+  }
+
+  // Ofertas (múltiplas lojas ou individual)
+  if (offersList.length > 1 && product.price) {
+    jsonLd.offers = {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'BRL',
+      lowPrice: product.price.toFixed(2),
+      highPrice: (product.originalPrice || product.price * 1.2).toFixed(2),
+      offerCount: offersList.length,
+      offers: offersList,
     };
+  } else if (offersList.length === 1) {
+    jsonLd.offers = offersList[0];
   }
 
   return jsonLd;
@@ -120,16 +173,53 @@ export default async function ProductPage({ params }: Props) {
   try {
     const isNumeric = /^\d+$/.test(id);
     const product = await prisma.product.findUnique({
-      where: isNumeric ? { shortId: parseInt(id) } : { id },
+      where: isNumeric ? { shortId: parseInt(id, 10) } : { id },
       include: {
         links: true,
         coupons: true,
         productLinks: true,
+        priceHistory: { orderBy: { createdAt: 'desc' } },
+        reviews: { orderBy: { rating: 'desc' }, take: 5 },
       }
     });
 
     if (!product) {
       notFound();
+    }
+
+    // Calcula se é o menor preço histórico e quantos dias faz
+    let lowestPriceInfo: {
+      isLowest: boolean;
+      days: number;
+      minPrice: number;
+      maxPrice: number;
+      savings: number;
+    } | null = null;
+
+    if (product.price && product.price > 0 && product.priceHistory && product.priceHistory.length > 0) {
+      const historyPrices = product.priceHistory.map(h => h.price);
+      const minPrice = Math.min(...historyPrices);
+      const maxPrice = Math.max(
+        ...product.priceHistory.map(h => h.originalPrice || h.price),
+        product.originalPrice || product.price
+      );
+
+      // Preço atual é menor ou igual ao mínimo com 1% de margem
+      if (product.price <= minPrice * 1.01) {
+        const oldest = product.priceHistory[product.priceHistory.length - 1].createdAt;
+        const daysDiff = Math.max(
+          30,
+          Math.floor((Date.now() - new Date(oldest).getTime()) / (1000 * 60 * 60 * 24))
+        );
+
+        lowestPriceInfo = {
+          isLowest: true,
+          days: daysDiff,
+          minPrice,
+          maxPrice,
+          savings: maxPrice > product.price ? Math.round((maxPrice - product.price) * 100) / 100 : 0,
+        };
+      }
     }
 
     const jsonLd = buildProductJsonLd(product);
@@ -142,7 +232,7 @@ export default async function ProductPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <Header />
-        <ProductDetail product={product} />
+        <ProductDetail product={product} lowestPriceInfo={lowestPriceInfo} />
         <Footer />
       </>
     );

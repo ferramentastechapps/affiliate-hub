@@ -49,6 +49,7 @@ model Product {
   enhancedImageUrl String? // Imagem aprimorada
   couponLink       String? // URL de resgate do cupom, sem código (novo campo)
   isFixed          Boolean   @default(false) // Trava dados contra sobrescrita do robô
+  scrapeFailCount  Int       @default(0) // Contador de falhas de scraping para auto-expiração
 
   // FASE 1 — IDs ÚNICOS POR PLATAFORMA
   platformId   String? // ID real da plataforma: ASIN, MLB123, shopId-productId

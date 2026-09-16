@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { ArrowSquareOut, Crown } from "@phosphor-icons/react";
+import { useMemo, useState, useEffect } from "react";
+import { ArrowSquareOut, Crown, Sparkle, Tag } from "@phosphor-icons/react";
 
 type ProductLink = {
   platform: string;
@@ -22,6 +22,7 @@ type LegacyLinks = {
 };
 
 type Props = {
+  productId?: string;
   productLinks?: ProductLink[];
   legacyLinks?: LegacyLinks | null;
   currentPrice?: number | null;
@@ -39,13 +40,38 @@ const PLATFORM_META: Record<string, { label: string; logo: string; color: string
   netshoes:     { label: "Netshoes",     logo: "https://www.google.com/s2/favicons?domain=netshoes.com.br&sz=64",       color: "#5c2a9d" },
 };
 
-export function PriceComparator({ productLinks = [], legacyLinks, currentPrice, onLinkClick }: Props) {
-  // Constrói lista de plataformas disponíveis, preferindo productLinks (mais completo)
+export function PriceComparator({ productId, productLinks = [], legacyLinks, currentPrice, onLinkClick }: Props) {
+  const [apiPrices, setApiPrices] = useState<Array<{
+    platform: string;
+    label: string;
+    logo: string;
+    url: string;
+    price: number;
+    originalPrice?: number | null;
+    isLowest: boolean;
+  }> | null>(null);
+
+  useEffect(() => {
+    if (!productId) return;
+    fetch(`/api/products/${productId}/platform-prices`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.prices)) {
+          setApiPrices(data.prices);
+        }
+      })
+      .catch(err => console.error("Erro ao carregar comparador de preços:", err));
+  }, [productId]);
+
+  // Fallback quando não há dados da API
   const platforms = useMemo(() => {
-    const result: { platform: string; url: string; label: string; logo: string; color: string }[] = [];
+    if (apiPrices && apiPrices.length > 0) {
+      return apiPrices;
+    }
+
+    const result: { platform: string; url: string; label: string; logo: string; color?: string; price?: number; originalPrice?: number | null; isLowest?: boolean }[] = [];
     const seen = new Set<string>();
 
-    // Adiciona de productLinks primeiro
     for (const pl of productLinks) {
       const url = pl.generatedAffiliateUrl || pl.affiliateUrl || pl.sourceUrl;
       if (url && !seen.has(pl.platform)) {
@@ -55,28 +81,25 @@ export function PriceComparator({ productLinks = [], legacyLinks, currentPrice, 
           logo: `https://www.google.com/s2/favicons?domain=${pl.platform}.com&sz=64`,
           color: "#ff334b",
         };
-        result.push({ platform: pl.platform, url, ...meta });
+        result.push({ platform: pl.platform, url, ...meta, price: currentPrice || undefined, isLowest: result.length === 0 });
       }
     }
 
-    // Fallback para links legados — só campos de plataformas conhecidas
     if (legacyLinks) {
       const legacyMap: Record<string, string | null | undefined> = legacyLinks as any;
       for (const [key, url] of Object.entries(legacyMap)) {
-        // Ignora campos internos do Prisma que não são plataformas
         if (!PLATFORM_META[key]) continue;
         if (url && !seen.has(key)) {
           seen.add(key);
           const meta = PLATFORM_META[key];
-          result.push({ platform: key, url, ...meta });
+          result.push({ platform: key, url, ...meta, price: currentPrice || undefined, isLowest: result.length === 0 });
         }
       }
     }
 
     return result;
-  }, [productLinks, legacyLinks]);
+  }, [productLinks, legacyLinks, apiPrices, currentPrice]);
 
-  // Só exibe se houver pelo menos 2 plataformas disponíveis
   if (platforms.length < 2) return null;
 
   const formatCurrency = (val: number) =>
@@ -84,19 +107,24 @@ export function PriceComparator({ productLinks = [], legacyLinks, currentPrice, 
 
   return (
     <div className="mt-8 bg-white/5 border border-white/5 rounded-3xl p-6 shadow-xl backdrop-blur-md">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="p-2.5 bg-accent/20 text-accent rounded-2xl">
-          <Crown size={22} weight="bold" />
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-accent/20 text-accent rounded-2xl">
+            <Crown size={22} weight="bold" />
+          </div>
+          <div>
+            <h4 className="text-base font-bold text-white leading-tight">Comparar Preço nas Lojas</h4>
+            <p className="text-xs text-zinc-400">Preço atualizado em tempo real nas maiores lojas</p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-base font-bold text-white leading-tight">Comparar nas lojas</h4>
-          <p className="text-xs text-zinc-400">Este produto está disponível em {platforms.length} lojas</p>
-        </div>
+        <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1">
+          <Sparkle size={13} weight="fill" /> {platforms.length} lojas
+        </span>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {platforms.map((p, i) => {
-          const isBest = i === 0; // A primeira entrada é considerada a mais relevante
+      <div className="flex flex-col gap-2.5">
+        {platforms.map((p) => {
+          const isBest = !!p.isLowest;
           return (
             <a
               key={p.platform}
@@ -104,9 +132,9 @@ export function PriceComparator({ productLinks = [], legacyLinks, currentPrice, 
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => onLinkClick?.(p.platform, p.url)}
-              className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border transition-all hover:scale-[1.01] active:scale-[0.99] ${
+              className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border transition-all hover:scale-[1.01] active:scale-[0.99] group ${
                 isBest
-                  ? "border-accent/40 bg-accent/10 shadow-[0_4px_16px_rgba(217,70,239,0.12)]"
+                  ? "border-emerald-500/40 bg-emerald-950/20 shadow-[0_4px_16px_rgba(16,185,129,0.12)] hover:border-emerald-500/60"
                   : "border-white/5 bg-white/3 hover:bg-white/8"
               }`}
             >
@@ -114,25 +142,42 @@ export function PriceComparator({ productLinks = [], legacyLinks, currentPrice, 
                 <img
                   src={p.logo}
                   alt={p.label}
-                  className="w-7 h-7 rounded-lg object-contain bg-white p-0.5"
+                  className="w-7 h-7 rounded-lg object-contain bg-white p-0.5 shrink-0"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
                 <div>
-                  <span className="text-sm font-bold text-white">{p.label}</span>
-                  {isBest && (
-                    <span className="ml-2 text-[9px] font-black text-accent uppercase tracking-wider bg-accent/20 px-1.5 py-0.5 rounded-full">
-                      Principal
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{p.label}</span>
+                    {isBest && (
+                      <span className="text-[10px] font-black text-emerald-300 uppercase tracking-wider bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        🏆 MAIS BARATO
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                    Frete & condições no site da loja
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {currentPrice && i === 0 && (
-                  <span className="text-sm font-black text-white">
-                    {formatCurrency(currentPrice)}
-                  </span>
+
+              <div className="flex items-center gap-3">
+                {p.price && p.price > 0 ? (
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm font-black ${isBest ? "text-emerald-400" : "text-white"}`}>
+                      {formatCurrency(p.price)}
+                    </span>
+                    {p.originalPrice && p.originalPrice > p.price && (
+                      <span className="text-[11px] text-zinc-500 line-through">
+                        {formatCurrency(p.originalPrice)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs font-semibold text-zinc-400">Ver preço</span>
                 )}
-                <ArrowSquareOut size={16} className="text-zinc-400 shrink-0" />
+                <div className={`p-1.5 rounded-lg ${isBest ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-zinc-400 group-hover:text-white"}`}>
+                  <ArrowSquareOut size={16} weight="bold" className="shrink-0" />
+                </div>
               </div>
             </a>
           );

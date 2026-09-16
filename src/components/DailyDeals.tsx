@@ -109,6 +109,56 @@ export function DailyDeals() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const [filterType, setFilterType] = useState<'alertas' | 'destaques' | 'recentes' | 'menorPreco' | 'emAlta' | 'baratinho'>('recentes');
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  // Sincroniza favoritos locais e remotos
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("economizei_favorites");
+      if (stored) {
+        setFavoriteIds(new Set(JSON.parse(stored)));
+      }
+    } catch {}
+
+    if (user) {
+      fetch('/api/favorites')
+        .then(res => res.json())
+        .then(data => {
+          if (data.favorites && Array.isArray(data.favorites)) {
+            const ids = data.favorites.map((f: any) => f.productId);
+            setFavoriteIds(prev => new Set([...prev, ...ids]));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
+
+  const toggleFavorite = async (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextSet = new Set(favoriteIds);
+    const isFav = nextSet.has(productId);
+    if (isFav) nextSet.delete(productId);
+    else nextSet.add(productId);
+    setFavoriteIds(nextSet);
+
+    try {
+      const arr = Array.from(nextSet);
+      localStorage.setItem("economizei_favorites", JSON.stringify(arr));
+      window.dispatchEvent(new CustomEvent("favorites-updated", { detail: { count: arr.length } }));
+    } catch {}
+
+    if (user) {
+      try {
+        await fetch('/api/favorites', {
+          method: isFav ? 'DELETE' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId })
+        });
+      } catch (err) {
+        console.error("Erro ao favoritar:", err);
+      }
+    }
+  };
 
   // Debounce search query to avoid hitting database on every keystroke
   useEffect(() => {
@@ -676,6 +726,16 @@ export function DailyDeals() {
                       className="flex items-center gap-1.5 text-[#8e92a4] hover:text-white transition-colors text-[11px] font-bold"
                     >
                       <ChatCircle size={16} weight="bold" /> {product._count?.comments || 0}
+                    </button>
+                    <div className="w-[1px] h-3 bg-white/10 mx-1"></div>
+                    <button 
+                      onClick={(e) => toggleFavorite(product.id, e)}
+                      title={favoriteIds.has(product.id) ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                      className={`flex items-center gap-1 transition-colors text-[11px] font-bold ${
+                        favoriteIds.has(product.id) ? 'text-rose-500 hover:text-rose-400' : 'text-[#8e92a4] hover:text-rose-500'
+                      }`}
+                    >
+                      <Heart size={16} weight={favoriteIds.has(product.id) ? "fill" : "bold"} />
                     </button>
                   </div>
                   <button className="text-[10px] font-bold uppercase tracking-wider text-white hover:text-[#ff334b] transition-colors flex items-center gap-1">

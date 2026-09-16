@@ -80,6 +80,7 @@ export async function GET(request: Request) {
     let updated = 0;
     let skipped = 0;
     let errors = 0;
+    let expiredCount = 0;
     const lowestPriceAlerts: string[] = [];
 
     for (const product of products) {
@@ -97,7 +98,6 @@ export async function GET(request: Request) {
           continue;
         }
 
-        // Raspa apenas o preço (com timeout curto de 8s por produto)
         let newPrice: number | undefined;
         try {
           const scraped = await scrapeProductFromUrl(sourceUrl, true);
@@ -105,11 +105,52 @@ export async function GET(request: Request) {
         } catch (scrapeErr: any) {
           console.warn(`[UpdatePrices] Falha ao raspar ${product.id}: ${scrapeErr.message}`);
           errors++;
+
+          // Incrementa falhas consecutivas e expira se atingir 3
+          const currentFails = ((product as any).scrapeFailCount ?? 0) + 1;
+          const shouldExpire = currentFails >= 3;
+
+          await prisma.product.update({
+            where: { id: product.id },
+            data: {
+              scrapeFailCount: currentFails,
+              ...(shouldExpire ? { status: 'expired' } : {}),
+            },
+          });
+
+          if (shouldExpire) {
+            console.log(`[UpdatePrices] ⚠️ Produto ${product.id} (${product.name}) marcado como EXPIRED após 3 falhas consecutivas`);
+            expiredCount++;
+          }
+
           continue;
         }
 
         if (!newPrice || newPrice <= 0) {
           skipped++;
+          continue;
+        }
+
+        // Reseta falhas se raspou com sucesso
+        if ((product as any).scrapeFailCount && (product as any).scrapeFailCount > 0) {
+          await prisma.product.update({
+            where: { id: product.id },
+            data: { scrapeFailCount: 0 },
+          });
+        }
+
+        // Auto-expiração: Se o preço subiu >= 30% em relação ao preço cadastrado/original, promoção expirou
+        const basePrice = product.price || product.originalPrice || 0;
+        if (basePrice > 0 && newPrice >= basePrice * 1.30) {
+          console.log(`[UpdatePrices] ⚠️ Oferta expirada por aumento de preço (+${(((newPrice - basePrice) / basePrice) * 100).toFixed(1)}%): ${product.name}`);
+          await prisma.product.update({
+            where: { id: product.id },
+            data: {
+              status: 'expired',
+              price: newPrice,
+            },
+          });
+          expiredCount++;
           continue;
         }
 
@@ -194,6 +235,7 @@ export async function GET(request: Request) {
         updated,
         skipped,
         errors,
+        expired: expiredCount,
         lowestPriceAlerts: lowestPriceAlerts.length,
       },
       dryRun,

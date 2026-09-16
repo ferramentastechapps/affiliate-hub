@@ -1,4 +1,5 @@
 import { DailyDeals } from "@/components/DailyDeals";
+import { TrendingProducts } from "@/components/TrendingProducts";
 import { Footer } from "@/components/Footer";
 import { Metadata } from "next";
 
@@ -80,6 +81,9 @@ export default async function Home() {
       {/* Fundo Premium 3D animado (agora no layout) */}
 
 
+
+      {/* Ranking de Produtos em Alta */}
+      <TrendingProducts />
 
       {/* Promocoes do Dia com Filtros */}
       <div id="ofertas" className="w-full">
