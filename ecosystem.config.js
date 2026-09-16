@@ -57,7 +57,7 @@ module.exports = {
       name: 'scrapling-service',
       script: 'main.py',
       cwd: '/root/affiliate-hub/scraper-service',
-      interpreter: 'python3',
+      interpreter: '/root/affiliate-hub/scraper-service/venv/bin/python3',
       watch: false,
       autorestart: true,
       restart_delay: 5000,
