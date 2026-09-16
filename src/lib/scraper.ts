@@ -9,6 +9,63 @@ export type ScrapedProduct = {
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🐍 SCRAPLING MICROSERVICE FALLBACK (Python FastAPI na porta 8001)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const SCRAPLING_SERVICE_URL = process.env.SCRAPLING_SERVICE_URL || 'http://127.0.0.1:8001';
+
+/**
+ * Tenta usar o microserviço Python (Scrapling) para fazer scraping.
+ * Scrapling bypassa Cloudflare, TLS fingerprinting e renderiza JS.
+ * Só é chamado como fallback quando o scraper Cheerio falha.
+ */
+async function scrapeWithScrapling(url: string): Promise<ScrapedProduct> {
+  console.log('🐍 Tentando fallback Scrapling microservice...');
+
+  const serviceUrl = `${SCRAPLING_SERVICE_URL}/scrape?url=${encodeURIComponent(url)}`;
+
+  const response = await fetch(serviceUrl, {
+    signal: AbortSignal.timeout(60000), // 60s — DynamicFetcher pode demorar
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Scrapling service HTTP ${response.status}: ${body}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.success || !data.name || data.name.length < 3) {
+    throw new Error('Scrapling: dados inválidos retornados');
+  }
+
+  console.log(`✅ Scrapling OK (fetcher: ${data.fetcher_used}):`, data.name.substring(0, 60));
+
+  return {
+    name: data.name,
+    imageUrl: data.imageUrl || '/placeholder.webp',
+    price: data.price ?? undefined,
+    description: data.description ?? undefined,
+    category: data.category ?? undefined,
+  };
+}
+
+/**
+ * Verifica se o microserviço Scrapling está disponível.
+ */
+async function isScraplingAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch(`${SCRAPLING_SERVICE_URL}/health`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔍 SCRAPER ROBUSTO COM CHEERIO
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -134,15 +191,42 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
     };
     
   } catch (error) {
-    console.error('❌ Erro ao buscar produto:', error);
-    
+    console.error('❌ Erro no scraper Cheerio:', error);
+
+    // ── Fallback: Scrapling Python microservice ──────────────────────────
+    const isBlocked =
+      error instanceof Error &&
+      (error.message.includes('403') ||
+       error.message.includes('429') ||
+       error.message.includes('503') ||
+       error.message.includes('Robot') ||
+       error.message.includes('captcha') ||
+       error.message.includes('Cloudflare') ||
+       error.message.includes('CAPTCHA') ||
+       error.message.includes('Nome do produto não encontrado'));
+
+    if (isBlocked) {
+      console.log('🔄 Detectado bloqueio — tentando Scrapling fallback...');
+      const scraplingOnline = await isScraplingAvailable();
+      if (scraplingOnline) {
+        try {
+          return await scrapeWithScrapling(url);
+        } catch (scraplingError) {
+          console.error('❌ Scrapling fallback também falhou:', scraplingError);
+        }
+      } else {
+        console.warn('⚠️ Scrapling microservice offline (porta 8001) — sem fallback disponível.');
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         throw new Error('Timeout: O site demorou muito para responder');
       }
       throw new Error(`Erro ao buscar produto: ${error.message}`);
     }
-    
+
     throw new Error('Não foi possível buscar os dados do produto');
   }
 }

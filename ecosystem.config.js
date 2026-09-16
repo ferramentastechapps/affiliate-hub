@@ -49,6 +49,22 @@ module.exports = {
       autorestart: true,
       restart_delay: 10000,
       max_restarts: 20,
+    },
+    {
+      // Scrapling Microservice — fallback scraper com bypass de anti-bot
+      // Dependências: pip install scrapling fastapi "uvicorn[standard]"
+      // Browsers: scrapling install
+      name: 'scrapling-service',
+      script: 'main.py',
+      cwd: '/root/affiliate-hub/scraper-service',
+      interpreter: 'python3',
+      watch: false,
+      autorestart: true,
+      restart_delay: 5000,
+      max_restarts: 30,
+      env: {
+        PYTHONUNBUFFERED: '1',
+      },
     }
   ]
 };
