@@ -5,151 +5,132 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
+const TABS = [
+  { id: "inicio",       label: "Início",       Icon: House },
+  { id: "categorias",   label: "Categorias",   Icon: Tag },
+  { id: "cupons",       label: "Cupons",        Icon: Ticket },
+  { id: "notificacoes", label: "Alertas",       Icon: Bell },
+] as const;
+
+type TabId = typeof TABS[number]["id"];
+
 export function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const [activeTab, setActiveTab] = useState<'inicio' | 'categorias' | 'cupons' | 'notificacoes'>('inicio');
+  const [activeTab, setActiveTab] = useState<TabId>("inicio");
   const pathname = usePathname();
 
-  // Ocultar no scroll down e exibir no scroll up (Comportamento polido de App)
+  // Hide on scroll-down, show on scroll-up
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      const currentY = window.scrollY;
+      if (currentY > lastScrollY && currentY > 80) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
       }
-      setLastScrollY(currentScrollY);
+      setLastScrollY(currentY);
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // Escutar eventos de outras partes do app para atualizar a aba ativa
   useEffect(() => {
-    const handleSetInicio = () => setActiveTab('inicio');
-    const handleSetCategorias = () => setActiveTab('categorias');
-    const handleSetCupons = () => setActiveTab('cupons');
-    
-    window.addEventListener("open-categories", handleSetCategorias);
-    window.addEventListener("open-coupons", handleSetCupons);
-    
+    const onCats = () => setActiveTab("categorias");
+    const onCupons = () => setActiveTab("cupons");
+    window.addEventListener("open-categories", onCats);
+    window.addEventListener("open-coupons", onCupons);
     return () => {
-      window.removeEventListener("open-categories", handleSetCategorias);
-      window.removeEventListener("open-coupons", handleSetCupons);
+      window.removeEventListener("open-categories", onCats);
+      window.removeEventListener("open-coupons", onCupons);
     };
   }, []);
 
-  const scrollTo = (id: string) => {
+  const handleTab = (id: TabId) => {
+    setActiveTab(id);
+    if (id === "inicio") {
+      const el = document.getElementById("inicio");
+      if (el) window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     if (id === "categorias") {
       window.dispatchEvent(new CustomEvent("open-categories"));
-      return;
     }
     if (id === "cupons") {
       window.location.href = "/cupons";
-      return;
     }
-    const el = document.getElementById(id);
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.scrollY - 80; // 80px offset pro header
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-  };
-
-  const handleTabClick = (tab: 'inicio' | 'categorias' | 'cupons' | 'notificacoes') => {
-    setActiveTab(tab);
-    if (tab === 'inicio') scrollTo('inicio');
-    if (tab === 'categorias') scrollTo('categorias');
-    if (tab === 'cupons') {
-      window.location.href = "/cupons";
-    }
-    if (tab === 'notificacoes') {
+    if (id === "notificacoes") {
       window.dispatchEvent(new CustomEvent("open-notifications"));
     }
   };
 
-  // Esconder no painel admin
   if (pathname?.startsWith("/admin")) return null;
 
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div 
-          initial={{ y: 100, opacity: 0 }}
+        <motion.nav
+          initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 280, damping: 24 }}
-          className="fixed bottom-3 left-0 right-0 mx-auto z-50 md:hidden w-[88%] max-w-[340px] h-12 flex items-center justify-around bg-zinc-950/90 backdrop-blur-2xl rounded-full border border-white/10 px-2 py-1 shadow-[0_12px_36px_rgba(0,0,0,0.7)]"
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          {/* Início */}
-          <button 
-            onClick={() => handleTabClick('inicio')} 
-            className={`flex items-center justify-center flex-1 h-9 rounded-full active:scale-95 transition-all ${
-              activeTab === 'inicio' 
-                ? 'text-[#ff334b] bg-white/5' 
-                : 'text-zinc-400 hover:text-white'
-            }`}
-            aria-label="Ir para início"
-          >
-            <House size={20} weight={activeTab === 'inicio' ? "fill" : "duotone"} />
-          </button>
-          
-          {/* Categorias */}
-          <button 
-            onClick={() => handleTabClick('categorias')} 
-            className={`flex items-center justify-center flex-1 h-9 rounded-full active:scale-95 transition-all ${
-              activeTab === 'categorias' 
-                ? 'text-[#ff334b] bg-white/5' 
-                : 'text-zinc-400 hover:text-white'
-            }`}
-            aria-label="Ir para categorias"
-          >
-            <Tag size={20} weight={activeTab === 'categorias' ? "fill" : "duotone"} />
-          </button>
+          <div className="mx-3 mb-3 h-[58px] flex items-center bg-[#0e1018]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_-2px_24px_rgba(0,0,0,0.6)] overflow-hidden">
+            
+            {/* 4 Main Tabs */}
+            {TABS.map(({ id, label, Icon }) => {
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleTab(id)}
+                  className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 transition-transform relative"
+                  aria-label={label}
+                >
+                  {/* Active indicator bar */}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-indicator"
+                      className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-[#ff334b]"
+                    />
+                  )}
+                  <Icon
+                    size={22}
+                    weight={isActive ? "fill" : "regular"}
+                    className={isActive ? "text-[#ff334b]" : "text-[#6b7280]"}
+                  />
+                  <span
+                    className={`text-[10px] font-medium leading-none ${
+                      isActive ? "text-[#ff334b]" : "text-[#6b7280]"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
 
-          {/* Cupons */}
-          <button 
-            onClick={() => handleTabClick('cupons')} 
-            className={`flex items-center justify-center flex-1 h-9 rounded-full active:scale-95 transition-all ${
-              activeTab === 'cupons' 
-                ? 'text-[#ff334b] bg-white/5' 
-                : 'text-zinc-400 hover:text-white'
-            }`}
-            aria-label="Ir para cupons"
-          >
-            <Ticket size={20} weight={activeTab === 'cupons' ? "fill" : "duotone"} />
-          </button>
+            {/* Divider */}
+            <div className="w-[1px] h-8 bg-white/[0.06] shrink-0" />
 
-          {/* Alertas / Notificações */}
-          <button 
-            onClick={() => handleTabClick('notificacoes')} 
-            className={`flex items-center justify-center flex-1 h-9 rounded-full active:scale-95 transition-all ${
-              activeTab === 'notificacoes' 
-                ? 'text-[#ff334b] bg-white/5' 
-                : 'text-zinc-400 hover:text-white'
-            }`}
-            aria-label="Abrir preferências de notificações"
-          >
-            <Bell size={20} weight={activeTab === 'notificacoes' ? "fill" : "duotone"} />
-          </button>
-          
-          {/* WhatsApp */}
-          <a 
-            href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t" 
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Entrar no grupo do WhatsApp"
-            className="flex items-center justify-center flex-1 h-9 rounded-full active:scale-95 transition-all text-zinc-400 hover:text-[#25D366]"
-          >
-            <div className="relative flex items-center justify-center">
-              <WhatsappLogo size={20} weight="duotone" className="text-[#25D366] drop-shadow-[0_0_6px_rgba(37,211,102,0.3)]" />
-              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#25D366] animate-ping" />
-            </div>
-          </a>
+            {/* WhatsApp */}
+            <a
+              href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Grupo WhatsApp"
+              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 active:scale-95 transition-transform"
+            >
+              <div className="relative">
+                <WhatsappLogo size={22} weight="fill" className="text-[#25D366]" />
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#25D366] animate-ping" />
+              </div>
+              <span className="text-[10px] font-medium leading-none text-[#6b7280]">Grupo</span>
+            </a>
 
-        </motion.div>
+          </div>
+        </motion.nav>
       )}
     </AnimatePresence>
   );

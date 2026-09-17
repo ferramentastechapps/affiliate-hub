@@ -237,7 +237,7 @@ export function CategoriesSection() {
                             alt={product.name}
                             store={storeKey}
                             category={product.category}
-                            className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                            className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                             containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
                           />
                           {/* Store badge */}

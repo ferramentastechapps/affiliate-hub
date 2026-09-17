@@ -1,39 +1,38 @@
 import React from "react";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🏪 SVGs VETORIAIS DE ALTA QUALIDADE PARA AS LOJAS (MOCKUP DESIGN)
+// 🏪 LOGOS VETORIAIS DE ALTA QUALIDADE E CONTRASTE (32x32 VIEWBOX)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export function AmazonLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <g transform="translate(-4, -5) scale(1.15)">
-        {/* Lowercase 'a' in Amazon style */}
-        <path
-          d="M45.5 45.8c-1.8 1.5-4.4 2.2-7.2 2.2-6.5 0-10.2-4.2-10.2-10.8 0-7.3 4.8-11.2 13-11.2h4v-1.6c0-3.2-1.7-5-5.2-5-3.3 0-6.6 1.4-8.8 2.8l-1.8-4C32.3 16 36.7 15 40.8 15c7.8 0 11.7 4.2 11.7 11.2v14.4c0 3.3.4 5.3 1.2 6.4h-5.4c-.6-1.1-.9-2.6-1-3.6zM45.1 30.6h-3.6c-4.8 0-7.4 1.8-7.4 6.2 0 3.6 1.8 5.6 5.2 5.6 3.6 0 5.8-2 5.8-6.2v-5.6z"
-          fill="#232F3E"
-        />
-        {/* Sorriso (Smile) */}
-        <path
-          d="M23 54c12 5.5 30 5.5 38 0"
-          stroke="#FF9900"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M58.5 52c1.2 1 2.5 2 2.5 2L59 56.5"
-          stroke="#FF9900"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </g>
+      <rect width="32" height="32" rx="7" fill="#131921" />
+      {/* Amazon letter 'a' in crisp white */}
+      <path
+        d="M19.8 19.3c-.9.8-2.1 1.2-3.5 1.2-3.1 0-4.9-2-4.9-5.2 0-3.5 2.3-5.4 6.2-5.4h1.9v-.8c0-1.5-.8-2.4-2.5-2.4-1.6 0-3.2.7-4.2 1.3l-.9-1.9c1.4-.9 3.5-1.4 5.5-1.4 3.7 0 5.6 2 5.6 5.4v6.9c0 1.6.2 2.5.6 3.1h-2.6c-.3-.5-.4-1.2-.5-1.8zm-.2-7.3h-1.7c-2.3 0-3.6.9-3.6 3 0 1.7.9 2.7 2.5 2.7 1.7 0 2.8-1 2.8-3v-2.7z"
+        fill="#FFFFFF"
+      />
+      {/* Amazon Smile Arrow in vibrant orange */}
+      <path
+        d="M9 22.5c5.8 2.8 14.5 2.8 18.4 0"
+        stroke="#FF9900"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M26.2 21.6c.6.5 1.2 1 1.2 1l-.3 1.2"
+        stroke="#FF9900"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -41,25 +40,25 @@ export function AmazonLogo(props: React.SVGProps<SVGSVGElement>) {
 export function MercadoLivreLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <circle cx="40" cy="40" r="30" fill="#FFE600" stroke="#2D3277" strokeWidth="2.5" />
-      {/* Shaking Hands */}
-      <g transform="translate(19, 18) scale(0.85)">
+      <rect width="32" height="32" rx="7" fill="#FFE600" />
+      {/* Shaking Hands Icon */}
+      <g transform="translate(6, 6) scale(0.62)">
         <path
-          d="M14 27C17 24 21 21 26 25C28.5 27 32 27.5 35 25"
+          d="M7 17C10.5 13 15 10 20.5 14C23.5 16.5 27.5 17 31 14"
           stroke="#2D3277"
-          strokeWidth="4"
+          strokeWidth="3.6"
           strokeLinecap="round"
         />
         <path
-          d="M36 23C33 26 29 29 24 25C21.5 23 18 22.5 15 25"
+          d="M32 12C28.5 15.5 24 18.5 18.5 14.5C15.5 12 11.5 11.5 8 14"
           stroke="#2D3277"
-          strokeWidth="4"
+          strokeWidth="3.6"
           strokeLinecap="round"
         />
       </g>
@@ -70,32 +69,33 @@ export function MercadoLivreLogo(props: React.SVGProps<SVGSVGElement>) {
 export function ShopeeLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <g transform="translate(14, 8) scale(1.3)">
-        {/* Sacola de Compras Shopee */}
+      <rect width="32" height="32" rx="7" fill="#EE4D2D" />
+      {/* Shopee Bag */}
+      <g transform="translate(7.5, 5.5) scale(0.53)">
         <path
-          d="M4 14V38C4 40.2 5.8 42 8 42H32C34.2 42 36 40.2 36 38V14H4Z"
-          fill="#EE4D2D"
+          d="M4 12V31C4 32.7 5.3 34 7 34H25C26.7 34 28 32.7 28 31V12H4Z"
+          fill="#FFFFFF"
         />
-        {/* Alças */}
         <path
-          d="M10 14V9C10 5.1 13.1 2 17 2V2C20.9 2 24 5.1 24 9V14"
-          stroke="#EE4D2D"
-          strokeWidth="4"
+          d="M10 12V8C10 4.7 12.7 2 16 2V2C19.3 2 22 4.7 22 8V12"
+          stroke="#FFFFFF"
+          strokeWidth="3"
           strokeLinecap="round"
         />
-        {/* Letra S */}
+        {/* Letter S in Orange */}
         <path
-          d="M21 21C19.5 21.8 18.5 22.8 18.5 24C18.5 26 21.5 26.5 23.5 27C26.5 27.8 28.5 29 28.5 31.5C28.5 34.5 25 35.5 23.5 35.5C21 35.5 19.5 34.5 19.5 34.5"
-          stroke="#FFFFFF"
-          strokeWidth="3.2"
+          d="M19.5 18C18.2 18.7 17.3 19.5 17.3 20.5C17.3 22.2 19.8 22.6 21.5 23C24 23.7 25.7 24.7 25.7 26.8C25.7 29.3 22.7 30.2 21.4 30.2C19.3 30.2 18 29.3 18 29.3"
+          stroke="#EE4D2D"
+          strokeWidth="2.8"
           strokeLinecap="round"
           strokeLinejoin="round"
+          transform="translate(-4, -1)"
         />
       </g>
     </svg>
@@ -105,28 +105,28 @@ export function ShopeeLogo(props: React.SVGProps<SVGSVGElement>) {
 export function AliExpressLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <g transform="translate(10, 6) scale(1.5)">
-        <rect width="40" height="40" rx="12" fill="#E62E04" />
-        {/* Alça branca da sacola */}
+      <rect width="32" height="32" rx="7" fill="#FF4747" />
+      {/* AliExpress bag + loop */}
+      <g transform="translate(6, 6) scale(0.62)">
         <path
-          d="M12 16V13C12 8.6 15.6 5 20 5C24.4 5 28 8.6 28 13V16"
+          d="M10 12V9C10 5.7 12.7 3 16 3C19.3 3 22 5.7 22 9V12"
           stroke="#FFFFFF"
-          strokeWidth="3.5"
+          strokeWidth="3.2"
           strokeLinecap="round"
         />
-        {/* Sacola AliExpress em si */}
+        <rect x="5" y="11" width="22" height="18" rx="3" fill="#FFFFFF" />
         <path
-          d="M8 16H32V32C32 34.2 30.2 36 28 36H12C9.8 36 8 34.2 8 32V16Z"
-          fill="#FF4612"
+          d="M11 21C11 18.2 13.2 16 16 16C18.8 16 21 18.2 21 21"
+          stroke="#FF4747"
+          strokeWidth="2.8"
+          strokeLinecap="round"
         />
-        {/* Loop branco central */}
-        <circle cx="20" cy="26" r="4.5" fill="#FFFFFF" />
       </g>
     </svg>
   );
@@ -135,63 +135,25 @@ export function AliExpressLogo(props: React.SVGProps<SVGSVGElement>) {
 export function TikTokShopLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <rect x="10" y="10" width="60" height="60" rx="16" fill="#000000" />
-      {/* Nota Musical TikTok */}
-      <g transform="translate(18, 18) scale(1.1)">
+      <rect width="32" height="32" rx="7" fill="#000000" />
+      {/* TikTok note with chromatic accent */}
+      <g transform="translate(8, 6.5) scale(0.55)">
         <path
-          d="M25 10H21V22C21 24.2 19.2 26 17 26C14.8 26 13 24.2 13 22C13 19.8 14.8 18 17 18V14C12.6 14 9 17.6 9 22C9 26.4 12.6 30 17 30C21.4 30 25 26.4 25 22V15C27 16.5 29.5 17 31 17V13C28 13 26 11.5 25 10Z"
+          d="M20 7H17V17C17 18.7 15.7 20 14 20C12.3 20 11 18.7 11 17C11 15.3 12.3 14 14 14V11C10.7 11 8 13.7 8 17C8 20.3 10.7 23 14 23C17.3 23 20 20.3 20 17V11C21.6 12.1 23.5 12.5 24.7 12.5V9.5C22.4 9.5 20.8 8.4 20 7Z"
           fill="#FFFFFF"
         />
         <path
-          d="M24 10H20V22C20 24.2 18.2 26 16 26C13.8 26 12 24.2 12 22C12 19.8 13.8 18 16 18"
+          d="M19 8H16V17.5C16 19 14.8 20.2 13.3 20.2C11.8 20.2 10.6 19 10.6 17.5C10.6 16 11.8 14.8 13.3 14.8"
           stroke="#00F2FE"
-          strokeWidth="1.5"
+          strokeWidth="1.2"
           fill="none"
         />
-      </g>
-    </svg>
-  );
-}
-
-export function KaBuMLogo(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 100 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={props.className}
-      {...props}
-    >
-      <g transform="translate(4, 0) scale(1.1)">
-        <text
-          x="0"
-          y="28"
-          fill="#0060FF"
-          fontSize="24"
-          fontWeight="950"
-          fontStyle="italic"
-          fontFamily="system-ui, -apple-system, sans-serif"
-          letterSpacing="-1px"
-        >
-          KaBuM
-        </text>
-        <text
-          x="80"
-          y="28"
-          fill="#FF6000"
-          fontSize="24"
-          fontWeight="950"
-          fontStyle="italic"
-          fontFamily="system-ui, -apple-system, sans-serif"
-        >
-          !
-        </text>
       </g>
     </svg>
   );
@@ -200,24 +162,59 @@ export function KaBuMLogo(props: React.SVGProps<SVGSVGElement>) {
 export function MagaluLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <rect x="10" y="10" width="60" height="60" rx="16" fill="#0086ff" />
+      <rect width="32" height="32" rx="7" fill="#0086FF" />
+      {/* Magalu 'lu' icon style */}
+      <g transform="translate(5, 7) scale(0.68)">
+        <path
+          d="M6 3V17C6 20.3 8.7 23 12 23H17"
+          stroke="#FFFFFF"
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <circle cx="23" cy="20" r="3" fill="#FFFFFF" />
+      </g>
+    </svg>
+  );
+}
+
+export function KaBuMLogo(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={props.className}
+      {...props}
+    >
+      <rect width="32" height="32" rx="7" fill="#0060FF" />
+      {/* KaBuM "K!" mark */}
       <text
-        x="40"
-        y="46"
+        x="12"
+        y="22"
         textAnchor="middle"
         fill="#FFFFFF"
-        fontSize="14"
+        fontSize="17"
         fontWeight="900"
         fontFamily="system-ui, -apple-system, sans-serif"
-        letterSpacing="-0.5px"
       >
-        magalu
+        K
+      </text>
+      <text
+        x="23"
+        y="22"
+        textAnchor="middle"
+        fill="#FF6000"
+        fontSize="17"
+        fontWeight="900"
+        fontFamily="system-ui, -apple-system, sans-serif"
+      >
+        !
       </text>
     </svg>
   );
@@ -226,24 +223,50 @@ export function MagaluLogo(props: React.SVGProps<SVGSVGElement>) {
 export function NetshoesLogo(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 0 80 80"
+      viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       {...props}
     >
-      <rect x="10" y="10" width="60" height="60" rx="16" fill="#562883" />
+      <rect width="32" height="32" rx="7" fill="#562883" />
       <text
-        x="40"
-        y="50"
+        x="16"
+        y="23"
         textAnchor="middle"
         fill="#FFFFFF"
-        fontSize="34"
+        fontSize="19"
         fontWeight="900"
         fontStyle="italic"
         fontFamily="system-ui, -apple-system, sans-serif"
       >
         N
+      </text>
+    </svg>
+  );
+}
+
+export function CasasBahiaLogo(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={props.className}
+      {...props}
+    >
+      <rect width="32" height="32" rx="7" fill="#003399" />
+      <text
+        x="16"
+        y="21"
+        textAnchor="middle"
+        fill="#FFFFFF"
+        fontSize="12"
+        fontWeight="900"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        letterSpacing="-0.5px"
+      >
+        CB
       </text>
     </svg>
   );
@@ -258,6 +281,7 @@ export type StoreKey =
   | "magalu"
   | "kabum"
   | "netshoes"
+  | "casasbahia"
   | "default";
 
 export interface StoreInfo {
@@ -289,8 +313,8 @@ export const STORE_INFOS: Record<StoreKey, StoreInfo> = {
   aliexpress: {
     key: "aliexpress",
     label: "AliExpress",
-    color: "#e62e04",
-    bgGlow: "rgba(230, 46, 4, 0.15)",
+    color: "#ff4747",
+    bgGlow: "rgba(255, 71, 71, 0.15)",
   },
   tiktok: {
     key: "tiktok",
@@ -306,7 +330,7 @@ export const STORE_INFOS: Record<StoreKey, StoreInfo> = {
   },
   kabum: {
     key: "kabum",
-    label: "KaBuM",
+    label: "KaBuM!",
     color: "#0060ff",
     bgGlow: "rgba(0, 96, 255, 0.15)",
   },
@@ -316,6 +340,12 @@ export const STORE_INFOS: Record<StoreKey, StoreInfo> = {
     color: "#562883",
     bgGlow: "rgba(86, 40, 131, 0.15)",
   },
+  casasbahia: {
+    key: "casasbahia",
+    label: "Casas Bahia",
+    color: "#003399",
+    bgGlow: "rgba(0, 51, 153, 0.15)",
+  },
   default: {
     key: "default",
     label: "Loja Parceira",
@@ -324,13 +354,22 @@ export const STORE_INFOS: Record<StoreKey, StoreInfo> = {
   },
 };
 
-export function detectStoreKey(item: {
+export function detectStoreKey(item?: {
   storeName?: string | null;
   source?: string | null;
   platformType?: string | null;
   links?: Record<string, any> | null;
   platform?: string | null;
-}): StoreKey {
+} | string | null): StoreKey {
+  if (!item) return "default";
+
+  // Se passou string direta como "amazon" ou "mercadolivre"
+  if (typeof item === "string") {
+    const s = item.toLowerCase().trim();
+    if (s in STORE_INFOS) return s as StoreKey;
+    return detectStoreKey({ storeName: s });
+  }
+
   const normalize = (v?: string | null) =>
     (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -343,15 +382,16 @@ export function detectStoreKey(item: {
 
   for (const c of candidates) {
     if (!c) continue;
-    if (c.includes("amazon")) return "amazon";
+    if (c.includes("amazon") || c === "amz") return "amazon";
     if (c.includes("mercado") || c.includes("meli") || c.includes("livre"))
       return "mercadolivre";
-    if (c.includes("shopee")) return "shopee";
+    if (c.includes("shopee") || c.includes("shp")) return "shopee";
     if (c.includes("aliexpress") || c.includes("ali")) return "aliexpress";
     if (c.includes("tiktok")) return "tiktok";
     if (c.includes("magalu") || c.includes("luiza")) return "magalu";
     if (c.includes("kabum")) return "kabum";
     if (c.includes("netshoes")) return "netshoes";
+    if (c.includes("bahia") || c.includes("casasbahia")) return "casasbahia";
   }
 
   // Verificar links legados
@@ -365,6 +405,7 @@ export function detectStoreKey(item: {
     if (item.links.magalu) return "magalu";
     if (item.links.kabum) return "kabum";
     if (item.links.netshoes) return "netshoes";
+    if (item.links.casasbahia) return "casasbahia";
   }
 
   return "default";
@@ -377,7 +418,7 @@ export function StoreLogo({
   store?: string | null;
   className?: string;
 }) {
-  const key = detectStoreKey({ storeName: store });
+  const key = detectStoreKey(store);
 
   switch (key) {
     case "amazon":
@@ -396,14 +437,15 @@ export function StoreLogo({
       return <MagaluLogo className={className} />;
     case "netshoes":
       return <NetshoesLogo className={className} />;
+    case "casasbahia":
+      return <CasasBahiaLogo className={className} />;
     default:
       return (
         <div
-          className={`rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-[9px] uppercase border border-white/20 shrink-0 ${className}`}
+          className={`rounded-lg bg-white/10 text-white flex items-center justify-center font-bold text-[9px] uppercase border border-white/15 shrink-0 ${className}`}
         >
-          {store ? store.substring(0, 2) : "🛒"}
+          {store && store.length > 0 ? store.substring(0, 2).toUpperCase() : "🏷️"}
         </div>
       );
   }
 }
-

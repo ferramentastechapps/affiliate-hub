@@ -3,8 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthButton } from "./AuthButton";
 import { AuthPanel } from "./AuthPanel";
-import { useState, useEffect } from "react";
-import { MagnifyingGlass, X, Robot, Heart } from "@phosphor-icons/react";
+import { useState, useEffect, useRef } from "react";
+import { MagnifyingGlass, X, Heart } from "@phosphor-icons/react";
 import { NotificationPreferencesModal } from "./NotificationPreferencesModal";
 import { usePathname } from "next/navigation";
 
@@ -12,10 +12,11 @@ export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
 
-  // Esconder no painel admin
   if (pathname?.startsWith("/admin")) return null;
 
   const handleSearchChange = (val: string) => {
@@ -23,131 +24,173 @@ export function Header() {
     window.dispatchEvent(new CustomEvent("search-change", { detail: { query: val } }));
   };
 
-  const handleOpenAiAssistant = () => {
-    window.dispatchEvent(new CustomEvent("open-ai-assistant", { detail: { query: searchVal } }));
+  const openSearch = () => {
+    setSearchOpen(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    handleSearchChange("");
   };
 
   useEffect(() => {
     const handleOpenNotifs = () => setIsPrefsOpen(true);
-    window.addEventListener('open-notifications', handleOpenNotifs);
-    return () => window.removeEventListener('open-notifications', handleOpenNotifs);
+    window.addEventListener("open-notifications", handleOpenNotifs);
+    return () => window.removeEventListener("open-notifications", handleOpenNotifs);
   }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Close search on Escape
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeSearch(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [searchOpen]);
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 bg-glass-bg/80 backdrop-blur-xl border-b border-glass-border">
-        <div className="max-w-[1400px] mx-auto px-3 md:px-8 py-2.5 md:py-3.5">
+      {/* ── MOBILE FULLSCREEN SEARCH OVERLAY ── */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-50 bg-[#080910]/95 backdrop-blur-xl flex flex-col md:hidden"
+          >
+            {/* Search Bar Row */}
+            <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-white/[0.06]">
+              <div className="relative flex-1">
+                <MagnifyingGlass
+                  size={17}
+                  weight="bold"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none"
+                />
+                <input
+                  ref={inputRef}
+                  type="search"
+                  inputMode="search"
+                  enterKeyHint="search"
+                  value={searchVal}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (document.activeElement as HTMLElement)?.blur();
+                    }
+                  }}
+                  className="w-full h-10 bg-[#13151f] border border-white/[0.08] rounded-xl pl-9 pr-4 text-[15px] text-white placeholder-[#6b7280] outline-none focus:border-[rgba(255,51,75,0.4)] appearance-none"
+                  placeholder="Buscar produto..."
+                />
+              </div>
+              <button
+                onClick={closeSearch}
+                className="text-[#6b7280] hover:text-white transition-colors text-sm font-medium shrink-0"
+              >
+                Cancelar
+              </button>
+            </div>
 
-          {/* ── MOBILE LAYOUT ── */}
-          <div className="flex md:hidden items-center justify-between gap-2">
+            {/* Recent / hint */}
+            {!searchVal && (
+              <div className="px-5 pt-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#374151] mb-3">Sugestões</p>
+                {["iPhone", "Notebook", "Fone de ouvido", "Cadeira gamer", "Smartwatch"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleSearchChange(s)}
+                    className="flex items-center gap-3 w-full py-2.5 text-[15px] text-[#6b7280] hover:text-white transition-colors text-left"
+                  >
+                    <MagnifyingGlass size={15} className="shrink-0" />
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Logo */}
-            <a href="/" className={`flex items-center shrink-0 overflow-hidden transition-all duration-300 ${mobileSearchOpen ? 'w-[40px]' : 'w-[180px]'}`}>
-              <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-10 w-auto max-w-none object-left" />
+      {/* ── HEADER ── */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-200 ${
+          scrolled
+            ? "bg-[#080910]/90 backdrop-blur-xl border-b border-white/[0.06]"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-14 md:h-16 flex items-center justify-between gap-4">
+
+          {/* Logo */}
+          <a href="/" className="flex items-center shrink-0">
+            <img
+              src="/logo economizei.webp?v=2"
+              alt="Economizei"
+              className="h-9 md:h-10 w-auto object-contain"
+            />
+          </a>
+
+          {/* ── DESKTOP: Search bar ── */}
+          <form
+            onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }}
+            className="hidden md:block relative w-full max-w-[480px]"
+          >
+            <MagnifyingGlass
+              size={16}
+              weight="bold"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none"
+            />
+            <input
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              value={searchVal}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full h-10 bg-[#13151f] border border-white/[0.08] hover:border-white/[0.14] focus:border-[rgba(255,51,75,0.4)] focus:shadow-[0_0_0_3px_rgba(255,51,75,0.08)] rounded-xl pl-9 pr-4 text-[14px] text-white placeholder-[#6b7280] outline-none transition-all duration-150 appearance-none"
+              placeholder="Buscar produto..."
+            />
+          </form>
+
+          {/* ── DESKTOP: Nav links ── */}
+          <nav className="hidden md:flex items-center gap-1">
+            {[
+              { href: "#inicio",     label: "Início" },
+              { href: "#categorias", label: "Categorias" },
+              { href: "/cupons",     label: "Cupons" },
+              { href: "/wishlist",   label: "Favoritos" },
+            ].map(({ href, label }) => (
+              <DesktopNavLink key={href} href={href}>{label}</DesktopNavLink>
+            ))}
+          </nav>
+
+          {/* ── RIGHT ACTIONS ── */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mobile: search icon */}
+            <button
+              onClick={openSearch}
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-[#6b7280] hover:text-white hover:bg-white/[0.06] transition-colors"
+              aria-label="Buscar"
+            >
+              <MagnifyingGlass size={19} weight="bold" />
+            </button>
+
+            {/* Mobile: wishlist */}
+            <a
+              href="/wishlist"
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-rose-400 hover:bg-white/[0.06] transition-colors"
+              aria-label="Favoritos"
+            >
+              <Heart size={19} weight="fill" />
             </a>
 
-            {/* Busca expandida no mobile */}
-            <AnimatePresence>
-              {mobileSearchOpen && (
-                <motion.div
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "100%" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex-1 relative"
-                >
-                  <form onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} className="w-full">
-                    <input
-                      autoFocus
-                      type="search"
-                      inputMode="search"
-                      enterKeyHint="search"
-                      value={searchVal}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      className="w-full bg-white/8 border border-white/10 focus:border-accent/50 rounded-xl py-2 pl-3 pr-9 text-white text-sm placeholder-text-secondary outline-none appearance-none"
-                      placeholder="Buscar produto..."
-                    />
-                  </form>
-                  <button
-                    onClick={() => { setMobileSearchOpen(false); handleSearchChange(""); }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary"
-                  >
-                    <X size={16} weight="bold" />
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Ações direitas */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {!mobileSearchOpen && (
-                <>
-                  <a
-                    href="/wishlist"
-                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-rose-400 hover:bg-white/10 transition-colors"
-                    aria-label="Favoritos"
-                  >
-                    <Heart size={18} weight="fill" />
-                  </a>
-                  <button
-                    onClick={() => setMobileSearchOpen(true)}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/8 text-text-secondary hover:text-white transition-colors"
-                    aria-label="Buscar"
-                  >
-                    <MagnifyingGlass size={18} weight="bold" />
-                  </button>
-                </>
-              )}
-              <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
-            </div>
-          </div>
-
-          {/* ── DESKTOP LAYOUT ── */}
-          <div className="hidden md:flex flex-row items-center justify-between gap-6">
-
-            {/* Logo */}
-            <motion.a
-              href="/"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className="flex items-center gap-3 shrink-0"
-            >
-              <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-12 w-auto object-contain" />
-            </motion.a>
-
-            {/* Barra de Busca */}
-            <form onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} className="relative w-full max-w-[500px]">
-              <input
-                type="search"
-                inputMode="search"
-                enterKeyHint="search"
-                value={searchVal}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full bg-white/5 border border-border-custom hover:border-white/10 focus:border-accent/50 focus:bg-white/8 focus:shadow-[0_0_0_3px_rgba(255,51,75,0.1)] rounded-xl py-2 pl-4 pr-11 text-white text-sm placeholder-text-secondary outline-none transition-all duration-200 appearance-none"
-                placeholder="Buscar um produto..."
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              </span>
-            </form>
-
-            {/* Nav + Auth */}
-            <div className="flex items-center gap-6">
-              <nav className="flex items-center gap-1">
-                <NavLink href="#inicio" active>Início</NavLink>
-                <NavLink href="#categorias">Categorias</NavLink>
-                <NavLink href="/cupons">Cupons</NavLink>
-                <NavLink href="/wishlist">Favoritos</NavLink>
-                <NavLink href="#footer">Comunidade</NavLink>
-              </nav>
-              <div className="flex items-center shrink-0 gap-2">
-                <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
-              </div>
-            </div>
-
+            <AuthButton onOpenAuth={() => setIsAuthOpen(true)} />
           </div>
 
         </div>
@@ -159,33 +202,28 @@ export function Header() {
   );
 }
 
-function NavLink({ href, children, active }: { href: string; children: React.ReactNode; active?: boolean }) {
+function DesktopNavLink({ href, children }: { href: string; children: React.ReactNode }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // Se for link de cupons ou favoritos, redireciona para a página
-    if (href === "#cupons" || href === "/cupons" || href === "/wishlist") {
+    if (href === "/cupons" || href === "/wishlist") {
       window.location.href = href;
       return;
     }
-    
     e.preventDefault();
-    if (href === "#categorias") { window.dispatchEvent(new CustomEvent("open-categories")); return; }
+    if (href === "#categorias") {
+      window.dispatchEvent(new CustomEvent("open-categories"));
+      return;
+    }
     const el = document.getElementById(href.replace("#", ""));
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: "smooth" });
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: "smooth" });
   };
 
   return (
-    <motion.a
+    <a
       href={href}
       onClick={handleClick}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all min-h-[40px] flex items-center cursor-pointer ${
-        active
-          ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-          : "text-text-secondary hover:text-white hover:bg-white/5"
-      }`}
+      className="px-3 py-1.5 rounded-lg text-[13.5px] font-medium text-[#6b7280] hover:text-white hover:bg-white/[0.05] transition-all cursor-pointer"
     >
       {children}
-    </motion.a>
+    </a>
   );
 }

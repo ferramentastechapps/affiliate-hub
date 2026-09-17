@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ToastProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -13,11 +13,12 @@ import { AiDealAssistant } from "@/components/AiDealAssistant";
 import { PwaUpdater } from "@/components/PwaUpdater";
 import Script from "next/script";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
   preload: true,
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -79,7 +80,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${montserrat.variable} ${geistMono.variable} dark antialiased`}
+      className={`${inter.variable} ${geistMono.variable} dark antialiased`}
     >
       <head>
         <meta name="lomadee" content="2324685" />

@@ -5,42 +5,41 @@ import { motion } from "framer-motion";
 import { PlatformModal } from "./PlatformModal";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
-import { 
-  Flame, 
-  DeviceMobile, 
-  GameController, 
-  House, 
-  TShirt, 
-  Baby, 
-  Sparkle, 
-  Barbell, 
-  ShoppingCart, 
-  BookOpen, 
-  Wrench, 
-  Car, 
-  PawPrint, 
-  Airplane, 
+import {
+  Flame,
+  DeviceMobile,
+  GameController,
+  House,
+  TShirt,
+  Baby,
+  Sparkle,
+  Barbell,
+  ShoppingCart,
+  BookOpen,
+  Wrench,
+  Car,
+  PawPrint,
+  Airplane,
   Package,
   Clock,
-  ArrowUpRight,
   ThumbsUp,
   ThumbsDown,
   Tag,
-  ShieldCheck,
-  Truck,
   Heart,
   ChatCircle,
   ArrowRight,
   Bell,
   Star,
-  TrendDown
+  TrendDown,
+  ArrowUpRight,
+  Check,
 } from "@phosphor-icons/react";
 
 import { Product } from "@/types/product";
 import { calculateDealTemperature } from "@/lib/deal-temperature";
 import { StoreLogo, detectStoreKey, STORE_INFOS } from "./StoreLogos";
 import { ProductImage } from "./ProductImage";
-import { PriceBadge } from "./PriceBadge";
+import { useRouter } from "next/navigation";
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
   "Todas": Flame,
@@ -61,7 +60,7 @@ const categoryIconMap: Record<string, React.ComponentType<any>> = {
 };
 
 const categoryColors: Record<string, string> = {
-  "Todas": "#f43f5e",
+  "Todas": "#ff334b",
   "Smartphones e TV": "#3b82f6",
   "Informática e Games": "#8b5cf6",
   "Casa e Eletrodomésticos": "#10b981",
@@ -75,28 +74,23 @@ const categoryColors: Record<string, string> = {
   "Automotivo": "#64748b",
   "Pet": "#0ea5e9",
   "Viagem": "#6366f1",
-  "Diversos": "#a1a1aa"
+  "Diversos": "#a1a1aa",
 };
 
-// Helper for deterministic discount simulation based on string ID
-
-
 function getTimeAgo(dateString?: string | Date) {
-  if (!dateString) return "há pouco tempo";
-  
+  if (!dateString) return "há pouco";
   const date = new Date(dateString);
   const now = new Date();
-  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-  
-  if (diffInMinutes < 1) return `agora mesmo`;
-  if (diffInMinutes < 60) return `há ${diffInMinutes} min`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `há ${diffInHours} h`;
-  const diffInDays = Math.floor(diffInHours / 24);
-  return `há ${diffInDays} ${diffInDays === 1 ? 'dia' : 'dias'}`;
+  const mins = Math.floor((now.getTime() - date.getTime()) / 60000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
-import { useRouter } from "next/navigation";
+const fmt = (v: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
 export function DailyDeals() {
   const router = useRouter();
@@ -110,25 +104,25 @@ export function DailyDeals() {
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
-  const [filterType, setFilterType] = useState<'alertas' | 'destaques' | 'recentes' | 'menorPreco' | 'emAlta' | 'baratinho'>('recentes');
+  const [filterType, setFilterType] = useState<
+    "alertas" | "destaques" | "recentes" | "menorPreco" | "emAlta" | "baratinho"
+  >("recentes");
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
 
-  // Sincroniza favoritos locais e remotos
+  // Sync favorites
   useEffect(() => {
     try {
       const stored = localStorage.getItem("economizei_favorites");
-      if (stored) {
-        setFavoriteIds(new Set(JSON.parse(stored)));
-      }
+      if (stored) setFavoriteIds(new Set(JSON.parse(stored)));
     } catch {}
-
     if (user) {
-      fetch('/api/favorites')
-        .then(res => res.json())
-        .then(data => {
-          if (data.favorites && Array.isArray(data.favorites)) {
-            const ids = data.favorites.map((f: any) => f.productId);
-            setFavoriteIds(prev => new Set([...prev, ...ids]));
+      fetch("/api/favorites")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.favorites && Array.isArray(d.favorites)) {
+            const ids = d.favorites.map((f: any) => f.productId);
+            setFavoriteIds((prev) => new Set([...prev, ...ids]));
           }
         })
         .catch(() => {});
@@ -142,586 +136,615 @@ export function DailyDeals() {
     if (isFav) nextSet.delete(productId);
     else nextSet.add(productId);
     setFavoriteIds(nextSet);
-
     try {
       const arr = Array.from(nextSet);
       localStorage.setItem("economizei_favorites", JSON.stringify(arr));
-      window.dispatchEvent(new CustomEvent("favorites-updated", { detail: { count: arr.length } }));
+      window.dispatchEvent(
+        new CustomEvent("favorites-updated", { detail: { count: arr.length } })
+      );
     } catch {}
-
     if (user) {
-      try {
-        await fetch('/api/favorites', {
-          method: isFav ? 'DELETE' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId })
-        });
-      } catch (err) {
-        console.error("Erro ao favoritar:", err);
-      }
+      await fetch("/api/favorites", {
+        method: isFav ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId }),
+      }).catch(() => {});
     }
   };
 
-  // Debounce search query to avoid hitting database on every keystroke
+  const copyCoupon = (e: React.MouseEvent, code: string, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopiedCouponId(id);
+    setTimeout(() => setCopiedCouponId(null), 2000);
+  };
+
+  // Debounce search
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 400);
-    return () => clearTimeout(handler);
+    const h = setTimeout(() => setDebouncedSearchQuery(searchQuery), 400);
+    return () => clearTimeout(h);
   }, [searchQuery]);
 
   useEffect(() => {
     fetchProducts();
-    
-    // Refresh a cada 5 minutos silenciosamente
     const interval = setInterval(() => fetchProducts(true), 5 * 60 * 1000);
-    
-    // Refresh quando o usuário volta pro app (foco ou visibilidade)
-    const handleFocus = () => fetchProducts(true);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchProducts(true);
-      }
+    const onFocus = () => fetchProducts(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchProducts(true);
     };
-    
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [filterType, user?.id, selectedCategory, debouncedSearchQuery]);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setVisibleCount(50);
   }, [searchQuery, selectedCategory, filterType]);
 
-  // Listen to search change custom event from Header
   useEffect(() => {
-    const handleSearchChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ query: string }>;
-      setSearchQuery(customEvent.detail.query || "");
+    const onSearch = (e: Event) => {
+      setSearchQuery((e as CustomEvent<{ query: string }>).detail.query || "");
     };
-    
-    const handleChangeFilter = (e: Event) => {
-      const customEvent = e as CustomEvent<{ filter: any }>;
-      setFilterType(customEvent.detail.filter);
-      const dealsSection = document.getElementById('ofertas');
-      if (dealsSection) {
-        dealsSection.scrollIntoView({ behavior: 'smooth' });
-      }
+    const onFilter = (e: Event) => {
+      setFilterType((e as CustomEvent<{ filter: any }>).detail.filter);
+      document.getElementById("ofertas")?.scrollIntoView({ behavior: "smooth" });
     };
-
-    window.addEventListener("search-change", handleSearchChange);
-    window.addEventListener("change-filter", handleChangeFilter);
+    window.addEventListener("search-change", onSearch);
+    window.addEventListener("change-filter", onFilter);
     return () => {
-      window.removeEventListener("search-change", handleSearchChange);
-      window.removeEventListener("change-filter", handleChangeFilter);
+      window.removeEventListener("search-change", onSearch);
+      window.removeEventListener("change-filter", onFilter);
     };
   }, []);
 
   async function fetchProducts(silent = false) {
     try {
-      if (!silent) {
-        setLoading(true);
-      }
-      let extraAlertsParam = '';
-      if (filterType === 'alertas') {
+      if (!silent) setLoading(true);
+      let extra = "";
+      if (filterType === "alertas") {
         try {
-          const cached = localStorage.getItem('push_preferences_cache');
+          const cached = localStorage.getItem("push_preferences_cache");
           if (cached) {
-            const parsed = JSON.parse(cached);
-            if (parsed.customInterests && Array.isArray(parsed.customInterests) && parsed.customInterests.length > 0) {
-              extraAlertsParam += `&keywords=${encodeURIComponent(parsed.customInterests.join(','))}`;
-            }
-            if (parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
-              extraAlertsParam += `&categories=${encodeURIComponent(parsed.categories.join(','))}`;
-            }
+            const p = JSON.parse(cached);
+            if (p.customInterests?.length)
+              extra += `&keywords=${encodeURIComponent(p.customInterests.join(","))}`;
+            if (p.categories?.length)
+              extra += `&categories=${encodeURIComponent(p.categories.join(","))}`;
           }
         } catch {}
       }
-
-      const userParam = user?.id ? `&userId=${user.id}` : '';
-      const categoryParam = selectedCategory && selectedCategory !== 'Todas' ? `&category=${encodeURIComponent(selectedCategory)}` : '';
-      const searchParam = debouncedSearchQuery ? `&search=${encodeURIComponent(debouncedSearchQuery)}` : '';
-      const res = await fetch(`/api/products?filter=${filterType}${userParam}${categoryParam}${searchParam}${extraAlertsParam}&_t=${Date.now()}`, { cache: "no-store" });
+      const catParam =
+        selectedCategory !== "Todas"
+          ? `&category=${encodeURIComponent(selectedCategory)}`
+          : "";
+      const searchParam = debouncedSearchQuery
+        ? `&search=${encodeURIComponent(debouncedSearchQuery)}`
+        : "";
+      const userParam = user?.id ? `&userId=${user.id}` : "";
+      const res = await fetch(
+        `/api/products?filter=${filterType}${userParam}${catParam}${searchParam}${extra}&_t=${Date.now()}`,
+        { cache: "no-store" }
+      );
       const data = await res.json();
-      
       if (data && data.length > 0) {
-        const parsedProducts = data.map((p: any) => ({
-          id: p.id,
-          shortId: p.shortId,
-          name: p.name,
-          category: p.category,
-          imageUrl: p.imageUrl,
-          enhancedImageUrl: p.enhancedImageUrl,
-          storeName: p.storeName,
-          source: p.source,
-          platformType: p.platformType,
-          price: p.price,
-          originalPrice: p.originalPrice,
-          createdAt: p.createdAt,
-          description: p.description,
-          coupons: p.coupons || [],
-          votes: p.votes || [],
-          alerts: p.alerts || [],
-          _count: p._count || { likes: 0, dislikes: 0, comments: 0 },
-          links: {
-            amazon: p.links?.amazon,
-            mercadoLivre: p.links?.mercadoLivre,
-            shopee: p.links?.shopee,
-            aliexpress: p.links?.aliexpress,
-            tiktok: p.links?.tiktok,
-            netshoes: p.links?.netshoes,
-            magalu: p.links?.magalu,
-            kabum: p.links?.kabum,
-          }
-        }));
-        setAllProducts(parsedProducts);
+        setAllProducts(
+          data.map((p: any) => ({
+            id: p.id,
+            shortId: p.shortId,
+            name: p.name,
+            category: p.category,
+            imageUrl: p.imageUrl,
+            enhancedImageUrl: p.enhancedImageUrl,
+            storeName: p.storeName,
+            source: p.source,
+            platformType: p.platformType,
+            price: p.price,
+            originalPrice: p.originalPrice,
+            createdAt: p.createdAt,
+            description: p.description,
+            coupons: p.coupons || [],
+            votes: p.votes || [],
+            alerts: p.alerts || [],
+            clicks: p.clicks,
+            isLowestPriceEver: p.isLowestPriceEver,
+            _count: p._count || { likes: 0, dislikes: 0, comments: 0 },
+            links: {
+              amazon: p.links?.amazon,
+              mercadoLivre: p.links?.mercadoLivre,
+              shopee: p.links?.shopee,
+              aliexpress: p.links?.aliexpress,
+              tiktok: p.links?.tiktok,
+              netshoes: p.links?.netshoes,
+              magalu: p.links?.magalu,
+              kabum: p.links?.kabum,
+            },
+          }))
+        );
       }
-    } catch (error) {
-      console.error("Erro ao buscar promoções:", error);
+    } catch (err) {
+      console.error("Erro ao buscar promoções:", err);
     } finally {
-      if (!silent) {
-        setLoading(false);
-      }
+      if (!silent) setLoading(false);
     }
   }
 
-  // Filtrar produtos por categoria e query de busca
-  let filteredProducts = allProducts.filter(p => {
-    // Category filter
-    const matchesCategory = selectedCategory === "Todas" || p.category === selectedCategory;
-    
-    // Search query filter (matches name, description, category or brand)
-    let matchesSearch = true;
+  // Filter + Sort
+  let filteredProducts = allProducts.filter((p) => {
+    const matchCat = selectedCategory === "Todas" || p.category === selectedCategory;
+    let matchSearch = true;
     if (searchQuery) {
       if (searchQuery.toUpperCase() === "CUPOM") {
-        matchesSearch = !!(p.coupons && p.coupons.length > 0);
+        matchSearch = !!(p.coupons && p.coupons.length > 0);
       } else {
         const terms = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
-        const productText = `${p.name} ${p.category} ${p.description || ''}`.toLowerCase();
-        matchesSearch = terms.every(term => productText.includes(term));
+        const text = `${p.name} ${p.category} ${p.description || ""}`.toLowerCase();
+        matchSearch = terms.every((t) => text.includes(t));
       }
     }
-
-    return matchesCategory && matchesSearch;
+    return matchCat && matchSearch;
   });
 
-  // Aplicar ordenação baseada no filtro selecionado
   filteredProducts = [...filteredProducts].sort((a, b) => {
+    const disc = (p: any) =>
+      p.originalPrice && p.price
+        ? ((p.originalPrice - p.price) / p.originalPrice) * 100
+        : 0;
     switch (filterType) {
-      case 'alertas':
-        // Produtos alertados pelo usuário vêm primeiro
-        const aAlert = a.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
-        const bAlert = b.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
-        if (aAlert !== bAlert) return bAlert - aAlert;
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      
-      case 'destaques':
-        // Produtos com maior desconto
-        const aDiscount = a.originalPrice && a.price ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
-        const bDiscount = b.originalPrice && b.price ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
-        return bDiscount - aDiscount;
-      
-      case 'recentes':
-        // Mais recentes primeiro
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      
-      case 'menorPreco':
-        // Menor preço primeiro
-        const aPrice = a.price || Infinity;
-        const bPrice = b.price || Infinity;
-        return aPrice - bPrice;
-      
-      case 'emAlta':
-        // Produtos em alta (ordenados por cliques e engajamento)
-        const aScore = (a.clicks || 0) * 10 + (a.originalPrice && a.price ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0);
-        const bScore = (b.clicks || 0) * 10 + (b.originalPrice && b.price ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0);
-        return bScore - aScore;
-      
-      case 'baratinho':
-        // Produtos com preço até R$ 50
+      case "alertas":
+        const aA = a.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
+        const bA = b.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
+        return (
+          bA - aA ||
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+      case "destaques":
+        return disc(b) - disc(a);
+      case "recentes":
+        return (
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+      case "menorPreco":
         return (a.price || Infinity) - (b.price || Infinity);
-      
+      case "emAlta":
+        return (
+          (b.clicks || 0) * 10 +
+          disc(b) -
+          ((a.clicks || 0) * 10 + disc(a))
+        );
+      case "baratinho":
+        return (a.price || Infinity) - (b.price || Infinity);
       default:
         return 0;
     }
   });
 
-  // Filtrar "baratinho" para mostrar só produtos até R$ 50
-  if (filterType === 'baratinho') {
-    filteredProducts = filteredProducts.filter(p => p.price && p.price <= 50);
+  if (filterType === "baratinho") {
+    filteredProducts = filteredProducts.filter((p) => p.price && p.price <= 50);
   }
-  
-  // Obter categorias únicas
-  const categories = ["Todas", ...Array.from(new Set(allProducts.map(p => p.category)))].filter(Boolean);
 
+  const categories = [
+    "Todas",
+    ...Array.from(new Set(allProducts.map((p) => p.category))),
+  ].filter(Boolean);
+  const displayProducts = filteredProducts.slice(0, visibleCount);
+
+  // ── LOADING SKELETON ──
   if (loading && allProducts.length === 0) {
     return (
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-4">
-        <div className="h-6 w-40 bg-zinc-900 rounded-lg animate-pulse mb-5" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-64 bg-zinc-900/50 rounded-2xl animate-pulse" />
+        {/* Filter skeleton */}
+        <div className="flex gap-2 mb-4 overflow-hidden">
+          {[80, 100, 72, 90, 80, 68].map((w, i) => (
+            <div
+              key={i}
+              className="skeleton rounded-full flex-none"
+              style={{ width: w, height: 32 }}
+            />
+          ))}
+        </div>
+        {/* Cards skeleton */}
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[108px] skeleton rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
-  if (allProducts.length === 0 && !loading) {
-    return null;
-  }
-
-  const displayProducts = filteredProducts.slice(0, visibleCount);
+  if (allProducts.length === 0 && !loading) return null;
 
   return (
-    <section 
-      className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-0 mb-10 relative"
+    <section
+      className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-0 mb-10"
       onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
     >
-      {/* Abas de Filtro */}
-      <div className="flex gap-2 mt-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+      {/* ── FILTER TABS ── */}
+      <div className="flex gap-1.5 mt-3 mb-3 overflow-x-auto pb-1 scrollbar-hide">
         {[
-          { key: 'alertas', label: 'Meus Alertas', icon: <Bell size={18} weight="regular" className="text-[#ff334b]" /> },
-          { key: 'destaques', label: 'Destaques', icon: <Star size={18} weight="regular" className="text-[#ff334b]" /> },
-          { key: 'recentes', label: 'Recentes', icon: <Clock size={18} weight="regular" className="text-[#ff334b]" /> },
-          { key: 'menorPreco', label: 'Menor Preço', icon: <TrendDown size={18} weight="regular" className="text-[#ff334b]" /> },
-          { key: 'emAlta', label: 'Em Alta', icon: <Flame size={18} weight="regular" className="text-[#ff334b]" /> },
-          { key: 'baratinho', label: 'Baratinho', icon: <Tag size={18} weight="regular" className="text-[#ff334b]" /> },
-        ].map((filter) => (
+          { key: "recentes",   label: "Recentes",      Icon: Clock },
+          { key: "emAlta",     label: "Em Alta",       Icon: Flame },
+          { key: "destaques",  label: "Destaques",     Icon: Star },
+          { key: "menorPreco", label: "Menor Preço",   Icon: TrendDown },
+          { key: "baratinho",  label: "Até R$ 50",     Icon: Tag },
+          { key: "alertas",    label: "Meus Alertas", Icon: Bell },
+        ].map(({ key, label, Icon }) => (
           <button
-            key={filter.key}
-            onClick={() => setFilterType(filter.key as any)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-[13px] md:text-sm transition-all whitespace-nowrap ${
-              filterType === filter.key
-                ? 'bg-transparent text-white border border-[#ff334b] shadow-[0_0_15px_rgba(255,51,75,0.4)]'
-                : 'bg-transparent text-white hover:bg-white/5 border border-white/10'
+            key={key}
+            onClick={() => setFilterType(key as any)}
+            className={`flex items-center gap-1.5 px-3 h-8 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all flex-none ${
+              filterType === key
+                ? "bg-[rgba(255,51,75,0.12)] text-[#ff4b60] border border-[rgba(255,51,75,0.35)] shadow-sm"
+                : "text-[#8e92a4] border border-white/[0.07] hover:border-white/[0.14] hover:text-white"
             }`}
           >
-            {filter.icon}
-            {filter.label}
+            <Icon size={13} weight={filterType === key ? "fill" : "regular"} />
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Seção Cabeçalho */}
-      <div className="flex items-center justify-between mb-4 md:mb-5">
-        <div>
-          <h2 className="text-lg md:text-2xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
-            Promoções do dia
-          </h2>
-          <p className="text-zinc-400 text-xs md:text-sm">As melhores ofertas atualizadas em tempo real</p>
-        </div>
+      {/* ── CATEGORY PILLS ── */}
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+        {categories.map((cat) => {
+          const CatIcon = categoryIconMap[cat] || Package;
+          const color = categoryColors[cat] || "#6b7280";
+          const isActive = selectedCategory === cat;
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`cat-pill ${isActive ? "active" : ""}`}
+              style={
+                isActive
+                  ? { borderColor: `${color}60`, color, background: `${color}14` }
+                  : {}
+              }
+            >
+              <CatIcon size={13} weight={isActive ? "fill" : "regular"} />
+              {cat === "Todas" ? "Todas" : cat.split(" ")[0]}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Sem resultados de busca/categoria */}
+      {/* ── SECTION HEADER ── */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div>
+          <h2 className="text-[16px] md:text-[20px] font-bold text-white tracking-tight flex items-center gap-2">
+            Promoções do dia
+          </h2>
+          <p className="text-[12px] text-[#8e92a4] mt-0.5">
+            Atualizadas em tempo real pela comunidade
+          </p>
+        </div>
+        {filteredProducts.length > 0 && (
+          <span className="text-[12px] font-medium text-[#8e92a4]">
+            {filteredProducts.length} ofertas
+          </span>
+        )}
+      </div>
+
+      {/* ── EMPTY STATE ── */}
       {filteredProducts.length === 0 && (
-        <div className="text-center py-16 rounded-[20px] bg-card border border-border-custom text-zinc-500">
-          <p className="text-base font-semibold">Nenhuma promoção encontrada para a sua busca.</p>
-          <p className="text-xs text-zinc-600 mt-1.5">Tente usar outros termos de busca ou mude de categoria.</p>
+        <div className="py-16 text-center bg-[#0e1018] rounded-2xl border border-white/[0.06]">
+          <Package size={40} weight="duotone" className="text-zinc-600 mx-auto mb-3" />
+          <p className="text-[15px] font-semibold text-white mb-1">
+            Nenhuma promoção encontrada
+          </p>
+          <p className="text-[13px] text-[#8e92a4]">
+            Tente outros termos de busca ou selecione outra categoria
+          </p>
         </div>
       )}
 
-      {/* Grid de promoções */}
+      {/* ── DEAL LIST ── */}
       {filteredProducts.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+        <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 xl:grid-cols-3">
           {displayProducts.map((product, index) => {
             const price = product.price || 0;
-            const originalPrice = product.originalPrice || 0;
-            const discount = (originalPrice > price && price > 0)
-              ? Math.round(((originalPrice - price) / originalPrice) * 100)
-              : 0;
+            const originalPrice = (product as any).originalPrice || 0;
+            const discount =
+              originalPrice > price && price > 0
+                ? Math.round(((originalPrice - price) / originalPrice) * 100)
+                : 0;
 
-            const userVote = user ? product.votes?.find(v => v.userId === user.id)?.type : null;
+            const userVote = user
+              ? product.votes?.find((v: any) => v.userId === user.id)?.type
+              : null;
 
+            // Extract coupon code
             let displayCoupon = "";
-            if (product.coupons && Array.isArray(product.coupons) && product.coupons.length > 0) {
-              const firstCoupon = product.coupons[0];
-              if (firstCoupon.code && firstCoupon.code.toUpperCase() !== "NORMAL") {
-                displayCoupon = firstCoupon.code;
+            if (product.coupons?.length) {
+              const first = product.coupons[0];
+              if (first.code && first.code.toUpperCase() !== "NORMAL") {
+                displayCoupon = first.code;
               }
-            } else if (product.description && typeof product.description === 'string' && product.description.includes('🎟️ CUPOM:')) {
-              const extracted = product.description.split('🎟️ CUPOM:')[1].trim();
+            } else if (product.description?.includes("🎟️ CUPOM:")) {
+              const extracted = product.description.split("🎟️ CUPOM:")[1]?.trim();
               if (extracted && extracted.toUpperCase() !== "NORMAL") {
-                displayCoupon = extracted.split('\n')[0].trim();
+                displayCoupon = extracted.split("\n")[0].trim();
               }
             }
 
-            async function handleVote(type: 'LIKE' | 'DISLIKE') {
-              if (!user) {
-                setShowAuthModal(true);
-                return;
-              }
-              try {
-                const newType = userVote === type ? 'REMOVE' : type;
-                
-                // Optimistic update na lista global
-                setAllProducts(prev => prev.map(p => {
-                  if (p.id === product.id) {
-                    let likes = p._count?.likes || 0;
-                    let dislikes = p._count?.dislikes || 0;
-                    
-                    if (userVote === 'LIKE') likes--;
-                    if (userVote === 'DISLIKE') dislikes--;
-                    
-                    if (newType === 'LIKE') likes++;
-                    if (newType === 'DISLIKE') dislikes++;
-
-                    const newVotes = p.votes?.filter(v => v.userId !== user.id) || [];
-                    if (newType !== 'REMOVE') {
-                      newVotes.push({ type: newType, userId: user.id });
-                    }
-
-                    return {
-                      ...p,
-                      votes: newVotes,
-                      _count: {
-                        ...p._count,
-                        likes,
-                        dislikes
-                      }
-                    };
-                  }
-                  return p;
-                }));
-
-                await fetch(`/api/products/${product.id}/vote`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ userId: user!.id, type: newType })
-                });
-              } catch (e) {
-                console.error("Erro ao votar", e);
-              }
-            }
-
-            // Detectar loja e metadados com precisão
             const storeKey = detectStoreKey(product);
             const storeInfo = STORE_INFOS[storeKey] || STORE_INFOS.default;
-            const mainPlatformText = storeInfo.label;
 
-            const dealTemp = calculateDealTemperature({
-              price,
-              originalPrice,
+            // Calculate deal temperature
+            const tempResult = calculateDealTemperature({
+              price: product.price,
+              originalPrice: product.originalPrice,
               likesCount: product._count?.likes,
               dislikesCount: product._count?.dislikes,
               clicksCount: product.clicks,
               hasCoupon: !!displayCoupon,
               isLowestPriceEver: (product as any).isLowestPriceEver,
-              createdAt: product.createdAt
+              createdAt: product.createdAt,
             });
+
+            async function handleVote(type: "LIKE" | "DISLIKE") {
+              if (!user) {
+                setShowAuthModal(true);
+                return;
+              }
+              try {
+                const newType = userVote === type ? "REMOVE" : type;
+                setAllProducts((prev) =>
+                  prev.map((p) => {
+                    if (p.id !== product.id) return p;
+                    let likes = p._count?.likes || 0;
+                    let dislikes = p._count?.dislikes || 0;
+                    if (userVote === "LIKE") likes--;
+                    if (userVote === "DISLIKE") dislikes--;
+                    if (newType === "LIKE") likes++;
+                    if (newType === "DISLIKE") dislikes++;
+                    const newVotes =
+                      p.votes?.filter((v: any) => v.userId !== user.id) || [];
+                    if (newType !== "REMOVE")
+                      newVotes.push({ type: newType, userId: user.id });
+                    return {
+                      ...p,
+                      votes: newVotes,
+                      _count: { ...p._count, likes, dislikes },
+                    };
+                  })
+                );
+                await fetch(`/api/products/${product.id}/vote`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: user.id, type: newType }),
+                });
+              } catch {}
+            }
 
             return (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 20, rotateX: 5 }}
-                animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                transition={{ delay: (index % 4) * 0.05, type: "spring", stiffness: 100 }}
-                onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
-                className="group cursor-pointer glass-3d-card rounded-[16px] overflow-hidden flex flex-col relative z-0"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (index % 6) * 0.03 }}
+                onClick={() =>
+                  router.push(`/produto/${product.shortId || product.id}`)
+                }
+                className="deal-card cursor-pointer group overflow-hidden"
               >
-                {/* Header (Store Info & Termômetro) */}
-                <div className="p-3 pb-2 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
-                  <div className="flex items-center gap-2">
-                    <StoreLogo store={storeKey} className="w-5 h-5 rounded-full object-contain shrink-0" />
-                    <span className="text-white font-bold text-xs flex items-center gap-1">
-                      {mainPlatformText}
-                      <ShieldCheck size={14} weight="fill" className="text-blue-500" />
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Etiqueta do Produto (EM ALTA, DESTAQUE, MENOR PREÇO, CUPOM ATIVO...) */}
-                    {(() => {
-                      let tagLabel = "DESTAQUE";
-                      let TagIcon = Star;
-                      let tagStyle = "bg-blue-500/15 text-blue-400 border-blue-500/30";
-
-                      if (displayCoupon) {
-                        tagLabel = "CUPOM ATIVO";
-                        TagIcon = Tag;
-                        tagStyle = "bg-amber-500/15 text-amber-400 border-amber-500/30";
-                      } else if (discount >= 40) {
-                        tagLabel = "IMPERDÍVEL";
-                        TagIcon = Sparkle;
-                        tagStyle = "bg-purple-500/15 text-purple-400 border-purple-500/30";
-                      } else if (discount >= 20 || (product._count?.likes || 0) >= 3 || (product.clicks || 0) >= 15) {
-                        tagLabel = "EM ALTA";
-                        TagIcon = Flame;
-                        tagStyle = "bg-rose-500/15 text-rose-400 border-rose-500/30";
-                      } else if (discount > 0) {
-                        tagLabel = "MENOR PREÇO";
-                        TagIcon = TrendDown;
-                        tagStyle = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-                      }
-
-                      return (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-black text-[10px] border shadow-sm tracking-tight ${tagStyle}`}>
-                          <TagIcon size={12} weight="fill" />
-                          <span>{tagLabel}</span>
-                        </span>
-                      );
-                    })()}
-                    <span className="text-[#8e92a4] text-[10px] flex items-center gap-1">
-                      <Clock size={10} weight="bold" /> {getTimeAgo(product.createdAt)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Middle (Image + Info) */}
-                <div className="flex flex-row">
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 shrink-0 relative bg-white flex items-center justify-center m-3 rounded-2xl p-2 shadow-inner overflow-hidden">
+                {/* ── MAIN ROW ── */}
+                <div className="flex items-stretch">
+                  {/* Image container: clean white background, crisp square box */}
+                  <div className="relative w-[92px] md:w-[106px] shrink-0 bg-white m-2.5 mr-0 rounded-xl overflow-hidden flex items-center justify-center self-center aspect-square shadow-sm">
                     <ProductImage
                       src={product.imageUrl}
                       enhancedSrc={product.enhancedImageUrl}
                       alt={product.name}
                       store={storeKey}
                       category={product.category}
-                      className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                      containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
+                      className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                      containerClassName="w-full h-full flex items-center justify-center"
                     />
                     {discount > 0 && (
-                      <span className="absolute -top-1 -left-1 bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-md">
+                      <span className="absolute top-1.5 left-1.5 bg-[#ff334b] text-white text-[10px] font-black px-1.5 py-0.5 rounded leading-none shadow-sm">
                         -{discount}%
-                      </span>
-                    )}
-                    {(filterType === 'emAlta' || (product.clicks && product.clicks > 15)) && (
-                      <span className="absolute top-1 right-1 bg-amber-500/90 backdrop-blur-sm text-zinc-950 font-black text-[9px] px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-0.5">
-                        🔥 EM ALTA
                       </span>
                     )}
                   </div>
 
-                  <div className="p-3 sm:p-4 flex flex-col flex-1 relative overflow-hidden">
-                    <span 
-                      className="text-[9px] font-bold uppercase tracking-wider mb-0.5 truncate"
-                      style={{ color: categoryColors[product.category] || "#8e92a4" }}
-                    >
-                      {product.category || "OFERTA"}
-                    </span>
+                  {/* Content container */}
+                  <div className="flex flex-col flex-1 py-2.5 px-3 min-w-0 justify-between">
+                    {/* Top Row: Store Badge + Temperature + Time */}
+                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.07] text-[11px] font-semibold text-zinc-300">
+                        <StoreLogo
+                          store={storeKey}
+                          className="w-4 h-4 rounded-sm shrink-0"
+                        />
+                        <span className="truncate max-w-[85px]">{storeInfo.label}</span>
+                      </span>
 
-                    <h3 className="text-[11px] sm:text-xs font-normal text-[#8e92a4] uppercase mb-1.5 line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                      {/* Deal Hotness / Temperature Score */}
+                      <span
+                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${tempResult.textColorClass} bg-white/[0.04]`}
+                      >
+                        <Flame size={11} weight="fill" />
+                        {tempResult.formattedTemperature}
+                      </span>
+
+                      <span className="text-[#6b7280] text-[10px] ml-auto shrink-0 flex items-center gap-0.5">
+                        <Clock size={10} weight="bold" />{" "}
+                        {getTimeAgo(product.createdAt)}
+                      </span>
+                    </div>
+
+                    {/* Product Name */}
+                    <p className="text-[13px] md:text-[13.5px] font-medium text-[#e2e4e9] leading-snug line-clamp-2 mb-1 group-hover:text-white transition-colors">
                       {product.name}
-                    </h3>
+                    </p>
 
-                    {/* Coupons and Conditions Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    {/* Highlights row: Coupon / Lowest Price */}
+                    <div className="flex flex-wrap gap-1 mb-1.5">
                       {(product as any).isLowestPriceEver && (
-                        <span className="bg-teal-500/15 text-teal-300 border border-teal-500/30 text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 animate-pulse">
-                          🏆 MENOR PREÇO
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/25 text-teal-400 text-[9.5px] font-bold">
+                          🏆 Menor preço
                         </span>
                       )}
                       {displayCoupon && (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 max-w-[90px] sm:max-w-[140px] truncate" title={displayCoupon}>
-                          <Tag size={10} weight="fill" className="shrink-0" /> <span className="truncate">{displayCoupon}</span>
-                        </span>
-                      )}
-                      {!(product as any).isLowestPriceEver && (product as any).hasCoupon && !displayCoupon && (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                          <Tag size={10} weight="fill" className="shrink-0" /> CUPOM
-                        </span>
+                        <button
+                          onClick={(e) => copyCoupon(e, displayCoupon, product.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[9.5px] font-bold active:scale-95 transition-all"
+                          title="Clique para copiar cupom"
+                        >
+                          {copiedCouponId === product.id ? (
+                            <>
+                              <Check size={10} weight="bold" className="text-emerald-400" />
+                              <span className="text-emerald-400">Copiado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Tag size={9} weight="fill" className="shrink-0" />
+                              <span className="max-w-[100px] truncate">
+                                Cupom: {displayCoupon}
+                              </span>
+                            </>
+                          )}
+                        </button>
                       )}
                     </div>
 
-                    <div className="mt-auto flex items-end gap-2">
+                    {/* Price row */}
+                    <div className="flex items-end gap-2 mt-auto">
                       {price > 0 ? (
                         <>
-                          <span className="text-base sm:text-lg font-black text-white leading-none">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                          <span className="text-[16px] md:text-[17px] font-bold text-[#ff334b] leading-none">
+                            {fmt(price)}
                           </span>
                           {discount > 0 && (
-                            <span className="text-[10px] sm:text-[11px] text-[#8e92a4] line-through leading-none pb-[2px]">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                            <span className="text-[11px] text-[#6b7280] line-through leading-none pb-px">
+                              {fmt(originalPrice)}
                             </span>
                           )}
                         </>
                       ) : (
-                        <span className="text-xs font-bold text-white">Ver detalhes</span>
+                        <span className="text-[13px] font-semibold text-white">
+                          Ver oferta
+                        </span>
                       )}
+
+                      {/* Action Chevron */}
+                      <span className="ml-auto flex-shrink-0 w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] group-hover:border-[#ff334b]/30 group-hover:bg-[#ff334b]/10 transition-all">
+                        <ArrowUpRight size={14} weight="bold" />
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Footer (Actions) */}
-                <div className="p-2.5 px-4 border-t border-white/5 flex items-center justify-between bg-black/20">
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        handleVote('LIKE');
-                      }}
-                      className={`flex items-center gap-1 transition-colors text-[11px] font-bold ${userVote === 'LIKE' ? 'text-emerald-500' : 'text-[#8e92a4] hover:text-emerald-500'}`}
-                    >
-                      <ThumbsUp size={16} weight={userVote === 'LIKE' ? "fill" : "bold"} /> {product._count?.likes || 0}
-                    </button>
-                    <button 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        handleVote('DISLIKE');
-                      }}
-                      className={`flex items-center gap-1 transition-colors text-[11px] font-bold ${userVote === 'DISLIKE' ? 'text-red-500' : 'text-[#8e92a4] hover:text-red-500'}`}
-                    >
-                      <ThumbsDown size={16} weight={userVote === 'DISLIKE' ? "fill" : "bold"} /> {product._count?.dislikes || 0}
-                    </button>
-                    <div className="w-[1px] h-3 bg-white/10 mx-1"></div>
-                    <button 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        router.push(`/produto/${product.shortId || product.id}#comments`);
-                      }}
-                      className="flex items-center gap-1.5 text-[#8e92a4] hover:text-white transition-colors text-[11px] font-bold"
-                    >
-                      <ChatCircle size={16} weight="bold" /> {product._count?.comments || 0}
-                    </button>
-                    <div className="w-[1px] h-3 bg-white/10 mx-1"></div>
-                    <button 
-                      onClick={(e) => toggleFavorite(product.id, e)}
-                      title={favoriteIds.has(product.id) ? "Remover dos favoritos" : "Salvar nos favoritos"}
-                      className={`flex items-center gap-1 transition-colors text-[11px] font-bold ${
-                        favoriteIds.has(product.id) ? 'text-rose-500 hover:text-rose-400' : 'text-[#8e92a4] hover:text-rose-500'
-                      }`}
-                    >
-                      <Heart size={16} weight={favoriteIds.has(product.id) ? "fill" : "bold"} />
-                    </button>
-                  </div>
-                  <button className="text-[10px] font-bold uppercase tracking-wider text-white hover:text-[#ff334b] transition-colors flex items-center gap-1">
-                    VER MAIS <ArrowRight size={10} weight="bold" className="text-[#ff334b]" />
+                {/* ── FOOTER ACTIONS (Likes, Comments, Favorites) ── */}
+                <div
+                  className="flex items-center gap-3 px-3 py-1.5 border-t border-white/[0.05] bg-white/[0.01]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Upvote */}
+                  <button
+                    onClick={() => handleVote("LIKE")}
+                    className={`flex items-center gap-1 text-[11px] font-semibold transition-colors py-1 ${
+                      userVote === "LIKE"
+                        ? "text-emerald-400"
+                        : "text-[#8e92a4] hover:text-emerald-400"
+                    }`}
+                    title="Votar positivo"
+                  >
+                    <ThumbsUp
+                      size={13}
+                      weight={userVote === "LIKE" ? "fill" : "regular"}
+                    />
+                    {product._count?.likes || 0}
+                  </button>
+
+                  {/* Downvote */}
+                  <button
+                    onClick={() => handleVote("DISLIKE")}
+                    className={`flex items-center gap-1 text-[11px] font-semibold transition-colors py-1 ${
+                      userVote === "DISLIKE"
+                        ? "text-red-400"
+                        : "text-[#8e92a4] hover:text-red-400"
+                    }`}
+                    title="Votar negativo"
+                  >
+                    <ThumbsDown
+                      size={13}
+                      weight={userVote === "DISLIKE" ? "fill" : "regular"}
+                    />
+                    {product._count?.dislikes || 0}
+                  </button>
+
+                  {/* Comments */}
+                  <button
+                    onClick={() =>
+                      router.push(`/produto/${product.shortId || product.id}#comments`)
+                    }
+                    className="flex items-center gap-1 text-[11px] font-semibold text-[#8e92a4] hover:text-white transition-colors py-1"
+                    title="Ver comentários"
+                  >
+                    <ChatCircle size={13} weight="regular" />
+                    {product._count?.comments || 0}
+                  </button>
+
+                  {/* Favorite / Bookmark */}
+                  <button
+                    onClick={(e) => toggleFavorite(product.id, e)}
+                    className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ml-auto py-1 ${
+                      favoriteIds.has(product.id)
+                        ? "text-rose-400"
+                        : "text-[#8e92a4] hover:text-rose-400"
+                    }`}
+                    title="Salvar oferta"
+                  >
+                    <Heart
+                      size={14}
+                      weight={favoriteIds.has(product.id) ? "fill" : "regular"}
+                    />
+                  </button>
+
+                  {/* Ver mais */}
+                  <button
+                    onClick={() =>
+                      router.push(`/produto/${product.shortId || product.id}`)
+                    }
+                    className="flex items-center gap-0.5 text-[11px] font-semibold text-white hover:text-[#ff334b] transition-colors py-1 pl-1"
+                  >
+                    Ver <ArrowRight size={10} weight="bold" className="text-[#ff334b]" />
                   </button>
                 </div>
-
               </motion.div>
             );
           })}
         </div>
       )}
 
+      {/* Load more */}
       {visibleCount < filteredProducts.length && (
-        <div className="mt-8 flex justify-center">
+        <div className="mt-6 flex justify-center">
           <button
-            onClick={() => setVisibleCount(prev => prev + 10)}
-            className="btn-3d group flex items-center justify-center gap-2 font-semibold text-sm md:text-base py-3 px-8 rounded-[20px] shadow-lg min-h-[48px]"
+            onClick={() => setVisibleCount((p) => p + 20)}
+            className="btn-primary h-11 px-8 text-[14px]"
           >
-            Ver mais {Math.min(10, filteredProducts.length - visibleCount)} produtos
+            Ver mais {Math.min(20, filteredProducts.length - visibleCount)} ofertas
           </button>
         </div>
       )}
 
-      <PlatformModal 
-        isOpen={!!selectedProduct} 
+      <PlatformModal
+        isOpen={!!selectedProduct}
         onClose={() => {
           setSelectedProduct(null);
           setOpenCommentsFor(null);
-        }} 
-        product={selectedProduct} 
+        }}
+        product={selectedProduct}
         onSelectRelated={setSelectedProduct}
         autoFocusComments={openCommentsFor === selectedProduct?.id}
       />
-      
       <AuthPanel isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </section>
   );
