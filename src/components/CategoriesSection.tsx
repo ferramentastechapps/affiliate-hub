@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Tag } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
+import { StoreLogo, detectStoreKey, STORE_INFOS } from "./StoreLogos";
+import { ProductImage } from "./ProductImage";
 
 const RAW_CATEGORIES = [
   { key: "air-fryers", label: "Air Fryers", icon: "🍟" },
@@ -55,6 +57,7 @@ type Product = {
   name: string;
   category: string;
   imageUrl: string;
+  enhancedImageUrl?: string | null;
   price?: number;
   originalPrice?: number;
   description?: string;
@@ -206,13 +209,9 @@ export function CategoriesSection() {
                       ? Math.round(((originalPrice - price) / originalPrice) * 100)
                       : 0;
 
-                    let mainPlatformText = "Link";
-                    let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=64";
-                    if (product.links?.amazon) { mainPlatformText = "Amazon"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com.br&sz=64"; }
-                    else if (product.links?.mercadoLivre) { mainPlatformText = "Mercado Livre"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=64"; }
-                    else if (product.links?.shopee) { mainPlatformText = "Shopee"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=64"; }
-                    else if (product.links?.aliexpress) { mainPlatformText = "AliExpress"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=64"; }
-                    else if (product.links?.tiktok) { mainPlatformText = "TikTok Shop"; mainPlatformLogo = "https://www.google.com/s2/favicons?domain=tiktok.com&sz=64"; }
+                    const storeKey = detectStoreKey(product);
+                    const storeInfo = STORE_INFOS[storeKey] || STORE_INFOS.default;
+                    const mainPlatformText = storeInfo.label;
 
                     return (
                       <motion.div
@@ -231,33 +230,22 @@ export function CategoriesSection() {
                         )}
 
                         {/* Imagem */}
-                        <div className="w-full aspect-[3/4] bg-black/40 rounded-xl mb-5 relative overflow-hidden flex items-center justify-center">
-                          <img
+                        <div className="w-full aspect-[3/4] bg-white rounded-xl mb-5 relative overflow-hidden flex items-center justify-center p-3">
+                          <ProductImage
                             src={product.imageUrl}
+                            enhancedSrc={product.enhancedImageUrl}
                             alt={product.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/placeholder.webp";
-                            }}
+                            store={storeKey}
+                            category={product.category}
+                            className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                            containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
                           />
-                          {/* Store badge — logo larger and clean */}
+                          {/* Store badge */}
                           <div
-                            className="absolute bottom-3 right-3 z-10 flex items-center justify-center rounded-full bg-white shadow-xl"
-                            style={{
-                              width: '48px',
-                              height: '48px',
-                              boxShadow: '0 0 0 2px #18181b, 0 4px 16px rgba(0,0,0,0.4)',
-                            }}
+                            className="absolute bottom-3 right-3 z-10 flex items-center justify-center rounded-full bg-zinc-900/90 p-1.5 shadow-xl border border-white/10 backdrop-blur-md"
+                            title={mainPlatformText}
                           >
-                             <img 
-                              src={mainPlatformLogo} 
-                              alt={mainPlatformText} 
-                              title={mainPlatformText} 
-                              className="w-8 h-8 object-contain" 
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "/placeholder.webp";
-                              }}
-                            />
+                            <StoreLogo store={storeKey} className="w-6 h-6 rounded-full object-contain" />
                           </div>
                           {/* Badge cupom */}
                           {product.coupons && product.coupons.length > 0 && (

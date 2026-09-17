@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { ArrowSquareOut, Crown, Sparkle, Tag } from "@phosphor-icons/react";
+import { StoreLogo } from "./StoreLogos";
 
 type ProductLink = {
   platform: string;
@@ -139,12 +140,9 @@ export function PriceComparator({ productId, productLinks = [], legacyLinks, cur
               }`}
             >
               <div className="flex items-center gap-3">
-                <img
-                  src={p.logo}
-                  alt={p.label}
-                  className="w-7 h-7 rounded-lg object-contain bg-white p-0.5 shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
+                <div className="w-7 h-7 rounded-lg bg-white p-0.5 shrink-0 flex items-center justify-center">
+                  <StoreLogo store={p.platform} className="w-6 h-6 rounded-md object-contain" />
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-white">{p.label}</span>

@@ -222,3 +222,188 @@ export function MagaluLogo(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function NetshoesLogo(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 80 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={props.className}
+      {...props}
+    >
+      <rect x="10" y="10" width="60" height="60" rx="16" fill="#562883" />
+      <text
+        x="40"
+        y="50"
+        textAnchor="middle"
+        fill="#FFFFFF"
+        fontSize="34"
+        fontWeight="900"
+        fontStyle="italic"
+        fontFamily="system-ui, -apple-system, sans-serif"
+      >
+        N
+      </text>
+    </svg>
+  );
+}
+
+export type StoreKey =
+  | "amazon"
+  | "mercadolivre"
+  | "shopee"
+  | "aliexpress"
+  | "tiktok"
+  | "magalu"
+  | "kabum"
+  | "netshoes"
+  | "default";
+
+export interface StoreInfo {
+  key: StoreKey;
+  label: string;
+  color: string;
+  bgGlow: string;
+}
+
+export const STORE_INFOS: Record<StoreKey, StoreInfo> = {
+  amazon: {
+    key: "amazon",
+    label: "Amazon",
+    color: "#ff9900",
+    bgGlow: "rgba(255, 153, 0, 0.15)",
+  },
+  mercadolivre: {
+    key: "mercadolivre",
+    label: "Mercado Livre",
+    color: "#3483FA",
+    bgGlow: "rgba(52, 131, 250, 0.15)",
+  },
+  shopee: {
+    key: "shopee",
+    label: "Shopee",
+    color: "#ee4d2d",
+    bgGlow: "rgba(238, 77, 45, 0.15)",
+  },
+  aliexpress: {
+    key: "aliexpress",
+    label: "AliExpress",
+    color: "#e62e04",
+    bgGlow: "rgba(230, 46, 4, 0.15)",
+  },
+  tiktok: {
+    key: "tiktok",
+    label: "TikTok Shop",
+    color: "#00f2fe",
+    bgGlow: "rgba(0, 242, 254, 0.15)",
+  },
+  magalu: {
+    key: "magalu",
+    label: "Magalu",
+    color: "#0086ff",
+    bgGlow: "rgba(0, 134, 255, 0.15)",
+  },
+  kabum: {
+    key: "kabum",
+    label: "KaBuM",
+    color: "#0060ff",
+    bgGlow: "rgba(0, 96, 255, 0.15)",
+  },
+  netshoes: {
+    key: "netshoes",
+    label: "Netshoes",
+    color: "#562883",
+    bgGlow: "rgba(86, 40, 131, 0.15)",
+  },
+  default: {
+    key: "default",
+    label: "Loja Parceira",
+    color: "#8e92a4",
+    bgGlow: "rgba(142, 146, 164, 0.15)",
+  },
+};
+
+export function detectStoreKey(item: {
+  storeName?: string | null;
+  source?: string | null;
+  platformType?: string | null;
+  links?: Record<string, any> | null;
+  platform?: string | null;
+}): StoreKey {
+  const normalize = (v?: string | null) =>
+    (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const candidates = [
+    normalize(item.storeName),
+    normalize(item.source),
+    normalize(item.platformType),
+    normalize(item.platform),
+  ];
+
+  for (const c of candidates) {
+    if (!c) continue;
+    if (c.includes("amazon")) return "amazon";
+    if (c.includes("mercado") || c.includes("meli") || c.includes("livre"))
+      return "mercadolivre";
+    if (c.includes("shopee")) return "shopee";
+    if (c.includes("aliexpress") || c.includes("ali")) return "aliexpress";
+    if (c.includes("tiktok")) return "tiktok";
+    if (c.includes("magalu") || c.includes("luiza")) return "magalu";
+    if (c.includes("kabum")) return "kabum";
+    if (c.includes("netshoes")) return "netshoes";
+  }
+
+  // Verificar links legados
+  if (item.links) {
+    if (item.links.amazon) return "amazon";
+    if (item.links.mercadoLivre || item.links.mercadolivre)
+      return "mercadolivre";
+    if (item.links.shopee) return "shopee";
+    if (item.links.aliexpress) return "aliexpress";
+    if (item.links.tiktok) return "tiktok";
+    if (item.links.magalu) return "magalu";
+    if (item.links.kabum) return "kabum";
+    if (item.links.netshoes) return "netshoes";
+  }
+
+  return "default";
+}
+
+export function StoreLogo({
+  store,
+  className = "w-5 h-5",
+}: {
+  store?: string | null;
+  className?: string;
+}) {
+  const key = detectStoreKey({ storeName: store });
+
+  switch (key) {
+    case "amazon":
+      return <AmazonLogo className={className} />;
+    case "mercadolivre":
+      return <MercadoLivreLogo className={className} />;
+    case "shopee":
+      return <ShopeeLogo className={className} />;
+    case "aliexpress":
+      return <AliExpressLogo className={className} />;
+    case "tiktok":
+      return <TikTokShopLogo className={className} />;
+    case "kabum":
+      return <KaBuMLogo className={className} />;
+    case "magalu":
+      return <MagaluLogo className={className} />;
+    case "netshoes":
+      return <NetshoesLogo className={className} />;
+    default:
+      return (
+        <div
+          className={`rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-[9px] uppercase border border-white/20 shrink-0 ${className}`}
+        >
+          {store ? store.substring(0, 2) : "🛒"}
+        </div>
+      );
+  }
+}
+

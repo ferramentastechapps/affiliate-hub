@@ -19,6 +19,7 @@ type Product = {
   category: string;
   description: string | null;
   imageUrl: string;
+  enhancedImageUrl?: string | null;
   price: number | null;
   originalPrice: number | null;
   couponLink?: string | null;
@@ -376,11 +377,24 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                src={product.images && product.images.length > 0 ? product.images[currentImageIndex].url : product.imageUrl} 
+                src={
+                  product.images && product.images.length > 0 
+                    ? product.images[currentImageIndex].url 
+                    : (product.imageUrl && product.imageUrl !== '/placeholder.webp' && !product.imageUrl.includes('unavailable'))
+                      ? product.imageUrl
+                      : (product.enhancedImageUrl && product.enhancedImageUrl !== '/placeholder.webp' && !product.enhancedImageUrl.includes('unavailable'))
+                        ? product.enhancedImageUrl
+                        : "/placeholder.webp"
+                } 
                 alt={product.name}
                 className="w-full h-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-500 max-h-[350px]"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/placeholder.webp";
+                  const target = e.target as HTMLImageElement;
+                  if (product.enhancedImageUrl && target.src !== product.enhancedImageUrl && !product.enhancedImageUrl.includes('unavailable')) {
+                    target.src = product.enhancedImageUrl;
+                  } else {
+                    target.src = "/placeholder.webp";
+                  }
                 }}
               />
 

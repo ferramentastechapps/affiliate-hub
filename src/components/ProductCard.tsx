@@ -11,6 +11,8 @@ export type Product = {
   name: string;
   category: string;
   imageUrl: string;
+  enhancedImageUrl?: string | null;
+  storeName?: string | null;
   price?: number;
   description?: string;
   coupons?: { id: string; code: string; discount: string; platform: string }[];
@@ -27,6 +29,17 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const fallbackImage = "/placeholder.webp";
+
+  const isGood = (url?: string | null) =>
+    url && url !== "/placeholder.webp" && !url.includes("unavailable");
+
+  const displaySrc = imageError
+    ? fallbackImage
+    : isGood(product.imageUrl)
+      ? product.imageUrl
+      : isGood(product.enhancedImageUrl)
+        ? product.enhancedImageUrl!
+        : fallbackImage;
 
   useEffect(() => {
     try {
@@ -96,7 +109,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
 
         {/* Next.js Image com otimização automática */}
         <Image
-          src={imageError ? fallbackImage : product.imageUrl}
+          src={displaySrc}
           alt={product.name}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

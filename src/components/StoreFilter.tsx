@@ -12,7 +12,10 @@ import {
   TikTokShopLogo,
   KaBuMLogo,
   MagaluLogo,
+  NetshoesLogo,
+  StoreLogo,
 } from "./StoreLogos";
+import { ProductImage } from "./ProductImage";
 
 const STORES = [
   { key: "amazon",       label: "Amazon",        domain: "amazon.com.br",        linkKey: "amazon",       color: "#ff9900", bgGlow: "rgba(255, 153, 0, 0.12)" },
@@ -22,6 +25,7 @@ const STORES = [
   { key: "tiktok",       label: "TikTok Shop",    domain: "tiktok.com",           linkKey: "tiktok",       color: "#00f2fe", bgGlow: "rgba(0, 242, 254, 0.12)" },
   { key: "kabum",        label: "KaBuM",          domain: "kabum.com.br",         linkKey: "kabum",        color: "#0060ff", bgGlow: "rgba(0, 96, 255, 0.12)" },
   { key: "magalu",       label: "Magalu",         domain: "magazineluiza.com.br", linkKey: "magalu",       color: "#0086ff", bgGlow: "rgba(0, 134, 255, 0.12)" },
+  { key: "netshoes",     label: "Netshoes",       domain: "netshoes.com.br",      linkKey: "netshoes",     color: "#562883", bgGlow: "rgba(86, 40, 131, 0.12)" },
 ];
 
 import { Product } from "@/types/product";
@@ -151,7 +155,7 @@ export function StoreFilter() {
       </div>
 
       {/* ── DESKTOP: Grid de cards ── */}
-      <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 mb-4">
+      <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2.5 mb-4">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
           const LogoComponent = {
@@ -162,6 +166,7 @@ export function StoreFilter() {
             tiktok: TikTokShopLogo,
             kabum: KaBuMLogo,
             magalu: MagaluLogo,
+            netshoes: NetshoesLogo,
           }[store.key] || (() => null);
 
           return (
@@ -182,18 +187,7 @@ export function StoreFilter() {
             >
               {/* Logo Area */}
               <div className="flex-1 w-full flex items-center justify-center p-2 min-h-0">
-                {store.key === "mercadolivre" ? (
-                  <img
-                    src="/mercado livre.png"
-                    alt={store.label}
-                    className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/placeholder.webp";
-                    }}
-                  />
-                ) : (
-                  <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
-                )}
+                <LogoComponent className="w-full h-full max-h-[70px] max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105 shrink-0" />
               </div>
               
               {/* Label Area */}
@@ -236,15 +230,8 @@ export function StoreFilter() {
             <div className="mt-8 pt-8 border-t border-white/[0.04]">
               {/* Header da seção expandida */}
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center p-2 shadow-lg shrink-0">
-                  <img
-                    src={`https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=128`}
-                    alt={activeStoreInfo?.label}
-                    className="w-full h-full object-contain mix-blend-multiply"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/placeholder.webp";
-                    }}
-                  />
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center p-1.5 shadow-lg shrink-0">
+                  <StoreLogo store={activeStoreInfo?.key} className="w-7 h-7 object-contain" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">
@@ -309,13 +296,13 @@ export function StoreFilter() {
                               </span>
                             </div>
 
-                            <img
+                            <ProductImage
                               src={product.imageUrl}
                               alt={product.name}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "/placeholder.webp";
-                              }}
+                              store={activeStoreInfo?.key}
+                              category={product.category}
+                              className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                              containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
                             />
                           </div>
 
@@ -329,15 +316,7 @@ export function StoreFilter() {
                               boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${activeStoreInfo?.color || "#ff334b"}88`,
                             }}
                           >
-                            <img
-                              src={mainPlatformLogo}
-                              alt={mainPlatformText}
-                              title={mainPlatformText}
-                              className="w-5 h-5 object-contain rounded-full"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "/placeholder.webp";
-                              }}
-                            />
+                            <StoreLogo store={activeStoreInfo?.key} className="w-5 h-5 rounded-full object-contain" />
                           </div>
                         </div>
 

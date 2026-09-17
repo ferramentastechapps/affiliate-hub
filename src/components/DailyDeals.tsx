@@ -38,6 +38,8 @@ import {
 
 import { Product } from "@/types/product";
 import { calculateDealTemperature } from "@/lib/deal-temperature";
+import { StoreLogo, detectStoreKey, STORE_INFOS } from "./StoreLogos";
+import { ProductImage } from "./ProductImage";
 import { PriceBadge } from "./PriceBadge";
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
@@ -255,6 +257,10 @@ export function DailyDeals() {
           name: p.name,
           category: p.category,
           imageUrl: p.imageUrl,
+          enhancedImageUrl: p.enhancedImageUrl,
+          storeName: p.storeName,
+          source: p.source,
+          platformType: p.platformType,
           price: p.price,
           originalPrice: p.originalPrice,
           createdAt: p.createdAt,
@@ -494,66 +500,10 @@ export function DailyDeals() {
               }
             }
 
-            // Mapeamento de cor e label do badge de plataforma
-            const storeBadgeConfig: Record<string, { bg: string, text: string, label: string }> = {
-              amazon:       { bg: "#ff9900", text: "#ffffff", label: "Amazon" },
-              mercadoLivre: { bg: "#3483FA", text: "#ffffff", label: "Mercado Livre" },
-              shopee:       { bg: "#ee4d2d", text: "#ffffff", label: "Shopee" },
-              aliexpress:   { bg: "#e43225", text: "#ffffff", label: "AliExpress" },
-              tiktok:       { bg: "#010101", text: "#ffffff", label: "TikTok Shop" },
-              magalu:       { bg: "#0086ff", text: "#ffffff", label: "Magalu" },
-              kabum:        { bg: "#0d47a1", text: "#ffffff", label: "KaBuM" },
-              netshoes:     { bg: "#5c2a9d", text: "#ffffff", label: "Netshoes" }
-            };
-
-
-            // Extrair a plataforma principal
-            let mainPlatformText = "Link";
-            let mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com&sz=128";
-            let platformKey = "amazon";
-            
-            if (product.links?.amazon) { 
-              mainPlatformText = "Amazon"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=amazon.com.br&sz=128"; 
-              platformKey = "amazon";
-            }
-            else if (product.links?.mercadoLivre) { 
-              mainPlatformText = "Mercado Livre"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=mercadolivre.com.br&sz=128"; 
-              platformKey = "mercadoLivre";
-            }
-            else if (product.links?.shopee) { 
-              mainPlatformText = "Shopee"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=shopee.com.br&sz=128"; 
-              platformKey = "shopee";
-            }
-            else if (product.links?.aliexpress) { 
-              mainPlatformText = "AliExpress"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=aliexpress.com&sz=128"; 
-              platformKey = "aliexpress";
-            }
-            else if (product.links?.tiktok) { 
-              mainPlatformText = "TikTok Shop"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=tiktok.com&sz=128"; 
-              platformKey = "tiktok";
-            }
-            else if (product.links?.netshoes) { 
-              mainPlatformText = "Netshoes"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=netshoes.com.br&sz=128"; 
-              platformKey = "netshoes";
-            }
-            else if (product.links?.magalu) { 
-              mainPlatformText = "Magalu"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=magazineluiza.com.br&sz=128"; 
-              platformKey = "magalu";
-            }
-            else if (product.links?.kabum) { 
-              mainPlatformText = "KaBuM"; 
-              mainPlatformLogo = "https://www.google.com/s2/favicons?domain=kabum.com.br&sz=128"; 
-              platformKey = "kabum";
-            }
-
-            const badgeStyle = storeBadgeConfig[platformKey] || { bg: "#ff334b", text: "#ffffff", label: mainPlatformText };
+            // Detectar loja e metadados com precisão
+            const storeKey = detectStoreKey(product);
+            const storeInfo = STORE_INFOS[storeKey] || STORE_INFOS.default;
+            const mainPlatformText = storeInfo.label;
 
             const dealTemp = calculateDealTemperature({
               price,
@@ -578,7 +528,7 @@ export function DailyDeals() {
                 {/* Header (Store Info & Termômetro) */}
                 <div className="p-3 pb-2 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
                   <div className="flex items-center gap-2">
-                    <img src={mainPlatformLogo} className="w-5 h-5 rounded-full object-contain" />
+                    <StoreLogo store={storeKey} className="w-5 h-5 rounded-full object-contain shrink-0" />
                     <span className="text-white font-bold text-xs flex items-center gap-1">
                       {mainPlatformText}
                       <ShieldCheck size={14} weight="fill" className="text-blue-500" />
@@ -626,13 +576,14 @@ export function DailyDeals() {
                 {/* Middle (Image + Info) */}
                 <div className="flex flex-row">
                   <div className="w-28 h-28 sm:w-32 sm:h-32 shrink-0 relative bg-white flex items-center justify-center m-3 rounded-2xl p-2 shadow-inner overflow-hidden">
-                    <img
+                    <ProductImage
                       src={product.imageUrl}
+                      enhancedSrc={product.enhancedImageUrl}
                       alt={product.name}
+                      store={storeKey}
+                      category={product.category}
                       className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.webp";
-                      }}
+                      containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
                     />
                     {discount > 0 && (
                       <span className="absolute -top-1 -left-1 bg-[#ff334b] text-white font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-md">

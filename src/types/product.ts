@@ -43,6 +43,9 @@ export interface Product {
   brand?: string | null;
   imageUrl: string;
   enhancedImageUrl?: string | null;
+  storeName?: string | null;
+  source?: string | null;
+  platformType?: string | null;
   price?: number | null;
   originalPrice?: number | null;
   description?: string | null;

@@ -12,6 +12,8 @@ import {
 } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { ProductImage } from "./ProductImage";
+import { StoreLogo, detectStoreKey } from "./StoreLogos";
 
 export function TrendingProducts() {
   const router = useRouter();
@@ -168,11 +170,14 @@ export function TrendingProducts() {
 
                 {/* Imagem do Produto */}
                 <div className="relative aspect-square w-full bg-white p-6 flex items-center justify-center overflow-hidden">
-                  <img
+                  <ProductImage
                     src={product.imageUrl}
+                    enhancedSrc={product.enhancedImageUrl}
                     alt={product.name}
+                    store={detectStoreKey(product)}
+                    category={product.category}
                     className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
+                    containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
                   />
                   {discount > 0 && (
                     <span className="absolute bottom-3 right-3 bg-red-600 text-white font-black text-[11px] px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1">
