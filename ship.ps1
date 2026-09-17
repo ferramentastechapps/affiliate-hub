@@ -35,11 +35,15 @@ git push origin $Branch
 
 Write-Host "Atualizacao enviada ao Github com sucesso!" -ForegroundColor Green
 
-Write-Host "Iniciando build local (para nao travar a VPS)..." -ForegroundColor Cyan
-npm run build
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Erro no build local. Abortando." -ForegroundColor Red
-    exit 1
+if ($env:SKIP_BUILD -eq "1" -or $env:SKIP_BUILD -eq "true") {
+    Write-Host "Pulando build local (SKIP_BUILD ativo)..." -ForegroundColor Yellow
+} else {
+    Write-Host "Iniciando build local (para nao travar a VPS)..." -ForegroundColor Cyan
+    npm run build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Erro no build local. Abortando." -ForegroundColor Red
+        exit 1
+    }
 }
 
 Write-Host "Compactando a pasta .next e arquivos do PWA..." -ForegroundColor Cyan

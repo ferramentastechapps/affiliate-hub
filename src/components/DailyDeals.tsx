@@ -347,9 +347,9 @@ export function DailyDeals() {
           ))}
         </div>
         {/* Cards skeleton */}
-        <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[108px] skeleton rounded-xl" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="aspect-[3/4] skeleton rounded-xl" />
           ))}
         </div>
       </div>
@@ -360,7 +360,7 @@ export function DailyDeals() {
 
   return (
     <section
-      className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-0 mb-10"
+      className="w-full max-w-[1400px] mx-auto px-2.5 sm:px-4 md:px-8 pt-0 mb-10"
       onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
     >
       {/* ── FILTER TABS ── */}
@@ -444,7 +444,7 @@ export function DailyDeals() {
 
       {/* ── DEAL LIST ── */}
       {filteredProducts.length > 0 && (
-        <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {displayProducts.map((product, index) => {
             const price = product.price || 0;
             const originalPrice = (product as any).originalPrice || 0;
@@ -526,196 +526,181 @@ export function DailyDeals() {
                 key={product.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (index % 6) * 0.03 }}
+                transition={{ delay: (index % 8) * 0.03 }}
                 onClick={() =>
                   router.push(`/produto/${product.shortId || product.id}`)
                 }
-                className="deal-card cursor-pointer group overflow-hidden"
+                className="deal-card cursor-pointer group overflow-hidden flex flex-col"
               >
-                {/* ── MAIN ROW ── */}
-                <div className="flex items-stretch">
-                  {/* Image container: clean white background, crisp square box */}
-                  <div className="relative w-[92px] md:w-[106px] shrink-0 bg-white m-2.5 mr-0 rounded-xl overflow-hidden flex items-center justify-center self-center aspect-square shadow-sm">
-                    <ProductImage
-                      src={product.imageUrl}
-                      enhancedSrc={product.enhancedImageUrl}
-                      alt={product.name}
-                      store={storeKey}
-                      category={product.category}
-                      className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-                      containerClassName="w-full h-full flex items-center justify-center"
-                    />
-                    {discount > 0 && (
-                      <span className="absolute top-1.5 left-1.5 bg-[#ff334b] text-white text-[10px] font-black px-1.5 py-0.5 rounded leading-none shadow-sm">
-                        -{discount}%
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Content container */}
-                  <div className="flex flex-col flex-1 py-2.5 px-3 min-w-0 justify-between">
-                    {/* Top Row: Store Badge + Temperature + Time */}
-                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.07] text-[11px] font-semibold text-zinc-300">
-                        <StoreLogo
-                          store={storeKey}
-                          className="w-4 h-4 rounded-sm shrink-0"
-                        />
-                        <span className="truncate max-w-[85px]">{storeInfo.label}</span>
-                      </span>
-
-                      {/* Deal Hotness / Temperature Score */}
-                      <span
-                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${tempResult.textColorClass} bg-white/[0.04]`}
-                      >
-                        <Flame size={11} weight="fill" />
-                        {tempResult.formattedTemperature}
-                      </span>
-
-                      <span className="text-[#6b7280] text-[10px] ml-auto shrink-0 flex items-center gap-0.5">
-                        <Clock size={10} weight="bold" />{" "}
-                        {getTimeAgo(product.createdAt)}
-                      </span>
-                    </div>
-
-                    {/* Product Name */}
-                    <p className="text-[13px] md:text-[13.5px] font-medium text-[#e2e4e9] leading-snug line-clamp-2 mb-1 group-hover:text-white transition-colors">
-                      {product.name}
-                    </p>
-
-                    {/* Highlights row: Coupon / Lowest Price */}
-                    <div className="flex flex-wrap gap-1 mb-1.5">
-                      {(product as any).isLowestPriceEver && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/25 text-teal-400 text-[9.5px] font-bold">
-                          🏆 Menor preço
-                        </span>
-                      )}
-                      {displayCoupon && (
-                        <button
-                          onClick={(e) => copyCoupon(e, displayCoupon, product.id)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[9.5px] font-bold active:scale-95 transition-all"
-                          title="Clique para copiar cupom"
-                        >
-                          {copiedCouponId === product.id ? (
-                            <>
-                              <Check size={10} weight="bold" className="text-emerald-400" />
-                              <span className="text-emerald-400">Copiado!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Tag size={9} weight="fill" className="shrink-0" />
-                              <span className="max-w-[100px] truncate">
-                                Cupom: {displayCoupon}
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Price row */}
-                    <div className="flex items-end gap-2 mt-auto">
-                      {price > 0 ? (
-                        <>
-                          <span className="text-[16px] md:text-[17px] font-bold text-[#ff334b] leading-none">
-                            {fmt(price)}
-                          </span>
-                          {discount > 0 && (
-                            <span className="text-[11px] text-[#6b7280] line-through leading-none pb-px">
-                              {fmt(originalPrice)}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-[13px] font-semibold text-white">
-                          Ver oferta
-                        </span>
-                      )}
-
-                      {/* Action Chevron */}
-                      <span className="ml-auto flex-shrink-0 w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] group-hover:border-[#ff334b]/30 group-hover:bg-[#ff334b]/10 transition-all">
-                        <ArrowUpRight size={14} weight="bold" />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── FOOTER ACTIONS (Likes, Comments, Favorites) ── */}
-                <div
-                  className="flex items-center gap-3 px-3 py-1.5 border-t border-white/[0.05] bg-white/[0.01]"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Upvote */}
-                  <button
-                    onClick={() => handleVote("LIKE")}
-                    className={`flex items-center gap-1 text-[11px] font-semibold transition-colors py-1 ${
-                      userVote === "LIKE"
-                        ? "text-emerald-400"
-                        : "text-[#8e92a4] hover:text-emerald-400"
-                    }`}
-                    title="Votar positivo"
-                  >
-                    <ThumbsUp
-                      size={13}
-                      weight={userVote === "LIKE" ? "fill" : "regular"}
-                    />
-                    {product._count?.likes || 0}
-                  </button>
-
-                  {/* Downvote */}
-                  <button
-                    onClick={() => handleVote("DISLIKE")}
-                    className={`flex items-center gap-1 text-[11px] font-semibold transition-colors py-1 ${
-                      userVote === "DISLIKE"
-                        ? "text-red-400"
-                        : "text-[#8e92a4] hover:text-red-400"
-                    }`}
-                    title="Votar negativo"
-                  >
-                    <ThumbsDown
-                      size={13}
-                      weight={userVote === "DISLIKE" ? "fill" : "regular"}
-                    />
-                    {product._count?.dislikes || 0}
-                  </button>
-
-                  {/* Comments */}
-                  <button
-                    onClick={() =>
-                      router.push(`/produto/${product.shortId || product.id}#comments`)
-                    }
-                    className="flex items-center gap-1 text-[11px] font-semibold text-[#8e92a4] hover:text-white transition-colors py-1"
-                    title="Ver comentários"
-                  >
-                    <ChatCircle size={13} weight="regular" />
-                    {product._count?.comments || 0}
-                  </button>
-
-                  {/* Favorite / Bookmark */}
+                {/* ── TOP IMAGE CONTAINER ── */}
+                <div className="relative w-full aspect-square bg-white overflow-hidden flex items-center justify-center p-2.5 sm:p-3">
+                  <ProductImage
+                    src={product.imageUrl}
+                    enhancedSrc={product.enhancedImageUrl}
+                    alt={product.name}
+                    store={storeKey}
+                    category={product.category}
+                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                    containerClassName="w-full h-full flex items-center justify-center"
+                  />
+                  {discount > 0 && (
+                    <span className="absolute top-2 left-2 z-10 bg-[#ff334b] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded leading-none shadow-sm">
+                      -{discount}%
+                    </span>
+                  )}
+                  {/* Favorite button */}
                   <button
                     onClick={(e) => toggleFavorite(product.id, e)}
-                    className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ml-auto py-1 ${
+                    className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                       favoriteIds.has(product.id)
-                        ? "text-rose-400"
-                        : "text-[#8e92a4] hover:text-rose-400"
+                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                        : "bg-black/35 hover:bg-black/55 text-white/90 hover:text-white backdrop-blur-xs"
                     }`}
                     title="Salvar oferta"
                   >
                     <Heart
                       size={14}
-                      weight={favoriteIds.has(product.id) ? "fill" : "regular"}
+                      weight={favoriteIds.has(product.id) ? "fill" : "bold"}
                     />
                   </button>
+                </div>
 
-                  {/* Ver mais */}
-                  <button
-                    onClick={() =>
-                      router.push(`/produto/${product.shortId || product.id}`)
-                    }
-                    className="flex items-center gap-0.5 text-[11px] font-semibold text-white hover:text-[#ff334b] transition-colors py-1 pl-1"
-                  >
-                    Ver <ArrowRight size={10} weight="bold" className="text-[#ff334b]" />
-                  </button>
+                {/* ── CARD BODY ── */}
+                <div className="flex flex-col flex-1 p-2.5 sm:p-3 justify-between">
+                  {/* Store Badge + Hotness */}
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.07] text-[10px] sm:text-[11px] font-semibold text-zinc-300 truncate max-w-[95px] sm:max-w-[120px]">
+                      <StoreLogo
+                        store={storeKey}
+                        className="w-3.5 h-3.5 rounded-sm shrink-0"
+                      />
+                      <span className="truncate">{storeInfo.label}</span>
+                    </span>
+
+                    <span
+                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] sm:text-[10px] font-bold ${tempResult.textColorClass} bg-white/[0.04] shrink-0`}
+                    >
+                      <Flame size={10} weight="fill" />
+                      {tempResult.formattedTemperature}
+                    </span>
+                  </div>
+
+                  {/* Product Name */}
+                  <p className="text-[12px] sm:text-[13px] font-medium text-[#e2e4e9] leading-snug line-clamp-2 min-h-[32px] sm:min-h-[36px] mb-1.5 group-hover:text-white transition-colors">
+                    {product.name}
+                  </p>
+
+                  {/* Highlights (Menor Preço / Cupom) */}
+                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[20px]">
+                    {(product as any).isLowestPriceEver && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/25 text-teal-400 text-[9px] sm:text-[9.5px] font-bold">
+                        🏆 Menor preço
+                      </span>
+                    )}
+                    {displayCoupon && (
+                      <button
+                        onClick={(e) => copyCoupon(e, displayCoupon, product.id)}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[9px] sm:text-[9.5px] font-bold active:scale-95 transition-all truncate max-w-full"
+                        title="Clique para copiar cupom"
+                      >
+                        {copiedCouponId === product.id ? (
+                          <>
+                            <Check size={9} weight="bold" className="text-emerald-400 shrink-0" />
+                            <span className="text-emerald-400 truncate">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Tag size={9} weight="fill" className="shrink-0" />
+                            <span className="truncate">Cupom: {displayCoupon}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Price Row */}
+                  <div className="mt-auto pt-1">
+                    {price > 0 ? (
+                      <div>
+                        {discount > 0 && (
+                          <span className="text-[10px] sm:text-[11px] text-[#6b7280] line-through leading-tight block">
+                            {fmt(originalPrice)}
+                          </span>
+                        )}
+                        <div className="flex items-baseline justify-between gap-1 mt-0.5">
+                          <span className="text-[15px] sm:text-[17px] font-extrabold text-[#ff334b] leading-tight">
+                            {fmt(price)}
+                          </span>
+                          <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] group-hover:border-[#ff334b]/30 group-hover:bg-[#ff334b]/10 transition-all">
+                            <ArrowUpRight size={13} weight="bold" />
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] sm:text-[13px] font-semibold text-white">
+                          Ver oferta
+                        </span>
+                        <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] transition-all">
+                          <ArrowUpRight size={13} weight="bold" />
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── FOOTER ACTIONS (Likes, Comments, Time) ── */}
+                <div
+                  className="flex items-center justify-between px-2.5 sm:px-3 py-1.5 border-t border-white/[0.05] bg-white/[0.01] text-[10px] sm:text-[11px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleVote("LIKE")}
+                      className={`flex items-center gap-0.5 font-semibold transition-colors py-0.5 ${
+                        userVote === "LIKE"
+                          ? "text-emerald-400"
+                          : "text-[#8e92a4] hover:text-emerald-400"
+                      }`}
+                      title="Votar positivo"
+                    >
+                      <ThumbsUp
+                        size={12}
+                        weight={userVote === "LIKE" ? "fill" : "regular"}
+                      />
+                      <span>{product._count?.likes || 0}</span>
+                    </button>
+                    <button
+                      onClick={() => handleVote("DISLIKE")}
+                      className={`flex items-center gap-0.5 font-semibold transition-colors py-0.5 ${
+                        userVote === "DISLIKE"
+                          ? "text-red-400"
+                          : "text-[#8e92a4] hover:text-red-400"
+                      }`}
+                      title="Votar negativo"
+                    >
+                      <ThumbsDown
+                        size={12}
+                        weight={userVote === "DISLIKE" ? "fill" : "regular"}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[#6b7280]">
+                    <button
+                      onClick={() =>
+                        router.push(`/produto/${product.shortId || product.id}#comments`)
+                      }
+                      className="flex items-center gap-0.5 font-semibold text-[#8e92a4] hover:text-white transition-colors py-0.5"
+                      title="Ver comentários"
+                    >
+                      <ChatCircle size={12} weight="regular" />
+                      <span>{product._count?.comments || 0}</span>
+                    </button>
+                    <span className="text-[9px] flex items-center gap-0.5">
+                      <Clock size={9} weight="bold" /> {getTimeAgo(product.createdAt)}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             );

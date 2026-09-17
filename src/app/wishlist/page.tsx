@@ -141,9 +141,9 @@ export default function WishlistPage() {
 
           {/* Conteúdo */}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
               {[1, 2, 3, 4].map(n => (
-                <div key={n} className="glass-3d-card rounded-3xl p-5 h-80 animate-pulse bg-white/5" />
+                <div key={n} className="glass-3d-card rounded-2xl sm:rounded-3xl p-3 sm:p-5 aspect-[3/4] animate-pulse bg-white/5" />
               ))}
             </div>
           ) : items.length === 0 ? (
@@ -170,7 +170,7 @@ export default function WishlistPage() {
               </Link>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
               <AnimatePresence>
                 {items.map((product) => {
                   const discount = product.originalPrice && product.price && product.originalPrice > product.price
@@ -186,10 +186,10 @@ export default function WishlistPage() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
-                      className="group cursor-pointer glass-3d-card rounded-[2rem] overflow-hidden flex flex-col border border-white/5 hover:border-accent/40 transition-all shadow-xl hover:shadow-2xl"
+                      className="group cursor-pointer glass-3d-card rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col border border-white/5 hover:border-accent/40 transition-all shadow-xl hover:shadow-2xl"
                     >
                       {/* Top Image */}
-                      <div className="relative aspect-[4/3] bg-white p-4 flex items-center justify-center overflow-hidden">
+                      <div className="relative aspect-square bg-white p-3 sm:p-4 flex items-center justify-center overflow-hidden">
                         <img
                           src={product.imageUrl}
                           alt={product.name}
@@ -197,8 +197,8 @@ export default function WishlistPage() {
                           onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
                         />
                         {discount > 0 && (
-                          <span className="absolute top-3 left-3 bg-red-600 text-white font-black text-xs px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1">
-                            <Tag size={12} weight="fill" />
+                          <span className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-red-600 text-white font-black text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 rounded-lg sm:rounded-xl shadow-md flex items-center gap-1">
+                            <Tag size={11} weight="fill" />
                             -{discount}%
                           </span>
                         )}
@@ -206,35 +206,35 @@ export default function WishlistPage() {
                         <button
                           onClick={(e) => handleRemove(product.id, e)}
                           title="Remover dos favoritos"
-                          className="absolute top-3 right-3 p-2 rounded-xl bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md transition-all shadow-md z-10"
+                          className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md transition-all shadow-md z-10"
                         >
-                          <Trash size={16} weight="bold" />
+                          <Trash size={14} weight="bold" />
                         </button>
                       </div>
 
                       {/* Info Body */}
-                      <div className="p-5 flex flex-col flex-1">
+                      <div className="p-3 sm:p-5 flex flex-col flex-1">
                         <span className="text-[10px] font-bold text-accent uppercase tracking-widest mb-1 truncate">
                           {product.category || "Oferta"}
                         </span>
-                        <h3 className="text-sm font-semibold text-zinc-200 line-clamp-2 mb-4 group-hover:text-white transition-colors leading-snug">
+                        <h3 className="text-xs sm:text-sm font-semibold text-zinc-200 line-clamp-2 mb-2 sm:mb-4 group-hover:text-white transition-colors leading-snug">
                           {product.name}
                         </h3>
 
-                        <div className="mt-auto pt-3 border-t border-white/5 flex items-end justify-between">
+                        <div className="mt-auto pt-2 sm:pt-3 border-t border-white/5 flex items-end justify-between">
                           <div>
-                            <div className="text-lg font-black text-white leading-tight">
+                            <div className="text-sm sm:text-lg font-black text-white leading-tight">
                               {formatCurrency(product.price)}
                             </div>
                             {discount > 0 && (
-                              <span className="text-xs text-zinc-500 line-through">
+                              <span className="text-[10px] sm:text-xs text-zinc-500 line-through">
                                 {formatCurrency(product.originalPrice)}
                               </span>
                             )}
                           </div>
 
-                          <span className="text-xs font-bold text-accent group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                            Ver detalhes <ArrowRight size={14} weight="bold" />
+                          <span className="text-[10px] sm:text-xs font-bold text-accent group-hover:translate-x-1 transition-transform flex items-center gap-0.5 sm:gap-1">
+                            Ver <ArrowRight size={12} weight="bold" />
                           </span>
                         </div>
                       </div>
