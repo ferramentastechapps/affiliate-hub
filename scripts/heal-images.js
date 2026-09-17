@@ -65,7 +65,18 @@ async function main() {
       continue;
     }
 
-    const clean = p.name.replace(/[\(\)\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+    // Limpa o nome para pegar as palavras-chave principais
+    const clean = p.name
+      .replace(/[\(\)\[\]]/g, ' ')
+      .replace(/[^\w\sÀ-ú]/gi, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+      .slice(0, 6)
+      .join(' ')
+      .trim();
+
+    await new Promise((r) => setTimeout(r, 1200));
+
     const results = await searchDDG(clean);
     if (results && results.length > 0 && results[0].image) {
       const img = results[0].image;
