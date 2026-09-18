@@ -109,6 +109,11 @@ loadState();
 function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
     return new Promise((resolve) => {
         try {
+            if (!imageUrl) return resolve(null);
+            if (imageUrl.startsWith('/')) {
+                const siteBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.AFFILIATE_HUB_URL || 'https://economizei.ftech-apps.com.br';
+                imageUrl = `${siteBase.replace(/\/$/, '')}${imageUrl}`;
+            }
             const protocol = imageUrl.startsWith('https') ? https : http;
             const req = protocol.get(imageUrl, {
                 headers: {
@@ -541,15 +546,27 @@ async function sendOfferMessage(targetChatId, offer) {
         console.log(`🖼️ Baixando imagem via Node.js: ${offer.imageUrl}`);
         const imgData = await downloadImageAsBase64(offer.imageUrl);
         if (imgData) {
+            // Tentativa 1: Enviar foto com legenda e linkPreview desativado (evita bug de memoize/getter no WA Web)
             try {
                 const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
-                await client.sendMessage(targetChatId, media, { caption: offer.message });
+                await client.sendMessage(targetChatId, media, { caption: offer.message, linkPreview: false });
                 sentWithMedia = true;
                 console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
                 addLog('info', 'Mensagem com imagem enviada com sucesso!');
             } catch (imgErr) {
-                console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
-                addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', imgErr.message);
+                console.warn('⚠️ Falha ao enviar foto com legenda unificada:', imgErr.message);
+                // Tentativa 2: Enviar a foto pura primeiro (sem legenda para evitar conflito de preview/memoize do WA Web)
+                try {
+                    const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
+                    await client.sendMessage(targetChatId, media, { linkPreview: false });
+                    await client.sendMessage(targetChatId, offer.message, { linkPreview: false });
+                    sentWithMedia = true;
+                    console.log('🚀 Imagem enviada separada do texto com sucesso!');
+                    addLog('info', 'Imagem enviada separada do texto com sucesso!');
+                } catch (sepErr) {
+                    console.error('❌ Falha total ao enviar mídia via WhatsApp:', sepErr.message);
+                    addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', sepErr.message);
+                }
             }
         } else {
             console.log('⚠️ Imagem não disponível, enviando só texto.');
@@ -557,7 +574,7 @@ async function sendOfferMessage(targetChatId, offer) {
     }
 
     if (!sentWithMedia) {
-        await client.sendMessage(targetChatId, offer.message);
+        await client.sendMessage(targetChatId, offer.message, { linkPreview: false });
         console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
         addLog('info', 'Mensagem (somente texto) enviada com sucesso!');
     }

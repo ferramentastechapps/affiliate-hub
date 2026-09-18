@@ -940,6 +940,10 @@ OU
                         print(f'⚠️ Erro ao obter URL da imagem do Telegram para o WhatsApp: {e}')
                         foto_img = None
 
+                # Se for caminho relativo (/enhanced/...), garantir URL pública completa
+                if foto_img and foto_img.startswith('/'):
+                    foto_img = f"{base_url}{foto_img}"
+
                 payload = {
                     'message': whatsapp_text,
                     'score': score_wpp,

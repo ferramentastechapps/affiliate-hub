@@ -25,6 +25,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br';
+    const rawImage = product.enhancedImageUrl || product.imageUrl;
+    const shareImage = rawImage?.startsWith('/')
+      ? `${siteUrl}${rawImage}`
+      : (rawImage || `${siteUrl}/placeholder.webp`);
 
     return {
       title: `${product.name} | Economizei`,
@@ -32,15 +36,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       openGraph: {
         title: product.name,
         description: product.description || `Compre ${product.name} com o melhor preço`,
-        images: [{ url: product.imageUrl }],
+        images: [{ url: shareImage }],
         type: 'website',
-        url: `${siteUrl}/produto/${product.shortId}`,
+        url: `${siteUrl}/produto/${product.shortId || product.id}`,
       },
       twitter: {
         card: 'summary_large_image',
         title: product.name,
         description: product.description || `Compre ${product.name} com o melhor preço`,
-        images: [product.imageUrl],
+        images: [shareImage],
       },
     };
   } catch (error) {
