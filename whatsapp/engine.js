@@ -5,6 +5,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const https = require('https');
 const http = require('http');
 
@@ -103,10 +104,12 @@ function loadState() {
 loadState();
 
 /**
- * Baixa uma imagem via Node.js nativo (NÃO dentro do Puppeteer).
- * Retorna null se falhar. Evita o erro "Runtime.callFunctionOn timed out".
+ * Baixa uma imagem via Node.js e salva em arquivo temporário.
+ * Usa fromFilePath() para evitar o bug "Data passed to getter" do whatsapp-web.js
+ * que ocorre ao serializar base64 em memória para grupos LID.
+ * Retorna { filePath, mimeType } ou null se falhar.
  */
-function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
+function downloadImageToFile(imageUrl, timeoutMs = 20000) {
     return new Promise((resolve) => {
         try {
             if (!imageUrl) return resolve(null);
@@ -123,7 +126,7 @@ function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
                 timeout: timeoutMs
             }, (res) => {
                 if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    return resolve(downloadImageAsBase64(res.headers.location, timeoutMs));
+                    return resolve(downloadImageToFile(res.headers.location, timeoutMs));
                 }
                 if (res.statusCode !== 200) {
                     console.warn(`⚠️ Download de imagem retornou status ${res.statusCode}: ${imageUrl}`);
@@ -131,14 +134,13 @@ function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
                 }
                 const contentType = res.headers['content-type'] || 'image/jpeg';
                 const mimeType = contentType.split(';')[0].trim();
-                const chunks = [];
-                res.on('data', chunk => chunks.push(chunk));
-                res.on('end', () => {
-                    const buffer = Buffer.concat(chunks);
-                    resolve({ base64: buffer.toString('base64'), mimeType });
-                });
-                res.on('error', (err) => {
-                    console.warn('⚠️ Erro ao ler stream da imagem:', err.message);
+                const ext = mimeType.includes('png') ? '.png' : mimeType.includes('webp') ? '.webp' : '.jpg';
+                const tmpPath = path.join(os.tmpdir(), `wa_promo_${Date.now()}${ext}`);
+                const fileStream = fs.createWriteStream(tmpPath);
+                res.pipe(fileStream);
+                fileStream.on('finish', () => resolve({ filePath: tmpPath, mimeType }));
+                fileStream.on('error', (err) => {
+                    console.warn('⚠️ Erro ao gravar imagem em disco:', err.message);
                     resolve(null);
                 });
             });
@@ -156,6 +158,11 @@ function downloadImageAsBase64(imageUrl, timeoutMs = 20000) {
             resolve(null);
         }
     });
+}
+
+/** Remove arquivo temporário silenciosamente */
+function cleanupTempFile(filePath) {
+    try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
 }
 
 // Helper para buscar proxy aleatório da Webshare
@@ -542,31 +549,39 @@ async function resolveTargetChatId(groupId, groupName) {
 
 async function sendOfferMessage(targetChatId, offer) {
     let sentWithMedia = false;
+    let tmpFilePath = null;
+
     if (offer.imageUrl) {
-        console.log(`🖼️ Baixando imagem via Node.js: ${offer.imageUrl}`);
-        const imgData = await downloadImageAsBase64(offer.imageUrl);
+        console.log(`🖼️ Baixando imagem para arquivo temp: ${offer.imageUrl}`);
+        const imgData = await downloadImageToFile(offer.imageUrl);
+
         if (imgData) {
-            // Tentativa 1: Enviar foto com legenda e linkPreview desativado (evita bug de memoize/getter no WA Web)
+            tmpFilePath = imgData.filePath;
+            // Usar fromFilePath evita o bug "Data passed to getter" ao serializar base64 internamente
+            // Tentativa 1: foto + legenda juntas
             try {
-                const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
-                await client.sendMessage(targetChatId, media, { caption: offer.message, linkPreview: false });
+                const media = MessageMedia.fromFilePath(tmpFilePath);
+                await client.sendMessage(targetChatId, media, { caption: offer.message, sendMediaAsDocument: false, linkPreview: false });
                 sentWithMedia = true;
                 console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
                 addLog('info', 'Mensagem com imagem enviada com sucesso!');
             } catch (imgErr) {
-                console.warn('⚠️ Falha ao enviar foto com legenda unificada:', imgErr.message);
-                // Tentativa 2: Enviar a foto pura primeiro (sem legenda para evitar conflito de preview/memoize do WA Web)
+                console.warn('⚠️ Falha ao enviar foto com legenda:', imgErr.message);
+                // Tentativa 2: foto separada do texto
                 try {
-                    const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
-                    await client.sendMessage(targetChatId, media, { linkPreview: false });
+                    const media = MessageMedia.fromFilePath(tmpFilePath);
+                    await client.sendMessage(targetChatId, media, { sendMediaAsDocument: false, linkPreview: false });
+                    await new Promise(r => setTimeout(r, 1500));
                     await client.sendMessage(targetChatId, offer.message, { linkPreview: false });
                     sentWithMedia = true;
-                    console.log('🚀 Imagem enviada separada do texto com sucesso!');
-                    addLog('info', 'Imagem enviada separada do texto com sucesso!');
+                    console.log('🚀 Imagem e texto enviados separadamente com sucesso!');
+                    addLog('info', 'Imagem e texto enviados separadamente com sucesso!');
                 } catch (sepErr) {
-                    console.error('❌ Falha total ao enviar mídia via WhatsApp:', sepErr.message);
-                    addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', sepErr.message);
+                    console.error('❌ Falha total ao enviar mídia:', sepErr.message);
+                    addLog('error', 'Falha ao enviar imagem. Usando fallback texto.', sepErr.message);
                 }
+            } finally {
+                cleanupTempFile(tmpFilePath);
             }
         } else {
             console.log('⚠️ Imagem não disponível, enviando só texto.');
