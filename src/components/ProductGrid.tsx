@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ProductCard, type Product } from "./ProductCard";
 import { PlatformModal } from "./PlatformModal";
@@ -133,7 +134,24 @@ const fallbackProducts: Product[] = [
   }
 ];
 
-import { useRouter } from "next/navigation";
+function formatApiProduct(p: any): Product {
+  return {
+    id: p.id,
+    shortId: p.shortId,
+    name: p.name,
+    category: p.category,
+    imageUrl: p.imageUrl,
+    description: p.description,
+    coupons: p.coupons || [],
+    links: {
+      amazon: p.links?.amazon,
+      mercadoLivre: p.links?.mercadoLivre,
+      shopee: p.links?.shopee,
+      aliexpress: p.links?.aliexpress,
+      tiktok: p.links?.tiktok,
+    },
+  };
+}
 
 export function ProductGrid() {
   const router = useRouter();
@@ -142,47 +160,34 @@ export function ProductGrid() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    let isMounted = true;
 
-  async function fetchProducts() {
-    try {
-      const res = await fetch("/api/products");
-      const data = await res.json();
-      
-      if (Array.isArray(data)) {
-        if (data.length === 0) {
-          setProducts([]);
-        } else {
-          const formattedProducts = data.map((p: any) => ({
-            id: p.id,
-            shortId: p.shortId,
-            name: p.name,
-            category: p.category,
-            imageUrl: p.imageUrl,
-            description: p.description,
-            coupons: p.coupons || [],
-            links: {
-              amazon: p.links?.amazon,
-              mercadoLivre: p.links?.mercadoLivre,
-              shopee: p.links?.shopee,
-              aliexpress: p.links?.aliexpress,
-              tiktok: p.links?.tiktok,
-            }
-          }));
-          setProducts(formattedProducts);
+    async function loadProducts() {
+      try {
+        const res = await fetch("/api/products");
+        const data = await res.json();
+        
+        if (isMounted) {
+          if (Array.isArray(data)) {
+            setProducts(data.map(formatApiProduct));
+          } else {
+            console.error("Erro da API. Resposta não é array:", data);
+            setProducts([]);
+          }
         }
-      } else {
-        console.error("Erro da API. Resposta não é array:", data);
-        setProducts([]);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        if (isMounted) setProducts([]);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (error) {
-      console.error("Erro real na hora de dar o fetch:", error);
-      setProducts([]);
-    } finally {
-      setLoading(false);
     }
-  }
+
+    loadProducts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   if (loading) {
     return (

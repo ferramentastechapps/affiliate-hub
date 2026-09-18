@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 export interface UserProfile {
   id: string;
@@ -30,28 +30,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Busca a sessão atual no banco de dados ao iniciar a página (mount)
   useEffect(() => {
+    let isMounted = true;
     async function checkSession() {
       try {
         const response = await fetch('/api/auth/me');
         if (response.ok) {
           const data = await response.json();
-          if (data && data.user) {
+          if (isMounted && data && data.user) {
             setUser(data.user);
           }
         }
       } catch (err) {
         console.error('Falha ao checar sessão ativa:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
     checkSession();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const clearError = () => setError(null);
+  const clearError = useCallback(() => setError(null), []);
 
   // Lógica de login com E-mail e Senha tradicional
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setError(null);
     try {
       const response = await fetch('/api/auth/login', {
@@ -77,10 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError('Erro de conexão com o servidor');
       return false;
     }
-  };
+  }, []);
 
   // Lógica de cadastro (Sign-up) tradicional
-  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+  const signup = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
     setError(null);
     try {
       const response = await fetch('/api/auth/signup', {
@@ -106,10 +112,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError('Erro de conexão com o servidor');
       return false;
     }
-  };
+  }, []);
 
   // Lógica de login com credencial obtida do Google OAuth (Front)
-  const loginWithGoogle = async (credential: string): Promise<boolean> => {
+  const loginWithGoogle = useCallback(async (credential: string): Promise<boolean> => {
     setError(null);
     try {
       const response = await fetch('/api/auth/google', {
@@ -135,10 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError('Erro ao autenticar com servidores do Google');
       return false;
     }
-  };
+  }, []);
 
   // Lógica de Logout
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (err) {
@@ -147,21 +153,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setError(null);
     }
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      error,
+      login,
+      signup,
+      loginWithGoogle,
+      logout,
+      clearError,
+    }),
+    [user, loading, error, login, signup, loginWithGoogle, logout, clearError]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        error,
-        login,
-        signup,
-        loginWithGoogle,
-        logout,
-        clearError,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

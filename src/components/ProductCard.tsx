@@ -25,21 +25,28 @@ type ProductCardProps = {
   onClick: (product: Product) => void;
 };
 
+const CARD_FALLBACK_IMAGE = "/placeholder.webp";
+
+function isUsableImageUrl(url?: string | null): boolean {
+  return Boolean(url && url !== CARD_FALLBACK_IMAGE && !url.includes("unavailable"));
+}
+
+function resolveProductCardImage(
+  imageUrl: string,
+  enhancedImageUrl?: string | null,
+  hasError = false
+): string {
+  if (hasError) return CARD_FALLBACK_IMAGE;
+  if (isUsableImageUrl(imageUrl)) return imageUrl;
+  if (isUsableImageUrl(enhancedImageUrl)) return enhancedImageUrl!;
+  return CARD_FALLBACK_IMAGE;
+}
+
 export function ProductCard({ product, onClick }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
-  const fallbackImage = "/placeholder.webp";
 
-  const isGood = (url?: string | null) =>
-    url && url !== "/placeholder.webp" && !url.includes("unavailable");
-
-  const displaySrc = imageError
-    ? fallbackImage
-    : isGood(product.imageUrl)
-      ? product.imageUrl
-      : isGood(product.enhancedImageUrl)
-        ? product.enhancedImageUrl!
-        : fallbackImage;
+  const displaySrc = resolveProductCardImage(product.imageUrl, product.enhancedImageUrl, imageError);
 
   useEffect(() => {
     try {

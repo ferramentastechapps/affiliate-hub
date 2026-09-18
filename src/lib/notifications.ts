@@ -63,77 +63,114 @@ export async function verificarEDispararAlertas(
   }
 }
 
+export interface AlertWithRelations {
+  id: string;
+  userId: string;
+  productId: string;
+  channel: string;
+  threshold?: number | null;
+  lastNotifiedAt?: Date | null;
+  user: {
+    id: string;
+    name?: string | null;
+    telegramId?: string | null;
+  };
+  product: {
+    id: string;
+    shortId?: number | string | null;
+    name: string;
+    imageUrl?: string | null;
+  };
+}
+
+const PUSH_ALERT_TITLES = [
+  "Seu produto baixou de preço! 🔥",
+  "Um item da sua lista caiu de preço! 📉",
+  "Alerta de Desconto! 🚨",
+  "Aquele produto que você queria está mais barato! 🛍️"
+] as const;
+
+const PUSH_ALERT_BODIES_TEMPLATES = [
+  (name: string) => `${name} acabou de receber um desconto especial para você.`,
+  (name: string) => `Corra antes que acabe! ${name} entrou em promoção.`,
+  (name: string) => `Aproveite! Desconto aplicado em ${name}.`,
+  (name: string) => `${name} está mais barato agora. Corre pra ver!`
+] as const;
+
+function getRandomPushAlertContent(productName: string): { title: string; body: string } {
+  const title = PUSH_ALERT_TITLES[Math.floor(Math.random() * PUSH_ALERT_TITLES.length)];
+  const bodyFn = PUSH_ALERT_BODIES_TEMPLATES[Math.floor(Math.random() * PUSH_ALERT_BODIES_TEMPLATES.length)];
+  return { title, body: bodyFn(productName) };
+}
+
+async function dispatchTelegramAlert(alerta: AlertWithRelations, message: string): Promise<void> {
+  if (alerta.user.telegramId) {
+    console.log(`[Alerts] Enviando alerta via Telegram para o usuário ${alerta.user.name || alerta.user.id} (${alerta.user.telegramId})`);
+    await sendTelegramMessage(alerta.user.telegramId, message, alerta.product.imageUrl || undefined);
+  } else {
+    console.warn(`[Alerts] Usuário ${alerta.user.id} selecionou Telegram, mas não possui telegramId cadastrado.`);
+  }
+}
+
+async function dispatchPushAlert(alerta: AlertWithRelations): Promise<void> {
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: { userId: alerta.user.id }
+  });
+
+  if (subscriptions.length === 0) {
+    console.log(`[Alerts] Usuário ${alerta.user.id} selecionou Push, mas não possui inscrições de Web Push ativas.`);
+    return;
+  }
+
+  console.log(`[Alerts] Enviando alerta via Web Push para o usuário ${alerta.user.name || alerta.user.id} (${subscriptions.length} subs)`);
+  const { title, body } = getRandomPushAlertContent(alerta.product.name);
+
+  const pushPayload = JSON.stringify({
+    title,
+    body,
+    icon: alerta.product.imageUrl || '/icons/icon-192x192.png',
+    url: `/produto/${alerta.product.shortId || alerta.product.id}`,
+  });
+
+  await Promise.allSettled(
+    subscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          pushPayload
+        );
+      } catch (error: any) {
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          await prisma.pushSubscription.delete({ where: { endpoint: sub.endpoint } }).catch(() => {});
+        }
+      }
+    })
+  );
+}
+
 export async function dispararNotificacao(
-  alerta: any, // ProductAlert & { user: User, product: Product }
+  alerta: AlertWithRelations,
   precoAnterior: number,
   precoNovo: number,
   quedaPercent: number
 ) {
   const mensagem = formatarMensagemAlerta(alerta.product, precoAnterior, precoNovo, quedaPercent);
-  
+
   if (alerta.channel === 'telegram' || alerta.channel === 'both') {
-    if (alerta.user.telegramId) {
-      console.log(`[Alerts] Enviando alerta via Telegram para o usuário ${alerta.user.name} (${alerta.user.telegramId})`);
-      await sendTelegramMessage(alerta.user.telegramId, mensagem, alerta.product.imageUrl || undefined);
-    } else {
-      console.warn(`[Alerts] Usuário ${alerta.user.id} selecionou Telegram, mas não possui telegramId cadastrado.`);
-    }
+    await dispatchTelegramAlert(alerta, mensagem);
   }
-  
+
   if (alerta.channel === 'push' || alerta.channel === 'both') {
-    // Buscar inscrições push ativas para este usuário específico
-    const subscriptions = await prisma.pushSubscription.findMany({
-      where: { userId: alerta.user.id }
-    });
-    
-    if (subscriptions.length > 0) {
-      console.log(`[Alerts] Enviando alerta via Web Push para o usuário ${alerta.user.name} (${subscriptions.length} subs)`);
-      const titles = [
-        "Seu produto baixou de preço! 🔥",
-        "Um item da sua lista caiu de preço! 📉",
-        "Alerta de Desconto! 🚨",
-        "Aquele produto que você queria está mais barato! 🛍️"
-      ];
-      
-      const bodies = [
-        `${alerta.product.name} acabou de receber um desconto especial para você.`,
-        `Corra antes que acabe! ${alerta.product.name} entrou em promoção.`,
-        `Aproveite! Desconto aplicado em ${alerta.product.name}.`,
-        `${alerta.product.name} está mais barato agora. Corre pra ver!`
-      ];
-
-      const randomTitle = titles[Math.floor(Math.random() * titles.length)];
-      const randomBody = bodies[Math.floor(Math.random() * bodies.length)];
-
-      const pushPayload = JSON.stringify({
-        title: randomTitle,
-        body: randomBody,
-        icon: alerta.product.imageUrl || '/icons/icon-192x192.png',
-        url: `/produto/${alerta.product.shortId || alerta.product.id}`,
-      });
-      
-      await Promise.allSettled(
-        subscriptions.map(async (sub) => {
-          try {
-            await webpush.sendNotification(
-              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-              pushPayload
-            );
-          } catch (error: any) {
-            // Se a sub não for mais válida (410 Gone ou 404 Not Found), removemos
-            if (error.statusCode === 410 || error.statusCode === 404) {
-              await prisma.pushSubscription.delete({ where: { endpoint: sub.endpoint } }).catch(() => {});
-            }
-          }
-        })
-      );
-    } else {
-      console.log(`[Alerts] Usuário ${alerta.user.id} selecionou Push, mas não possui inscrições de Web Push ativas.`);
-    }
+    await dispatchPushAlert(alerta);
   }
 }
 
-function formatarMensagemAlerta(product: any, precoAnterior: number, precoNovo: number, quedaPercent: number) {
+function formatarMensagemAlerta(
+  product: AlertWithRelations['product'],
+  precoAnterior: number,
+  precoNovo: number,
+  quedaPercent: number
+): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://economizei.ftech-apps.com.br";
   const linkProduto = `${siteUrl.replace(/\/$/, '')}/produto/${product.shortId || product.id}`;
   

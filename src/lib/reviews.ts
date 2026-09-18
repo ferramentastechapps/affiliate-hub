@@ -19,13 +19,15 @@ function getMlAccessToken(): string | null {
   return process.env.ML_ACCESS_TOKEN || null;
 }
 
+const MLB_ITEM_ID_REGEX = /(MLB-?\d{8,15})/i;
+
 /**
  * Busca e salva as reviews de um produto do Mercado Livre usando a API Oficial.
  * API Endpoint: https://api.mercadolibre.com/reviews/item/{itemId}
  */
 export async function fetchAndSaveMLReviews(productId: string, mlUrl: string) {
   try {
-    const match = mlUrl.match(/(MLB-?\d{8,15})/i);
+    const match = mlUrl.match(MLB_ITEM_ID_REGEX);
     if (!match) {
       console.log(`[ML Reviews] Item ID não encontrado na URL: ${mlUrl}`);
       return;

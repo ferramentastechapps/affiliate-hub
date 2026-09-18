@@ -9,20 +9,22 @@ type ProductModalProps = {
   product?: any;
 };
 
+const INITIAL_PRODUCT_FORM = {
+  name: "",
+  category: "",
+  brand: "",
+  subcategory: "",
+  platformProductId: "",
+  description: "",
+  imageUrl: "",
+  enhancedImageUrl: "",
+  price: "",
+  couponLink: "",
+  isFixed: false,
+};
+
 export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    brand: "",
-    subcategory: "",
-    platformProductId: "",
-    description: "",
-    imageUrl: "",
-    enhancedImageUrl: "",
-    price: "",
-    couponLink: "",
-    isFixed: false,
-  });
+  const [formData, setFormData] = useState(INITIAL_PRODUCT_FORM);
 
   const [uploadingSite, setUploadingSite] = useState(false);
   const [uploadingLifestyle, setUploadingLifestyle] = useState(false);
@@ -102,19 +104,7 @@ export function ProductModal({ isOpen, onClose, product }: ProductModalProps) {
       handleSearchImages(product.name || "");
       setShowNewCategoryInput(false);
     } else {
-      setFormData({
-        name: "",
-        category: "",
-        brand: "",
-        subcategory: "",
-        platformProductId: "",
-        description: "",
-        imageUrl: "",
-        enhancedImageUrl: "",
-        price: "",
-        couponLink: "",
-        isFixed: false,
-      });
+      setFormData(INITIAL_PRODUCT_FORM);
       setProductLinks([]);
       setImages([]);
       setAlternativeImages([]);

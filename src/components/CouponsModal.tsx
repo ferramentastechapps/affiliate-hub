@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Tag, CaretLeft, Copy, Check } from "@phosphor-icons/react";
 
@@ -12,24 +12,45 @@ type Coupon = {
   platform: string;
 };
 
+const PLATFORM_DOMAIN_MAP: Record<string, string> = {
+  amazon: 'amazon.com.br',
+  mercadolivre: 'mercadolivre.com.br',
+  oboticario: 'boticario.com.br',
+  boticario: 'boticario.com.br',
+  deonibus: 'deonibus.com',
+  lg: 'lg.com',
+  shopee: 'shopee.com.br',
+  aliexpress: 'aliexpress.com',
+  ali: 'aliexpress.com',
+  tiktok: 'tiktok.com',
+  tiktokshop: 'tiktok.com',
+  kabum: 'kabum.com.br',
+  fastshop: 'fastshop.com.br',
+  nike: 'nike.com.br',
+  adidas: 'adidas.com.br',
+  netshoes: 'netshoes.com.br',
+  zattini: 'zattini.com.br',
+  magazine: 'magazineluiza.com.br',
+  magazineluiza: 'magazineluiza.com.br',
+  magalu: 'magazineluiza.com.br',
+};
+
 function getDomainFromPlatform(platform: string): string {
   const p = platform.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
-  if (p === 'amazon') return 'amazon.com.br';
-  if (p === 'mercadolivre') return 'mercadolivre.com.br';
-  if (p === 'oboticario' || p === 'boticario') return 'boticario.com.br';
-  if (p === 'deonibus') return 'deonibus.com';
-  if (p === 'lg') return 'lg.com';
-  if (p === 'shopee') return 'shopee.com.br';
-  if (p === 'aliexpress' || p === 'ali') return 'aliexpress.com';
-  if (p === 'tiktok' || p === 'tiktokshop') return 'tiktok.com';
-  if (p === 'kabum') return 'kabum.com.br';
-  if (p === 'fastshop') return 'fastshop.com.br';
-  if (p === 'nike') return 'nike.com.br';
-  if (p === 'adidas') return 'adidas.com.br';
-  if (p === 'netshoes') return 'netshoes.com.br';
-  if (p === 'zattini') return 'zattini.com.br';
-  if (p === 'magazine' || p === 'magazineluiza' || p === 'magalu') return 'magazineluiza.com.br';
-  return p + '.com.br';
+  return PLATFORM_DOMAIN_MAP[p] || `${p}.com.br`;
+}
+
+function normalizeCouponPlatform(rawPlatform: string): string {
+  const p = rawPlatform.toLowerCase().trim();
+  if (p.includes('mercado') || p === 'meli') return 'Mercado Livre';
+  if (p.includes('magalu') || p.includes('magazine')) return 'Magalu';
+  if (p.includes('boticario')) return 'O Boticário';
+  if (p.includes('shopee')) return 'Shopee';
+  if (p.includes('amazon')) return 'Amazon';
+  if (p.includes('aliexpress') || p === 'ali') return 'AliExpress';
+  if (p.includes('tiktok')) return 'TikTok Shop';
+  if (p.includes('kabum')) return 'KaBuM!';
+  return rawPlatform;
 }
 
 export function CouponsModal() {
@@ -39,6 +60,13 @@ export function CouponsModal() {
   const [platforms, setPlatforms] = useState<{name: string, count: number, coupons: Coupon[]}[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   // Sync hash and custom events to open the modal
   useEffect(() => {
@@ -62,61 +90,55 @@ export function CouponsModal() {
 
   // Control body scroll when modal is open
   useEffect(() => {
+    let isMounted = true;
+
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      if (allCoupons.length === 0) fetchCoupons(); // Load data when opened
+      if (allCoupons.length === 0) {
+        setLoading(true);
+        fetch("/api/coupons")
+          .then((r) => r.json())
+          .then((data: Coupon[]) => {
+            if (!isMounted || !Array.isArray(data)) return;
+
+            const unique: Coupon[] = [];
+            const byPlatform: Record<string, { count: number, coupons: Coupon[] }> = {};
+            
+            for (const c of data) {
+              const p = normalizeCouponPlatform(c.platform);
+              const coupon = { ...c, platform: p };
+              const upperCode = coupon.code.toUpperCase();
+              
+              if (!byPlatform[p]) byPlatform[p] = { count: 0, coupons: [] };
+
+              if (!byPlatform[p].coupons.find(existing => existing.code.toUpperCase() === upperCode)) {
+                unique.push(coupon);
+                byPlatform[p].coupons.push(coupon);
+                byPlatform[p].count++;
+              }
+            }
+
+            const plats = Object.entries(byPlatform)
+              .map(([name, d]) => ({ name, count: d.count, coupons: d.coupons }))
+              .sort((a, b) => b.count - a.count);
+
+            setAllCoupons(unique);
+            setPlatforms(plats);
+          })
+          .catch(console.error)
+          .finally(() => {
+            if (isMounted) setLoading(false);
+          });
+      }
     } else {
       document.body.style.overflow = "unset";
     }
+
     return () => {
+      isMounted = false;
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
-
-  const fetchCoupons = () => {
-    setLoading(true);
-    fetch("/api/coupons")
-      .then((r) => r.json())
-      .then((data: Coupon[]) => {
-        if (!Array.isArray(data)) return;
-
-        const unique: Coupon[] = [];
-        const byPlatform: Record<string, { count: number, coupons: Coupon[] }> = {};
-        
-        for (const c of data) {
-          let p = c.platform.toLowerCase().trim();
-          if (p.includes('mercado') || p === 'meli') p = 'Mercado Livre';
-          else if (p.includes('magalu') || p.includes('magazine')) p = 'Magalu';
-          else if (p.includes('boticario')) p = 'O Boticário';
-          else if (p.includes('shopee')) p = 'Shopee';
-          else if (p.includes('amazon')) p = 'Amazon';
-          else if (p.includes('aliexpress') || p === 'ali') p = 'AliExpress';
-          else if (p.includes('tiktok')) p = 'TikTok Shop';
-          else if (p.includes('kabum')) p = 'KaBuM!';
-          else p = c.platform;
-
-          const coupon = { ...c, platform: p };
-          const upperCode = coupon.code.toUpperCase();
-          
-          if (!byPlatform[p]) byPlatform[p] = { count: 0, coupons: [] };
-
-          if (!byPlatform[p].coupons.find(existing => existing.code.toUpperCase() === upperCode)) {
-            unique.push(coupon);
-            byPlatform[p].coupons.push(coupon);
-            byPlatform[p].count++;
-          }
-        }
-
-        const plats = Object.entries(byPlatform)
-          .map(([name, d]) => ({ name, count: d.count, coupons: d.coupons }))
-          .sort((a, b) => b.count - a.count);
-
-        setAllCoupons(unique);
-        setPlatforms(plats);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
+  }, [isOpen, allCoupons.length]);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -127,9 +149,14 @@ export function CouponsModal() {
   };
 
   const copyToClipboard = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopied(code);
-    setTimeout(() => setCopied(null), 2000);
+    try {
+      navigator.clipboard.writeText(code);
+      setCopied(code);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(null), 2000);
+    } catch (err) {
+      console.error("Erro ao copiar cupom:", err);
+    }
   };
 
   const activePlatformData = platforms.find((p) => p.name === activePlatform);

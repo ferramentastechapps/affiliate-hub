@@ -284,8 +284,44 @@ export function ProductsTab() {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => { 
-    fetchProducts(); 
-    fetchCategories();
+    let isMounted = true;
+
+    async function loadInitialData() {
+      try {
+        setLoading(true);
+        let endpoint = '/api/products?status=all';
+        
+        if (statusFilter === 'price-drops') {
+          endpoint = '/api/products?filter=price-drops';
+        } else if (statusFilter === 'best-to-post') {
+          endpoint = '/api/admin/products/best-to-post';
+        }
+        
+        const [productsRes, categoriesRes] = await Promise.allSettled([
+          fetch(endpoint),
+          fetch('/api/admin/categories')
+        ]);
+
+        if (isMounted && productsRes.status === 'fulfilled') {
+          const data = await productsRes.value.json();
+          setProducts(Array.isArray(data) ? data : []);
+        }
+
+        if (isMounted && categoriesRes.status === 'fulfilled') {
+          const catData = await categoriesRes.value.json();
+          if (Array.isArray(catData)) setCategories(catData);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados iniciais de produtos:", error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadInitialData();
+    return () => {
+      isMounted = false;
+    };
   }, [statusFilter]);
 
   async function fetchProducts() {
@@ -301,7 +337,7 @@ export function ProductsTab() {
       
       const res = await fetch(endpoint);
       const data = await res.json();
-      setProducts(data);
+      setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Erro ao buscar produtos:", error);
     } finally {

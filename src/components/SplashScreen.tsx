@@ -33,8 +33,6 @@ export function SplashScreen() {
     setShow(false);
   };
 
-  if (!show) return null;
-
   return (
     <AnimatePresence>
       {show && (

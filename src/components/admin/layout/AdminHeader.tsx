@@ -35,12 +35,19 @@ export function AdminHeader({ onMenuClick, mobileSidebarOpen }: AdminHeaderProps
       <div className="flex items-center space-x-2 sm:space-x-4">
         <div className="flex items-center space-x-2 sm:space-x-3 bg-zinc-900/50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-zinc-800">
           {user?.image ? (
-            <img src={user.image} alt={user.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" />
+            <img
+              src={user.image}
+              alt={user.name || "Avatar"}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
           ) : (
             <UserCircle className="w-7 h-7 sm:w-8 sm:h-8 text-zinc-400" />
           )}
           <div className="hidden sm:flex flex-col">
-            <span className="text-sm font-medium text-zinc-200 leading-none">{user?.name}</span>
+            <span className="text-sm font-medium text-zinc-200 leading-none">{user?.name || "Administrador"}</span>
             <span className="text-xs text-zinc-500 mt-1">{user?.role === 'admin' ? 'Administrador' : 'Moderador'}</span>
           </div>
         </div>

@@ -14,10 +14,10 @@ export async function validateImageUrl(url: string, timeoutMs: number = 2000): P
     return false;
   }
 
-  try {
-    const controller = new AbortController();
-    const timerId = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = new AbortController();
+  const timerId = setTimeout(() => controller.abort(), timeoutMs);
 
+  try {
     // Tenta primeiro com HEAD (mais rápido, sem baixar o corpo da imagem)
     let response: Response;
     try {
@@ -38,8 +38,6 @@ export async function validateImageUrl(url: string, timeoutMs: number = 2000): P
       });
     }
 
-    clearTimeout(timerId);
-
     if (!response.ok) {
       return false;
     }
@@ -58,5 +56,7 @@ export async function validateImageUrl(url: string, timeoutMs: number = 2000): P
   } catch (error) {
     // Captura timeout (AbortError), erro de conexão de rede ou URL inválida
     return false;
+  } finally {
+    clearTimeout(timerId);
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { House, Tag, Ticket, Bell, WhatsappLogo } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -16,7 +16,7 @@ type TabId = typeof TABS[number]["id"];
 
 export function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
   const [activeTab, setActiveTab] = useState<TabId>("inicio");
   const pathname = usePathname();
 
@@ -24,16 +24,16 @@ export function MobileBottomNav() {
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
-      if (currentY > lastScrollY && currentY > 80) {
+      if (currentY > lastScrollY.current && currentY > 80) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
       }
-      setLastScrollY(currentY);
+      lastScrollY.current = currentY;
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   useEffect(() => {
     const onCats = () => setActiveTab("categorias");

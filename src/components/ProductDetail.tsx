@@ -59,6 +59,90 @@ type LowestPriceInfo = {
   savings: number;
 } | null;
 
+const PLATFORM_LABELS: Record<string, string> = {
+  amazon: 'Amazon',
+  mercadoLivre: 'Mercado Livre',
+  shopee: 'Shopee',
+  aliexpress: 'AliExpress',
+  tiktok: 'TikTok',
+  magalu: 'Magalu',
+  kabum: 'KaBuM',
+  netshoes: 'Netshoes',
+};
+
+const KNOWN_LINK_FIELDS = Object.keys(PLATFORM_LABELS);
+
+const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const shortDateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
+
+export function formatBrl(val: number): string {
+  return brlFormatter.format(val);
+}
+
+export function formatShortDate(val: string | Date): string {
+  return shortDateFormatter.format(new Date(val));
+}
+
+function resolveTargetUrlAndPlatform(product: Product) {
+  let targetUrl = "";
+  let platformName = "";
+
+  if (product.productLinks && product.productLinks.length > 0) {
+    const pl = product.productLinks[0];
+    const url = pl.generatedAffiliateUrl || pl.affiliateUrl || pl.sourceUrl;
+    if (url) {
+      targetUrl = url;
+      platformName = PLATFORM_LABELS[pl.platform] || pl.platform;
+    }
+  }
+
+  if (!targetUrl && product.links) {
+    for (const key of KNOWN_LINK_FIELDS) {
+      const val = (product.links as any)[key];
+      if (typeof val === 'string' && val.length > 0) {
+        targetUrl = val;
+        platformName = PLATFORM_LABELS[key] || key;
+        break;
+      }
+    }
+  }
+
+  return { targetUrl, platformName };
+}
+
+function extractProductCouponAndConditions(product: Product) {
+  let displayCoupon = '';
+  if (product.coupons && product.coupons.length > 0) {
+    displayCoupon = product.coupons[0].code;
+  } else if (product.description?.includes('🎟️ CUPOM:')) {
+    displayCoupon = product.description.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
+  }
+
+  let condicoesMsg = "";
+  const desc = product.description || '';
+  let descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
+  descSemCupom = descSemCupom.replace(/Oferta na loja[^\n]+no[^\n]+/gi, '').trim();
+
+  if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
+    condicoesMsg = descSemCupom;
+  }
+
+  return { displayCoupon, condicoesMsg };
+}
+
+function resolveDetailMainImage(product: Product, currentImageIndex: number): string {
+  if (product.images && product.images.length > 0) {
+    return product.images[currentImageIndex]?.url || "/placeholder.webp";
+  }
+  if (product.imageUrl && product.imageUrl !== '/placeholder.webp' && !product.imageUrl.includes('unavailable')) {
+    return product.imageUrl;
+  }
+  if (product.enhancedImageUrl && product.enhancedImageUrl !== '/placeholder.webp' && !product.enhancedImageUrl.includes('unavailable')) {
+    return product.enhancedImageUrl;
+  }
+  return "/placeholder.webp";
+}
+
 export function ProductDetail({ product, lowestPriceInfo }: { product: Product; lowestPriceInfo?: LowestPriceInfo }) {
   const router = useRouter();
   const { user } = useAuth();
@@ -83,11 +167,12 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
 
   // Inicializa estado de favoritos (localStorage para visitantes + API se logado)
   useEffect(() => {
+    let isMounted = true;
     try {
       const stored = localStorage.getItem("economizei_favorites");
       if (stored) {
         const ids: string[] = JSON.parse(stored);
-        if (ids.includes(product.id)) {
+        if (ids.includes(product.id) && isMounted) {
           setIsFavorited(true);
         }
       }
@@ -97,12 +182,14 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
       fetch(`/api/favorites?productId=${product.id}`)
         .then(res => res.json())
         .then(data => {
-          if (typeof data.isFavorited === 'boolean') {
+          if (isMounted && typeof data.isFavorited === 'boolean') {
             setIsFavorited(data.isFavorited);
           }
         })
         .catch(() => {});
     }
+
+    return () => { isMounted = false; };
   }, [product.id, user]);
 
   async function handleToggleFavorite() {
@@ -138,10 +225,12 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
 
   // Load related products, votes and comments
   useEffect(() => {
+    let isMounted = true;
+
     fetch(`/api/products/${product.id}/similar?limit=8`)
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
+        if (isMounted && Array.isArray(data)) {
           setRelatedProducts(data);
         }
       })
@@ -150,20 +239,24 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
     fetch(`/api/products/${product.id}/vote`)
       .then(res => res.json())
       .then(data => {
-        if (!data.error) {
+        if (isMounted && !data.error) {
           setVotes({
             likes: data.likes,
             dislikes: data.dislikes,
             userVote: user ? data.votes?.find((v: any) => v.userId === user?.id)?.type || null : null
           });
         }
-      });
+      })
+      .catch(() => {});
 
     fetch(`/api/products/${product.id}/comments`)
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setComments(data);
-      });
+        if (isMounted && Array.isArray(data)) setComments(data);
+      })
+      .catch(() => {});
+
+    return () => { isMounted = false; };
   }, [product.id, user]);
 
   function requireAuth() {
@@ -225,47 +318,11 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
     window.open(`https://wa.me/?text=${text}`, '_blank');
   }
 
-  // Determine target platform — prefer productLinks over legacy links
-  const PLATFORM_LABELS: Record<string, string> = {
-    amazon: 'Amazon',
-    mercadoLivre: 'Mercado Livre',
-    shopee: 'Shopee',
-    aliexpress: 'AliExpress',
-    tiktok: 'TikTok',
-    magalu: 'Magalu',
-    kabum: 'KaBuM',
-    netshoes: 'Netshoes',
-  };
-  const KNOWN_LINK_FIELDS = Object.keys(PLATFORM_LABELS);
-
-  let targetUrl = "";
-  let platformName = "";
-
-  // 1. Try productLinks (newer, more complete)
-  if (product.productLinks && product.productLinks.length > 0) {
-    const pl = product.productLinks[0];
-    const url = pl.generatedAffiliateUrl || pl.affiliateUrl || pl.sourceUrl;
-    if (url) {
-      targetUrl = url;
-      platformName = PLATFORM_LABELS[pl.platform] || pl.platform;
-    }
-  }
-
-  // 2. Fallback to known legacy link fields only
-  if (!targetUrl && product.links) {
-    for (const key of KNOWN_LINK_FIELDS) {
-      const val = (product.links as any)[key];
-      if (typeof val === 'string' && val.length > 0) {
-        targetUrl = val;
-        platformName = PLATFORM_LABELS[key] || key;
-        break;
-      }
-    }
-  }
+  const { targetUrl, platformName } = resolveTargetUrlAndPlatform(product);
+  const { displayCoupon, condicoesMsg } = extractProductCouponAndConditions(product);
 
   function trackAffiliateClick(platform: string, productName: string, url: string) {
     try {
-      // Registrar no backend para os relatórios do painel
       fetch('/api/track/click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -316,25 +373,6 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
     ? "https://" + targetUrl 
     : targetUrl;
 
-  // Find coupon
-  let displayCoupon = '';
-  if (product.coupons && product.coupons.length > 0) {
-    displayCoupon = product.coupons[0].code;
-  } else if (product.description?.includes('🎟️ CUPOM:')) {
-    displayCoupon = product.description.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
-  }
-  
-  // Extrair regras e condições da descrição (antes do cupom se houver)
-  let condicoesMsg = "";
-  const desc = product.description || '';
-  let descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
-  // Limpar texto padrão do scraper (ex: "Oferta na loja Mercado Livre no Promobit")
-  descSemCupom = descSemCupom.replace(/Oferta na loja[^\n]+no[^\n]+/gi, '').trim();
-  
-  if (descSemCupom && descSemCupom !== 'Oferta encaminhada de grupos') {
-    condicoesMsg = descSemCupom;
-  }
-
 
   return (
     <main className="min-h-screen text-white pt-24 md:pt-28 pb-16">
@@ -348,88 +386,13 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
         </button>
 
         <div className="w-full glass-3d-card rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row shadow-2xl">
-          
-          {/* Image Section */}
-          <div className="relative w-full md:w-5/12 bg-white border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-6 lg:p-10 min-h-[300px] md:min-h-[450px] rounded-t-[2.5rem] md:rounded-l-[2.5rem] md:rounded-tr-none">
-            {price > 0 && discount > 0 && (
-              <motion.div 
-                initial={{ scale: 0, rotate: -10 }} 
-                animate={{ scale: 1, rotate: 0 }} 
-                className="absolute top-6 left-6 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-xl"
-              >
-                <Tag size={22} weight="fill" />
-                -{discount}%
-              </motion.div>
-            )}
-            
-            <div className="flex-1 flex items-center justify-center relative group">
-              {(product.images && product.images.length > 1) && (
-                <button 
-                  onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : product.images!.length - 1)}
-                  className="absolute left-0 z-20 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent focus:outline-none"
-                >
-                  <ArrowLeft size={20} weight="bold" />
-                </button>
-              )}
-
-              <motion.img 
-                key={currentImageIndex}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                src={
-                  product.images && product.images.length > 0 
-                    ? product.images[currentImageIndex].url 
-                    : (product.imageUrl && product.imageUrl !== '/placeholder.webp' && !product.imageUrl.includes('unavailable'))
-                      ? product.imageUrl
-                      : (product.enhancedImageUrl && product.enhancedImageUrl !== '/placeholder.webp' && !product.enhancedImageUrl.includes('unavailable'))
-                        ? product.enhancedImageUrl
-                        : "/placeholder.webp"
-                } 
-                alt={product.name}
-                className="w-full h-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-500 max-h-[350px]"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (product.enhancedImageUrl && target.src !== product.enhancedImageUrl && !product.enhancedImageUrl.includes('unavailable')) {
-                    target.src = product.enhancedImageUrl;
-                  } else {
-                    target.src = "/placeholder.webp";
-                  }
-                }}
-              />
-
-              {(product.images && product.images.length > 1) && (
-                <button 
-                  onClick={() => setCurrentImageIndex(prev => prev < product.images!.length - 1 ? prev + 1 : 0)}
-                  className="absolute right-0 z-20 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent focus:outline-none"
-                >
-                  <ArrowRight size={20} weight="bold" />
-                </button>
-              )}
-            </div>
-
-            {/* Thumbnail Strip */}
-            {product.images && product.images.length > 1 && (
-              <div className="flex gap-2 mt-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                {product.images.map((img, idx) => (
-                  <button
-                    key={img.id}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    className={`relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                      currentImageIndex === idx ? 'border-accent scale-105 opacity-100' : 'border-white/10 opacity-50 hover:opacity-100'
-                    }`}
-                  >
-                    <img 
-                      src={img.url} 
-                      alt={`Thumbnail ${idx}`} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ProductImageGallery
+            product={product}
+            currentImageIndex={currentImageIndex}
+            onSelectImage={setCurrentImageIndex}
+            price={price}
+            discount={discount}
+          />
 
           {/* Details Section */}
           <div className="p-6 md:p-8 lg:p-10 flex flex-col w-full md:w-7/12">
@@ -452,7 +415,7 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
                   </span>
                   {lowestPriceInfo.savings > 0 && (
                     <span className="text-[10px] text-teal-200/80 font-medium">
-                      Economize até {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lowestPriceInfo.savings)} vs valor mais alto registrado
+                      Economize até {formatBrl(lowestPriceInfo.savings)} vs valor mais alto registrado
                     </span>
                   )}
                 </div>
@@ -462,11 +425,11 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
             {price > 0 ? (
               <div className="flex flex-row items-center gap-4 mb-8">
                 <span className="text-4xl md:text-5xl font-normal text-white tracking-tighter leading-none">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                  {formatBrl(price)}
                 </span>
                 {discount > 0 && (
                   <span className="text-lg md:text-xl text-zinc-500 font-medium line-through">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                    {formatBrl(originalPrice)}
                   </span>
                 )}
               </div>
@@ -527,39 +490,15 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
               </button>
             )}
 
-            <div className="flex justify-between items-center mt-6 px-2">
-              <div className="flex items-center gap-2">
-                <AlertButton productId={product.id} />
-                <button
-                  onClick={handleToggleFavorite}
-                  disabled={favLoading}
-                  title={isFavorited ? "Remover dos favoritos" : "Salvar nos favoritos"}
-                  className={`p-3 rounded-2xl transition-all flex items-center justify-center ${
-                    isFavorited
-                      ? "text-rose-400 bg-rose-500/20 border border-rose-500/30 shadow-[0_4px_20px_rgba(244,63,94,0.25)] scale-105"
-                      : "text-zinc-400 bg-white/5 hover:bg-white/10 hover:text-rose-400 border border-white/5"
-                  }`}
-                >
-                  <Heart size={24} weight={isFavorited ? "fill" : "regular"} className={isFavorited ? "text-rose-500" : ""} />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-4 bg-white/5 px-4 py-2.5 rounded-2xl">
-                <button onClick={() => handleVote('LIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'LIKE' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}>
-                  <ThumbsUp size={24} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
-                  {votes.likes > 0 && <span className="text-sm font-bold">{votes.likes}</span>}
-                </button>
-                <div className="w-[1px] h-6 bg-white/10" />
-                <button onClick={() => handleVote('DISLIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'DISLIKE' ? 'text-red-400' : 'text-zinc-400 hover:text-white'}`}>
-                  <ThumbsDown size={24} weight={votes.userVote === 'DISLIKE' ? "fill" : "regular"} />
-                  {(votes.userVote === 'DISLIKE' && votes.dislikes > 0) && <span className="text-sm font-bold">{votes.dislikes}</span>}
-                </button>
-              </div>
-
-              <button onClick={handleShare} className="p-3 rounded-2xl transition-all text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 shadow-[0_4px_20px_rgba(37,211,102,0.15)]">
-                <WhatsappLogo size={24} weight="fill" />
-              </button>
-            </div>
+            <ProductActionBar
+              productId={product.id}
+              isFavorited={isFavorited}
+              favLoading={favLoading}
+              onToggleFavorite={handleToggleFavorite}
+              votes={votes}
+              onVote={handleVote}
+              onShare={handleShare}
+            />
 
             <PriceHistoryChart productId={product.id} />
 
@@ -578,127 +517,23 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
         <ProductReviews productId={product.id} />
 
         {/* Comments Section */}
-        <div ref={commentsRef} className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-3 bg-accent/20 rounded-2xl text-accent">
-              <ChatText size={28} weight="fill" />
-            </div>
-            <div>
-              <h4 className="text-xl font-bold text-white">Comentários</h4>
-              <p className="text-sm text-zinc-400">{comments.length} avaliações da comunidade</p>
-            </div>
-          </div>
-          
-          <form onSubmit={handlePostComment} className="flex gap-3 mb-10">
-            {user?.image ? (
-              <img src={user.image} alt={user.name} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 shrink-0 border-2 border-white/10">
-                <User size={24} />
-              </div>
-            )}
-            <div className="flex-1 relative">
-              <input 
-                type="text" 
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                placeholder={user ? "Compartilhe sua opinião sobre este produto..." : "Faça login para comentar"}
-                className="w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 pl-5 pr-14 text-white placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:bg-black/60 transition-colors shadow-inner"
-                disabled={isSubmitting || !user}
-              />
-              {user && (
-                <button 
-                  type="submit" 
-                  disabled={!newComment.trim() || isSubmitting}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-accent text-white hover:bg-accent-light rounded-xl disabled:opacity-40 transition-colors"
-                >
-                  <PaperPlaneRight size={20} weight="fill" />
-                </button>
-              )}
-            </div>
-          </form>
-
-          <div className="space-y-4">
-            {comments.map((comment, i) => (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                key={comment.id} 
-                className="flex gap-4 p-5 bg-white/5 rounded-3xl border border-white/5 hover:border-white/10 transition-colors"
-              >
-                {comment.user?.image ? (
-                  <img src={comment.user.image} alt={comment.user.name} className="w-10 h-10 rounded-full object-cover shrink-0 border border-white/10 shadow-lg" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-white shrink-0 shadow-lg">
-                    <span className="text-sm font-bold">{comment.user?.name?.charAt(0) || comment.guestName?.charAt(0) || 'A'}</span>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <span className="text-sm font-bold text-white">{comment.user?.name || comment.guestName || 'Anônimo'}</span>
-                    <span className="text-xs text-zinc-500 font-medium bg-black/30 px-2 py-0.5 rounded-md">
-                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(comment.createdAt))}
-                    </span>
-                  </div>
-                  <p className="text-sm text-zinc-300 leading-relaxed">{comment.text}</p>
-                </div>
-              </motion.div>
-            ))}
-            {comments.length === 0 && (
-              <div className="text-center py-10 bg-black/20 rounded-3xl border border-dashed border-white/10 text-zinc-500">
-                Nenhum comentário ainda. Seja o primeiro a avaliar!
-              </div>
-            )}
-          </div>
-        </div>
+        <ProductCommentsSection
+          comments={comments}
+          user={user}
+          newComment={newComment}
+          isSubmitting={isSubmitting}
+          commentsRef={commentsRef}
+          onCommentChange={setNewComment}
+          onPostComment={handlePostComment}
+        />
 
         {/* Related Products */}
-        {relatedProducts.length > 0 && (
-          <div className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
-            <h4 className="text-xl md:text-2xl font-bold text-white mb-6">Ofertas Relacionadas</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {relatedProducts.slice(0, visibleRelatedCount).map((relItem) => (
-                <button 
-                  key={relItem.id}
-                  onClick={() => router.push(`/produto/${relItem.shortId || relItem.id}`)}
-                  className="group bg-black/40 border border-white/5 hover:border-accent/30 rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:-translate-y-1 duration-300"
-                >
-                  <div className="w-full aspect-square bg-white flex items-center justify-center overflow-hidden p-3 rounded-t-2xl">
-                    <img 
-                      src={relItem.imageUrl} 
-                      alt={relItem.name} 
-                      className="w-full h-full object-contain group-hover:scale-105 transition-all duration-500"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder.webp";
-                      }}
-                    />
-                  </div>
-                  <div className="p-4 bg-gradient-to-t from-black/80 to-transparent flex-1 flex flex-col">
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1 line-clamp-1">{relItem.category}</span>
-                    <h5 className="font-semibold text-white text-sm line-clamp-2 leading-tight group-hover:text-accent-light transition-colors mb-2">
-                      {relItem.name}
-                    </h5>
-                    <span className="text-white text-base font-black mt-auto">
-                      {relItem.price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(relItem.price) : 'Ver Oferta'}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {visibleRelatedCount < relatedProducts.length && (
-              <div className="flex justify-center mt-2">
-                <button
-                  onClick={() => setVisibleRelatedCount(prev => prev + 10)}
-                  className="text-white border border-white/10 hover:bg-white/5 font-semibold text-sm py-3 px-8 rounded-xl transition-all"
-                >
-                  Ver mais ofertas ({relatedProducts.length - visibleRelatedCount})
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        <RelatedProductsSection
+          relatedProducts={relatedProducts}
+          visibleCount={visibleRelatedCount}
+          onSelectProduct={(relItem) => router.push(`/produto/${relItem.shortId || relItem.id}`)}
+          onLoadMore={() => setVisibleRelatedCount(prev => prev + 10)}
+        />
 
       </div>
 
@@ -720,3 +555,315 @@ export function ProductDetail({ product, lowestPriceInfo }: { product: Product; 
     </main>
   );
 }
+
+// ── Subcomponents ──
+
+interface ProductImageGalleryProps {
+  product: Product;
+  currentImageIndex: number;
+  onSelectImage: React.Dispatch<React.SetStateAction<number>>;
+  price: number;
+  discount: number;
+}
+
+function ProductImageGallery({
+  product,
+  currentImageIndex,
+  onSelectImage,
+  price,
+  discount,
+}: ProductImageGalleryProps) {
+  const hasMultipleImages = Boolean(product.images && product.images.length > 1);
+
+  return (
+    <div className="relative w-full md:w-5/12 bg-white border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-6 lg:p-10 min-h-[300px] md:min-h-[450px] rounded-t-[2.5rem] md:rounded-l-[2.5rem] md:rounded-tr-none">
+      {price > 0 && discount > 0 && (
+        <motion.div 
+          initial={{ scale: 0, rotate: -10 }} 
+          animate={{ scale: 1, rotate: 0 }} 
+          className="absolute top-6 left-6 z-10 bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.5)] text-white font-black px-4 py-2 rounded-2xl flex items-center gap-1.5 text-xl"
+        >
+          <Tag size={22} weight="fill" />
+          -{discount}%
+        </motion.div>
+      )}
+      
+      <div className="flex-1 flex items-center justify-center relative group">
+        {hasMultipleImages && (
+          <button 
+            onClick={() => onSelectImage(prev => prev > 0 ? prev - 1 : product.images!.length - 1)}
+            className="absolute left-0 z-20 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent focus:outline-none"
+            aria-label="Imagem anterior"
+          >
+            <ArrowLeft size={20} weight="bold" />
+          </button>
+        )}
+
+        <motion.img 
+          key={currentImageIndex}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          src={resolveDetailMainImage(product, currentImageIndex)} 
+          alt={product.name}
+          className="w-full h-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-500 max-h-[350px]"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            if (product.enhancedImageUrl && target.src !== product.enhancedImageUrl && !product.enhancedImageUrl.includes('unavailable')) {
+              target.src = product.enhancedImageUrl;
+            } else {
+              target.src = "/placeholder.webp";
+            }
+          }}
+        />
+
+        {hasMultipleImages && (
+          <button 
+            onClick={() => onSelectImage(prev => prev < product.images!.length - 1 ? prev + 1 : 0)}
+            className="absolute right-0 z-20 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent focus:outline-none"
+            aria-label="Próxima imagem"
+          >
+            <ArrowRight size={20} weight="bold" />
+          </button>
+        )}
+      </div>
+
+      {hasMultipleImages && (
+        <div className="flex gap-2 mt-6 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+          {product.images!.map((img, idx) => (
+            <button
+              key={img.id}
+              onClick={() => onSelectImage(idx)}
+              className={`relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                currentImageIndex === idx ? 'border-accent scale-105 opacity-100' : 'border-white/10 opacity-50 hover:opacity-100'
+              }`}
+            >
+              <img 
+                src={img.url} 
+                alt={`Thumbnail ${idx}`} 
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ProductActionBarProps {
+  productId: string;
+  isFavorited: boolean;
+  favLoading: boolean;
+  onToggleFavorite: () => void;
+  votes: { likes: number; dislikes: number; userVote: string | null };
+  onVote: (type: 'LIKE' | 'DISLIKE') => void;
+  onShare: () => void;
+}
+
+function ProductActionBar({
+  productId,
+  isFavorited,
+  favLoading,
+  onToggleFavorite,
+  votes,
+  onVote,
+  onShare,
+}: ProductActionBarProps) {
+  return (
+    <div className="flex justify-between items-center mt-6 px-2">
+      <div className="flex items-center gap-2">
+        <AlertButton productId={productId} />
+        <button
+          onClick={onToggleFavorite}
+          disabled={favLoading}
+          title={isFavorited ? "Remover dos favoritos" : "Salvar nos favoritos"}
+          className={`p-3 rounded-2xl transition-all flex items-center justify-center ${
+            isFavorited
+              ? "text-rose-400 bg-rose-500/20 border border-rose-500/30 shadow-[0_4px_20px_rgba(244,63,94,0.25)] scale-105"
+              : "text-zinc-400 bg-white/5 hover:bg-white/10 hover:text-rose-400 border border-white/5"
+          }`}
+        >
+          <Heart size={24} weight={isFavorited ? "fill" : "regular"} className={isFavorited ? "text-rose-500" : ""} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4 bg-white/5 px-4 py-2.5 rounded-2xl">
+        <button onClick={() => onVote('LIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'LIKE' ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}>
+          <ThumbsUp size={24} weight={votes.userVote === 'LIKE' ? "fill" : "regular"} />
+          {votes.likes > 0 && <span className="text-sm font-bold">{votes.likes}</span>}
+        </button>
+        <div className="w-[1px] h-6 bg-white/10" />
+        <button onClick={() => onVote('DISLIKE')} className={`flex items-center gap-1.5 transition-colors ${votes.userVote === 'DISLIKE' ? 'text-red-400' : 'text-zinc-400 hover:text-white'}`}>
+          <ThumbsDown size={24} weight={votes.userVote === 'DISLIKE' ? "fill" : "regular"} />
+          {(votes.userVote === 'DISLIKE' && votes.dislikes > 0) && <span className="text-sm font-bold">{votes.dislikes}</span>}
+        </button>
+      </div>
+
+      <button onClick={onShare} className="p-3 rounded-2xl transition-all text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 shadow-[0_4px_20px_rgba(37,211,102,0.15)]">
+        <WhatsappLogo size={24} weight="fill" />
+      </button>
+    </div>
+  );
+}
+
+interface ProductCommentsSectionProps {
+  comments: any[];
+  user: any;
+  newComment: string;
+  isSubmitting: boolean;
+  commentsRef: React.RefObject<HTMLDivElement | null>;
+  onCommentChange: (val: string) => void;
+  onPostComment: (e: React.FormEvent) => void;
+}
+
+function ProductCommentsSection({
+  comments,
+  user,
+  newComment,
+  isSubmitting,
+  commentsRef,
+  onCommentChange,
+  onPostComment,
+}: ProductCommentsSectionProps) {
+  return (
+    <div ref={commentsRef} className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-3 bg-accent/20 rounded-2xl text-accent">
+          <ChatText size={28} weight="fill" />
+        </div>
+        <div>
+          <h4 className="text-xl font-bold text-white">Comentários</h4>
+          <p className="text-sm text-zinc-400">{comments.length} avaliações da comunidade</p>
+        </div>
+      </div>
+      
+      <form onSubmit={onPostComment} className="flex gap-3 mb-10">
+        {user?.image ? (
+          <img src={user.image} alt={user.name} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 shrink-0 border-2 border-white/10">
+            <User size={24} />
+          </div>
+        )}
+        <div className="flex-1 relative">
+          <input 
+            type="text" 
+            value={newComment}
+            onChange={e => onCommentChange(e.target.value)}
+            placeholder={user ? "Compartilhe sua opinião sobre este produto..." : "Faça login para comentar"}
+            className="w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 pl-5 pr-14 text-white placeholder:text-zinc-500 focus:outline-none focus:border-accent/50 focus:bg-black/60 transition-colors shadow-inner"
+            disabled={isSubmitting || !user}
+          />
+          {user && (
+            <button 
+              type="submit" 
+              disabled={!newComment.trim() || isSubmitting}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-accent text-white hover:bg-accent-light rounded-xl disabled:opacity-40 transition-colors"
+            >
+              <PaperPlaneRight size={20} weight="fill" />
+            </button>
+          )}
+        </div>
+      </form>
+
+      <div className="space-y-4">
+        {comments.map((comment, i) => (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            key={comment.id} 
+            className="flex gap-4 p-5 bg-white/5 rounded-3xl border border-white/5 hover:border-white/10 transition-colors"
+          >
+            {comment.user?.image ? (
+              <img src={comment.user.image} alt={comment.user.name} className="w-10 h-10 rounded-full object-cover shrink-0 border border-white/10 shadow-lg" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-white shrink-0 shadow-lg">
+                <span className="text-sm font-bold">{comment.user?.name?.charAt(0) || comment.guestName?.charAt(0) || 'A'}</span>
+              </div>
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-1.5">
+                <span className="text-sm font-bold text-white">{comment.user?.name || comment.guestName || 'Anônimo'}</span>
+                <span className="text-xs text-zinc-500 font-medium bg-black/30 px-2 py-0.5 rounded-md">
+                  {formatShortDate(comment.createdAt)}
+                </span>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">{comment.text}</p>
+            </div>
+          </motion.div>
+        ))}
+        {comments.length === 0 && (
+          <div className="text-center py-10 bg-black/20 rounded-3xl border border-dashed border-white/10 text-zinc-500">
+            Nenhum comentário ainda. Seja o primeiro a avaliar!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface RelatedProductsSectionProps {
+  relatedProducts: any[];
+  visibleCount: number;
+  onSelectProduct: (relItem: any) => void;
+  onLoadMore: () => void;
+}
+
+function RelatedProductsSection({
+  relatedProducts,
+  visibleCount,
+  onSelectProduct,
+  onLoadMore,
+}: RelatedProductsSectionProps) {
+  if (relatedProducts.length === 0) return null;
+
+  return (
+    <div className="mt-12 glass-3d-card rounded-[2.5rem] p-6 sm:p-10">
+      <h4 className="text-xl md:text-2xl font-bold text-white mb-6">Ofertas Relacionadas</h4>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {relatedProducts.slice(0, visibleCount).map((relItem) => (
+          <button 
+            key={relItem.id}
+            onClick={() => onSelectProduct(relItem)}
+            className="group bg-black/40 border border-white/5 hover:border-accent/30 rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:-translate-y-1 duration-300"
+          >
+            <div className="w-full aspect-square bg-white flex items-center justify-center overflow-hidden p-3 rounded-t-2xl">
+              <img 
+                src={relItem.imageUrl} 
+                alt={relItem.name} 
+                className="w-full h-full object-contain group-hover:scale-105 transition-all duration-500"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/placeholder.webp";
+                }}
+              />
+            </div>
+            <div className="p-4 bg-gradient-to-t from-black/80 to-transparent flex-1 flex flex-col">
+              <span className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1 line-clamp-1">{relItem.category}</span>
+              <h5 className="font-semibold text-white text-sm line-clamp-2 leading-tight group-hover:text-accent-light transition-colors mb-2">
+                {relItem.name}
+              </h5>
+              <span className="text-white text-base font-black mt-auto">
+                {relItem.price > 0 ? formatBrl(relItem.price) : 'Ver Oferta'}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {visibleCount < relatedProducts.length && (
+        <div className="flex justify-center mt-2">
+          <button
+            onClick={onLoadMore}
+            className="text-white border border-white/10 hover:bg-white/5 font-semibold text-sm py-3 px-8 rounded-xl transition-all"
+          >
+            Ver mais ofertas ({relatedProducts.length - visibleCount})
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+

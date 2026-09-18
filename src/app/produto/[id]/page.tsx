@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { ProductDetail } from '@/components/ProductDetail';
-import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Metadata } from 'next';
 
@@ -167,6 +166,50 @@ function buildProductJsonLd(product: any): object {
   return jsonLd;
 }
 
+interface LowestPriceInfo {
+  isLowest: boolean;
+  days: number;
+  minPrice: number;
+  maxPrice: number;
+  savings: number;
+}
+
+function calculateLowestPriceInfo(
+  price: number | null | undefined,
+  originalPrice: number | null | undefined,
+  priceHistory?: Array<{ price: number; originalPrice?: number | null; createdAt: Date | string }>
+): LowestPriceInfo | null {
+  if (!price || price <= 0 || !priceHistory || priceHistory.length === 0) {
+    return null;
+  }
+
+  const historyPrices = priceHistory.map(h => h.price);
+  const minPrice = Math.min(...historyPrices);
+  const maxPrice = Math.max(
+    ...priceHistory.map(h => h.originalPrice || h.price),
+    originalPrice || price
+  );
+
+  // Preço atual é menor ou igual ao mínimo com 1% de margem
+  if (price <= minPrice * 1.01) {
+    const oldest = priceHistory[priceHistory.length - 1].createdAt;
+    const daysDiff = Math.max(
+      30,
+      Math.floor((Date.now() - new Date(oldest).getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    return {
+      isLowest: true,
+      days: daysDiff,
+      minPrice,
+      maxPrice,
+      savings: maxPrice > price ? Math.round((maxPrice - price) * 100) / 100 : 0,
+    };
+  }
+
+  return null;
+}
+
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
 
@@ -187,40 +230,11 @@ export default async function ProductPage({ params }: Props) {
       notFound();
     }
 
-    // Calcula se é o menor preço histórico e quantos dias faz
-    let lowestPriceInfo: {
-      isLowest: boolean;
-      days: number;
-      minPrice: number;
-      maxPrice: number;
-      savings: number;
-    } | null = null;
-
-    if (product.price && product.price > 0 && product.priceHistory && product.priceHistory.length > 0) {
-      const historyPrices = product.priceHistory.map(h => h.price);
-      const minPrice = Math.min(...historyPrices);
-      const maxPrice = Math.max(
-        ...product.priceHistory.map(h => h.originalPrice || h.price),
-        product.originalPrice || product.price
-      );
-
-      // Preço atual é menor ou igual ao mínimo com 1% de margem
-      if (product.price <= minPrice * 1.01) {
-        const oldest = product.priceHistory[product.priceHistory.length - 1].createdAt;
-        const daysDiff = Math.max(
-          30,
-          Math.floor((Date.now() - new Date(oldest).getTime()) / (1000 * 60 * 60 * 24))
-        );
-
-        lowestPriceInfo = {
-          isLowest: true,
-          days: daysDiff,
-          minPrice,
-          maxPrice,
-          savings: maxPrice > product.price ? Math.round((maxPrice - product.price) * 100) / 100 : 0,
-        };
-      }
-    }
+    const lowestPriceInfo = calculateLowestPriceInfo(
+      product.price,
+      product.originalPrice,
+      product.priceHistory
+    );
 
     const jsonLd = buildProductJsonLd(product);
 
@@ -231,7 +245,6 @@ export default async function ProductPage({ params }: Props) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Header />
         <ProductDetail product={product} lowestPriceInfo={lowestPriceInfo} />
         <Footer />
       </>

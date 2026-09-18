@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash, Eye, EyeSlash, Image } from "@phosphor-icons/react";
 import { BannerModal } from "./BannerModal";
 
-type Banner = {
+export type AdminBanner = {
   id: string;
   title: string;
   imageDesktop: string;
@@ -14,27 +14,115 @@ type Banner = {
   isActive: boolean;
 };
 
+interface BannerCardProps {
+  banner: AdminBanner;
+  onToggle: (banner: AdminBanner) => void;
+  onEdit: (banner: AdminBanner) => void;
+  onDelete: (id: string) => void;
+  onImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void;
+}
+
+function BannerCard({ banner, onToggle, onEdit, onDelete, onImageError }: BannerCardProps) {
+  return (
+    <div
+      className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all ${
+        banner.isActive ? "border-zinc-800" : "border-zinc-800/40 opacity-60"
+      }`}
+    >
+      {/* Preview desktop */}
+      <div className="relative h-32 bg-zinc-800">
+        <img
+          src={banner.imageDesktop}
+          alt={banner.title}
+          className="w-full h-full object-cover"
+          onError={onImageError}
+        />
+        <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+          Desktop
+        </div>
+        {/* Mobile preview thumbnail */}
+        <div className="absolute top-2 right-2 w-10 h-14 rounded-lg overflow-hidden border-2 border-white/20 bg-zinc-700">
+          <img
+            src={banner.imageMobile}
+            alt="mobile"
+            className="w-full h-full object-cover"
+            onError={onImageError}
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[8px] text-white text-center py-0.5">
+            mob
+          </div>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h3 className="text-white font-semibold text-sm truncate">{banner.title}</h3>
+          <span className="text-zinc-500 text-xs shrink-0">#{banner.order}</span>
+        </div>
+        {banner.link && (
+          <p className="text-zinc-500 text-xs truncate mb-3">🔗 {banner.link}</p>
+        )}
+
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            onClick={() => onToggle(banner)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              banner.isActive
+                ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
+            }`}
+          >
+            {banner.isActive ? <Eye size={14} /> : <EyeSlash size={14} />}
+            {banner.isActive ? "Ativo" : "Inativo"}
+          </button>
+          <button
+            onClick={() => onEdit(banner)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
+          >
+            <Pencil size={14} />
+            Editar
+          </button>
+          <button
+            onClick={() => onDelete(banner.id)}
+            className="ml-auto p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+          >
+            <Trash size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BannersTab() {
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [banners, setBanners] = useState<AdminBanner[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [editingBanner, setEditingBanner] = useState<AdminBanner | null>(null);
 
-  useEffect(() => { fetchBanners(); }, []);
-
-  async function fetchBanners() {
+  const fetchBanners = async (isMounted = true) => {
     try {
       setLoading(true);
-      // Admin busca todos (incluindo inativos)
       const res = await fetch("/api/banners?all=true");
       const data = await res.json();
-      setBanners(Array.isArray(data) ? data : []);
+      if (isMounted) {
+        setBanners(Array.isArray(data) ? data : []);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao buscar banners:", err);
     } finally {
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
-  }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchBanners(isMounted);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function handleDelete(id: string) {
     if (!confirm("Deletar este banner?")) return;
@@ -42,7 +130,7 @@ export function BannersTab() {
     fetchBanners();
   }
 
-  async function handleToggle(banner: Banner) {
+  async function handleToggle(banner: AdminBanner) {
     await fetch(`/api/banners/${banner.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -56,10 +144,14 @@ export function BannersTab() {
     setIsModalOpen(true);
   }
 
-  function openEdit(banner: Banner) {
+  function openEdit(banner: AdminBanner) {
     setEditingBanner(banner);
     setIsModalOpen(true);
   }
+
+  const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = "none";
+  };
 
   return (
     <div>
@@ -91,77 +183,14 @@ export function BannersTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {banners.map((banner) => (
-            <div
+            <BannerCard
               key={banner.id}
-              className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all ${
-                banner.isActive ? "border-zinc-800" : "border-zinc-800/40 opacity-60"
-              }`}
-            >
-              {/* Preview desktop */}
-              <div className="relative h-32 bg-zinc-800">
-                <img
-                  src={banner.imageDesktop}
-                  alt={banner.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-                <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
-                  Desktop
-                </div>
-                {/* Mobile preview thumbnail */}
-                <div className="absolute top-2 right-2 w-10 h-14 rounded-lg overflow-hidden border-2 border-white/20 bg-zinc-700">
-                  <img
-                    src={banner.imageMobile}
-                    alt="mobile"
-                    className="w-full h-full object-cover"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[8px] text-white text-center py-0.5">
-                    mob
-                  </div>
-                </div>
-              </div>
-
-              {/* Info */}
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h3 className="text-white font-semibold text-sm truncate">{banner.title}</h3>
-                  <span className="text-zinc-500 text-xs shrink-0">#{banner.order}</span>
-                </div>
-                {banner.link && (
-                  <p className="text-zinc-500 text-xs truncate mb-3">🔗 {banner.link}</p>
-                )}
-
-                <div className="flex items-center gap-2 mt-3">
-                  <button
-                    onClick={() => handleToggle(banner)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      banner.isActive
-                        ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                        : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
-                    }`}
-                  >
-                    {banner.isActive ? <Eye size={14} /> : <EyeSlash size={14} />}
-                    {banner.isActive ? "Ativo" : "Inativo"}
-                  </button>
-                  <button
-                    onClick={() => openEdit(banner)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
-                  >
-                    <Pencil size={14} />
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(banner.id)}
-                    className="ml-auto p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                  >
-                    <Trash size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
+              banner={banner}
+              onToggle={handleToggle}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onImageError={hideBrokenImage}
+            />
           ))}
         </div>
       )}

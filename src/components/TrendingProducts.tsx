@@ -13,6 +13,11 @@ const RANK_BADGES = [
   { bg: "bg-amber-600", text: "text-white" },
 ];
 
+const formatBrl = (v?: number | null) =>
+  v && v > 0
+    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v)
+    : "Ver oferta";
+
 export function TrendingProducts() {
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
@@ -20,21 +25,24 @@ export function TrendingProducts() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let isMounted = true;
     fetch("/api/products/trending")
       .then((r) => r.json())
       .then((d) => {
+        if (!isMounted) return;
         if (d.products && Array.isArray(d.products)) setProducts(d.products);
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (!loading && products.length === 0) return null;
-
-  const fmt = (v?: number | null) =>
-    v && v > 0
-      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v)
-      : "Ver oferta";
 
   return (
     <section className="w-full max-w-[1400px] mx-auto px-3 md:px-8 pt-3 pb-1">
@@ -141,7 +149,7 @@ export function TrendingProducts() {
 
                     {/* Price */}
                     <p className="text-[13px] font-bold text-[#ff334b] mt-1">
-                      {fmt(product.price)}
+                      {formatBrl(product.price)}
                     </p>
                   </div>
                 </motion.button>

@@ -54,6 +54,12 @@ const CATEGORIES = [...RAW_CATEGORIES].sort((a, b) =>
   a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" })
 );
 
+const formatBrl = (val: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(val);
+
 export function CategoriesModal() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -110,6 +116,7 @@ export function CategoriesModal() {
       setProducts([]);
       return;
     }
+    let isMounted = true;
     setLoading(true);
     setProducts([]);
 
@@ -119,7 +126,7 @@ export function CategoriesModal() {
     fetch(`/api/products?category=${encodeURIComponent(categoryName)}`)
       .then((r) => r.json())
       .then((data: any[]) => {
-        if (!Array.isArray(data)) return;
+        if (!isMounted || !Array.isArray(data)) return;
 
         setProducts(
           data.map((p) => ({
@@ -144,7 +151,13 @@ export function CategoriesModal() {
         );
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeCategory]);
 
   const handleClose = () => {
@@ -394,17 +407,11 @@ export function CategoriesModal() {
                                       <>
                                         {discount > 0 && (
                                           <span className="text-zinc-500 text-[10px] line-through font-normal">
-                                            {new Intl.NumberFormat("pt-BR", {
-                                              style: "currency",
-                                              currency: "BRL",
-                                            }).format(originalPrice)}
+                                            {formatBrl(originalPrice)}
                                           </span>
                                         )}
                                         <span className="text-sm font-bold text-white tracking-tight">
-                                          {new Intl.NumberFormat("pt-BR", {
-                                              style: "currency",
-                                              currency: "BRL",
-                                            }).format(price)}
+                                          {formatBrl(price)}
                                         </span>
                                       </>
                                     ) : (

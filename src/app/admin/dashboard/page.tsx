@@ -35,17 +35,25 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
+
     fetch('/api/admin/dashboard')
       .then(res => res.json())
       .then(d => {
+        if (!isMounted) return;
         if (d.error) setError(d.error);
         else setData(d);
         setLoading(false);
       })
       .catch(() => {
+        if (!isMounted) return;
         setError('Falha ao carregar dashboard');
         setLoading(false);
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {

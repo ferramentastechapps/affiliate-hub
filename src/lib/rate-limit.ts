@@ -34,7 +34,7 @@ interface RateLimitResult {
 const stores = new Map<string, Map<string, RateLimitEntry>>();
 
 // Cleanup automático a cada 5 minutos para limpar apenas chaves expiradas (sem deletar o namespace)
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const store of stores.values()) {
     for (const [key, entry] of store.entries()) {
@@ -44,6 +44,10 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000);
+
+if (cleanupTimer.unref) {
+  cleanupTimer.unref();
+}
 
 /**
  * Cria um rate limiter com namespace próprio para evitar colisão entre endpoints.

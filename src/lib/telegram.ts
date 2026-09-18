@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const TELEGRAM_PROMO_GROUP_ID = process.env.TELEGRAM_PROMO_GROUP_ID;
@@ -113,6 +116,83 @@ export async function sendTelegramMessage(chatId: string, text: string, imageUrl
   }
 }
 
+const INVALID_COUPON_CODES = new Set(['NORMAL', 'NONE', 'NULL', 'N/A', 'NA']);
+
+function extractCouponFromDescription(description?: string | null): string | null {
+  if (!description || !description.includes('🎟️ CUPOM:')) return null;
+  const rawCode = description.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
+  if (rawCode && !INVALID_COUPON_CODES.has(rawCode.toUpperCase())) {
+    return rawCode;
+  }
+  return null;
+}
+
+function resolvePlatformBadge(platform?: string | null, storeName?: string | null): string {
+  if (platform && PLATFORMA_EMOJIS[platform]) {
+    return PLATFORMA_EMOJIS[platform];
+  }
+  if (!storeName) return '';
+  const storeLower = storeName.toLowerCase();
+  if (storeLower.includes('amazon')) return '🟠 Amazon';
+  if (storeLower.includes('mercado')) return '🟡 Mercado Livre';
+  if (storeLower.includes('shopee')) return '🟠 Shopee';
+  if (storeLower.includes('aliexpress')) return '🔴 AliExpress';
+  if (storeLower.includes('tiktok')) return '⚫ TikTok Shop';
+  if (storeLower.includes('netshoes')) return '🟣 Netshoes';
+  if (storeLower.includes('magalu') || storeLower.includes('magazine')) return '🔵 Magalu';
+  if (storeLower.includes('kabum')) return '🔵 Kabum';
+  return storeName;
+}
+
+function cleanPromotionDescription(description?: string | null): string {
+  if (!description) return '';
+  const descSemCupom = description.split('🎟️ CUPOM:')[0].trim();
+  const descLimpa = descSemCupom
+    .split('\n')
+    .filter((line: string) => !/^Oferta (na|no) /i.test(line.trim()))
+    .join('\n')
+    .trim();
+  return descLimpa && descLimpa !== 'Oferta encaminhada de grupos' ? `↪️ <i>${descLimpa}</i>` : '';
+}
+
+function buildCouponMessage(product: any): string {
+  const coupons = product.coupons || [];
+  if (coupons.length > 0 && product.price) {
+    const coupon = coupons[0];
+    let msg = `🎟️ <code>${coupon.code}</code>`;
+    if (product.priceWithCoupon) {
+      const basePrice = product.originalPrice || product.price;
+      const totalSavingsPercent = ((basePrice - product.priceWithCoupon) / basePrice) * 100;
+      msg += ` → R$ <b>${formatBrCurrency(product.priceWithCoupon)}</b> (economia total ${totalSavingsPercent.toFixed(0)}%)`;
+    } else if (coupon.discount) {
+      msg += ` → ${coupon.discount}`;
+    }
+    return msg;
+  }
+
+  const codeFromDesc = extractCouponFromDescription(product.description);
+  return codeFromDesc ? `🎟️ <code>${codeFromDesc}</code>` : '';
+}
+
+function formatAiHeadline(aiAnalysisRaw: any): string {
+  if (!aiAnalysisRaw) return "<b>🔥 ACHADINHO IMPERDÍVEL!</b>";
+  try {
+    const data = typeof aiAnalysisRaw === 'string' ? JSON.parse(aiAnalysisRaw) : aiAnalysisRaw;
+    if (data && typeof data === 'object') {
+      const titulo = data.titulo;
+      const subtitulo = data.subtitulo;
+      if (titulo) {
+        let headline = `<b>${titulo.toUpperCase()}</b>`;
+        if (subtitulo) {
+          headline += `\n<i>${subtitulo.toLowerCase()}</i>`;
+        }
+        return headline;
+      }
+    }
+  } catch {}
+  return "<b>🔥 ACHADINHO IMPERDÍVEL!</b>";
+}
+
 /**
  * Envia um produto para aprovação do administrador (moderador) no Telegram.
  */
@@ -148,15 +228,8 @@ export async function sendToModeration(product: any): Promise<boolean> {
     }
   }
 
-  const desc = product.description || '';
-  let cupomMsg = "";
-  if (desc.includes('🎟️ CUPOM:')) {
-    const cupomExtraido = desc.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
-    if (cupomExtraido && !['NORMAL', 'NONE', 'NULL', 'N/A', 'NA'].includes(cupomExtraido.toUpperCase())) {
-      cupomMsg = `\n🎟️ <code>${cupomExtraido}</code>`;
-    }
-  }
-
+  const cupomExtraido = extractCouponFromDescription(product.description);
+  const cupomMsg = cupomExtraido ? `\n🎟️ <code>${cupomExtraido}</code>` : "";
   const aprovarMsg = `<code>/aprovar ${product.id}</code>\n💡 <i>(Link de afiliado será gerado automaticamente!)</i>`;
 
   const text = `
@@ -165,7 +238,7 @@ export async function sendToModeration(product: any): Promise<boolean> {
 
 📦 <b>${product.name}</b>
 🏷️ ${product.category}
-🏪 Plataforma: <b>{plataformaNome}</b>
+🏪 Plataforma: <b>${plataformaNome}</b>
 ${precoStr}${cupomMsg}
 
 ${linkOriginal}
@@ -181,7 +254,7 @@ ${aprovarMsg}
 
 🆔 <b>ID do Produto:</b>
 <code>${product.id}</code>
-  `.replace('{plataformaNome}', plataformaNome).trim();
+  `.trim();
 
   const imageUrl = product.imageUrl || product.enhancedImageUrl;
   return sendTelegramMessage(TELEGRAM_CHAT_ID, text, imageUrl);
@@ -203,189 +276,63 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   }
 
   const emoji = CATEGORY_EMOJIS[product.category] || '🔖';
-  
-  // Buscar cupons do produto (podem vir do webhook ou do banco)
-  const coupons = product.coupons || [];
-  const hasCoupons = coupons.length > 0;
-  
-  // Formatação de preços com cupom
+  const cupomMsg = buildCouponMessage(product);
+  const condicoesMsg = cleanPromotionDescription(product.description);
+  const dropBadge = product.dropPercent && product.dropPercent > 0 ? `⚡ PREÇO CAIU ${product.dropPercent}%!` : "";
+  const legendaTop = formatAiHeadline(product.aiAnalysis);
+
   let precoTxt = "";
-  let cupomMsg = "";
-  
   if (product.originalPrice && product.price && Number(product.originalPrice) > Number(product.price)) {
     precoTxt = `🔥 DE R$ <s>${formatBrCurrency(product.originalPrice)}</s> | POR R$ <b>${formatBrCurrency(product.price)}</b>`;
   } else if (product.price) {
     precoTxt = `🔥 POR R$ <b>${formatBrCurrency(product.price)}</b>`;
   }
-  
-  // Se tem cupom, calcular preço final
-  if (hasCoupons && product.price) {
-    const coupon = coupons[0];
-    cupomMsg = `🎟️ <code>${coupon.code}</code>`;
-    
-    // Tentar calcular preço com cupom (estimativa)
-    if (product.priceWithCoupon) {
-      const totalSavings = product.originalPrice ? product.originalPrice - product.priceWithCoupon : product.price - product.priceWithCoupon;
-      const totalSavingsPercent = product.originalPrice 
-        ? ((product.originalPrice - product.priceWithCoupon) / product.originalPrice) * 100
-        : ((product.price - product.priceWithCoupon) / product.price) * 100;
-      
-      cupomMsg += ` → R$ <b>${formatBrCurrency(product.priceWithCoupon)}</b> (economia total ${totalSavingsPercent.toFixed(0)}%)`;
-    } else if (coupon.discount) {
-      cupomMsg += ` → ${coupon.discount}`;
-    }
-  } else {
-    // Fallback: buscar cupom na descrição (compatibilidade com sistema antigo)
-    const desc = product.description || '';
-    if (desc.includes('🎟️ CUPOM:')) {
-      const cupomExtraido = desc.split('🎟️ CUPOM:')[1].split('\n')[0].trim();
-      if (cupomExtraido && !['NORMAL', 'NONE', 'NULL', 'N/A', 'NA'].includes(cupomExtraido.toUpperCase())) {
-        cupomMsg = `🎟️ <code>${cupomExtraido}</code>`;
-      }
-    }
-  }
-  
-  // Extrair regras e condições da descrição (antes do cupom se houver)
-  let condicoesMsg = "";
-  const desc = product.description || '';
-  const descSemCupom = desc.split('🎟️ CUPOM:')[0].trim();
 
-  // Limpar texto padrão do scraper
-  const descLimpa = descSemCupom
-    .split('\n')
-    .filter((line: string) => !/^Oferta (na|no) /i.test(line.trim()))
-    .join('\n')
-    .trim();
-  if (descLimpa && descLimpa !== 'Oferta encaminhada de grupos') {
-    condicoesMsg = `↪️ <i>${descLimpa}</i>`;
-  }
-  
-  // Badge de queda de preço
-  let dropBadge = "";
-  if (product.dropPercent && product.dropPercent > 0) {
-    dropBadge = `⚡ PREÇO CAIU ${product.dropPercent}%!`;
-  }
-
-  // Legenda da IA
-  let legendaTop = "";
-  const aiAnalysisRaw = product.aiAnalysis;
-  if (aiAnalysisRaw) {
-    try {
-      const data = JSON.parse(aiAnalysisRaw);
-      if (data && typeof data === 'object') {
-        const titulo = data.titulo;
-        const subtitulo = data.subtitulo;
-        const analise = data.analise || data.critique;
-        
-        if (titulo) {
-          legendaTop = `<b>${titulo.toUpperCase()}</b>`;
-          if (subtitulo) {
-            legendaTop += `\n<i>${subtitulo.toLowerCase()}</i>`;
-          }
-        } else {
-          legendaTop = `<b>🔥 ACHADINHO IMPERDÍVEL!</b>`;
-        }
-      } else {
-        legendaTop = `<b>🔥 ACHADINHO IMPERDÍVEL!</b>`;
-      }
-    } catch {
-      legendaTop = `<b>🔥 ACHADINHO IMPERDÍVEL!</b>`;
-    }
-  } else {
-    legendaTop = "<b>🔥 ACHADINHO IMPERDÍVEL!</b>";
-  }
-
-  const lines = [];
+  const lines: string[] = [];
   if (legendaTop) {
-    lines.push(legendaTop);
-    lines.push("");
+    lines.push(legendaTop, "");
   }
-  
   if (dropBadge) {
-    lines.push(dropBadge);
-    lines.push("");
-  }
-  
-  lines.push(`${emoji} ${product.name}`);
-  lines.push("");
-
-  // Adicionar nome da loja/plataforma (apenas a bolinha e o nome)
-  const PLATAFORMA_EMOJIS: Record<string, string> = {
-    amazon: '🟠 Amazon',
-    mercadoLivre: '🟡 Mercado Livre',
-    shopee: '🟠 Shopee',
-    aliexpress: '🔴 AliExpress',
-    tiktok: '⚫ TikTok Shop',
-    netshoes: '🟣 Netshoes',
-    magalu: '🔵 Magalu',
-    kabum: '🔵 Kabum',
-  };
-
-  let lojaDetectada = platform ? PLATAFORMA_EMOJIS[platform] : '';
-  if (!lojaDetectada && product.storeName) {
-    const storeLower = product.storeName.toLowerCase();
-    if (storeLower.includes('amazon')) lojaDetectada = '🟠 Amazon';
-    else if (storeLower.includes('mercado')) lojaDetectada = '🟡 Mercado Livre';
-    else if (storeLower.includes('shopee')) lojaDetectada = '🟠 Shopee';
-    else if (storeLower.includes('aliexpress')) lojaDetectada = '🔴 AliExpress';
-    else if (storeLower.includes('tiktok')) lojaDetectada = '⚫ TikTok Shop';
-    else if (storeLower.includes('netshoes')) lojaDetectada = '🟣 Netshoes';
-    else if (storeLower.includes('magalu') || storeLower.includes('magazine')) lojaDetectada = '🔵 Magalu';
-    else if (storeLower.includes('kabum')) lojaDetectada = '🔵 Kabum';
-    else lojaDetectada = product.storeName;
+    lines.push(dropBadge, "");
   }
 
+  lines.push(`${emoji} ${product.name}`, "");
+
+  const lojaDetectada = resolvePlatformBadge(platform, product.storeName);
   if (lojaDetectada) {
-    lines.push(`<b>${lojaDetectada}</b>`);
-    lines.push("");
+    lines.push(`<b>${lojaDetectada}</b>`, "");
   }
-  
-  if (precoTxt) {
-    lines.push(precoTxt);
-  }
-  if (condicoesMsg) {
-    lines.push(condicoesMsg);
-  }
-  if (cupomMsg) {
-    lines.push(cupomMsg);
-  }
-  
+
+  if (precoTxt) lines.push(precoTxt);
+  if (condicoesMsg) lines.push(condicoesMsg);
+  if (cupomMsg) lines.push(cupomMsg);
+
   lines.push("");
-  
+
   const shortId = product.shortId;
-  let linkProduto = "";
-  if (shortId) {
-    linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${shortId}`;
-  } else if (product.id) {
-    linkProduto = `${SITE_URL.replace(/\/$/, '')}/produto/${product.id}`;
-  }
+  const linkProduto = shortId 
+    ? `${SITE_URL.replace(/\/$/, '')}/produto/${shortId}`
+    : product.id 
+      ? `${SITE_URL.replace(/\/$/, '')}/produto/${product.id}`
+      : "";
 
   const couponLink = product.couponLink;
   if (couponLink) {
     if (linkProduto) {
-      lines.push(`🔗 Ver no site: ${linkProduto}`);
-      lines.push("");
+      lines.push(`🔗 Ver no site: ${linkProduto}`, "");
     }
     lines.push(`🎟️ Resgate o cupom antes: ${couponLink}`);
     lines.push(`🛒 Depois acesse o produto: ${affiliateLink}`);
   } else {
-    if (linkProduto) {
-      lines.push(`🔗 ${linkProduto}`);
-    } else {
-      lines.push(`🔗 ${affiliateLink}`);
-    }
+    lines.push(linkProduto ? `🔗 ${linkProduto}` : `🔗 ${affiliateLink}`);
   }
 
   const text = lines.join('\n');
-
   return sendTelegramMessage(TELEGRAM_PROMO_GROUP_ID, text, lifestyleImage);
 }
 
 export async function publishToQueueTop(product: any, platform: string, affiliateLink: string) {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    
     const candidato = {
       produto: product,
       platform,

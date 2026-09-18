@@ -411,6 +411,19 @@ export function detectStoreKey(item?: {
   return "default";
 }
 
+const LOGO_COMPONENTS: Record<StoreKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+  amazon: AmazonLogo,
+  mercadolivre: MercadoLivreLogo,
+  shopee: ShopeeLogo,
+  aliexpress: AliExpressLogo,
+  tiktok: TikTokShopLogo,
+  kabum: KaBuMLogo,
+  magalu: MagaluLogo,
+  netshoes: NetshoesLogo,
+  casasbahia: CasasBahiaLogo,
+  default: AmazonLogo, // fallback token
+};
+
 export function StoreLogo({
   store,
   className = "w-5 h-5",
@@ -420,32 +433,16 @@ export function StoreLogo({
 }) {
   const key = detectStoreKey(store);
 
-  switch (key) {
-    case "amazon":
-      return <AmazonLogo className={className} />;
-    case "mercadolivre":
-      return <MercadoLivreLogo className={className} />;
-    case "shopee":
-      return <ShopeeLogo className={className} />;
-    case "aliexpress":
-      return <AliExpressLogo className={className} />;
-    case "tiktok":
-      return <TikTokShopLogo className={className} />;
-    case "kabum":
-      return <KaBuMLogo className={className} />;
-    case "magalu":
-      return <MagaluLogo className={className} />;
-    case "netshoes":
-      return <NetshoesLogo className={className} />;
-    case "casasbahia":
-      return <CasasBahiaLogo className={className} />;
-    default:
-      return (
-        <div
-          className={`rounded-lg bg-white/10 text-white flex items-center justify-center font-bold text-[9px] uppercase border border-white/15 shrink-0 ${className}`}
-        >
-          {store && store.length > 0 ? store.substring(0, 2).toUpperCase() : "🏷️"}
-        </div>
-      );
+  if (key !== "default") {
+    const Component = LOGO_COMPONENTS[key];
+    if (Component) return <Component className={className} />;
   }
+
+  return (
+    <div
+      className={`rounded-lg bg-white/10 text-white flex items-center justify-center font-bold text-[9px] uppercase border border-white/15 shrink-0 ${className}`}
+    >
+      {store && store.length > 0 ? store.substring(0, 2).toUpperCase() : "🏷️"}
+    </div>
+  );
 }

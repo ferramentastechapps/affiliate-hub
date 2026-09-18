@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PlatformModal } from "./PlatformModal";
-import { Clock } from "@phosphor-icons/react";
 
 type Product = {
   id: string;
@@ -19,10 +19,90 @@ type Product = {
   shortId?: number;
 };
 
-// Deterministic discount based on ID
+const HIGHLIGHT_GRADIENTS = [
+  "radial-gradient(circle at 75% 30%, #501015 0%, #12141c 100%)",
+  "radial-gradient(circle at 75% 30%, #1b3a24 0%, #12141c 100%)",
+  "radial-gradient(circle at 75% 30%, #102e50 0%, #12141c 100%)",
+];
 
+const formatBrl = (val: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(val);
 
-import { useRouter } from "next/navigation";
+interface WeeklyHighlightCardProps {
+  product: Product;
+  index: number;
+  onClick: () => void;
+}
+
+function WeeklyHighlightCard({ product, index, onClick }: WeeklyHighlightCardProps) {
+  const price = product.price || 0;
+  const originalPrice = product.originalPrice || 0;
+  const discount =
+    originalPrice > price && price > 0
+      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+      : 0;
+
+  return (
+    <motion.div
+      onClick={onClick}
+      whileHover={{ y: -3 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className="group cursor-pointer bg-card hover:bg-[#161722] border border-white/5 hover:border-white/10 rounded-2xl p-4 relative flex items-center justify-between overflow-hidden select-none transition-all duration-300 h-32 shadow-lg hover:shadow-black/40 w-[260px] shrink-0 md:w-auto snap-start"
+    >
+      {/* Radial gradient background based on index */}
+      <div
+        className="absolute inset-0 z-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: HIGHLIGHT_GRADIENTS[index % HIGHLIGHT_GRADIENTS.length],
+        }}
+      />
+
+      {/* Left Column (Text & Price info) */}
+      <div className="relative z-10 flex flex-col justify-between h-full flex-1 pr-4">
+        {/* Discount Badge */}
+        {discount > 0 && (
+          <div className="flex items-center gap-1.5 self-start">
+            <span className="bg-[#ff334b] text-white text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
+              -{discount}%
+            </span>
+          </div>
+        )}
+
+        {/* Product Title */}
+        <h3 className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2 mt-2 mb-2 group-hover:text-[#ff334b] transition-colors">
+          {product.name}
+        </h3>
+
+        {/* Price Tag */}
+        <div className="flex flex-col mt-auto">
+          {price > 0 && discount > 0 && (
+            <span className="text-[11px] text-[#8e92a4] line-through leading-none mb-1">
+              {formatBrl(originalPrice)}
+            </span>
+          )}
+          <span className="text-base sm:text-lg font-black text-white transition-colors">
+            {price > 0 ? formatBrl(price) : "Ver oferta"}
+          </span>
+        </div>
+      </div>
+
+      {/* Right Column (Image Container) */}
+      <div className="relative z-10 w-32 h-32 shrink-0 overflow-hidden flex items-center justify-center bg-white rounded-2xl p-1 transition-all duration-300 group-hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          className="absolute inset-0 w-full h-full object-contain p-1 transition-transform duration-500 group-hover:scale-110"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/placeholder.webp";
+          }}
+        />
+      </div>
+    </motion.div>
+  );
+}
 
 export function WeeklyHighlights() {
   const router = useRouter();
@@ -32,9 +112,11 @@ export function WeeklyHighlights() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
     fetch("/api/products")
       .then((r) => r.json())
       .then((data) => {
+        if (!isMounted) return;
         if (Array.isArray(data) && data.length > 0) {
           // Select products with highest discounts or simply first 3
           const formatted = data.map((p: any) => ({
@@ -62,7 +144,13 @@ export function WeeklyHighlights() {
         }
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {
@@ -93,92 +181,21 @@ export function WeeklyHighlights() {
         >
           Ver todos
           <svg width="10" height="10" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
-            <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </a>
       </div>
 
       {/* Grid de Destaques (Scrollable on mobile) */}
       <div className="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-4 scrollbar-hide snap-x snap-mandatory">
-        {products.map((product) => {
-          const price = product.price || 0;
-          const originalPrice = product.originalPrice || 0;
-          const discount = (originalPrice > price && price > 0)
-            ? Math.round(((originalPrice - price) / originalPrice) * 100)
-            : 0;
-
-          return (
-            <motion.div
-              key={product.id}
-              onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
-              whileHover={{ y: -3 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="group cursor-pointer bg-card hover:bg-[#161722] border border-white/5 hover:border-white/10 rounded-2xl p-4 relative flex items-center justify-between overflow-hidden select-none transition-all duration-300 h-32 shadow-lg hover:shadow-black/40 w-[260px] shrink-0 md:w-auto snap-start"
-            >
-              {/* Radial gradient background based on index */}
-              <div
-                className="absolute inset-0 z-0 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
-                style={{
-                  background:
-                    products.indexOf(product) === 0
-                      ? "radial-gradient(circle at 75% 30%, #501015 0%, #12141c 100%)"
-                      : products.indexOf(product) === 1
-                      ? "radial-gradient(circle at 75% 30%, #1b3a24 0%, #12141c 100%)"
-                      : "radial-gradient(circle at 75% 30%, #102e50 0%, #12141c 100%)",
-                }}
-              />
-
-              {/* Left Column (Text & Price info) */}
-              <div className="relative z-10 flex flex-col justify-between h-full flex-1 pr-4">
-                {/* Discount Badge */}
-                {discount > 0 && (
-                  <div className="flex items-center gap-1.5 self-start">
-                    <span className="bg-[#ff334b] text-white text-[11px] font-extrabold px-2 py-0.5 rounded-[6px] uppercase tracking-wider flex items-center gap-1">
-                      -{discount}%
-                    </span>
-                  </div>
-                )}
-                
-                {/* Product Title */}
-                <h3 className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2 mt-2 mb-2 group-hover:text-[#ff334b] transition-colors">
-                  {product.name}
-                </h3>
-
-                {/* Price Tag */}
-                <div className="flex flex-col mt-auto">
-                  {price > 0 && discount > 0 && (
-                    <span className="text-[11px] text-[#8e92a4] line-through leading-none mb-1">
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(originalPrice)}
-                    </span>
-                  )}
-                  <span className="text-base sm:text-lg font-black text-white transition-colors">
-                    {price > 0
-                      ? new Intl.NumberFormat("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                      }).format(price)
-                      : "Ver oferta"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Column (Image Container) */}
-              <div className="relative z-10 w-32 h-32 shrink-0 overflow-hidden flex items-center justify-center bg-white rounded-2xl p-1 transition-all duration-300 group-hover:scale-105 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="absolute inset-0 w-full h-full object-contain p-1 transition-transform duration-500 group-hover:scale-110"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.webp";
-                  }}
-                />
-              </div>
-            </motion.div>
-          );
-        })}
+        {products.map((product, index) => (
+          <WeeklyHighlightCard
+            key={product.id}
+            product={product}
+            index={index}
+            onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
+          />
+        ))}
       </div>
 
       {/* Dots de navegação simulados estilo mockup */}

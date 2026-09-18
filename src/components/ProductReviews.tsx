@@ -13,18 +13,71 @@ interface Review {
   publishedAt: string;
 }
 
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex text-yellow-400">
+      {[...Array(5)].map((_, i) => (
+        <Star
+          key={i}
+          size={14}
+          weight={i < rating ? "fill" : "regular"}
+          className={i >= rating ? "text-zinc-600" : ""}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ReviewCard({ review }: { review: Review }) {
+  return (
+    <div className="bg-white/5 border border-white/5 rounded-2xl p-5 hover:bg-white/10 transition-colors">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <span className="font-medium text-white flex items-center gap-2">
+            {review.authorName}
+            {review.verified && (
+              <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
+                <ShieldCheck size={12} weight="fill" /> Verificado
+              </span>
+            )}
+          </span>
+          <span className="text-xs text-zinc-500">
+            {new Date(review.publishedAt).toLocaleDateString("pt-BR")}
+          </span>
+        </div>
+        <StarRating rating={review.rating} />
+      </div>
+      <p className="text-sm text-zinc-300 mb-4 line-clamp-4">
+        "{review.comment}"
+      </p>
+      {review.helpful > 0 && (
+        <div className="flex items-center gap-1 text-xs text-zinc-500">
+          <ThumbsUp size={14} /> {review.helpful} pessoas acharam útil
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProductReviews({ productId }: { productId: string }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     fetch(`/api/products/${productId}/reviews`)
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setReviews(data);
+        if (isMounted && Array.isArray(data)) setReviews(data);
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [productId]);
 
   if (loading) {
@@ -49,36 +102,7 @@ export function ProductReviews({ productId }: { productId: string }) {
 
       <div className="grid gap-4 md:grid-cols-2">
         {reviews.map((review) => (
-          <div key={review.id} className="bg-white/5 border border-white/5 rounded-2xl p-5 hover:bg-white/10 transition-colors">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span className="font-medium text-white flex items-center gap-2">
-                  {review.authorName}
-                  {review.verified && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                      <ShieldCheck size={12} weight="fill" /> Verificado
-                    </span>
-                  )}
-                </span>
-                <span className="text-xs text-zinc-500">
-                  {new Date(review.publishedAt).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-              <div className="flex text-yellow-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} weight={i < review.rating ? "fill" : "regular"} className={i >= review.rating ? "text-zinc-600" : ""} />
-                ))}
-              </div>
-            </div>
-            <p className="text-sm text-zinc-300 mb-4 line-clamp-4">
-              "{review.comment}"
-            </p>
-            {review.helpful > 0 && (
-              <div className="flex items-center gap-1 text-xs text-zinc-500">
-                <ThumbsUp size={14} /> {review.helpful} pessoas acharam útil
-              </div>
-            )}
-          </div>
+          <ReviewCard key={review.id} review={review} />
         ))}
       </div>
     </div>

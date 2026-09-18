@@ -721,6 +721,16 @@ type ScrapedProduct = {
   createdAt: string;
 };
 
+function extractAiCritique(aiAnalysis?: string | null): string {
+  if (!aiAnalysis) return '';
+  try {
+    const parsed = JSON.parse(aiAnalysis);
+    return parsed.analise || parsed.critique || aiAnalysis;
+  } catch {
+    return aiAnalysis;
+  }
+}
+
 function ProductsSection() {
   const [products, setProducts] = useState<ScrapedProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -808,21 +818,20 @@ function ProductsSection() {
       ) : (
         <div className="space-y-4">
           {products.map((p) => {
-            let aiCritique = '';
-            if (p.aiAnalysis) {
-              try {
-                const parsed = JSON.parse(p.aiAnalysis);
-                aiCritique = parsed.analise || parsed.critique || p.aiAnalysis;
-              } catch {
-                aiCritique = p.aiAnalysis;
-              }
-            }
+            const aiCritique = extractAiCritique(p.aiAnalysis);
 
             return (
               <div key={p.id} className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-4 flex gap-4 hover:border-zinc-700/60 transition-colors">
                 {/* Imagem */}
                 <div className="w-20 h-20 bg-zinc-950 rounded-lg overflow-hidden shrink-0 flex items-center justify-center border border-zinc-800">
-                  <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 </div>
 
                 {/* Conteúdo */}
@@ -973,17 +982,59 @@ export function AiStudioTab() {
 }
 
 // ─── Section G: Tokens ───────────────────────────────────────────────────────
+const PERIOD_LABELS: Record<string, string> = {
+  hoje: "Hoje",
+  ontem: "Ontem",
+  "7d": "Últimos 7 dias",
+  "30d": "Últimos 30 dias",
+  "90d": "Últimos 90 dias",
+};
+
+type TokenFunctionGroup = {
+  functionName: string;
+  _sum: { totalTokens?: number; costUSD?: number };
+};
+
+type TokenModelGroup = {
+  modelUsed: string;
+  _sum: { totalTokens?: number; costUSD?: number };
+};
+
+type TokenMetricsData = {
+  totalCalls?: number;
+  totalTokens?: number;
+  totalCostUSD?: number;
+  groupByFunction?: TokenFunctionGroup[];
+  groupByModel?: TokenModelGroup[];
+};
+
 function TokensSection() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<TokenMetricsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('hoje');
+  const [period, setPeriod] = useState("hoje");
 
   useEffect(() => {
-    setLoading(true);
-    fetch(`/api/admin/analytics/tokens?period=${period}`)
-      .then(res => res.json())
-      .then(json => setData(json.data))
-      .finally(() => setLoading(false));
+    let isMounted = true;
+
+    async function loadTokens() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/admin/analytics/tokens?period=${period}`);
+        const json = await res.json();
+        if (isMounted) {
+          setData(json.data || null);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar métricas de tokens:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadTokens();
+    return () => {
+      isMounted = false;
+    };
   }, [period]);
 
   if (loading) return <div className="p-8 text-center text-zinc-400">Carregando métricas de IA...</div>;
@@ -992,16 +1043,15 @@ function TokensSection() {
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
-        {['hoje', 'ontem', '7d', '30d', '90d'].map(p => (
+        {Object.entries(PERIOD_LABELS).map(([key, label]) => (
           <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${period === p ? 'bg-accent text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+            key={key}
+            onClick={() => setPeriod(key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              period === key ? "bg-accent text-white" : "bg-zinc-900 text-zinc-400 hover:text-white"
+            }`}
           >
-            {p === 'hoje' ? 'Hoje' : 
-             p === 'ontem' ? 'Ontem' : 
-             p === '7d' ? 'Últimos 7 dias' : 
-             p === '30d' ? 'Últimos 30 dias' : 'Últimos 90 dias'}
+            {label}
           </button>
         ))}
       </div>
@@ -1027,7 +1077,7 @@ function TokensSection() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
           <h3 className="font-semibold mb-4 text-zinc-100">Uso por Função</h3>
           <div className="space-y-3">
-            {data.groupByFunction?.map((f: any) => (
+            {data.groupByFunction?.map((f) => (
               <div key={f.functionName} className="flex justify-between items-center bg-zinc-950 p-3 rounded-lg border border-zinc-800/50">
                 <span className="font-medium text-zinc-300">{f.functionName}</span>
                 <div className="text-right text-xs">
@@ -1042,7 +1092,7 @@ function TokensSection() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
           <h3 className="font-semibold mb-4 text-zinc-100">Uso por Modelo</h3>
           <div className="space-y-3">
-            {data.groupByModel?.map((m: any) => (
+            {data.groupByModel?.map((m) => (
               <div key={m.modelUsed} className="flex justify-between items-center bg-zinc-950 p-3 rounded-lg border border-zinc-800/50">
                 <span className="font-medium text-zinc-300">{m.modelUsed}</span>
                 <div className="text-right text-xs">

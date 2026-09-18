@@ -4,8 +4,8 @@
  */
 
 export interface ProductTemperatureInput {
-  price: number | null;
-  originalPrice: number | null;
+  price?: number | null;
+  originalPrice?: number | null;
   likesCount?: number;
   dislikesCount?: number;
   clicksCount?: number;

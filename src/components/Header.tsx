@@ -8,6 +8,15 @@ import { MagnifyingGlass, X, Heart } from "@phosphor-icons/react";
 import { NotificationPreferencesModal } from "./NotificationPreferencesModal";
 import { usePathname } from "next/navigation";
 
+const SEARCH_SUGGESTIONS = ["iPhone", "Notebook", "Fone de ouvido", "Cadeira gamer", "Smartwatch"] as const;
+
+const NAV_LINKS = [
+  { href: "#inicio", label: "Início" },
+  { href: "#categorias", label: "Categorias" },
+  { href: "/cupons", label: "Cupons" },
+  { href: "/wishlist", label: "Favoritos" },
+] as const;
+
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
@@ -15,6 +24,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
 
   if (pathname?.startsWith("/admin")) return null;
@@ -26,13 +36,21 @@ export function Header() {
 
   const openSearch = () => {
     setSearchOpen(true);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const closeSearch = () => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     setSearchOpen(false);
     handleSearchChange("");
   };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const handleOpenNotifs = () => setIsPrefsOpen(true);
@@ -56,67 +74,13 @@ export function Header() {
 
   return (
     <>
-      {/* ── MOBILE FULLSCREEN SEARCH OVERLAY ── */}
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-50 bg-[#080910]/95 backdrop-blur-xl flex flex-col md:hidden"
-          >
-            {/* Search Bar Row */}
-            <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-white/[0.06]">
-              <div className="relative flex-1">
-                <MagnifyingGlass
-                  size={17}
-                  weight="bold"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none"
-                />
-                <input
-                  ref={inputRef}
-                  type="search"
-                  inputMode="search"
-                  enterKeyHint="search"
-                  value={searchVal}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      (document.activeElement as HTMLElement)?.blur();
-                    }
-                  }}
-                  className="w-full h-10 bg-[#13151f] border border-white/[0.08] rounded-xl pl-9 pr-4 text-[15px] text-white placeholder-[#6b7280] outline-none focus:border-[rgba(255,51,75,0.4)] appearance-none"
-                  placeholder="Buscar produto..."
-                />
-              </div>
-              <button
-                onClick={closeSearch}
-                className="text-[#6b7280] hover:text-white transition-colors text-sm font-medium shrink-0"
-              >
-                Cancelar
-              </button>
-            </div>
-
-            {/* Recent / hint */}
-            {!searchVal && (
-              <div className="px-5 pt-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-[#374151] mb-3">Sugestões</p>
-                {["iPhone", "Notebook", "Fone de ouvido", "Cadeira gamer", "Smartwatch"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleSearchChange(s)}
-                    className="flex items-center gap-3 w-full py-2.5 text-[15px] text-[#6b7280] hover:text-white transition-colors text-left"
-                  >
-                    <MagnifyingGlass size={15} className="shrink-0" />
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <MobileSearchOverlay
+        isOpen={searchOpen}
+        searchVal={searchVal}
+        inputRef={inputRef}
+        onSearchChange={handleSearchChange}
+        onClose={closeSearch}
+      />
 
       {/* ── HEADER ── */}
       <header
@@ -160,12 +124,7 @@ export function Header() {
 
           {/* ── DESKTOP: Nav links ── */}
           <nav className="hidden md:flex items-center gap-1">
-            {[
-              { href: "#inicio",     label: "Início" },
-              { href: "#categorias", label: "Categorias" },
-              { href: "/cupons",     label: "Cupons" },
-              { href: "/wishlist",   label: "Favoritos" },
-            ].map(({ href, label }) => (
+            {NAV_LINKS.map(({ href, label }) => (
               <DesktopNavLink key={href} href={href}>{label}</DesktopNavLink>
             ))}
           </nav>
@@ -227,3 +186,83 @@ function DesktopNavLink({ href, children }: { href: string; children: React.Reac
     </a>
   );
 }
+
+interface MobileSearchOverlayProps {
+  isOpen: boolean;
+  searchVal: string;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onSearchChange: (val: string) => void;
+  onClose: () => void;
+}
+
+function MobileSearchOverlay({
+  isOpen,
+  searchVal,
+  inputRef,
+  onSearchChange,
+  onClose,
+}: MobileSearchOverlayProps) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 bg-[#080910]/95 backdrop-blur-xl flex flex-col md:hidden"
+        >
+          {/* Search Bar Row */}
+          <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-white/[0.06]">
+            <div className="relative flex-1">
+              <MagnifyingGlass
+                size={17}
+                weight="bold"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none"
+              />
+              <input
+                ref={inputRef}
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
+                value={searchVal}
+                onChange={(e) => onSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    (document.activeElement as HTMLElement)?.blur();
+                  }
+                }}
+                className="w-full h-10 bg-[#13151f] border border-white/[0.08] rounded-xl pl-9 pr-4 text-[15px] text-white placeholder-[#6b7280] outline-none focus:border-[rgba(255,51,75,0.4)] appearance-none"
+                placeholder="Buscar produto..."
+              />
+            </div>
+            <button
+              onClick={onClose}
+              className="text-[#6b7280] hover:text-white transition-colors text-sm font-medium shrink-0"
+            >
+              Cancelar
+            </button>
+          </div>
+
+          {/* Recent / hint */}
+          {!searchVal && (
+            <div className="px-5 pt-5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#374151] mb-3">Sugestões</p>
+              {SEARCH_SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onSearchChange(s)}
+                  className="flex items-center gap-3 w-full py-2.5 text-[15px] text-[#6b7280] hover:text-white transition-colors text-left"
+                >
+                  <MagnifyingGlass size={15} className="shrink-0" />
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+

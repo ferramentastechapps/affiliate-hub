@@ -99,6 +99,8 @@ function Field({
   );
 }
 
+const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const { login, signup, loginWithGoogle, error, clearError } = useAuth();
@@ -122,7 +124,6 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
   const pwStrength       = getPasswordStrength(password);
   const googleInit       = useRef(false);
   const clearField       = (k: string) => setErrors((p) => ({ ...p, [k]: "" }));
-  const validateEmail    = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   // ── Google SDK ───────────────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,16 +169,30 @@ export function AuthPanel({ isOpen, onClose }: AuthPanelProps) {
       }
     };
 
+    let iv: NodeJS.Timeout | null = null;
+    let cleanupTimer: NodeJS.Timeout | null = null;
+
     const timer = setTimeout(() => {
       if (!render()) {
-        const iv = setInterval(() => { if (render()) clearInterval(iv); }, 300);
-        const cleanup = setTimeout(() => clearInterval(iv), 5000);
-        return () => { clearInterval(iv); clearTimeout(cleanup); };
+        iv = setInterval(() => {
+          if (render() && iv) {
+            clearInterval(iv);
+            iv = null;
+          }
+        }, 300);
+        cleanupTimer = setTimeout(() => {
+          if (iv) {
+            clearInterval(iv);
+            iv = null;
+          }
+        }, 5000);
       }
     }, 150);
 
     return () => {
       clearTimeout(timer);
+      if (iv) clearInterval(iv);
+      if (cleanupTimer) clearTimeout(cleanupTimer);
       window.removeEventListener("resize", checkMobile);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

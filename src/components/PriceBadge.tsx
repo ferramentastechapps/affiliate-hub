@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, TrendDown, Flame, Warning } from "@phosphor-icons/react";
+import { ShieldCheck, TrendDown, Flame } from "@phosphor-icons/react";
 
 interface PriceBadgeProps {
   currentPrice: number;
@@ -10,6 +10,8 @@ interface PriceBadgeProps {
   averagePrice?: number | null;
   className?: string;
 }
+
+const BASE_BADGE_STYLE = "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px]";
 
 export function PriceBadge({
   currentPrice,
@@ -24,7 +26,7 @@ export function PriceBadge({
   if (lowestPriceIn90Days && currentPrice <= lowestPriceIn90Days * 1.01) {
     return (
       <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-black text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-sm ${className}`}
+        className={`${BASE_BADGE_STYLE} font-black bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-sm ${className}`}
         title="Este é o menor preço registrado nos últimos 90 dias!"
       >
         <ShieldCheck size={12} weight="fill" className="text-emerald-400 shrink-0" />
@@ -38,7 +40,7 @@ export function PriceBadge({
     const savings = Math.round(((averagePrice - currentPrice) / averagePrice) * 100);
     return (
       <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10px] bg-teal-500/15 border border-teal-500/30 text-teal-300 ${className}`}
+        className={`${BASE_BADGE_STYLE} font-bold bg-teal-500/15 border border-teal-500/30 text-teal-300 ${className}`}
         title={`Preço ${savings}% abaixo da média de mercado`}
       >
         <TrendDown size={12} weight="bold" className="text-teal-300 shrink-0" />
@@ -53,7 +55,7 @@ export function PriceBadge({
     if (discount >= 30) {
       return (
         <span
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-black text-[10px] bg-rose-500/15 border border-rose-500/30 text-rose-400 ${className}`}
+          className={`${BASE_BADGE_STYLE} font-black bg-rose-500/15 border border-rose-500/30 text-rose-400 ${className}`}
         >
           <Flame size={12} weight="fill" className="text-rose-400 shrink-0" />
           <span>-{discount}% OFF</span>

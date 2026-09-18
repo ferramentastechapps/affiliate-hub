@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Tag } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
@@ -52,6 +53,9 @@ const CATEGORIES = [...RAW_CATEGORIES].sort((a, b) =>
   a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" })
 );
 
+const formatBrl = (val: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
+
 type Product = {
   id: string;
   name: string;
@@ -67,10 +71,6 @@ type Product = {
   shortId?: number;
 };
 
-
-
-import { useRouter } from "next/navigation";
-
 export function CategoriesSection() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -80,13 +80,14 @@ export function CategoriesSection() {
 
   useEffect(() => {
     if (!activeCategory) return;
+    let isMounted = true;
     setLoading(true);
     setProducts([]);
 
     fetch("/api/products")
       .then(r => r.json())
       .then((data: any[]) => {
-        if (!Array.isArray(data)) return;
+        if (!isMounted || !Array.isArray(data)) return;
         
         const activeCatObj = CATEGORIES.find(c => c.key === activeCategory);
         const filtered = data.filter(p => {
@@ -114,7 +115,13 @@ export function CategoriesSection() {
         })));
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeCategory]);
 
   const activeCategoryInfo = CATEGORIES.find(c => c.key === activeCategory);
@@ -268,11 +275,11 @@ export function CategoriesSection() {
                               <>
                                 {discount > 0 && (
                                   <span className="text-zinc-500 text-xs line-through font-normal mb-0.5">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                                    {formatBrl(originalPrice)}
                                   </span>
                                 )}
                                 <span className="text-xl font-bold text-white tracking-tight">
-                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
+                                  {formatBrl(price)}
                                 </span>
                               </>
                             ) : (

@@ -9,16 +9,16 @@ interface AuthButtonProps {
   onOpenAuth: () => void;
 }
 
+// Obtém as iniciais do nome do usuário de forma robusta
+function getInitials(name: string): string {
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export function AuthButton({ onOpenAuth }: AuthButtonProps) {
   const { user, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
-
-  // Obtém as iniciais do nome do usuário de forma robusta
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(" ");
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
 
   const handleLogout = async () => {
     setShowDropdown(false);

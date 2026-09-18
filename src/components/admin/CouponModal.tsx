@@ -2,32 +2,58 @@
 
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
+import type { AdminCoupon } from "./CouponsTab";
+
+type ProductOption = {
+  id: string;
+  name: string;
+};
+
+type CouponFormState = {
+  code: string;
+  description: string;
+  discount: string;
+  platform: string;
+  productId: string;
+  expiresAt: string;
+  minPurchaseValue: string;
+  maxDiscountValue: string;
+  applicableCategories: string;
+};
+
+const INITIAL_FORM_STATE: CouponFormState = {
+  code: "",
+  description: "",
+  discount: "",
+  platform: "",
+  productId: "",
+  expiresAt: "",
+  minPurchaseValue: "",
+  maxDiscountValue: "",
+  applicableCategories: "",
+};
 
 type CouponModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  coupon?: any;
+  coupon?: AdminCoupon | null;
 };
 
 export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
-  const [products, setProducts] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    code: "",
-    description: "",
-    discount: "",
-    platform: "",
-    productId: "",
-    expiresAt: "",
-    minPurchaseValue: "",
-    maxDiscountValue: "",
-    applicableCategories: "",
-  });
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [formData, setFormData] = useState<CouponFormState>(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const setField = (field: keyof CouponFormState, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchProducts();
-    }
+    if (!isOpen) return;
+
+    fetchProducts();
+    setError("");
 
     if (coupon) {
       setFormData({
@@ -44,17 +70,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
         applicableCategories: coupon.applicableCategories || "",
       });
     } else {
-      setFormData({
-        code: "",
-        description: "",
-        discount: "",
-        platform: "",
-        productId: "",
-        expiresAt: "",
-        minPurchaseValue: "",
-        maxDiscountValue: "",
-        applicableCategories: "",
-      });
+      setFormData(INITIAL_FORM_STATE);
     }
   }, [coupon, isOpen]);
 
@@ -62,15 +78,16 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
     try {
       const res = await fetch("/api/products");
       const data = await res.json();
-      setProducts(data);
-    } catch (error) {
-      console.error("Erro ao buscar produtos:", error);
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Erro ao buscar produtos:", err);
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     try {
       const payload = {
@@ -82,18 +99,21 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
         applicableCategories: formData.applicableCategories || null,
       };
 
-      const url = coupon ? `/api/coupons/${coupon.id}` : "/api/coupons";
-      const method = coupon ? "PUT" : "POST";
+      const url = coupon?.id ? `/api/coupons/${coupon.id}` : "/api/coupons";
+      const method = coupon?.id ? "PUT" : "POST";
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error(await res.text());
 
       onClose();
-    } catch (error) {
-      alert("Erro ao salvar cupom");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao salvar cupom";
+      setError(message);
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -123,9 +143,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
               type="text"
               required
               value={formData.code}
-              onChange={(e) =>
-                setFormData({ ...formData, code: e.target.value.toUpperCase() })
-              }
+              onChange={(e) => setField("code", e.target.value.toUpperCase())}
               placeholder="DESCONTO10"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 font-mono focus:outline-none focus:border-accent"
             />
@@ -137,9 +155,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
               type="text"
               required
               value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
+              onChange={(e) => setField("description", e.target.value)}
               placeholder="10% de desconto na primeira compra"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             />
@@ -151,9 +167,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
               type="text"
               required
               value={formData.discount}
-              onChange={(e) =>
-                setFormData({ ...formData, discount: e.target.value })
-              }
+              onChange={(e) => setField("discount", e.target.value)}
               placeholder="10% OFF ou R$ 50 OFF"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             />
@@ -164,9 +178,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
             <select
               required
               value={formData.platform}
-              onChange={(e) =>
-                setFormData({ ...formData, platform: e.target.value })
-              }
+              onChange={(e) => setField("platform", e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             >
               <option value="">Selecione...</option>
@@ -185,9 +197,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
             </label>
             <select
               value={formData.productId}
-              onChange={(e) =>
-                setFormData({ ...formData, productId: e.target.value })
-              }
+              onChange={(e) => setField("productId", e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             >
               <option value="">Nenhum (cupom geral)</option>
@@ -206,9 +216,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
             <input
               type="date"
               value={formData.expiresAt}
-              onChange={(e) =>
-                setFormData({ ...formData, expiresAt: e.target.value })
-              }
+              onChange={(e) => setField("expiresAt", e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             />
           </div>
@@ -220,7 +228,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
                 type="number"
                 step="0.01"
                 value={formData.minPurchaseValue}
-                onChange={(e) => setFormData({ ...formData, minPurchaseValue: e.target.value })}
+                onChange={(e) => setField("minPurchaseValue", e.target.value)}
                 placeholder="Ex: 100.00"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
               />
@@ -231,7 +239,7 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
                 type="number"
                 step="0.01"
                 value={formData.maxDiscountValue}
-                onChange={(e) => setFormData({ ...formData, maxDiscountValue: e.target.value })}
+                onChange={(e) => setField("maxDiscountValue", e.target.value)}
                 placeholder="Ex: 60.00"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
               />
@@ -243,11 +251,13 @@ export function CouponModal({ isOpen, onClose, coupon }: CouponModalProps) {
             <input
               type="text"
               value={formData.applicableCategories}
-              onChange={(e) => setFormData({ ...formData, applicableCategories: e.target.value })}
+              onChange={(e) => setField("applicableCategories", e.target.value)}
               placeholder="Ex: Eletrônicos, Moda (ou texto livre)"
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 focus:outline-none focus:border-accent"
             />
           </div>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <div className="flex gap-3 pt-4">
             <button

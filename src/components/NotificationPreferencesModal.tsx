@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -42,6 +42,17 @@ const QUICK_SUGGESTIONS = [
   'iPhone', 'PS5', 'Air Fryer', 'Smart TV', 'JBL', 'Geladeira', 'Notebook', 'Kindle', 'Alexa'
 ];
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 function loadFromLocalStorage(): PreferencesData | null {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -52,12 +63,165 @@ function loadFromLocalStorage(): PreferencesData | null {
   }
 }
 
-function saveToLocalStorage(prefs: PreferencesData) {
+function saveToLocalStorage(data: PreferencesData): void {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(prefs));
-  } catch {
-    // quota exceeded ou modo privado
-  }
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+const formatBrl = (val: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+interface DeviceStatusCardProps {
+  isSubscribedOnDevice: boolean;
+  isTestingPush: boolean;
+  isSubscribing: boolean;
+  onTestPush: () => void;
+  onActivatePush: () => void;
+  onDismiss: () => void;
+}
+
+function DeviceStatusCard({
+  isSubscribedOnDevice,
+  isTestingPush,
+  isSubscribing,
+  onTestPush,
+  onActivatePush,
+  onDismiss,
+}: DeviceStatusCardProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+      className="relative overflow-hidden bg-gradient-to-r from-zinc-900/90 to-zinc-900/50 border border-amber-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+          <DeviceMobile size={22} weight="duotone" className="text-amber-400" />
+        </div>
+        <div>
+          <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+            <span>Status do Aparelho</span>
+            <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+              Configuração
+            </span>
+          </h4>
+          <p className="text-[11px] text-zinc-400 mt-0.5">
+            {isSubscribedOnDevice
+              ? 'Seu celular está pronto. Teste para confirmar o recebimento.'
+              : 'Ative as notificações para receber alertas neste celular.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 self-end sm:self-center">
+        {isSubscribedOnDevice ? (
+          <button
+            onClick={onTestPush}
+            disabled={isTestingPush}
+            className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isTestingPush ? (
+              <Spinner size={14} className="animate-spin text-black" />
+            ) : (
+              <PaperPlaneTilt size={14} weight="fill" />
+            )}
+            <span>Testar Notificação</span>
+          </button>
+        ) : (
+          <button
+            onClick={onActivatePush}
+            disabled={isSubscribing}
+            className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isSubscribing ? (
+              <Spinner size={14} className="animate-spin text-black" />
+            ) : (
+              <BellRinging size={14} weight="fill" />
+            )}
+            <span>Ativar no Celular</span>
+          </button>
+        )}
+
+        <button
+          onClick={onDismiss}
+          title="Dispensar aviso"
+          className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 rounded-lg transition-colors"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+interface AlertProductItemProps {
+  product: any;
+  onClick: () => void;
+}
+
+function AlertProductItem({ product: p, onClick }: AlertProductItemProps) {
+  const hasCoupon = p.coupons && p.coupons.length > 0;
+  const hasDiscount = p.originalPrice && p.price && p.originalPrice > p.price;
+  const discountPct = hasDiscount
+    ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
+    : 0;
+
+  return (
+    <div
+      onClick={onClick}
+      className="group cursor-pointer bg-zinc-900/60 hover:bg-zinc-800/80 border border-white/[0.06] hover:border-amber-500/40 rounded-2xl p-3 flex items-center justify-between gap-3.5 transition-all shadow-sm active:scale-[0.99]"
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="w-13 h-13 rounded-xl bg-black/50 border border-white/5 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+          <img
+            src={p.imageUrl || '/placeholder.webp'}
+            alt={p.name}
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/placeholder.webp';
+            }}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h5 className="text-xs font-semibold text-zinc-200 line-clamp-2 leading-snug group-hover:text-amber-300 transition-colors">
+            {p.name}
+          </h5>
+          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            {p.category && (
+              <span className="text-[10px] text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.05] capitalize">
+                {p.category}
+              </span>
+            )}
+            {hasCoupon && (
+              <span className="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                🎟️ Cupom
+              </span>
+            )}
+            {discountPct > 0 && (
+              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold">
+                -{discountPct}%
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-end shrink-0 pl-1">
+        {hasDiscount && (
+          <span className="text-[10px] text-zinc-500 line-through">
+            {formatBrl(p.originalPrice)}
+          </span>
+        )}
+        <span className="text-sm font-extrabold text-white tracking-tight">
+          {p.price ? formatBrl(p.price) : 'Ver preço'}
+        </span>
+        <span className="text-[11px] font-bold text-amber-400 group-hover:text-amber-300 flex items-center gap-0.5 mt-1">
+          Ver <ArrowRight size={11} weight="bold" />
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPreferencesModalProps) {
@@ -80,6 +244,22 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
   const [matchingProducts, setMatchingProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
+  const testSuccessTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showTestSuccessMessage = (msg: string, durationMs: number) => {
+    setTestSuccess(msg);
+    if (testSuccessTimerRef.current) clearTimeout(testSuccessTimerRef.current);
+    testSuccessTimerRef.current = setTimeout(() => {
+      setTestSuccess(null);
+    }, durationMs);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (testSuccessTimerRef.current) clearTimeout(testSuccessTimerRef.current);
+    };
+  }, []);
+
   // ── Carrega status de dispensado do card do aparelho ──────────────────────
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -91,16 +271,22 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
   // ── Carrega categorias dinâmicas ──────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
+    let isMounted = true;
 
     fetch('/api/categories')
       .then((res) => res.json())
       .then((data) => {
+        if (!isMounted) return;
         if (data.categories && Array.isArray(data.categories)) {
           const sorted = [...data.categories].sort((a, b) => a.localeCompare(b, 'pt-BR'));
           setAllCategories(sorted);
         }
       })
       .catch(console.error);
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen]);
 
   // ── Verifica status do Push no dispositivo ───────────────────────────────
@@ -200,15 +386,23 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
       params.set('endpoint', subscriptionEndpoint);
     }
 
+    let isMounted = true;
+
     fetch(`/api/products?${params.toString()}&_t=${Date.now()}`)
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) {
+        if (isMounted && Array.isArray(data)) {
           setMatchingProducts(data.slice(0, 15));
         }
       })
       .catch(console.error)
-      .finally(() => setLoadingProducts(false));
+      .finally(() => {
+        if (isMounted) setLoadingProducts(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, customInterests, selectedCategories, user?.id, subscriptionEndpoint]);
 
   useEffect(() => {
@@ -230,17 +424,6 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
   }, [isOpen]);
 
   // ── Ativar Push no Aparelho ───────────────────────────────────────────────
-  const urlBase64ToUint8Array = (base64String: string) => {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  };
-
   const handleActivatePush = async () => {
     setIsSubscribing(true);
     try {
@@ -289,8 +472,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
         }),
       });
 
-      setTestSuccess('Notificações ativadas com sucesso neste aparelho!');
-      setTimeout(() => setTestSuccess(null), 3500);
+      showTestSuccessMessage('Notificações ativadas com sucesso neste aparelho!', 3500);
     } catch (err: any) {
       console.error('Erro ao ativar push:', err);
       alert('Erro ao ativar notificações: ' + (err.message || 'Tente novamente.'));
@@ -312,7 +494,7 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
     } catch {}
 
     setIsTestingPush(true);
-    setTestSuccess('Disparando notificação de teste no seu celular...');
+    showTestSuccessMessage('Disparando notificação de teste no seu celular...', 5000);
 
     try {
       const res = await fetch('/api/push/test', {
@@ -322,15 +504,13 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
       });
 
       if (res.ok) {
-        setTestSuccess('🔔 Teste enviado! Verifique as notificações do seu celular.');
+        showTestSuccessMessage('🔔 Teste enviado! Verifique as notificações do seu celular.', 4000);
       } else {
-        setTestSuccess('Notificação enviada para a fila de disparo.');
+        showTestSuccessMessage('Notificação enviada para a fila de disparo.', 4000);
       }
-      setTimeout(() => setTestSuccess(null), 4000);
     } catch (err) {
       console.error('Erro ao testar push:', err);
-      setTestSuccess('Teste solicitado.');
-      setTimeout(() => setTestSuccess(null), 3000);
+      showTestSuccessMessage('Teste solicitado.', 3000);
     } finally {
       setIsTestingPush(false);
     }
@@ -567,68 +747,14 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
             >
               {/* Card de Status do Aparelho (SÓ APARECE UMA VEZ / ATÉ O USUÁRIO TESTAR OU DISPENSAR) */}
               {!isStatusDismissed && (
-                <motion.div
-                  initial={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  className="relative overflow-hidden bg-gradient-to-r from-zinc-900/90 to-zinc-900/50 border border-amber-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
-                      <DeviceMobile size={22} weight="duotone" className="text-amber-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                        <span>Status do Aparelho</span>
-                        <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                          Configuração
-                        </span>
-                      </h4>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        {isSubscribedOnDevice
-                          ? 'Seu celular está pronto. Teste para confirmar o recebimento.'
-                          : 'Ative as notificações para receber alertas neste celular.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-end sm:self-center">
-                    {isSubscribedOnDevice ? (
-                      <button
-                        onClick={handleTestPush}
-                        disabled={isTestingPush}
-                        className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {isTestingPush ? (
-                          <Spinner size={14} className="animate-spin text-black" />
-                        ) : (
-                          <PaperPlaneTilt size={14} weight="fill" />
-                        )}
-                        <span>Testar Notificação</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleActivatePush}
-                        disabled={isSubscribing}
-                        className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-black font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {isSubscribing ? (
-                          <Spinner size={14} className="animate-spin text-black" />
-                        ) : (
-                          <BellRinging size={14} weight="fill" />
-                        )}
-                        <span>Ativar no Celular</span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={handleDismissStatusCard}
-                      title="Dispensar aviso"
-                      className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 rounded-lg transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                </motion.div>
+                <DeviceStatusCard
+                  isSubscribedOnDevice={isSubscribedOnDevice}
+                  isTestingPush={isTestingPush}
+                  isSubscribing={isSubscribing}
+                  onTestPush={handleTestPush}
+                  onActivatePush={handleActivatePush}
+                  onDismiss={handleDismissStatusCard}
+                />
               )}
 
               {/* Resumo dos Alertas Ativos (Chips) */}
@@ -751,75 +877,16 @@ export function NotificationPreferencesModal({ isOpen, onClose }: NotificationPr
 
                 {!loadingProducts && matchingProducts.length > 0 && (
                   <div className="flex flex-col gap-2">
-                    {matchingProducts.map((p) => {
-                      const hasCoupon = p.coupons && p.coupons.length > 0;
-                      const hasDiscount = p.originalPrice && p.price && p.originalPrice > p.price;
-                      const discountPct = hasDiscount 
-                        ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
-                        : 0;
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => {
-                            onClose();
-                            router.push(`/produto/${p.shortId || p.id}`);
-                          }}
-                          className="group cursor-pointer bg-zinc-900/60 hover:bg-zinc-800/80 border border-white/[0.06] hover:border-amber-500/40 rounded-2xl p-3 flex items-center justify-between gap-3.5 transition-all shadow-sm active:scale-[0.99]"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-13 h-13 rounded-xl bg-black/50 border border-white/5 p-1 flex items-center justify-center shrink-0 overflow-hidden">
-                              <img
-                                src={p.imageUrl || '/placeholder.webp'}
-                                alt={p.name}
-                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/placeholder.webp';
-                                }}
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h5 className="text-xs font-semibold text-zinc-200 line-clamp-2 leading-snug group-hover:text-amber-300 transition-colors">
-                                {p.name}
-                              </h5>
-                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                {p.category && (
-                                  <span className="text-[10px] text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.05] capitalize">
-                                    {p.category}
-                                  </span>
-                                )}
-                                {hasCoupon && (
-                                  <span className="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
-                                    🎟️ Cupom
-                                  </span>
-                                )}
-                                {discountPct > 0 && (
-                                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold">
-                                    -{discountPct}%
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col items-end shrink-0 pl-1">
-                            {hasDiscount && (
-                              <span className="text-[10px] text-zinc-500 line-through">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.originalPrice)}
-                              </span>
-                            )}
-                            <span className="text-sm font-extrabold text-white tracking-tight">
-                              {p.price
-                                ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)
-                                : 'Ver preço'}
-                            </span>
-                            <span className="text-[11px] font-bold text-amber-400 group-hover:text-amber-300 flex items-center gap-0.5 mt-1">
-                              Ver <ArrowRight size={11} weight="bold" />
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {matchingProducts.map((p) => (
+                      <AlertProductItem
+                        key={p.id}
+                        product={p}
+                        onClick={() => {
+                          onClose();
+                          router.push(`/produto/${p.shortId || p.id}`);
+                        }}
+                      />
+                    ))}
                   </div>
                 )}
               </div>

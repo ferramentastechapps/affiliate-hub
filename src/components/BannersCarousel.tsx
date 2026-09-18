@@ -13,22 +13,37 @@ interface Banner {
 }
 
 // Fallback estático enquanto não há banners no banco
-const FALLBACK: Banner[] = [];
+const FALLBACK_BANNERS: Banner[] = [];
+const BANNER_FALLBACK_IMAGE = "/placeholder.webp";
 
 interface BannersCarouselProps {
   onBannerClick?: (bannerTitle: string) => void;
 }
 
 export function BannersCarousel({ onBannerClick }: BannersCarouselProps) {
-  const [banners, setBanners] = useState<Banner[]>(FALLBACK);
+  const [banners, setBanners] = useState<Banner[]>(FALLBACK_BANNERS);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    fetch("/api/banners")
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data) && data.length > 0) setBanners(data); })
-      .catch(() => {});
+    let isMounted = true;
+
+    async function loadBanners() {
+      try {
+        const res = await fetch("/api/banners");
+        const data = await res.json();
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setBanners(data);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar banners do carrossel:", err);
+      }
+    }
+
+    loadBanners();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -39,7 +54,9 @@ export function BannersCarousel({ onBannerClick }: BannersCarouselProps) {
   }, []);
 
   // Reset index when banners change
-  useEffect(() => { setCurrentIndex(0); }, [banners.length]);
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [banners.length]);
 
   if (banners.length === 0) return null;
 
@@ -79,7 +96,7 @@ export function BannersCarousel({ onBannerClick }: BannersCarouselProps) {
                   alt={banner.title}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/placeholder.webp";
+                    (e.target as HTMLImageElement).src = BANNER_FALLBACK_IMAGE;
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">

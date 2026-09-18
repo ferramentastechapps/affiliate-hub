@@ -6,46 +6,141 @@ import { CouponModal } from "./CouponModal";
 import { CouponsListSkeleton } from "./SkeletonLoader";
 import { useToastContext } from "@/components/ToastProvider";
 
-type Coupon = {
+export type AdminCoupon = {
   id: string;
   code: string;
   description: string;
   discount: string;
   platform: string;
   isActive: boolean;
-  expiresAt?: string;
+  expiresAt?: string | null;
   minPurchaseValue?: number | null;
   maxDiscountValue?: number | null;
   applicableCategories?: string | null;
+  productId?: string | null;
   product?: {
     name: string;
-  };
+  } | null;
 };
 
+function formatCouponExpiry(expiresAt: string): string {
+  try {
+    return new Date(expiresAt).toLocaleDateString("pt-BR");
+  } catch {
+    return expiresAt;
+  }
+}
+
+interface CouponCardProps {
+  coupon: AdminCoupon;
+  onCopyCode: (code: string) => void;
+  onToggleActive: (coupon: AdminCoupon) => void;
+  onEdit: (coupon: AdminCoupon) => void;
+  onDelete: (id: string) => void;
+}
+
+function CouponCard({ coupon, onCopyCode, onToggleActive, onEdit, onDelete }: CouponCardProps) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex items-center justify-between">
+      <div className="flex-1">
+        <div className="flex items-center gap-3 mb-2">
+          <button
+            onClick={() => onCopyCode(coupon.code)}
+            className="flex items-center gap-2 bg-accent/10 text-accent px-4 py-1.5 rounded-lg font-mono font-bold hover:bg-accent/20 transition-colors"
+          >
+            {coupon.code}
+            <Copy size={16} />
+          </button>
+          <span className="text-sm text-zinc-500 uppercase font-medium">
+            {coupon.platform}
+          </span>
+          {!coupon.isActive && (
+            <span className="text-xs bg-red-900/20 text-red-400 px-2 py-1 rounded">
+              Inativo
+            </span>
+          )}
+        </div>
+        <p className="text-zinc-300 mb-1">{coupon.description}</p>
+        <p className="text-sm text-accent font-semibold">{coupon.discount}</p>
+        
+        {(coupon.minPurchaseValue || coupon.maxDiscountValue || coupon.applicableCategories) && (
+          <div className="mt-2 text-xs text-zinc-400">
+            {coupon.minPurchaseValue && <span className="mr-3">Min: R$ {coupon.minPurchaseValue}</span>}
+            {coupon.maxDiscountValue && <span className="mr-3">Max: R$ {coupon.maxDiscountValue}</span>}
+            {coupon.applicableCategories && <span>Cat: {coupon.applicableCategories}</span>}
+          </div>
+        )}
+
+        {coupon.product && (
+          <p className="text-xs text-zinc-500 mt-2">
+            Produto: {coupon.product.name}
+          </p>
+        )}
+        {coupon.expiresAt && (
+          <p className="text-xs text-zinc-500 mt-1">
+            Expira em: {formatCouponExpiry(coupon.expiresAt)}
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => onToggleActive(coupon)}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            coupon.isActive
+              ? "bg-green-900/20 text-green-400 hover:bg-green-900/30"
+              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+          }`}
+        >
+          {coupon.isActive ? "Ativo" : "Inativo"}
+        </button>
+        <button
+          onClick={() => onEdit(coupon)}
+          className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
+        >
+          <Pencil size={16} />
+        </button>
+        <button
+          onClick={() => onDelete(coupon.id)}
+          className="flex items-center gap-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 px-3 py-2 rounded-lg transition-colors"
+        >
+          <Trash size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function CouponsTab() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [editingCoupon, setEditingCoupon] = useState<AdminCoupon | null>(null);
   const [loading, setLoading] = useState(true);
   const toast = useToastContext();
 
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
-
-  async function fetchCoupons() {
+  const fetchCoupons = async (isMounted = true) => {
     try {
       setLoading(true);
       const res = await fetch("/api/coupons");
       const data = await res.json();
-      setCoupons(data);
+      if (isMounted) {
+        setCoupons(Array.isArray(data) ? data : []);
+      }
     } catch (error) {
       console.error("Erro ao buscar cupons:", error);
       toast.error("Erro ao carregar cupons");
     } finally {
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
-  }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchCoupons(isMounted);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function handleDelete(id: string) {
     if (!confirm("Tem certeza que deseja deletar este cupom?")) return;
@@ -64,7 +159,7 @@ export function CouponsTab() {
     }
   }
 
-  async function toggleActive(coupon: Coupon) {
+  async function toggleActive(coupon: AdminCoupon) {
     try {
       const res = await fetch(`/api/coupons/${coupon.id}`, {
         method: "PUT",
@@ -84,7 +179,7 @@ export function CouponsTab() {
     }
   }
 
-  function handleEdit(coupon: Coupon) {
+  function handleEdit(coupon: AdminCoupon) {
     setEditingCoupon(coupon);
     setIsModalOpen(true);
   }
@@ -119,76 +214,14 @@ export function CouponsTab() {
         <>
           <div className="space-y-4">
             {coupons.map((coupon) => (
-              <div
+              <CouponCard
                 key={coupon.id}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex items-center justify-between"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <button
-                      onClick={() => copyCode(coupon.code)}
-                      className="flex items-center gap-2 bg-accent/10 text-accent px-4 py-1.5 rounded-lg font-mono font-bold hover:bg-accent/20 transition-colors"
-                    >
-                      {coupon.code}
-                      <Copy size={16} />
-                    </button>
-                    <span className="text-sm text-zinc-500 uppercase font-medium">
-                      {coupon.platform}
-                    </span>
-                    {!coupon.isActive && (
-                      <span className="text-xs bg-red-900/20 text-red-400 px-2 py-1 rounded">
-                        Inativo
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-zinc-300 mb-1">{coupon.description}</p>
-                  <p className="text-sm text-accent font-semibold">{coupon.discount}</p>
-                  
-                  {(coupon.minPurchaseValue || coupon.maxDiscountValue || coupon.applicableCategories) && (
-                    <div className="mt-2 text-xs text-zinc-400">
-                      {coupon.minPurchaseValue && <span className="mr-3">Min: R$ {coupon.minPurchaseValue}</span>}
-                      {coupon.maxDiscountValue && <span className="mr-3">Max: R$ {coupon.maxDiscountValue}</span>}
-                      {coupon.applicableCategories && <span>Cat: {coupon.applicableCategories}</span>}
-                    </div>
-                  )}
-
-                  {coupon.product && (
-                    <p className="text-xs text-zinc-500 mt-2">
-                      Produto: {coupon.product.name}
-                    </p>
-                  )}
-                  {coupon.expiresAt && (
-                    <p className="text-xs text-zinc-500 mt-1">
-                      Expira em: {new Date(coupon.expiresAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleActive(coupon)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                      coupon.isActive
-                        ? "bg-green-900/20 text-green-400 hover:bg-green-900/30"
-                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                    }`}
-                  >
-                    {coupon.isActive ? "Ativo" : "Inativo"}
-                  </button>
-                  <button
-                    onClick={() => handleEdit(coupon)}
-                    className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg transition-colors"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(coupon.id)}
-                    className="flex items-center gap-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 px-3 py-2 rounded-lg transition-colors"
-                  >
-                    <Trash size={16} />
-                  </button>
-                </div>
-              </div>
+                coupon={coupon}
+                onCopyCode={copyCode}
+                onToggleActive={toggleActive}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { PlatformModal } from "./PlatformModal";
 import { useAuth } from "./AuthProvider";
@@ -92,6 +92,251 @@ function getTimeAgo(dateString?: string | Date) {
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
+function extractDealCoupon(product: Product): string {
+  if (product.coupons?.length) {
+    const first = product.coupons[0];
+    if (first.code && first.code.toUpperCase() !== "NORMAL") {
+      return first.code;
+    }
+  } else if (product.description?.includes("🎟️ CUPOM:")) {
+    const extracted = product.description.split("🎟️ CUPOM:")[1]?.trim();
+    if (extracted && extracted.toUpperCase() !== "NORMAL") {
+      return extracted.split("\n")[0].trim();
+    }
+  }
+  return "";
+}
+
+function calculateProductDiscount(price?: number, originalPrice?: number): number {
+  if (originalPrice && price && originalPrice > price && price > 0) {
+    return Math.round(((originalPrice - price) / originalPrice) * 100);
+  }
+  return 0;
+}
+
+interface DailyDealCardProps {
+  product: Product;
+  index: number;
+  isFavorite: boolean;
+  userVote: "LIKE" | "DISLIKE" | null;
+  copiedCouponId: string | null;
+  onToggleFavorite: (productId: string, e: React.MouseEvent) => void;
+  onCopyCoupon: (e: React.MouseEvent, code: string, id: string) => void;
+  onVote: (type: "LIKE" | "DISLIKE") => void;
+  onCardClick: () => void;
+  onCommentsClick: () => void;
+}
+
+function DailyDealCard({
+  product,
+  index,
+  isFavorite,
+  userVote,
+  copiedCouponId,
+  onToggleFavorite,
+  onCopyCoupon,
+  onVote,
+  onCardClick,
+  onCommentsClick,
+}: DailyDealCardProps) {
+  const price = product.price || 0;
+  const originalPrice = (product as any).originalPrice || 0;
+  const discount = calculateProductDiscount(price, originalPrice);
+  const displayCoupon = extractDealCoupon(product);
+  const storeKey = detectStoreKey(product);
+  const storeInfo = STORE_INFOS[storeKey] || STORE_INFOS.default;
+
+  const tempResult = calculateDealTemperature({
+    price: product.price ?? null,
+    originalPrice: product.originalPrice ?? null,
+    likesCount: product._count?.likes,
+    dislikesCount: product._count?.dislikes,
+    clicksCount: product.clicks,
+    hasCoupon: !!displayCoupon,
+    isLowestPriceEver: (product as any).isLowestPriceEver,
+    createdAt: product.createdAt,
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: (index % 8) * 0.03 }}
+      onClick={onCardClick}
+      className="deal-card cursor-pointer group overflow-hidden flex flex-col"
+    >
+      {/* ── TOP IMAGE CONTAINER ── */}
+      <div className="relative w-full aspect-square bg-white overflow-hidden flex items-center justify-center p-2.5 sm:p-3">
+        <ProductImage
+          src={product.imageUrl}
+          enhancedSrc={product.enhancedImageUrl}
+          alt={product.name}
+          store={storeKey}
+          category={product.category}
+          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+          containerClassName="w-full h-full flex items-center justify-center"
+        />
+        {discount > 0 && (
+          <span className="absolute top-2 left-2 z-10 bg-[#ff334b] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded leading-none shadow-sm">
+            -{discount}%
+          </span>
+        )}
+        {/* Favorite button */}
+        <button
+          onClick={(e) => onToggleFavorite(product.id, e)}
+          className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+            isFavorite
+              ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+              : "bg-black/35 hover:bg-black/55 text-white/90 hover:text-white backdrop-blur-xs"
+          }`}
+          title="Salvar oferta"
+        >
+          <Heart
+            size={14}
+            weight={isFavorite ? "fill" : "bold"}
+          />
+        </button>
+      </div>
+
+      {/* ── CARD BODY ── */}
+      <div className="flex flex-col flex-1 p-2.5 sm:p-3 justify-between">
+        {/* Store Badge + Hotness */}
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.07] text-[10px] sm:text-[11px] font-semibold text-zinc-300 truncate max-w-[95px] sm:max-w-[120px]">
+            <StoreLogo
+              store={storeKey}
+              className="w-3.5 h-3.5 rounded-sm shrink-0"
+            />
+            <span className="truncate">{storeInfo.label}</span>
+          </span>
+
+          <span
+            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] sm:text-[10px] font-bold ${tempResult.textColorClass} bg-white/[0.04] shrink-0`}
+          >
+            <Flame size={10} weight="fill" />
+            {tempResult.formattedTemperature}
+          </span>
+        </div>
+
+        {/* Product Name */}
+        <p className="text-[12px] sm:text-[13px] font-medium text-[#e2e4e9] leading-snug line-clamp-2 min-h-[32px] sm:min-h-[36px] mb-1.5 group-hover:text-white transition-colors">
+          {product.name}
+        </p>
+
+        {/* Highlights (Menor Preço / Cupom) */}
+        <div className="flex flex-wrap gap-1 mb-1.5 min-h-[20px]">
+          {(product as any).isLowestPriceEver && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/25 text-teal-400 text-[9px] sm:text-[9.5px] font-bold">
+              🏆 Menor preço
+            </span>
+          )}
+          {displayCoupon && (
+            <button
+              onClick={(e) => onCopyCoupon(e, displayCoupon, product.id)}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[9px] sm:text-[9.5px] font-bold active:scale-95 transition-all truncate max-w-full"
+              title="Clique para copiar cupom"
+            >
+              {copiedCouponId === product.id ? (
+                <>
+                  <Check size={9} weight="bold" className="text-emerald-400 shrink-0" />
+                  <span className="text-emerald-400 truncate">Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Tag size={9} weight="fill" className="shrink-0" />
+                  <span className="truncate">Cupom: {displayCoupon}</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Price Row */}
+        <div className="mt-auto pt-1">
+          {price > 0 ? (
+            <div>
+              {discount > 0 && (
+                <span className="text-[10px] sm:text-[11px] text-[#6b7280] line-through leading-tight block">
+                  {fmt(originalPrice)}
+                </span>
+              )}
+              <div className="flex items-baseline justify-between gap-1 mt-0.5">
+                <span className="text-[15px] sm:text-[17px] font-extrabold text-[#ff334b] leading-tight">
+                  {fmt(price)}
+                </span>
+                <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] group-hover:border-[#ff334b]/30 group-hover:bg-[#ff334b]/10 transition-all">
+                  <ArrowUpRight size={13} weight="bold" />
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] sm:text-[13px] font-semibold text-white">
+                Ver oferta
+              </span>
+              <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] transition-all">
+                <ArrowUpRight size={13} weight="bold" />
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── FOOTER ACTIONS (Likes, Comments, Time) ── */}
+      <div
+        className="flex items-center justify-between px-2.5 sm:px-3 py-1.5 border-t border-white/[0.05] bg-white/[0.01] text-[10px] sm:text-[11px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onVote("LIKE")}
+            className={`flex items-center gap-0.5 font-semibold transition-colors py-0.5 ${
+              userVote === "LIKE"
+                ? "text-emerald-400"
+                : "text-[#8e92a4] hover:text-emerald-400"
+            }`}
+            title="Votar positivo"
+          >
+            <ThumbsUp
+              size={12}
+              weight={userVote === "LIKE" ? "fill" : "regular"}
+            />
+            <span>{product._count?.likes || 0}</span>
+          </button>
+          <button
+            onClick={() => onVote("DISLIKE")}
+            className={`flex items-center gap-0.5 font-semibold transition-colors py-0.5 ${
+              userVote === "DISLIKE"
+                ? "text-red-400"
+                : "text-[#8e92a4] hover:text-red-400"
+            }`}
+            title="Votar negativo"
+          >
+            <ThumbsDown
+              size={12}
+              weight={userVote === "DISLIKE" ? "fill" : "regular"}
+            />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-[#6b7280]">
+          <button
+            onClick={onCommentsClick}
+            className="flex items-center gap-0.5 font-semibold text-[#8e92a4] hover:text-white transition-colors py-0.5"
+            title="Ver comentários"
+          >
+            <ChatCircle size={12} weight="regular" />
+            <span>{product._count?.comments || 0}</span>
+          </button>
+          <span className="text-[9px] flex items-center gap-0.5">
+            <Clock size={9} weight="bold" /> {getTimeAgo(product.createdAt)}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export function DailyDeals() {
   const router = useRouter();
   const { user } = useAuth();
@@ -109,6 +354,17 @@ export function DailyDeals() {
   >("recentes");
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
+
+  const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   // Sync favorites
   useEffect(() => {
@@ -154,9 +410,48 @@ export function DailyDeals() {
 
   const copyCoupon = (e: React.MouseEvent, code: string, id: string) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(code);
+    navigator.clipboard.writeText(code).catch(() => {});
     setCopiedCouponId(id);
-    setTimeout(() => setCopiedCouponId(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => {
+      if (isMountedRef.current) setCopiedCouponId(null);
+    }, 2000);
+  };
+
+  const handleVote = async (product: Product, type: "LIKE" | "DISLIKE") => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    const userVote = product.votes?.find((v: any) => v.userId === user.id)?.type;
+    try {
+      const newType = userVote === type ? "REMOVE" : type;
+      setAllProducts((prev) =>
+        prev.map((p) => {
+          if (p.id !== product.id) return p;
+          let likes = p._count?.likes || 0;
+          let dislikes = p._count?.dislikes || 0;
+          if (userVote === "LIKE") likes--;
+          if (userVote === "DISLIKE") dislikes--;
+          if (newType === "LIKE") likes++;
+          if (newType === "DISLIKE") dislikes++;
+          const newVotes =
+            p.votes?.filter((v: any) => v.userId !== user.id) || [];
+          if (newType !== "REMOVE")
+            newVotes.push({ type: newType, userId: user.id });
+          return {
+            ...p,
+            votes: newVotes,
+            _count: { ...p._count, likes, dislikes },
+          };
+        })
+      );
+      await fetch(`/api/products/${product.id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, type: newType }),
+      });
+    } catch {}
   };
 
   // Debounce search
@@ -203,7 +498,7 @@ export function DailyDeals() {
 
   async function fetchProducts(silent = false) {
     try {
-      if (!silent) setLoading(true);
+      if (!silent && isMountedRef.current) setLoading(true);
       let extra = "";
       if (filterType === "alertas") {
         try {
@@ -230,7 +525,7 @@ export function DailyDeals() {
         { cache: "no-store" }
       );
       const data = await res.json();
-      if (data && data.length > 0) {
+      if (isMountedRef.current && data && data.length > 0) {
         setAllProducts(
           data.map((p: any) => ({
             id: p.id,
@@ -268,7 +563,7 @@ export function DailyDeals() {
     } catch (err) {
       console.error("Erro ao buscar promoções:", err);
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && isMountedRef.current) setLoading(false);
     }
   }
 
@@ -289,10 +584,7 @@ export function DailyDeals() {
   });
 
   filteredProducts = [...filteredProducts].sort((a, b) => {
-    const disc = (p: any) =>
-      p.originalPrice && p.price
-        ? ((p.originalPrice - p.price) / p.originalPrice) * 100
-        : 0;
+    const disc = (p: any) => calculateProductDiscount(p.price, p.originalPrice);
     switch (filterType) {
       case "alertas":
         const aA = a.alerts?.some((al: any) => al.userId === user?.id) ? 1 : 0;
@@ -446,263 +738,24 @@ export function DailyDeals() {
       {filteredProducts.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {displayProducts.map((product, index) => {
-            const price = product.price || 0;
-            const originalPrice = (product as any).originalPrice || 0;
-            const discount =
-              originalPrice > price && price > 0
-                ? Math.round(((originalPrice - price) / originalPrice) * 100)
-                : 0;
-
             const userVote = user
-              ? product.votes?.find((v: any) => v.userId === user.id)?.type
+              ? (product.votes?.find((v: any) => v.userId === user.id)?.type as "LIKE" | "DISLIKE" | null)
               : null;
 
-            // Extract coupon code
-            let displayCoupon = "";
-            if (product.coupons?.length) {
-              const first = product.coupons[0];
-              if (first.code && first.code.toUpperCase() !== "NORMAL") {
-                displayCoupon = first.code;
-              }
-            } else if (product.description?.includes("🎟️ CUPOM:")) {
-              const extracted = product.description.split("🎟️ CUPOM:")[1]?.trim();
-              if (extracted && extracted.toUpperCase() !== "NORMAL") {
-                displayCoupon = extracted.split("\n")[0].trim();
-              }
-            }
-
-            const storeKey = detectStoreKey(product);
-            const storeInfo = STORE_INFOS[storeKey] || STORE_INFOS.default;
-
-            // Calculate deal temperature
-            const tempResult = calculateDealTemperature({
-              price: product.price,
-              originalPrice: product.originalPrice,
-              likesCount: product._count?.likes,
-              dislikesCount: product._count?.dislikes,
-              clicksCount: product.clicks,
-              hasCoupon: !!displayCoupon,
-              isLowestPriceEver: (product as any).isLowestPriceEver,
-              createdAt: product.createdAt,
-            });
-
-            async function handleVote(type: "LIKE" | "DISLIKE") {
-              if (!user) {
-                setShowAuthModal(true);
-                return;
-              }
-              try {
-                const newType = userVote === type ? "REMOVE" : type;
-                setAllProducts((prev) =>
-                  prev.map((p) => {
-                    if (p.id !== product.id) return p;
-                    let likes = p._count?.likes || 0;
-                    let dislikes = p._count?.dislikes || 0;
-                    if (userVote === "LIKE") likes--;
-                    if (userVote === "DISLIKE") dislikes--;
-                    if (newType === "LIKE") likes++;
-                    if (newType === "DISLIKE") dislikes++;
-                    const newVotes =
-                      p.votes?.filter((v: any) => v.userId !== user.id) || [];
-                    if (newType !== "REMOVE")
-                      newVotes.push({ type: newType, userId: user.id });
-                    return {
-                      ...p,
-                      votes: newVotes,
-                      _count: { ...p._count, likes, dislikes },
-                    };
-                  })
-                );
-                await fetch(`/api/products/${product.id}/vote`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId: user.id, type: newType }),
-                });
-              } catch {}
-            }
-
             return (
-              <motion.div
+              <DailyDealCard
                 key={product.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (index % 8) * 0.03 }}
-                onClick={() =>
-                  router.push(`/produto/${product.shortId || product.id}`)
-                }
-                className="deal-card cursor-pointer group overflow-hidden flex flex-col"
-              >
-                {/* ── TOP IMAGE CONTAINER ── */}
-                <div className="relative w-full aspect-square bg-white overflow-hidden flex items-center justify-center p-2.5 sm:p-3">
-                  <ProductImage
-                    src={product.imageUrl}
-                    enhancedSrc={product.enhancedImageUrl}
-                    alt={product.name}
-                    store={storeKey}
-                    category={product.category}
-                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
-                    containerClassName="w-full h-full flex items-center justify-center"
-                  />
-                  {discount > 0 && (
-                    <span className="absolute top-2 left-2 z-10 bg-[#ff334b] text-white text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded leading-none shadow-sm">
-                      -{discount}%
-                    </span>
-                  )}
-                  {/* Favorite button */}
-                  <button
-                    onClick={(e) => toggleFavorite(product.id, e)}
-                    className={`absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                      favoriteIds.has(product.id)
-                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                        : "bg-black/35 hover:bg-black/55 text-white/90 hover:text-white backdrop-blur-xs"
-                    }`}
-                    title="Salvar oferta"
-                  >
-                    <Heart
-                      size={14}
-                      weight={favoriteIds.has(product.id) ? "fill" : "bold"}
-                    />
-                  </button>
-                </div>
-
-                {/* ── CARD BODY ── */}
-                <div className="flex flex-col flex-1 p-2.5 sm:p-3 justify-between">
-                  {/* Store Badge + Hotness */}
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.07] text-[10px] sm:text-[11px] font-semibold text-zinc-300 truncate max-w-[95px] sm:max-w-[120px]">
-                      <StoreLogo
-                        store={storeKey}
-                        className="w-3.5 h-3.5 rounded-sm shrink-0"
-                      />
-                      <span className="truncate">{storeInfo.label}</span>
-                    </span>
-
-                    <span
-                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] sm:text-[10px] font-bold ${tempResult.textColorClass} bg-white/[0.04] shrink-0`}
-                    >
-                      <Flame size={10} weight="fill" />
-                      {tempResult.formattedTemperature}
-                    </span>
-                  </div>
-
-                  {/* Product Name */}
-                  <p className="text-[12px] sm:text-[13px] font-medium text-[#e2e4e9] leading-snug line-clamp-2 min-h-[32px] sm:min-h-[36px] mb-1.5 group-hover:text-white transition-colors">
-                    {product.name}
-                  </p>
-
-                  {/* Highlights (Menor Preço / Cupom) */}
-                  <div className="flex flex-wrap gap-1 mb-1.5 min-h-[20px]">
-                    {(product as any).isLowestPriceEver && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-teal-500/10 border border-teal-500/25 text-teal-400 text-[9px] sm:text-[9.5px] font-bold">
-                        🏆 Menor preço
-                      </span>
-                    )}
-                    {displayCoupon && (
-                      <button
-                        onClick={(e) => copyCoupon(e, displayCoupon, product.id)}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[9px] sm:text-[9.5px] font-bold active:scale-95 transition-all truncate max-w-full"
-                        title="Clique para copiar cupom"
-                      >
-                        {copiedCouponId === product.id ? (
-                          <>
-                            <Check size={9} weight="bold" className="text-emerald-400 shrink-0" />
-                            <span className="text-emerald-400 truncate">Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Tag size={9} weight="fill" className="shrink-0" />
-                            <span className="truncate">Cupom: {displayCoupon}</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Price Row */}
-                  <div className="mt-auto pt-1">
-                    {price > 0 ? (
-                      <div>
-                        {discount > 0 && (
-                          <span className="text-[10px] sm:text-[11px] text-[#6b7280] line-through leading-tight block">
-                            {fmt(originalPrice)}
-                          </span>
-                        )}
-                        <div className="flex items-baseline justify-between gap-1 mt-0.5">
-                          <span className="text-[15px] sm:text-[17px] font-extrabold text-[#ff334b] leading-tight">
-                            {fmt(price)}
-                          </span>
-                          <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] group-hover:border-[#ff334b]/30 group-hover:bg-[#ff334b]/10 transition-all">
-                            <ArrowUpRight size={13} weight="bold" />
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12px] sm:text-[13px] font-semibold text-white">
-                          Ver oferta
-                        </span>
-                        <span className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white/[0.05] border border-white/[0.06] flex items-center justify-center text-[#8e92a4] group-hover:text-[#ff334b] transition-all">
-                          <ArrowUpRight size={13} weight="bold" />
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── FOOTER ACTIONS (Likes, Comments, Time) ── */}
-                <div
-                  className="flex items-center justify-between px-2.5 sm:px-3 py-1.5 border-t border-white/[0.05] bg-white/[0.01] text-[10px] sm:text-[11px]"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleVote("LIKE")}
-                      className={`flex items-center gap-0.5 font-semibold transition-colors py-0.5 ${
-                        userVote === "LIKE"
-                          ? "text-emerald-400"
-                          : "text-[#8e92a4] hover:text-emerald-400"
-                      }`}
-                      title="Votar positivo"
-                    >
-                      <ThumbsUp
-                        size={12}
-                        weight={userVote === "LIKE" ? "fill" : "regular"}
-                      />
-                      <span>{product._count?.likes || 0}</span>
-                    </button>
-                    <button
-                      onClick={() => handleVote("DISLIKE")}
-                      className={`flex items-center gap-0.5 font-semibold transition-colors py-0.5 ${
-                        userVote === "DISLIKE"
-                          ? "text-red-400"
-                          : "text-[#8e92a4] hover:text-red-400"
-                      }`}
-                      title="Votar negativo"
-                    >
-                      <ThumbsDown
-                        size={12}
-                        weight={userVote === "DISLIKE" ? "fill" : "regular"}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[#6b7280]">
-                    <button
-                      onClick={() =>
-                        router.push(`/produto/${product.shortId || product.id}#comments`)
-                      }
-                      className="flex items-center gap-0.5 font-semibold text-[#8e92a4] hover:text-white transition-colors py-0.5"
-                      title="Ver comentários"
-                    >
-                      <ChatCircle size={12} weight="regular" />
-                      <span>{product._count?.comments || 0}</span>
-                    </button>
-                    <span className="text-[9px] flex items-center gap-0.5">
-                      <Clock size={9} weight="bold" /> {getTimeAgo(product.createdAt)}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
+                product={product}
+                index={index}
+                isFavorite={favoriteIds.has(product.id)}
+                userVote={userVote}
+                copiedCouponId={copiedCouponId}
+                onToggleFavorite={toggleFavorite}
+                onCopyCoupon={copyCoupon}
+                onVote={(type) => handleVote(product, type)}
+                onCardClick={() => router.push(`/produto/${product.shortId || product.id}`)}
+                onCommentsClick={() => router.push(`/produto/${product.shortId || product.id}#comments`)}
+              />
             );
           })}
         </div>

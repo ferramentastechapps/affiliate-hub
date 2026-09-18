@@ -9,13 +9,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const imageUrl = searchParams.get('url');
 
-    if (!imageUrl || !imageUrl.startsWith('http')) {
+    if (!imageUrl) {
       return new NextResponse('URL de imagem inválida', { status: 400 });
     }
 
     // Se for URL relativa local (ex: /uploads/... ou /enhanced/...), redireciona internamente
     if (imageUrl.startsWith('/')) {
       return NextResponse.redirect(new URL(imageUrl, request.url));
+    }
+
+    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+      return new NextResponse('URL de imagem inválida', { status: 400 });
     }
 
     let referer = '';

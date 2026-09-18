@@ -23,63 +23,115 @@ import {
   Camera
 } from '@phosphor-icons/react';
 
+type MenuItemConfig = {
+  name: string;
+  path: string;
+  icon: React.ElementType;
+  hasBadge?: boolean;
+};
+
+type MenuSectionConfig = {
+  items: MenuItemConfig[];
+};
+
+const MENU_SECTIONS: MenuSectionConfig[] = [
+  {
+    items: [
+      { name: 'Dashboard', path: '/admin/dashboard', icon: ChartPieSlice },
+      { name: 'Analytics', path: '/admin/analytics', icon: ChartLineUp },
+    ],
+  },
+  {
+    items: [
+      { name: 'Produtos', path: '/admin/products', icon: Package, hasBadge: true },
+      { name: 'Cupons', path: '/admin/coupons', icon: Ticket },
+      { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
+    ],
+  },
+  {
+    items: [
+      { name: 'CRM / Usuários', path: '/admin/users', icon: Users },
+      { name: 'Comentários', path: '/admin/comments', icon: ChatCircleText },
+      { name: 'Campanhas', path: '/admin/campaigns', icon: Megaphone },
+    ],
+  },
+  {
+    items: [
+      { name: 'Bot', path: '/admin/bot', icon: Robot },
+      { name: 'WhatsApp', path: '/admin/whatsapp', icon: ChatCircleDots },
+      { name: 'Filas', path: '/admin/queues', icon: ListDashes },
+      { name: 'IA Criativa', path: '/admin/ai-studio', icon: Brain },
+      { name: 'Social Studio', path: '/admin/social-studio', icon: Camera },
+      { name: 'Notificações', path: '/admin/notifications', icon: Bell },
+    ],
+  },
+  {
+    items: [
+      { name: 'Parceiros', path: '/admin/partners', icon: Handshake },
+      { name: 'Logs', path: '/admin/logs', icon: ListChecks },
+      { name: 'Configurações', path: '/admin/settings', icon: GearSix },
+    ],
+  },
+];
+
+interface AdminNavItemProps {
+  item: MenuItemConfig;
+  isActive: boolean;
+  badge?: number | null;
+}
+
+function AdminNavItem({ item, isActive, badge }: AdminNavItemProps) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.path}
+      className={`flex items-center rounded-xl transition-colors h-10 justify-between px-3 ${
+        isActive
+          ? 'bg-indigo-500/10 text-indigo-400 font-medium'
+          : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <Icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
+        <span className="text-sm whitespace-nowrap">{item.name}</span>
+      </div>
+      {badge ? (
+        <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+          {badge}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 export function AdminSidebar() {
   const pathname = usePathname();
   const [counts, setCounts] = useState({ pendingProducts: 0, totalComments: 0 });
 
   useEffect(() => {
-    fetch('/api/admin/dashboard')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.error) {
+    let isMounted = true;
+
+    async function loadDashboardCounts() {
+      try {
+        const res = await fetch('/api/admin/dashboard');
+        const data = await res.json();
+        if (isMounted && !data.error) {
           setCounts({
             pendingProducts: data.products?.pending || 0,
-            totalComments: 0
+            totalComments: 0,
           });
         }
-      })
-      .catch(() => {});
-  }, []);
-
-  const menuSections = [
-    {
-      items: [
-        { name: 'Dashboard', path: '/admin/dashboard', icon: ChartPieSlice },
-        { name: 'Analytics', path: '/admin/analytics', icon: ChartLineUp },
-      ]
-    },
-    {
-      items: [
-        { name: 'Produtos', path: '/admin/products', icon: Package, badge: counts.pendingProducts },
-        { name: 'Cupons', path: '/admin/coupons', icon: Ticket },
-        { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
-      ]
-    },
-    {
-      items: [
-        { name: 'CRM / Usuários', path: '/admin/users', icon: Users },
-        { name: 'Comentários', path: '/admin/comments', icon: ChatCircleText },
-        { name: 'Campanhas', path: '/admin/campaigns', icon: Megaphone },
-      ]
-    },
-    {
-      items: [
-        { name: 'Bot', path: '/admin/bot', icon: Robot },
-        { name: 'WhatsApp', path: '/admin/whatsapp', icon: ChatCircleDots },
-        { name: 'Filas', path: '/admin/queues', icon: ListDashes },
-        { name: 'IA Criativa', path: '/admin/ai-studio', icon: Brain },
-        { name: 'Social Studio', path: '/admin/social-studio', icon: Camera },
-        { name: 'Notificações', path: '/admin/notifications', icon: Bell },
-      ]
-    },
-    {
-      items: [
-        { name: 'Parceiros', path: '/admin/partners', icon: Handshake },
-        { name: 'Logs', path: '/admin/logs', icon: ListChecks },
-        { name: 'Configurações', path: '/admin/settings', icon: GearSix },
-      ]
+      } catch (err) {
+        console.error('Erro ao buscar contadores do dashboard:', err);
+      }
     }
-  ];
+
+    loadDashboardCounts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <aside
@@ -94,33 +146,17 @@ export function AdminSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col gap-3">
-        {menuSections.map((section, idx) => (
+        {MENU_SECTIONS.map((section, idx) => (
           <div key={idx} className="space-y-0.5">
-            {section.items.map((item) => {
-              const isActive = pathname.startsWith(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`flex items-center rounded-xl transition-colors h-10 justify-between px-3 ${
-                    isActive
-                      ? 'bg-indigo-500/10 text-indigo-400 font-medium'
-                      : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
-                    <span className="text-sm whitespace-nowrap">{item.name}</span>
-                  </div>
-                  {item.badge ? (
-                    <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                      {item.badge}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-            {idx < menuSections.length - 1 && (
+            {section.items.map((item) => (
+              <AdminNavItem
+                key={item.path}
+                item={item}
+                isActive={pathname.startsWith(item.path)}
+                badge={item.hasBadge && counts.pendingProducts > 0 ? counts.pendingProducts : null}
+              />
+            ))}
+            {idx < MENU_SECTIONS.length - 1 && (
               <div className="h-px bg-zinc-800/50 my-1 mx-3" />
             )}
           </div>

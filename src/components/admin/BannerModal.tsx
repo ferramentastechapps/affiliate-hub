@@ -1,15 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Image, Link, ArrowsDownUp } from "@phosphor-icons/react";
+import { X, Image as ImageIcon, Link as LinkIcon, ArrowsDownUp } from "@phosphor-icons/react";
+import type { AdminBanner } from "./BannersTab";
 
-type Banner = {
+type BannerFormState = Omit<AdminBanner, "id" | "isActive"> & {
   id?: string;
-  title: string;
-  imageDesktop: string;
-  imageMobile: string;
-  link: string;
-  order: number;
   isActive?: boolean;
 };
 
@@ -17,25 +13,35 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  editingBanner?: Banner | null;
+  editingBanner?: AdminBanner | null;
 };
 
-const empty: Banner = { title: "", imageDesktop: "", imageMobile: "", link: "", order: 0 };
+const EMPTY_BANNER: BannerFormState = {
+  title: "",
+  imageDesktop: "",
+  imageMobile: "",
+  link: "",
+  order: 0,
+};
 
 export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
-  const [form, setForm] = useState<Banner>(empty);
+  const [form, setForm] = useState<BannerFormState>(EMPTY_BANNER);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setForm(editingBanner ? { ...editingBanner } : empty);
+    setForm(editingBanner ? { ...editingBanner } : EMPTY_BANNER);
     setError("");
   }, [editingBanner, isOpen]);
 
   if (!isOpen) return null;
 
-  const set = (field: keyof Banner, value: string | number) =>
+  const set = (field: keyof BannerFormState, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  const hideBrokenImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = "none";
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,8 +62,9 @@ export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
       if (!res.ok) throw new Error(await res.text());
       onSave();
       onClose();
-    } catch (err: any) {
-      setError(err.message || "Erro ao salvar banner");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao salvar banner";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -94,7 +101,7 @@ export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
           {/* Imagem Desktop */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-              <Image size={16} className="text-accent" />
+              <ImageIcon size={16} className="text-accent" />
               Imagem Desktop (URL)
             </label>
             <input
@@ -109,7 +116,7 @@ export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
                 src={form.imageDesktop}
                 alt="preview desktop"
                 className="w-full h-20 object-cover rounded-xl border border-zinc-700 mt-1"
-                onError={(e) => (e.currentTarget.style.display = "none")}
+                onError={hideBrokenImage}
               />
             )}
           </div>
@@ -117,7 +124,7 @@ export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
           {/* Imagem Mobile */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-              <Image size={16} className="text-blue-400" />
+              <ImageIcon size={16} className="text-blue-400" />
               Imagem Mobile (URL)
             </label>
             <input
@@ -132,7 +139,7 @@ export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
                 src={form.imageMobile}
                 alt="preview mobile"
                 className="w-full h-20 object-cover rounded-xl border border-zinc-700 mt-1"
-                onError={(e) => (e.currentTarget.style.display = "none")}
+                onError={hideBrokenImage}
               />
             )}
           </div>
@@ -140,7 +147,7 @@ export function BannerModal({ isOpen, onClose, onSave, editingBanner }: Props) {
           {/* Link */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-              <Link size={16} className="text-zinc-400" />
+              <LinkIcon size={16} className="text-zinc-400" />
               Link ao clicar (opcional)
             </label>
             <input

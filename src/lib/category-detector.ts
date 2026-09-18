@@ -18,7 +18,7 @@ export const CATEGORY_MAP: Record<string, string[]> = {
     "fogão", "forno", "forno elétrico", "purificador", "bebedouro", "passadeira", "ferro de passar",
     // Marcas de Eletro
     "mondial", "arno", "britânia", "britania", "philco", "oster", "electrolux", "consul", "brastemp", "walita", 
-    "kitchenaid", "midea", "fischer", "suggar", "mueller", "dako", "mueller",
+    "kitchenaid", "midea", "fischer", "suggar", "dako", "mueller",
     // Casa, Móveis & Decoração
     "sofá", "sofa", "poltrona", "mesa", "cadeira", "cama", "colchão", "colchao", "travesseiro", "lençol", 
     "edredom", "toalha", "armário", "guarda-roupa", "estante", "rack", "escrivaninha", "lâmpada", "lustre", 
@@ -137,9 +137,12 @@ export function detectSmartCategory(productName: string, description?: string, r
   // Testar primeiro correspondências exatas/fortes no Nome do Produto
   for (const [officialCategory, keywords] of Object.entries(CATEGORY_MAP)) {
     for (const keyword of keywords) {
-      // Regex com bordas para evitar falso positivo em palavras curtas
-      const regex = new RegExp(`\\b${keyword}\\b`, "i");
-      if (regex.test(textToAnalyze) || textToAnalyze.includes(keyword)) {
+      if (keyword.length <= 4) {
+        const regex = new RegExp(`\\b${keyword}\\b`, "i");
+        if (regex.test(textToAnalyze)) {
+          return officialCategory;
+        }
+      } else if (textToAnalyze.includes(keyword)) {
         return officialCategory;
       }
     }

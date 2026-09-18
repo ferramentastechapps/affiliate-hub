@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { X, CheckCircle, Warning, Info, XCircle } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -104,21 +104,21 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = (type: ToastType, message: string, duration?: number) => {
+  const addToast = useCallback((type: ToastType, message: string, duration?: number) => {
     const id = Math.random().toString(36).substring(7);
     setToasts((prev) => [...prev, { id, type, message, duration }]);
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
+  }, []);
 
-  const toast = {
+  const toast = useMemo(() => ({
     success: (message: string, duration?: number) => addToast("success", message, duration),
     error: (message: string, duration?: number) => addToast("error", message, duration),
     warning: (message: string, duration?: number) => addToast("warning", message, duration),
     info: (message: string, duration?: number) => addToast("info", message, duration),
-  };
+  }), [addToast]);
 
   return { toasts, toast, removeToast };
 }

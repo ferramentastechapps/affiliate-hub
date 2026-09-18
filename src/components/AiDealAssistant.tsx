@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Robot, X, PaperPlaneRight, Sparkle, ArrowRight, Flame, ShoppingBagOpen } from "@phosphor-icons/react";
+import { Robot, X, PaperPlaneRight, Sparkle, ArrowRight, Flame } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 interface ProductItem {
@@ -24,6 +24,68 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface AiProductCardProps {
+  product: ProductItem;
+  onClick: () => void;
+}
+
+function AiProductCard({ product: p, onClick }: AiProductCardProps) {
+  const pPrice = p.price || 0;
+  const pOrig = p.originalPrice || 0;
+  const pDiscount = pOrig > pPrice && pPrice > 0 ? Math.round(((pOrig - pPrice) / pOrig) * 100) : 0;
+
+  return (
+    <div
+      onClick={onClick}
+      className="flex items-center gap-2.5 p-2 bg-black/60 hover:bg-zinc-800 border border-white/10 hover:border-rose-500/50 rounded-xl cursor-pointer transition-all group"
+    >
+      <div className="w-12 h-12 shrink-0 bg-white rounded-lg p-1 flex items-center justify-center relative overflow-hidden">
+        <img
+          src={p.imageUrl || "/placeholder.webp"}
+          alt={p.name}
+          className="w-full h-full object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/placeholder.webp";
+          }}
+        />
+        {pDiscount > 0 && (
+          <span className="absolute top-0 left-0 bg-rose-600 text-white font-black text-[8px] px-1 rounded-br">
+            -{pDiscount}%
+          </span>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h4 className="text-[11px] font-bold text-white truncate group-hover:text-rose-400 transition-colors">
+          {p.name}
+        </h4>
+        <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
+          <span className="font-black text-emerald-400">
+            R$ {pPrice.toFixed(2)}
+          </span>
+          {pOrig > pPrice && (
+            <span className="text-zinc-500 line-through text-[10px]">
+              R$ {pOrig.toFixed(2)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="px-2 py-1 bg-rose-500/20 text-rose-400 text-[10px] font-bold rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-colors shrink-0 flex items-center gap-1">
+        <span>VER</span>
+        <ArrowRight size={12} weight="bold" />
+      </div>
+    </div>
+  );
+}
+
+const QUICK_PROMPTS = [
+  "🔥 Melhores promoções de hoje",
+  "📱 Smartphones até R$ 2.000",
+  "🎫 Cupons de desconto ativos",
+  "💻 Notebook para trabalhar"
+];
+
 export function AiDealAssistant() {
   const router = useRouter();
   const pathname = usePathname();
@@ -36,7 +98,7 @@ export function AiDealAssistant() {
   const [inputQuery, setInputQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [isButtonVisible, setIsButtonVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -52,23 +114,24 @@ export function AiDealAssistant() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
         setIsButtonVisible(false);
       } else {
         setIsButtonVisible(true);
       }
-      setLastScrollY(currentScrollY);
+      lastScrollY.current = currentScrollY;
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
+      return () => clearTimeout(timer);
     }
   }, [messages, isOpen]);
 
@@ -83,13 +146,6 @@ export function AiDealAssistant() {
     window.addEventListener("open-ai-assistant", handleOpenAiAssistant);
     return () => window.removeEventListener("open-ai-assistant", handleOpenAiAssistant);
   }, []);
-
-  const quickPrompts = [
-    "🔥 Melhores promoções de hoje",
-    "📱 Smartphones até R$ 2.000",
-    "🎫 Cupons de desconto ativos",
-    "💻 Notebook para trabalhar"
-  ];
 
   async function handleSendMessage(queryText?: string) {
     const textToSend = queryText || inputQuery;
@@ -251,59 +307,16 @@ export function AiDealAssistant() {
                           <p className="font-black text-[11px] text-amber-400 flex items-center gap-1">
                             <Flame size={14} weight="fill" /> Ofertas Encontradas ({msg.recommendedProducts.length}):
                           </p>
-                          {msg.recommendedProducts.map((p) => {
-                            const pPrice = p.price || 0;
-                            const pOrig = p.originalPrice || 0;
-                            const pDiscount = pOrig > pPrice && pPrice > 0 ? Math.round(((pOrig - pPrice) / pOrig) * 100) : 0;
-
-                            return (
-                              <div
-                                key={p.id}
-                                onClick={() => {
-                                  setIsOpen(false);
-                                  router.push(`/produto/${p.shortId || p.id}`);
-                                }}
-                                className="flex items-center gap-2.5 p-2 bg-black/60 hover:bg-zinc-800 border border-white/10 hover:border-rose-500/50 rounded-xl cursor-pointer transition-all group"
-                              >
-                                <div className="w-12 h-12 shrink-0 bg-white rounded-lg p-1 flex items-center justify-center relative overflow-hidden">
-                                  <img
-                                    src={p.imageUrl || "/placeholder.webp"}
-                                    alt={p.name}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = "/placeholder.webp";
-                                    }}
-                                  />
-                                  {pDiscount > 0 && (
-                                    <span className="absolute top-0 left-0 bg-rose-600 text-white font-black text-[8px] px-1 rounded-br">
-                                      -{pDiscount}%
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="text-[11px] font-bold text-white truncate group-hover:text-rose-400 transition-colors">
-                                    {p.name}
-                                  </h4>
-                                  <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
-                                    <span className="font-black text-emerald-400">
-                                      R$ {pPrice.toFixed(2)}
-                                    </span>
-                                    {pOrig > pPrice && (
-                                      <span className="text-zinc-500 line-through text-[10px]">
-                                        R$ {pOrig.toFixed(2)}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="px-2 py-1 bg-rose-500/20 text-rose-400 text-[10px] font-bold rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-colors shrink-0 flex items-center gap-1">
-                                  <span>VER</span>
-                                  <ArrowRight size={12} weight="bold" />
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {msg.recommendedProducts.map((p) => (
+                            <AiProductCard
+                              key={p.id}
+                              product={p}
+                              onClick={() => {
+                                setIsOpen(false);
+                                router.push(`/produto/${p.shortId || p.id}`);
+                              }}
+                            />
+                          ))}
                         </div>
                       )}
                     </div>
@@ -325,7 +338,7 @@ export function AiDealAssistant() {
 
               {/* Botões de sugestão rápida */}
               <div className="px-3 py-2 bg-zinc-900/80 border-t border-white/5 flex gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
-                {quickPrompts.map((prompt, idx) => (
+                {QUICK_PROMPTS.map((prompt, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(prompt)}

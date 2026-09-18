@@ -70,25 +70,95 @@ const CHANNEL_ICON_MAP: Record<string, { icon: React.ElementType; color: string;
   whatsapp: { icon: ChatCircleText, color: "text-green-400 bg-green-500/10 border-green-500/20", label: "WhatsApp" },
 };
 
+interface KpiCardProps {
+  label: string;
+  value: string;
+  sublabel: string;
+  icon: React.ElementType;
+  iconColorClass: string;
+}
+
+function KpiCard({ label, value, sublabel, icon: Icon, iconColorClass }: KpiCardProps) {
+  return (
+    <div className="bg-zinc-900/90 border border-white/5 p-5 rounded-2xl flex flex-col justify-between">
+      <div className="flex items-center justify-between text-zinc-400 mb-3">
+        <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
+        <div className={`p-2 rounded-xl ${iconColorClass}`}>
+          <Icon size={20} weight="fill" />
+        </div>
+      </div>
+      <div>
+        <span className="text-3xl font-black text-white leading-tight">{value}</span>
+        <span className="text-xs text-zinc-500 block mt-1">{sublabel}</span>
+      </div>
+    </div>
+  );
+}
+
+function CampaignPerformanceRow({ camp }: { camp: AnalyticsData["campaignPerformances"][0] }) {
+  const chan = CHANNEL_ICON_MAP[camp.channel] || {
+    icon: Sparkle,
+    color: "text-zinc-400 bg-zinc-800",
+    label: camp.channel,
+  };
+  const ChanIcon = chan.icon;
+
+  return (
+    <tr className="hover:bg-white/[0.02] transition-colors">
+      <td className="py-3 px-3 font-semibold text-white max-w-[200px] truncate">
+        {camp.title}
+      </td>
+      <td className="py-3 px-3">
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-semibold ${chan.color}`}>
+          <ChanIcon size={14} weight="fill" />
+          {chan.label}
+        </span>
+      </td>
+      <td className="py-3 px-3 text-center font-bold text-zinc-200">
+        {camp.totalSent.toLocaleString("pt-BR")}
+      </td>
+      <td className="py-3 px-3 text-center">
+        <span className={camp.totalFailed > 0 ? "text-red-400 font-bold" : "text-zinc-500"}>
+          {camp.totalFailed}
+        </span>
+      </td>
+      <td className="py-3 px-3 text-center">
+        <span className="inline-block px-2 py-0.5 rounded-full font-black text-xs bg-accent/15 text-accent border border-accent/25">
+          {camp.ctr}%
+        </span>
+      </td>
+      <td className="py-3 px-3 text-right text-zinc-500 text-xs">
+        {camp.sentAt ? new Date(camp.sentAt).toLocaleDateString("pt-BR") : "Rascunho"}
+      </td>
+    </tr>
+  );
+}
+
 export function CampaignAnalyticsTab() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchAnalytics = () => {
-    setLoading(true);
-    fetch("/api/admin/campaigns/analytics")
-      .then((res) => res.json())
-      .then((json) => {
-        if (!json.error) {
-          setData(json);
-        }
-      })
-      .catch((err) => console.error("Erro ao carregar analytics:", err))
-      .finally(() => setLoading(false));
+  const fetchAnalytics = async (isMounted = true) => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/campaigns/analytics");
+      const json = await res.json();
+      if (isMounted && !json.error) {
+        setData(json);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar analytics:", err);
+    } finally {
+      if (isMounted) setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchAnalytics();
+    let isMounted = true;
+    fetchAnalytics(isMounted);
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading && !data) {
@@ -107,7 +177,7 @@ export function CampaignAnalyticsTab() {
   if (!data) return null;
 
   const { summary, channelStats, hourlyChartData, campaignPerformances } = data;
-  const totalChannelClicks = Math.max(1, (channelStats.push + channelStats.telegram + channelStats.whatsapp));
+  const totalChannelClicks = Math.max(1, channelStats.push + channelStats.telegram + channelStats.whatsapp);
 
   return (
     <div className="flex flex-col gap-8">
@@ -126,7 +196,7 @@ export function CampaignAnalyticsTab() {
         </div>
 
         <button
-          onClick={fetchAnalytics}
+          onClick={() => fetchAnalytics()}
           disabled={loading}
           className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 transition-all hover:text-white"
         >
@@ -137,77 +207,34 @@ export function CampaignAnalyticsTab() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Enviado */}
-        <div className="bg-zinc-900/90 border border-white/5 p-5 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Disparado</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
-              <PaperPlaneTilt size={20} weight="fill" />
-            </div>
-          </div>
-          <div>
-            <span className="text-3xl font-black text-white leading-tight">
-              {summary.totalSent.toLocaleString("pt-BR")}
-            </span>
-            <span className="text-xs text-zinc-500 block mt-1">
-              {summary.totalCampaigns} campanhas criadas
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Alcance / Delivery Rate */}
-        <div className="bg-zinc-900/90 border border-white/5 p-5 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider">Taxa de Entrega</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-              <CheckCircle size={20} weight="fill" />
-            </div>
-          </div>
-          <div>
-            <span className="text-3xl font-black text-white leading-tight">
-              {summary.deliveryRate}%
-            </span>
-            <span className="text-xs text-zinc-500 block mt-1">
-              {summary.totalFailed} falhas registradas
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Cliques 24h */}
-        <div className="bg-zinc-900/90 border border-white/5 p-5 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider">Cliques (Últimas 24h)</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
-              <CursorClick size={20} weight="fill" />
-            </div>
-          </div>
-          <div>
-            <span className="text-3xl font-black text-white leading-tight">
-              {summary.totalClicks24h.toLocaleString("pt-BR")}
-            </span>
-            <span className="text-xs text-zinc-500 block mt-1">
-              {summary.totalClicks7d.toLocaleString("pt-BR")} nos últimos 7 dias
-            </span>
-          </div>
-        </div>
-
-        {/* Card 4: CTR Médio */}
-        <div className="bg-zinc-900/90 border border-white/5 p-5 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider">CTR Médio Estimado</span>
-            <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
-              <TrendUp size={20} weight="fill" />
-            </div>
-          </div>
-          <div>
-            <span className="text-3xl font-black text-white leading-tight">
-              {summary.overallCtr}%
-            </span>
-            <span className="text-xs text-zinc-500 block mt-1">
-              Taxa de conversão em cliques
-            </span>
-          </div>
-        </div>
+        <KpiCard
+          label="Total Disparado"
+          value={summary.totalSent.toLocaleString("pt-BR")}
+          sublabel={`${summary.totalCampaigns} campanhas criadas`}
+          icon={PaperPlaneTilt}
+          iconColorClass="bg-blue-500/10 text-blue-400"
+        />
+        <KpiCard
+          label="Taxa de Entrega"
+          value={`${summary.deliveryRate}%`}
+          sublabel={`${summary.totalFailed} falhas registradas`}
+          icon={CheckCircle}
+          iconColorClass="bg-emerald-500/10 text-emerald-400"
+        />
+        <KpiCard
+          label="Cliques (Últimas 24h)"
+          value={summary.totalClicks24h.toLocaleString("pt-BR")}
+          sublabel={`${summary.totalClicks7d.toLocaleString("pt-BR")} nos últimos 7 dias`}
+          icon={CursorClick}
+          iconColorClass="bg-amber-500/10 text-amber-400"
+        />
+        <KpiCard
+          label="CTR Médio Estimado"
+          value={`${summary.overallCtr}%`}
+          sublabel="Taxa de conversão em cliques"
+          icon={TrendUp}
+          iconColorClass="bg-rose-500/10 text-rose-400"
+        />
       </div>
 
       {/* Gráfico de Cliques nas Últimas 24 Horas + Breakdown por Canal */}
@@ -347,44 +374,9 @@ export function CampaignAnalyticsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {campaignPerformances.map((camp) => {
-                const chan = CHANNEL_ICON_MAP[camp.channel] || {
-                  icon: Sparkle,
-                  color: "text-zinc-400 bg-zinc-800",
-                  label: camp.channel,
-                };
-                const ChanIcon = chan.icon;
-
-                return (
-                  <tr key={camp.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-3 font-semibold text-white max-w-[200px] truncate">
-                      {camp.title}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-semibold ${chan.color}`}>
-                        <ChanIcon size={14} weight="fill" />
-                        {chan.label}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center font-bold text-zinc-200">
-                      {camp.totalSent.toLocaleString("pt-BR")}
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={camp.totalFailed > 0 ? "text-red-400 font-bold" : "text-zinc-500"}>
-                        {camp.totalFailed}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className="inline-block px-2 py-0.5 rounded-full font-black text-xs bg-accent/15 text-accent border border-accent/25">
-                        {camp.ctr}%
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right text-zinc-500 text-xs">
-                      {camp.sentAt ? new Date(camp.sentAt).toLocaleDateString("pt-BR") : "Rascunho"}
-                    </td>
-                  </tr>
-                );
-              })}
+              {campaignPerformances.map((camp) => (
+                <CampaignPerformanceRow key={camp.id} camp={camp} />
+              ))}
             </tbody>
           </table>
         </div>

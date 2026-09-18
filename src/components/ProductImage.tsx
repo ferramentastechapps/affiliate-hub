@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Package, Tag } from "@phosphor-icons/react";
+import { Tag } from "@phosphor-icons/react";
 import { StoreLogo, detectStoreKey } from "./StoreLogos";
 
 interface ProductImageProps {
@@ -12,6 +12,24 @@ interface ProductImageProps {
   category?: string | null;
   className?: string;
   containerClassName?: string;
+}
+
+// Normaliza e limpa URL
+function sanitizeUrl(url?: string | null): string | null {
+  if (!url) return null;
+  let trimmed = url.trim();
+  if (trimmed === "" || trimmed === "/placeholder.webp" || trimmed.includes("unavailable")) {
+    return null;
+  }
+  // Suporte a URLs com protocolo relativo //
+  if (trimmed.startsWith("//")) {
+    trimmed = "https:" + trimmed;
+  }
+  // Forçar https se for http de CDNs conhecidas
+  if (trimmed.startsWith("http://")) {
+    trimmed = trimmed.replace("http://", "https://");
+  }
+  return trimmed;
 }
 
 export function ProductImage({
@@ -25,24 +43,6 @@ export function ProductImage({
 }: ProductImageProps) {
   const [useEnhanced, setUseEnhanced] = useState(false);
   const [hasError, setHasError] = useState(false);
-
-  // Normaliza e limpa URL
-  const sanitizeUrl = (url?: string | null): string | null => {
-    if (!url) return null;
-    let trimmed = url.trim();
-    if (trimmed === "" || trimmed === "/placeholder.webp" || trimmed.includes("unavailable")) {
-      return null;
-    }
-    // Suporte a URLs com protocolo relativo //
-    if (trimmed.startsWith("//")) {
-      trimmed = "https:" + trimmed;
-    }
-    // Forçar https se for http de CDNs conhecidas
-    if (trimmed.startsWith("http://")) {
-      trimmed = trimmed.replace("http://", "https://");
-    }
-    return trimmed;
-  };
 
   const primaryUrl = sanitizeUrl(src);
   const enhancedUrl = sanitizeUrl(enhancedSrc);

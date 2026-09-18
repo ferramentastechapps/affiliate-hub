@@ -3,6 +3,95 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+const AFFILIATE_PLATFORM_KEYS = [
+  'amazon',
+  'mercadoLivre',
+  'shopee',
+  'aliexpress',
+  'tiktok',
+  'netshoes',
+  'magalu',
+  'kabum',
+] as const;
+
+function hasValidAffiliateLink(product: any): boolean {
+  const hasPlatformLink = product.productLinks?.some(
+    (link: any) => link.affiliateUrl || link.generatedAffiliateUrl
+  );
+  const hasOldLink = product.links && AFFILIATE_PLATFORM_KEYS.some((key) => product.links[key]);
+  return Boolean(hasPlatformLink || hasOldLink);
+}
+
+function calculateProductHotScore(p: any): {
+  hotScore: number;
+  isLowestPriceEver: boolean;
+  hasCoupon: boolean;
+} {
+  const hasCoupon = p.coupons.length > 0;
+  const aiScore = p.aiScore ?? 0;
+
+  let isLowestPriceEver = false;
+  let dropFromOriginal = 0;
+  if (p.price && p.originalPrice && p.originalPrice > p.price) {
+    dropFromOriginal = ((p.originalPrice - p.price) / p.originalPrice) * 100;
+  }
+  if (p.priceHistory && p.priceHistory.length > 0) {
+    const histMinPrice = Math.min(...p.priceHistory.map((h: any) => h.price));
+    if (p.price && p.price <= histMinPrice * 1.01) {
+      isLowestPriceEver = true;
+    }
+  }
+
+  const hoursSinceCreation = p.createdAt
+    ? (Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)
+    : 999;
+  const freshnessScore = Math.max(0, 10 - (hoursSinceCreation / (7 * 24)) * 10);
+
+  const rawScore =
+    (aiScore * 2) +
+    (isLowestPriceEver ? 25 : 0) +
+    (hasCoupon ? 15 : 0) +
+    Math.min(dropFromOriginal * 0.5, 15) +
+    freshnessScore;
+
+  return {
+    hotScore: Math.round(rawScore * 10) / 10,
+    isLowestPriceEver,
+    hasCoupon,
+  };
+}
+
+function calculatePriceDropMetrics(
+  price: number | null | undefined,
+  priceHistory?: Array<{ price: number; createdAt: Date }>
+): { dropPercent: number; lowestPrice30d: number; highestPrice30d: number } {
+  let dropPercent = 0;
+  let lowestPrice30d = price ?? 0;
+  let highestPrice30d = price ?? 0;
+
+  if (priceHistory && priceHistory.length > 0) {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const history30d = priceHistory.filter((h) => h.createdAt >= thirtyDaysAgo);
+
+    if (history30d.length > 0) {
+      const prices = history30d.map((h) => h.price).filter(Boolean) as number[];
+      lowestPrice30d = Math.min(...prices, price || Infinity);
+      highestPrice30d = Math.max(...prices, price || 0);
+
+      if (price && highestPrice30d > 0) {
+        dropPercent = ((highestPrice30d - price) / highestPrice30d) * 100;
+      }
+    }
+  }
+
+  return {
+    dropPercent: Math.round(dropPercent * 10) / 10,
+    lowestPrice30d,
+    highestPrice30d,
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -71,7 +160,7 @@ export async function GET(request: Request) {
       } else {
         const terms = searchParam.toLowerCase().split(/\s+/).filter(Boolean);
         if (terms.length > 0) {
-          whereClause.AND = terms.map(term => ({
+          const searchConditions = terms.map(term => ({
             OR: [
               { name: { contains: term, mode: 'insensitive' } },
               { category: { contains: term, mode: 'insensitive' } },
@@ -79,6 +168,7 @@ export async function GET(request: Request) {
               { description: { contains: term, mode: 'insensitive' } }
             ]
           }));
+          whereClause.AND = whereClause.AND ? [...whereClause.AND, ...searchConditions] : searchConditions;
         }
       }
     }
@@ -206,66 +296,15 @@ export async function GET(request: Request) {
       },
       orderBy: orderByClause
     });
-    
+
     const mappedProducts = products.map(p => {
       const likes = p.votes.filter(v => v.type === 'LIKE').length;
       const dislikes = p.votes.filter(v => v.type === 'DISLIKE').length;
+      const { hotScore, isLowestPriceEver, hasCoupon } = calculateProductHotScore(p);
+      const priceDropMetrics = filterParam === 'price-drops'
+        ? calculatePriceDropMetrics(p.price, p.priceHistory)
+        : null;
 
-      // ─── HOT DEAL SCORE ─────────────────────────────────────────────
-      // Calcula um score composto para ordenar "Destaques" com produtos realmente bons
-      const hasCoupon = p.coupons.length > 0;
-      const aiScore = p.aiScore ?? 0;
-
-      // Menor preço histórico: compara preço atual com o menor já registrado
-      let isLowestPriceEver = false;
-      let dropFromOriginal = 0;
-      if (p.price && p.originalPrice && p.originalPrice > p.price) {
-        dropFromOriginal = ((p.originalPrice - p.price) / p.originalPrice) * 100;
-      }
-      if (p.priceHistory && p.priceHistory.length > 0) {
-        const histMinPrice = Math.min(...p.priceHistory.map((h: any) => h.price));
-        if (p.price && p.price <= histMinPrice * 1.01) { // tolerância de 1%
-          isLowestPriceEver = true;
-        }
-      }
-
-      // Frescor: premia produtos recentes (últimas 24h = 10 pontos, caindo para 0 em 7 dias)
-      const hoursSinceCreation = p.createdAt
-        ? (Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60 * 60)
-        : 999;
-      const freshnessScore = Math.max(0, 10 - (hoursSinceCreation / (7 * 24)) * 10);
-
-      const hotScore =
-        (aiScore * 2) +                              // até 20 pontos (aiScore 0-10)
-        (isLowestPriceEver ? 25 : 0) +              // +25 se for menor preço histórico
-        (hasCoupon ? 15 : 0) +                      // +15 se tiver cupom ativo
-        Math.min(dropFromOriginal * 0.5, 15) +      // até 15 pontos por desconto
-        freshnessScore;                              // até 10 pontos por frescor
-      // ────────────────────────────────────────────────────────────────
-      // FASE 2 — Calcular dados de queda de preço
-      let dropPercent = 0;
-      let lowestPrice30d = p.price ?? 0;
-      let highestPrice30d = p.price ?? 0;
-      
-      if (filterParam === 'price-drops' && p.priceHistory && p.priceHistory.length > 0) {
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        
-        // Filtrar histórico dos últimos 30 dias
-        const history30d = p.priceHistory.filter(h => h.createdAt >= thirtyDaysAgo);
-        
-        if (history30d.length > 0) {
-          const prices = history30d.map(h => h.price).filter(Boolean) as number[];
-          lowestPrice30d = Math.min(...prices, p.price || Infinity);
-          highestPrice30d = Math.max(...prices, p.price || 0);
-          
-          // Calcular queda percentual vs preço máximo histórico
-          if (p.price && highestPrice30d > 0) {
-            dropPercent = ((highestPrice30d - p.price) / highestPrice30d) * 100;
-          }
-        }
-      }
-      
       return {
         ...p,
         _count: {
@@ -273,17 +312,10 @@ export async function GET(request: Request) {
           likes,
           dislikes
         },
-        // Hot Deal Score e flags para o front-end
-        hotScore: Math.round(hotScore * 10) / 10,
+        hotScore,
         isLowestPriceEver,
         hasCoupon,
-        // Dados adicionais para price-drops
-        ...(filterParam === 'price-drops' && {
-          dropPercent: Math.round(dropPercent * 10) / 10,
-          lowestPrice30d,
-          highestPrice30d
-        })
-        // Mantemos os `votes` no payload para o front-end saber o voto atual do usuário sem fazer fetch extra
+        ...(priceDropMetrics && priceDropMetrics)
       };
     });
 
@@ -292,12 +324,7 @@ export async function GET(request: Request) {
 
     // Oculta produtos sem link de afiliado no site (mas não no painel admin, onde status=all ou pending)
     if (statusParam !== 'all' && statusParam !== 'pending') {
-      finalProducts = finalProducts.filter((p: any) => {
-        const hasPlatformLink = p.productLinks?.some((link: any) => link.affiliateUrl || link.generatedAffiliateUrl);
-        const linkKeys = ['amazon', 'mercadoLivre', 'shopee', 'aliexpress', 'tiktok', 'netshoes', 'magalu', 'kabum'];
-        const hasOldLink = p.links && linkKeys.some(key => p.links[key]);
-        return hasPlatformLink || hasOldLink;
-      });
+      finalProducts = finalProducts.filter(hasValidAffiliateLink);
     }
 
     if (filterParam === 'price-drops') {

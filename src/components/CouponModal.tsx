@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Copy, Check, ArrowRight } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 type CouponModalProps = {
   isOpen: boolean;
@@ -15,6 +15,14 @@ type CouponModalProps = {
   onGoToStore: () => void;
 };
 
+function getCouponCodeFontSize(code: string): string {
+  if (code.length > 20) return "text-base sm:text-lg tracking-normal";
+  if (code.length > 15) return "text-lg sm:text-xl tracking-normal";
+  if (code.length > 12) return "text-xl sm:text-2xl tracking-normal";
+  if (code.length > 8) return "text-2xl sm:text-3xl tracking-wide";
+  return "text-3xl sm:text-4xl tracking-wider";
+}
+
 export function CouponModal({ 
   isOpen, 
   onClose, 
@@ -26,11 +34,23 @@ export function CouponModal({
   onGoToStore 
 }: CouponModalProps) {
   const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(couponCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      navigator.clipboard.writeText(couponCode);
+      setCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("Erro ao copiar cupom:", e);
+    }
   };
 
   const handleGoToStore = () => {
@@ -90,17 +110,7 @@ export function CouponModal({
               <span className="text-xs text-zinc-500 uppercase tracking-wider font-bold block mb-2">
                 Código do Cupom
               </span>
-              <code className={`font-mono font-black text-white block mb-4 break-all select-all text-center leading-none ${
-                couponCode.length > 20 
-                  ? 'text-base sm:text-lg tracking-normal' 
-                  : couponCode.length > 15 
-                    ? 'text-lg sm:text-xl tracking-normal' 
-                    : couponCode.length > 12 
-                      ? 'text-xl sm:text-2xl tracking-normal' 
-                      : couponCode.length > 8 
-                        ? 'text-2xl sm:text-3xl tracking-wide' 
-                        : 'text-3xl sm:text-4xl tracking-wider'
-              }`}>
+              <code className={`font-mono font-black text-white block mb-4 break-all select-all text-center leading-none ${getCouponCodeFontSize(couponCode)}`}>
                 {couponCode}
               </code>
               

@@ -13,14 +13,18 @@ export function PwaUpdater() {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
     let refreshing = false;
+    let intervalId: NodeJS.Timeout | null = null;
+    let onVisibilityChange: (() => void) | null = null;
 
     // Quando o novo Service Worker assume o controle (controllerchange),
     // atualizamos silenciosamente para garantir que a página use os novos assets.
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
+    const onControllerChange = () => {
       if (refreshing) return;
       refreshing = true;
       window.location.reload();
-    });
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
     navigator.serviceWorker
       .register('/sw.js', { updateViaCache: 'none' })
@@ -48,26 +52,29 @@ export function PwaUpdater() {
         });
 
         // 4. Verificação periódica em segundo plano (a cada 10 minutos)
-        const interval = setInterval(() => {
+        intervalId = setInterval(() => {
           registration.update().catch(() => {});
         }, 10 * 60 * 1000);
 
         // 5. Verifica também quando o usuário volta para o app (troca de aba ou desbloqueio)
-        const handleVisibilityChange = () => {
+        onVisibilityChange = () => {
           if (document.visibilityState === 'visible') {
             registration.update().catch(() => {});
           }
         };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-          clearInterval(interval);
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
       })
       .catch((err) => {
         console.warn('[PWA] Falha ao registrar Service Worker:', err);
       });
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      if (intervalId) clearInterval(intervalId);
+      if (onVisibilityChange) {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      }
+    };
   }, []);
 
   return null;

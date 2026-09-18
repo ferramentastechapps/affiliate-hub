@@ -356,29 +356,32 @@ async function initWhatsApp() {
     });
 }
 
+// Auxiliar para encerramento limpo do cliente Puppeteer
+async function destroyCurrentClient() {
+    try {
+        if (client) {
+            await Promise.race([
+                client.destroy(),
+                new Promise(r => setTimeout(r, 3000))
+            ]).catch(e => console.log('Destroy notice:', e.message));
+        }
+    } catch (err) {
+        console.log('Erro ao destruir cliente:', err.message);
+    }
+    client = null;
+}
+
 // Reconexão segura assíncrona sem travar Express
 function safeReconnect() {
-    addLog('info', 'Solicitação manual de reconexão iniciada...');
+    addLog('info', 'Solicitação de reconexão iniciada...');
     isReady = false;
     connectionState = 'INITIALIZING';
     currentQrCode = null;
     latestQr = null;
-    
+
     setImmediate(async () => {
-        try {
-            if (client) {
-                await Promise.race([
-                    client.destroy(),
-                    new Promise(r => setTimeout(r, 3000))
-                ]).catch(e => console.log('Destroy notice:', e.message));
-            }
-        } catch (err) {
-            console.log('Erro ao destruir cliente:', err.message);
-        }
-        client = null;
-        setTimeout(() => {
-            initWhatsApp();
-        }, 1000);
+        await destroyCurrentClient();
+        setTimeout(() => initWhatsApp(), 1000);
     });
 }
 
@@ -391,34 +394,18 @@ function resetSession() {
     latestQr = null;
 
     setImmediate(async () => {
-        try {
-            if (client) {
-                await Promise.race([
-                    client.destroy(),
-                    new Promise(r => setTimeout(r, 3000))
-                ]).catch(e => console.log('Destroy notice:', e.message));
-            }
-        } catch (err) {
-            console.log('Erro ao destruir cliente:', err.message);
-        }
-        client = null;
+        await destroyCurrentClient();
 
         const authPath = path.join(__dirname, '.wwebjs_auth');
         const cachePath = path.join(__dirname, '.wwebjs_cache');
         try {
-            if (fs.existsSync(authPath)) {
-                fs.rmSync(authPath, { recursive: true, force: true });
-            }
-            if (fs.existsSync(cachePath)) {
-                fs.rmSync(cachePath, { recursive: true, force: true });
-            }
+            if (fs.existsSync(authPath)) fs.rmSync(authPath, { recursive: true, force: true });
+            if (fs.existsSync(cachePath)) fs.rmSync(cachePath, { recursive: true, force: true });
             addLog('info', 'Arquivos de sessão antigos removidos do disco.');
         } catch (err) {
             addLog('error', 'Erro ao remover diretório de sessão', err.message);
         }
-        setTimeout(() => {
-            initWhatsApp();
-        }, 1000);
+        setTimeout(() => initWhatsApp(), 1000);
     });
 }
 
@@ -427,124 +414,97 @@ initWhatsApp();
 
 // ── Express Endpoints ──────────────────────────────────────────────────
 
-// Endpoint para receber ofertas do bot Python
-app.post('/send', (req, res) => {
-    const { message, score, imageUrl } = req.body;
-    
-    if (!message) {
-        return res.status(400).json({ error: 'Message is required' });
+// ── Auxiliares de Visualização e Resposta (SRP) ────────────────────────
+
+function renderQrHtmlPage(ready, qrRaw) {
+    if (ready) {
+        return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Conectado</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
+        .card { background: #111b21; padding: 40px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 420px; width: 100%; border: 1px solid #222d34; }
+        h2 { color: #00a884; margin-top: 0; font-size: 24px; }
+        p { color: #8696a0; font-size: 15px; line-height: 1.5; }
+        .icon { font-size: 48px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">✅</div>
+        <h2>WhatsApp Conectado!</h2>
+        <p>O robô do WhatsApp está ativo e pronto para disparar ofertas no grupo.</p>
+    </div>
+</body>
+</html>`;
     }
 
-    messageQueue.push({ message, score: score || 0, imageUrl });
-    saveState();
-    console.log(`📥 Nova oferta recebida no balde (Score: ${score}). Total no balde: ${messageQueue.length}`);
-    addLog('info', `Nova oferta recebida no balde (Score: ${score}). Total: ${messageQueue.length}`);
-    
-    if (isReady) {
-        console.log('⚡ Disparando oferta automaticamente para o WhatsApp...');
-        setTimeout(() => flushBucket(), 500);
+    if (!qrRaw) {
+        return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="3">
+    <title>Aguardando QR Code</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
+        .card { background: #111b21; padding: 40px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 420px; width: 100%; border: 1px solid #222d34; }
+        h2 { color: #00a884; margin-top: 0; }
+        p { color: #8696a0; font-size: 14px; }
+        .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #00a884; border-radius: 50%; width: 44px; height: 44px; animation: spin 1s linear infinite; margin: 24px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>⏳ Gerando QR Code...</h2>
+        <div class="spinner"></div>
+        <p>O robô está iniciando a navegação. Esta página será atualizada automaticamente em 3 segundos.</p>
+    </div>
+</body>
+</html>`;
     }
 
-    return res.status(200).json({ success: true, queued: true });
-});
+    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrRaw)}`;
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="8">
+    <title>Conectar WhatsApp</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
+        .card { background: #111b21; padding: 32px 24px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 440px; width: 100%; border: 1px solid #222d34; }
+        img { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        h2 { color: #00a884; margin-top: 0; margin-bottom: 12px; font-size: 22px; }
+        p { color: #8696a0; font-size: 14px; margin: 6px 0; line-height: 1.4; }
+        .step { background: #182229; padding: 12px; border-radius: 8px; font-size: 13px; color: #e9edef; margin-bottom: 16px; border-left: 4px solid #00a884; text-align: left; }
+        .warning { font-size: 12px; color: #f7a600; margin-top: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>📱 Conectar WhatsApp</h2>
+        <div class="step">
+            <strong>Como conectar:</strong><br>
+            1. Abra o WhatsApp no celular<br>
+            2. Toque em <strong>Mais opções (⋮)</strong> ou <strong>Configurações</strong><br>
+            3. Toque em <strong>Aparelhos conectados</strong> > <strong>Conectar um aparelho</strong>
+        </div>
+        <img src="${qrImgUrl}" alt="QR Code WhatsApp" width="300" height="300" />
+        <p class="warning">⚠️ O QR Code atualiza a cada 8 segundos automaticamente.</p>
+    </div>
+</body>
+</html>`;
+}
 
-// Endpoint legado para exibir o QR Code em HTML
-app.get('/qr', (req, res) => {
-    if (isReady) {
-        return res.send(`
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>WhatsApp Conectado</title>
-                <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
-                    .card { background: #111b21; padding: 40px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 420px; width: 100%; border: 1px solid #222d34; }
-                    h2 { color: #00a884; margin-top: 0; font-size: 24px; }
-                    p { color: #8696a0; font-size: 15px; line-height: 1.5; }
-                    .icon { font-size: 48px; margin-bottom: 10px; }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <div class="icon">✅</div>
-                    <h2>WhatsApp Conectado!</h2>
-                    <p>O robô do WhatsApp está ativo e pronto para disparar ofertas no grupo.</p>
-                </div>
-            </body>
-            </html>
-        `);
-    }
-
-    if (!latestQr) {
-        return res.send(`
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <meta http-equiv="refresh" content="3">
-                <title>Aguardando QR Code</title>
-                <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
-                    .card { background: #111b21; padding: 40px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 420px; width: 100%; border: 1px solid #222d34; }
-                    h2 { color: #00a884; margin-top: 0; }
-                    p { color: #8696a0; font-size: 14px; }
-                    .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #00a884; border-radius: 50%; width: 44px; height: 44px; animation: spin 1s linear infinite; margin: 24px auto; }
-                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <h2>⏳ Gerando QR Code...</h2>
-                    <div class="spinner"></div>
-                    <p>O robô está iniciando a navegação. Esta página será atualizada automaticamente em 3 segundos.</p>
-                </div>
-            </body>
-            </html>
-        `);
-    }
-
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(latestQr)}`;
-    return res.send(`
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="refresh" content="8">
-            <title>Conectar WhatsApp</title>
-            <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #0b141a; color: #e9edef; margin: 0; padding: 20px; }
-                .card { background: #111b21; padding: 32px 24px; border-radius: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 440px; width: 100%; border: 1px solid #222d34; }
-                img { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-                h2 { color: #00a884; margin-top: 0; margin-bottom: 12px; font-size: 22px; }
-                p { color: #8696a0; font-size: 14px; margin: 6px 0; line-height: 1.4; }
-                .step { background: #182229; padding: 12px; border-radius: 8px; font-size: 13px; color: #e9edef; margin-bottom: 16px; border-left: 4px solid #00a884; text-align: left; }
-                .warning { font-size: 12px; color: #f7a600; margin-top: 14px; }
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <h2>📱 Conectar WhatsApp</h2>
-                <div class="step">
-                    <strong>Como conectar:</strong><br>
-                    1. Abra o WhatsApp no celular<br>
-                    2. Toque em <strong>Mais opções (⋮)</strong> ou <strong>Configurações</strong><br>
-                    3. Toque em <strong>Aparelhos conectados</strong> > <strong>Conectar um aparelho</strong>
-                </div>
-                <img src="${qrImgUrl}" alt="QR Code WhatsApp" width="300" height="300" />
-                <p class="warning">⚠️ O QR Code atualiza a cada 8 segundos automaticamente.</p>
-            </div>
-        </body>
-        </html>
-    `);
-});
-
-// Status detalhado em JSON para o painel Admin
-app.get('/status', (req, res) => {
-    return res.status(200).json({
+function buildStatusPayload() {
+    return {
         isReady,
         status: connectionState,
         qrCode: currentQrCode,
@@ -557,12 +517,83 @@ app.get('/status', (req, res) => {
         readyAt,
         groupConfigured: {
             name: GROUP_NAME || null,
-            id: GROUP_ID || null
+            id: GROUP_ID || null,
         },
         delayMinutes: DELAY_MINUTES,
         outsideSchedule: false,
-        logs: logsBuffer.slice(-30).reverse()
-    });
+        logs: logsBuffer.slice(-30).reverse(),
+    };
+}
+
+async function resolveTargetChatId(groupId, groupName) {
+    if (groupId) return groupId;
+    if (!groupName || !client) return null;
+
+    console.log(`🔍 Buscando ID do grupo pelo nome '${groupName}'...`);
+    const chats = await client.getChats();
+    const group = chats.find((c) => c.isGroup && c.name === groupName);
+    return group ? group.id._serialized : null;
+}
+
+async function sendOfferMessage(targetChatId, offer) {
+    let sentWithMedia = false;
+    if (offer.imageUrl) {
+        console.log(`🖼️ Baixando imagem via Node.js: ${offer.imageUrl}`);
+        const imgData = await downloadImageAsBase64(offer.imageUrl);
+        if (imgData) {
+            try {
+                const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
+                await client.sendMessage(targetChatId, media, { caption: offer.message });
+                sentWithMedia = true;
+                console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
+                addLog('info', 'Mensagem com imagem enviada com sucesso!');
+            } catch (imgErr) {
+                console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
+                addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', imgErr.message);
+            }
+        } else {
+            console.log('⚠️ Imagem não disponível, enviando só texto.');
+        }
+    }
+
+    if (!sentWithMedia) {
+        await client.sendMessage(targetChatId, offer.message);
+        console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
+        addLog('info', 'Mensagem (somente texto) enviada com sucesso!');
+    }
+}
+
+// ── Express Endpoints ──────────────────────────────────────────────────
+
+// Endpoint para receber ofertas do bot Python
+app.post('/send', (req, res) => {
+    const { message, score, imageUrl } = req.body;
+
+    if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+    }
+
+    messageQueue.push({ message, score: score || 0, imageUrl });
+    saveState();
+    console.log(`📥 Nova oferta recebida no balde (Score: ${score}). Total no balde: ${messageQueue.length}`);
+    addLog('info', `Nova oferta recebida no balde (Score: ${score}). Total: ${messageQueue.length}`);
+
+    if (isReady) {
+        console.log('⚡ Disparando oferta automaticamente para o WhatsApp...');
+        setTimeout(() => flushBucket(), 500);
+    }
+
+    return res.status(200).json({ success: true, queued: true });
+});
+
+// Endpoint para exibir o QR Code em HTML
+app.get('/qr', (req, res) => {
+    return res.send(renderQrHtmlPage(isReady, latestQr));
+});
+
+// Status detalhado em JSON para o painel Admin
+app.get('/status', (req, res) => {
+    return res.status(200).json(buildStatusPayload());
 });
 
 // Solicita reconexão manual
@@ -587,7 +618,7 @@ app.get('/groups', async (req, res) => {
     if (!isReady || !client) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
     try {
         const chats = await client.getChats();
-        const groups = chats.filter(c => c.isGroup).map(c => ({ name: c.name, id: c.id._serialized }));
+        const groups = chats.filter((c) => c.isGroup).map((c) => ({ name: c.name, id: c.id._serialized }));
         return res.status(200).json({ groups });
     } catch (err) {
         addLog('error', 'Erro ao obter grupos do WhatsApp', err.message);
@@ -606,7 +637,6 @@ async function flushBucket() {
         return { skipped: true, reason: 'not_ready' };
     }
 
-
     if (messageQueue.length === 0) {
         console.log('😴 Balde vazio. Nenhuma oferta para enviar agora.');
         return { skipped: true, reason: 'empty' };
@@ -622,10 +652,9 @@ async function flushBucket() {
 
     isFlushing = true;
     console.log(`🔄 Analisando ${messageQueue.length} ofertas no balde...`);
-    
+
     messageQueue.sort((a, b) => b.score - a.score);
     const bestOffer = messageQueue.shift();
-
     saveState();
 
     const targetLabel = GROUP_ID ? `JID: ${GROUP_ID}` : `grupo '${GROUP_NAME}'`;
@@ -633,65 +662,22 @@ async function flushBucket() {
     addLog('info', `Enviando melhor oferta (Score: ${bestOffer.score}) para ${targetLabel}...`);
 
     try {
-        let targetChatId = GROUP_ID;
-
-        if (!targetChatId) {
-            console.log(`🔍 Buscando ID do grupo pelo nome '${GROUP_NAME}'...`);
-            const chats = await client.getChats();
-            const group = chats.find(c => c.isGroup && c.name === GROUP_NAME);
-            if (group) {
-                targetChatId = group.id._serialized;
-            }
-        }
+        const targetChatId = await resolveTargetChatId(GROUP_ID, GROUP_NAME);
 
         if (!targetChatId) {
             const errStr = `Grupo '${GROUP_NAME}' não encontrado`;
             console.error(`❌ ${errStr}! Tem certeza que este WhatsApp está no grupo?`);
             addLog('error', errStr);
             return { success: false, error: errStr };
-        } else {
-            if (bestOffer.imageUrl) {
-                console.log(`🖼️ Baixando imagem via Node.js: ${bestOffer.imageUrl}`);
-                const imgData = await downloadImageAsBase64(bestOffer.imageUrl);
-                
-                if (imgData) {
-                    try {
-                        const media = new MessageMedia(imgData.mimeType, imgData.base64, 'promo.jpg');
-                        await client.sendMessage(targetChatId, media, { caption: bestOffer.message });
-                        console.log('🚀 Mensagem com imagem enviada com sucesso para o grupo!');
-                        addLog('info', 'Mensagem com imagem enviada com sucesso!');
-                    } catch (imgErr) {
-                        console.error('❌ Erro ao enviar mídia via WhatsApp:', imgErr.message);
-                        addLog('error', 'Falha ao enviar imagem. Tentando fallback para texto.', imgErr.message);
-                        try {
-                            if (client && isReady) {
-                                await client.sendMessage(targetChatId, bestOffer.message);
-                                console.log('🚀 Mensagem (somente texto, fallback) enviada com sucesso!');
-                                addLog('info', 'Mensagem (fallback texto) enviada com sucesso!');
-                            }
-                        } catch (textErr) {
-                            console.error('❌ Falha também no fallback texto:', textErr.message);
-                            addLog('error', 'Falha também no fallback de texto', textErr.message);
-                        }
-                    }
-                } else {
-                    console.log('⚠️ Imagem não disponível, enviando só texto.');
-                    await client.sendMessage(targetChatId, bestOffer.message);
-                    console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
-                    addLog('info', 'Mensagem (somente texto) enviada com sucesso!');
-                }
-            } else {
-                await client.sendMessage(targetChatId, bestOffer.message);
-                console.log('🚀 Mensagem (somente texto) enviada com sucesso para o grupo!');
-                addLog('info', 'Mensagem (somente texto) enviada com sucesso!');
-            }
-            
-            messageQueue = [];
-            saveState();
-            flushCount++;
-            console.log('🗑️ Balde esvaziado para a próxima rodada.');
-            return { success: true };
         }
+
+        await sendOfferMessage(targetChatId, bestOffer);
+
+        messageQueue = [];
+        saveState();
+        flushCount++;
+        console.log('🗑️ Balde esvaziado para a próxima rodada.');
+        return { success: true };
     } catch (err) {
         console.error('❌ Erro ao enviar mensagem:', err);
         lastError = `Erro ao enviar: ${err.message}`;
@@ -719,33 +705,22 @@ setInterval(async () => {
 
 // Health Check periódico
 setInterval(async () => {
-    if (isReady && client) {
-        try {
-            const state = await client.getState();
-            if (state !== 'CONNECTED') {
-                console.log(`⚠️ Health Check: estado do WhatsApp = '${state}'. Forçando reconexão...`);
-                addLog('warning', `Health Check: Estado '${state}'. Forçando reconexão...`);
-                isReady = false;
-                connectionState = 'INITIALIZING';
-                try { await client.destroy(); } catch (e) { /* ignora */ }
-                setTimeout(() => {
-                    console.log('🔄 Reconectando WhatsApp após health check...');
-                    initWhatsApp();
-                }, 5000);
-            }
-        } catch (err) {
-            console.log('⚠️ Health Check: WhatsApp não responde. Forçando reconexão...', err.message);
-            addLog('error', 'Health Check: WhatsApp não respondeu. Forçando reconexão...', err.message);
-            isReady = false;
-            connectionState = 'INITIALIZING';
-            try { await client.destroy(); } catch (e) { /* ignora */ }
-            setTimeout(() => {
-                console.log('🔄 Reconectando WhatsApp após health check falho...');
-                initWhatsApp();
-            }, 5000);
-        }
-    } else {
+    if (!isReady || !client) {
         console.log('💤 Health Check: WhatsApp não está pronto (isReady=false).');
+        return;
+    }
+
+    try {
+        const state = await client.getState();
+        if (state !== 'CONNECTED') {
+            console.log(`⚠️ Health Check: estado do WhatsApp = '${state}'. Forçando reconexão...`);
+            addLog('warning', `Health Check: Estado '${state}'. Forçando reconexão...`);
+            safeReconnect();
+        }
+    } catch (err) {
+        console.log('⚠️ Health Check: WhatsApp não responde. Forçando reconexão...', err.message);
+        addLog('error', 'Health Check: WhatsApp não respondeu. Forçando reconexão...', err.message);
+        safeReconnect();
     }
 }, 5 * 60 * 1000);
 

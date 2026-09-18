@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/components/AuthProvider";
 import { AuthPanel } from "@/components/AuthPanel";
@@ -11,12 +10,23 @@ import {
   ArrowRight, 
   ShoppingBag, 
   Tag, 
-  Sparkle,
-  ArrowSquareOut
+  Sparkle
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+function removeFavoriteFromStorage(productId: string): void {
+  try {
+    const stored = localStorage.getItem("economizei_favorites");
+    if (stored) {
+      const ids: string[] = JSON.parse(stored);
+      const nextIds = ids.filter(id => id !== productId);
+      localStorage.setItem("economizei_favorites", JSON.stringify(nextIds));
+      window.dispatchEvent(new CustomEvent("favorites-updated", { detail: { count: nextIds.length } }));
+    }
+  } catch {}
+}
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -26,6 +36,8 @@ export default function WishlistPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadWishlist() {
       setLoading(true);
       try {
@@ -33,7 +45,7 @@ export default function WishlistPage() {
           // Usuário logado: busca do backend
           const res = await fetch("/api/favorites");
           const data = await res.json();
-          if (data.favorites && Array.isArray(data.favorites)) {
+          if (isMounted && data.favorites && Array.isArray(data.favorites)) {
             setItems(data.favorites.map((f: any) => f.product).filter(Boolean));
           }
         } else {
@@ -45,24 +57,30 @@ export default function WishlistPage() {
             // Busca produtos pelos IDs
             const res = await fetch(`/api/products?limit=50`);
             const data = await res.json();
-            if (data.products && Array.isArray(data.products)) {
+            if (isMounted && data.products && Array.isArray(data.products)) {
               const matched = data.products.filter((p: any) => ids.includes(p.id));
               setItems(matched);
             }
-          } else {
+          } else if (isMounted) {
             setItems([]);
           }
         }
       } catch (err) {
         console.error("Erro ao carregar favoritos:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     if (!authLoading) {
       loadWishlist();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, authLoading]);
 
   async function handleRemove(productId: string, e: React.MouseEvent) {
@@ -71,17 +89,7 @@ export default function WishlistPage() {
 
     // Optimistic update
     setItems(prev => prev.filter(item => item.id !== productId));
-
-    // Remove do localStorage
-    try {
-      const stored = localStorage.getItem("economizei_favorites");
-      if (stored) {
-        const ids: string[] = JSON.parse(stored);
-        const nextIds = ids.filter(id => id !== productId);
-        localStorage.setItem("economizei_favorites", JSON.stringify(nextIds));
-        window.dispatchEvent(new CustomEvent("favorites-updated", { detail: { count: nextIds.length } }));
-      }
-    } catch {}
+    removeFavoriteFromStorage(productId);
 
     // Se logado, remove do servidor
     if (user) {
@@ -102,7 +110,6 @@ export default function WishlistPage() {
 
   return (
     <>
-      <Header />
       <main className="min-h-screen text-white pt-28 pb-20 px-4 md:px-8">
         <div className="max-w-[1280px] mx-auto">
           {/* Header da Página */}

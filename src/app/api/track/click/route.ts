@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // 1. Buscar o produto pelo shortId (número) ou id (string)
     const isNumeric = /^\d+$/.test(productId);
     const product = await prisma.product.findUnique({
-      where: isNumeric ? { shortId: parseInt(productId) } : { id: productId }
+      where: isNumeric ? { shortId: parseInt(productId, 10) } : { id: productId }
     });
 
     if (!product) {

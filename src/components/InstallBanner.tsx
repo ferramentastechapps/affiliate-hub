@@ -23,16 +23,8 @@ export function InstallBanner() {
     const preferencesPrompted = localStorage.getItem('pushPreferencesPrompted');
     const showPrefFlag = localStorage.getItem('showPreferencesAfterInstall');
 
-    // Se o PWA está rodando em modo standalone pela primeira vez após instalação
-    if (isInstalled && !preferencesPrompted) {
-      localStorage.setItem('pushPreferencesPrompted', 'true');
-      localStorage.removeItem('showPreferencesAfterInstall');
-      setShowPreferencesModal(true);
-      return;
-    }
-
-    // Se veio de um redirecionamento de instalação direta
-    if (showPrefFlag === 'true') {
+    // Se o PWA está rodando em modo standalone pela primeira vez ou veio de redirecionamento
+    if ((isInstalled && !preferencesPrompted) || showPrefFlag === 'true') {
       localStorage.setItem('pushPreferencesPrompted', 'true');
       localStorage.removeItem('showPreferencesAfterInstall');
       setShowPreferencesModal(true);
@@ -45,17 +37,13 @@ export function InstallBanner() {
 
     if (bannerDismissed) {
       if (bannerDismissed === 'true') {
-        // Legado: converte para timestamp a partir de agora
         localStorage.setItem('installBannerDismissed', Date.now().toString());
         return;
       }
-
       const dismissedTime = parseInt(bannerDismissed, 10);
-      if (!isNaN(dismissedTime)) {
-        const tenDaysInMs = 10 * 24 * 60 * 60 * 1000;
-        if (Date.now() - dismissedTime < tenDaysInMs) {
-          return;
-        }
+      const tenDaysInMs = 10 * 24 * 60 * 60 * 1000;
+      if (!isNaN(dismissedTime) && Date.now() - dismissedTime < tenDaysInMs) {
+        return;
       }
     }
 

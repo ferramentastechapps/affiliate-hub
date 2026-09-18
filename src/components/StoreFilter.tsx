@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Clock, Calendar } from "@phosphor-icons/react";
+import { X, Clock } from "@phosphor-icons/react";
 import { PlatformModal } from "./PlatformModal";
 import {
   AmazonLogo,
@@ -16,6 +17,7 @@ import {
   StoreLogo,
 } from "./StoreLogos";
 import { ProductImage } from "./ProductImage";
+import { Product } from "@/types/product";
 
 const STORES = [
   { key: "amazon",       label: "Amazon",        domain: "amazon.com.br",        linkKey: "amazon",       color: "#ff9900", bgGlow: "rgba(255, 153, 0, 0.12)" },
@@ -28,9 +30,21 @@ const STORES = [
   { key: "netshoes",     label: "Netshoes",       domain: "netshoes.com.br",      linkKey: "netshoes",     color: "#562883", bgGlow: "rgba(86, 40, 131, 0.12)" },
 ];
 
-import { Product } from "@/types/product";
+const STORE_LOGO_COMPONENTS: Record<string, React.ComponentType<{ className?: string }>> = {
+  amazon: AmazonLogo,
+  mercadolivre: MercadoLivreLogo,
+  shopee: ShopeeLogo,
+  aliexpress: AliExpressLogo,
+  tiktok: TikTokShopLogo,
+  kabum: KaBuMLogo,
+  magalu: MagaluLogo,
+  netshoes: NetshoesLogo,
+};
 
-
+const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+function formatBrl(val: number) {
+  return BRL_FORMATTER.format(val);
+}
 
 function getTimeAgo(dateString?: string | Date) {
   if (!dateString) return "há pouco";
@@ -46,7 +60,97 @@ function getTimeAgo(dateString?: string | Date) {
   return `${diffInDays}d`;
 }
 
-import { useRouter } from "next/navigation";
+interface StoreProductCardProps {
+  product: Product;
+  index: number;
+  activeStoreInfo?: { key: string; label: string; color: string; domain: string };
+  onClick: () => void;
+}
+
+function StoreProductCard({ product, index, activeStoreInfo, onClick }: StoreProductCardProps) {
+  const price = product.price || 0;
+  const originalPrice = product.originalPrice || 0;
+  const discount = (originalPrice > price && price > 0)
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
+      onClick={onClick}
+      className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
+    >
+      {/* Imagem Container Wrapper */}
+      <div className="w-full aspect-square relative">
+        <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
+          <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
+            {discount > 0 && (
+              <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
+                -{discount}%
+              </span>
+            )}
+            <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
+              <Clock size={12} weight="bold" />
+              {getTimeAgo(product.createdAt)}
+            </span>
+          </div>
+
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            store={activeStoreInfo?.key}
+            category={product.category}
+            className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+            containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
+          />
+        </div>
+
+        {/* Overlapping Brand Badge */}
+        <div
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full"
+          style={{
+            width: '36px',
+            height: '36px',
+            background: activeStoreInfo?.color || "#ff334b",
+            boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${activeStoreInfo?.color || "#ff334b"}88`,
+          }}
+        >
+          <StoreLogo store={activeStoreInfo?.key} className="w-5 h-5 rounded-full object-contain" />
+        </div>
+      </div>
+
+      {/* Deal Body */}
+      <div className="p-4 pt-7 flex flex-col flex-1">
+        <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
+          {product.category || "Oferta"}
+        </span>
+
+        <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
+          {product.name}
+        </h3>
+
+        <div className="mt-auto flex flex-col">
+          {price > 0 ? (
+            <>
+              {discount > 0 && (
+                <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
+                  {formatBrl(originalPrice)}
+                </span>
+              )}
+              <span className="text-base font-black text-white">
+                {formatBrl(price)}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm font-bold text-white">Ver detalhes</span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export function StoreFilter() {
   const router = useRouter();
@@ -58,13 +162,14 @@ export function StoreFilter() {
 
   useEffect(() => {
     if (!activeStore) return;
+    let isMounted = true;
     setLoading(true);
     setProducts([]);
 
     fetch(`/api/products?store=${activeStore}`)
       .then(r => r.json())
       .then((data: any[]) => {
-        if (!Array.isArray(data)) return;
+        if (!isMounted || !Array.isArray(data)) return;
 
         setProducts(data.map(p => ({
           id: p.id,
@@ -89,7 +194,13 @@ export function StoreFilter() {
         })));
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeStore]);
 
   const activeStoreInfo = STORES.find(s => s.key === activeStore);
@@ -116,15 +227,7 @@ export function StoreFilter() {
       <div className="flex md:hidden gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide snap-x snap-mandatory">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
-          const LogoComponent = {
-            amazon: AmazonLogo,
-            mercadolivre: MercadoLivreLogo,
-            shopee: ShopeeLogo,
-            aliexpress: AliExpressLogo,
-            tiktok: TikTokShopLogo,
-            kabum: KaBuMLogo,
-            magalu: MagaluLogo,
-          }[store.key] || (() => null);
+          const LogoComponent = STORE_LOGO_COMPONENTS[store.key] || (() => null);
 
           return (
             <button
@@ -158,16 +261,7 @@ export function StoreFilter() {
       <div className="hidden md:grid grid-cols-2 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2.5 mb-4">
         {STORES.map((store) => {
           const isActive = activeStore === store.key;
-          const LogoComponent = {
-            amazon: AmazonLogo,
-            mercadolivre: MercadoLivreLogo,
-            shopee: ShopeeLogo,
-            aliexpress: AliExpressLogo,
-            tiktok: TikTokShopLogo,
-            kabum: KaBuMLogo,
-            magalu: MagaluLogo,
-            netshoes: NetshoesLogo,
-          }[store.key] || (() => null);
+          const LogoComponent = STORE_LOGO_COMPONENTS[store.key] || (() => null);
 
           return (
             <button
@@ -261,95 +355,15 @@ export function StoreFilter() {
               {/* Grid de produtos */}
               {!loading && products.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                  {products.map((product, index) => {
-                    const price = product.price || 0;
-                    const originalPrice = product.originalPrice || 0;
-                    const discount = (originalPrice > price && price > 0)
-                      ? Math.round(((originalPrice - price) / originalPrice) * 100)
-                      : 0;
-
-                    let mainPlatformText = activeStoreInfo?.label || "Oferta";
-                    let mainPlatformLogo = `https://www.google.com/s2/favicons?domain=${activeStoreInfo?.domain}&sz=128`;
-
-                    return (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
-                        onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
-                        className="group cursor-pointer bg-card border border-border-custom rounded-[20px] overflow-hidden flex flex-col relative transition-all duration-300 hover:-translate-y-1 hover:border-zinc-700/80"
-                      >
-                        {/* Imagem Container Wrapper (No overflow-hidden to allow badge to overlap) */}
-                        <div className="w-full aspect-square relative">
-                          {/* Imagem Container (With overflow-hidden for image hover scale zoom) */}
-                          <div className="w-full h-full bg-zinc-900/30 flex items-center justify-center relative overflow-hidden border-b border-white/[0.04]">
-                            <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center z-10">
-                              {discount > 0 && (
-                                <span className="bg-[#ff334b] text-white font-bold text-[12px] px-2 py-0.5 rounded-[6px]">
-                                  -{discount}%
-                                </span>
-                              )}
-                              <span className="bg-white/15 text-white text-[11px] font-semibold px-2 py-0.5 rounded-[6px] flex items-center gap-1">
-                                <Clock size={12} weight="bold" />
-                                {getTimeAgo(product.createdAt)}
-                              </span>
-                            </div>
-
-                            <ProductImage
-                              src={product.imageUrl}
-                              alt={product.name}
-                              store={activeStoreInfo?.key}
-                              category={product.category}
-                              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
-                              containerClassName="w-full h-full flex items-center justify-center relative overflow-hidden"
-                            />
-                          </div>
-
-                          {/* Overlapping Brand Badge — Logo only, premium circular style */}
-                          <div
-                            className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center rounded-full"
-                            style={{
-                              width: '36px',
-                              height: '36px',
-                              background: activeStoreInfo?.color || "#ff334b",
-                              boxShadow: `0 0 0 2.5px #18181b, 0 0 14px 2px ${activeStoreInfo?.color || "#ff334b"}88`,
-                            }}
-                          >
-                            <StoreLogo store={activeStoreInfo?.key} className="w-5 h-5 rounded-full object-contain" />
-                          </div>
-                        </div>
-
-                        {/* Deal Body */}
-                        <div className="p-4 pt-7 flex flex-col flex-1">
-                          <span className="text-[10px] font-bold text-[#8e92a4] uppercase tracking-wider mb-1">
-                            {product.category || "Oferta"}
-                          </span>
-
-                          <h3 className="text-sm font-bold text-white mb-2 line-clamp-2 leading-snug min-h-[38px] group-hover:text-[#ff334b] transition-colors">
-                            {product.name}
-                          </h3>
-
-                          <div className="mt-auto flex flex-col">
-                            {price > 0 ? (
-                              <>
-                                {discount > 0 && (
-                                  <span className="text-[12px] text-[#8e92a4] line-through leading-none mb-1">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                                  </span>
-                                )}
-                                <span className="text-base font-black text-white">
-                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-sm font-bold text-white">Ver detalhes</span>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                  {products.map((product, index) => (
+                    <StoreProductCard
+                      key={product.id}
+                      product={product}
+                      index={index}
+                      activeStoreInfo={activeStoreInfo}
+                      onClick={() => router.push(`/produto/${product.shortId || product.id}`)}
+                    />
+                  ))}
                 </div>
               )}
             </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Ticket, Storefront, MagnifyingGlass, Check, TrendUp, Copy, CaretRight } from "@phosphor-icons/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Ticket, Storefront, MagnifyingGlass, TrendUp, CaretRight } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
 
 interface Coupon {
   id: string;
@@ -22,30 +22,37 @@ export default function CuponsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCoupons();
-  }, []);
+    let isMounted = true;
 
-  const fetchCoupons = async () => {
-    try {
-      const res = await fetch('/api/coupons');
-      if (res.ok) {
-        const data = await res.json();
-        setCoupons(data);
+    const fetchCoupons = async () => {
+      try {
+        const res = await fetch('/api/coupons');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setCoupons(data);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar cupons:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('Erro ao buscar cupons:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchCoupons();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleCopyCoupon = (code: string) => {
     navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
   };
 
   const filteredCoupons = coupons.filter(coupon => {

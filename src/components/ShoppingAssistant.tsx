@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChatCircle, X, PaperPlaneRight, Sparkle, User, CaretDown } from "@phosphor-icons/react";
+import { ChatCircle, X, PaperPlaneRight, Sparkle, User } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -9,6 +9,75 @@ type Message = {
   role: "user" | "assistant";
   content: string;
 };
+
+const PRESETS = [
+  "🔥 Melhores descontos hoje",
+  "💻 Notebook para trabalho",
+  "📺 Indicações de TV barata",
+  "🎫 Algum cupom ativo?",
+];
+
+function MarkdownLinkContent({ content }: { content: string }) {
+  const parts = [];
+  let lastIndex = 0;
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    const text = match[1];
+    const url = match[2];
+    const index = match.index;
+
+    if (index > lastIndex) {
+      parts.push(content.substring(lastIndex, index));
+    }
+
+    parts.push(
+      <a
+        key={index}
+        href={url}
+        className="inline-flex items-center gap-0.5 px-2 py-0.5 mx-1 font-bold text-[11px] sm:text-xs rounded bg-accent/20 text-accent hover:bg-accent hover:text-white transition-colors border border-accent/20 cursor-pointer"
+      >
+        {text}
+      </a>
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(content.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? <>{parts}</> : <>{content}</>;
+}
+
+function ChatMessageBubble({ message: m }: { message: Message }) {
+  const isUser = m.role === "user";
+  return (
+    <div className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}>
+      {!isUser && (
+        <div className="w-7 h-7 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+          <Sparkle size={14} weight="fill" />
+        </div>
+      )}
+      <div
+        className={`max-w-[80%] rounded-[1.25rem] px-4 py-3 text-xs leading-relaxed ${
+          isUser
+            ? "bg-[#ff334b] text-white rounded-tr-none font-medium shadow-md shadow-[#ff334b]/15"
+            : "bg-white/5 border border-white/5 text-[#8e92a4] rounded-tl-none"
+        }`}
+      >
+        <MarkdownLinkContent content={m.content} />
+      </div>
+      {isUser && (
+        <div className="w-7 h-7 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
+          <User size={14} weight="bold" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ShoppingAssistant() {
   const pathname = usePathname();
@@ -23,13 +92,6 @@ export function ShoppingAssistant() {
   const [loading, setLoading] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const presets = [
-    "🔥 Melhores descontos hoje",
-    "💻 Notebook para trabalho",
-    "📺 Indicações de TV barata",
-    "🎫 Algum cupom ativo?",
-  ];
 
   // Auto-scroll para a última mensagem
   useEffect(() => {
@@ -73,41 +135,6 @@ export function ShoppingAssistant() {
     }
   };
 
-  // Helper para renderizar links markdown [Texto](/produto/id)
-  const renderMessageContent = (content: string) => {
-    const parts = [];
-    let lastIndex = 0;
-    // Regex para achar links markdown: [Texto](/produto/id)
-    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      const text = match[1];
-      const url = match[2];
-      const index = match.index;
-
-      // Adiciona o texto antes do link
-      if (index > lastIndex) {
-        parts.push(content.substring(lastIndex, index));
-      }
-
-      // Adiciona o link renderizado
-      parts.push(
-        <a
-          key={index}
-          href={url}
-          className="inline-flex items-center gap-0.5 px-2 py-0.5 mx-1 font-bold text-[11px] sm:text-xs rounded bg-accent/20 text-accent hover:bg-accent hover:text-white transition-colors border border-accent/20 cursor-pointer"
-        >
-          {text}
-        </a>
-      );
-
-      lastIndex = regex.lastIndex;
-    }
-
-    return parts.length > 0 ? parts : content;
-  };
-
   if (pathname?.startsWith("/admin")) return null;
 
   return (
@@ -146,27 +173,7 @@ export function ShoppingAssistant() {
             {/* Balões de Mensagem */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent">
               {messages.map((m, idx) => (
-                <div key={idx} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {m.role === "assistant" && (
-                    <div className="w-7 h-7 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
-                      <Sparkle size={14} weight="fill" />
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[80%] rounded-[1.25rem] px-4 py-3 text-xs leading-relaxed ${
-                      m.role === "user"
-                        ? "bg-[#ff334b] text-white rounded-tr-none font-medium shadow-md shadow-[#ff334b]/15"
-                        : "bg-white/5 border border-white/5 text-[#8e92a4] rounded-tl-none"
-                    }`}
-                  >
-                    {renderMessageContent(m.content)}
-                  </div>
-                  {m.role === "user" && (
-                    <div className="w-7 h-7 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
-                      <User size={14} weight="bold" />
-                    </div>
-                  )}
-                </div>
+                <ChatMessageBubble key={idx} message={m} />
               ))}
 
               {/* Bolha de carregamento */}
@@ -188,7 +195,7 @@ export function ShoppingAssistant() {
             {/* Sugestões Rápidas */}
             {messages.length === 1 && !loading && (
               <div className="px-5 pb-2 flex flex-wrap gap-1.5">
-                {presets.map((preset) => (
+                {PRESETS.map((preset) => (
                   <button
                     key={preset}
                     onClick={() => handleSend(preset)}
