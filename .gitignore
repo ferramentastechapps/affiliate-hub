@@ -58,6 +58,8 @@ corrigir-ia-vps.ps1
 
 # deploy script gerado (contém chaves de API — nunca commitar)
 .deploy.sh
+videos_output/
+*.mp4
 next_build.tar.gz
 __pycache__/
 *.pyc
