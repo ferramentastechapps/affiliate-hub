@@ -658,6 +658,64 @@ app.get('/groups', async (req, res) => {
     }
 });
 
+// Diagnóstico detalhado da sessão e do envio de mídia no Puppeteer
+app.get('/debug-media', async (req, res) => {
+    if (!isReady || !client) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
+    try {
+        const targetChatId = GROUP_ID || (await resolveTargetChatId(GROUP_ID, GROUP_NAME));
+        const evalResult = await client.pupPage.evaluate(async (chatId) => {
+            const steps = [];
+            try {
+                steps.push('1. getChat');
+                const chat = await window.WWebJS.getChat(chatId, { getAsModel: false });
+                steps.push(`1. ok: chat found = ${!!chat}, isGroup = ${chat?.id?.isGroup?.()}`);
+
+                steps.push('2. check MeUser');
+                const { getMaybeMeLidUser, getMaybeMePnUser } = window.require('WAWebUserPrefsMeUser');
+                const lidUser = getMaybeMeLidUser();
+                const meUser = getMaybeMePnUser();
+                steps.push(`2. ok: mePn = ${meUser?._serialized || meUser?.$1}, meLid = ${lidUser?._serialized || lidUser?.$1}`);
+
+                steps.push('3. check groupMetadata');
+                const isLidMode = chat?.groupMetadata?.isLidAddressingMode;
+                steps.push(`3. ok: isLidAddressingMode = ${isLidMode}`);
+
+                steps.push('4. check MsgKey properties');
+                const newId = await window.require('WAWebMsgKey').newId();
+                const newMsgKey = new (window.require('WAWebMsgKey'))({
+                    from: meUser,
+                    to: chat.id,
+                    id: newId,
+                    selfDir: 'out',
+                });
+                steps.push(`4. ok: newMsgKey _serialized=${newMsgKey._serialized}, $1=${newMsgKey.$1}, toString=${newMsgKey.toString?.()}`);
+
+                steps.push('5. check Msg.get behavior');
+                try {
+                    const res1 = window.require('WAWebCollections').Msg.get(newMsgKey._serialized);
+                    steps.push(`5.1 Msg.get(_serialized) = ${res1}`);
+                } catch (e1) {
+                    steps.push(`5.1 Msg.get(_serialized) ERROR: ${e1.message}`);
+                }
+                try {
+                    const res2 = window.require('WAWebCollections').Msg.get(newMsgKey.$1);
+                    steps.push(`5.2 Msg.get($1) = ${res2}`);
+                } catch (e2) {
+                    steps.push(`5.2 Msg.get($1) ERROR: ${e2.message}`);
+                }
+
+                return { success: true, steps };
+            } catch (err) {
+                return { success: false, error: err.message, stack: err.stack, steps };
+            }
+        }, targetChatId);
+
+        return res.status(200).json(evalResult);
+    } catch (err) {
+        return res.status(500).json({ error: err.message, stack: err.stack });
+    }
+});
+
 // ── Lógica do Balde ───────────────────────────────────────────────────
 async function flushBucket() {
     if (isFlushing) {
