@@ -704,6 +704,27 @@ app.get('/debug-media', async (req, res) => {
                     steps.push(`5.2 Msg.get($1) ERROR: ${e2.message}`);
                 }
 
+                steps.push('6. test processMediaData');
+                try {
+                    const dummyMedia = {
+                        mimetype: 'image/jpeg',
+                        data: '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+                        filename: 'test.jpg'
+                    };
+                    const mediaOptions = await window.WWebJS.processMediaData(dummyMedia, {
+                        forceSticker: false,
+                        forceGif: false,
+                        forceVoice: false,
+                        forceDocument: false,
+                        forceMediaHd: false,
+                        sendToChannel: false,
+                        sendToStatus: false,
+                    });
+                    steps.push(`6. ok: processMediaData success! type=${mediaOptions.type}, filehash=${mediaOptions.filehash}`);
+                } catch (eMedia) {
+                    steps.push(`6. processMediaData ERROR: ${eMedia.message} | stack: ${eMedia.stack}`);
+                }
+
                 return { success: true, steps };
             } catch (err) {
                 return { success: false, error: err.message, stack: err.stack, steps };
