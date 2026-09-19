@@ -823,6 +823,50 @@ app.get('/debug-media', async (req, res) => {
                     } catch (e8) {
                         steps.push(`8. ERROR: ${e8.message}`);
                     }
+
+                    steps.push('9. pinpoint which media option breaks MsgModel');
+                    try {
+                        const MsgModel = window.require('WAWebCollections').Msg.modelClass;
+                        const baseTextMsg = {
+                            id: msgKeyLid,
+                            ack: 0,
+                            body: 'test text',
+                            from: fromLid,
+                            to: chat.id,
+                            local: true,
+                            self: 'out',
+                            t: parseInt(new Date().getTime() / 1000),
+                            isNewMsg: true,
+                            type: 'chat',
+                            ...ephemeralFields
+                        };
+                        try {
+                            const testText = new MsgModel(baseTextMsg);
+                            steps.push('9.1 baseTextMsg SUCCEEDED without mediaOptions!');
+                        } catch (eText) {
+                            steps.push(`9.1 baseTextMsg FAILED: ${eText.message}`);
+                        }
+
+                        // Test each key of mediaOptions:
+                        const mediaJson = mediaOptions.toJSON ? mediaOptions.toJSON() : {};
+                        const allMediaKeys = Array.from(new Set([...Object.keys(mediaOptions), ...Object.keys(mediaJson)]));
+                        steps.push(`9.2 allMediaKeys: ${allMediaKeys.join(', ')}`);
+
+                        let workingMsg = { ...baseTextMsg };
+                        for (const key of allMediaKeys) {
+                            const val = mediaOptions[key] !== undefined ? mediaOptions[key] : mediaJson[key];
+                            const candidate = { ...workingMsg, [key]: val };
+                            try {
+                                new MsgModel(candidate);
+                                workingMsg[key] = val;
+                                steps.push(`key '${key}' OK`);
+                            } catch (eKey) {
+                                steps.push(`🚨 KEY '${key}' CAUSED CRASH: ${eKey.message}`);
+                            }
+                        }
+                    } catch (e9) {
+                        steps.push(`9. ERROR: ${e9.message}`);
+                    }
                 } catch (eMedia) {
                     steps.push(`6. processMediaData ERROR: ${eMedia.message} | stack: ${eMedia.stack}`);
                 }
