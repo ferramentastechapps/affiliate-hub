@@ -114,7 +114,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           <Heart size={18} weight={isFavorited ? "fill" : "bold"} />
         </button>
 
-        {/* Next.js Image com otimização automática */}
+        {/* Next.js Image — unoptimized para aceitar imagens de qualquer CDN/domínio */}
         <Image
           src={displaySrc}
           alt={product.name}
@@ -123,7 +123,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           className="object-contain p-5 transition-transform duration-700 ease-out group-hover:scale-105"
           onError={() => setImageError(true)}
           priority={false}
-          quality={85}
+          unoptimized
         />
         
         {/* Overlay gradient */}

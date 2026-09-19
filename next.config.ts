@@ -106,14 +106,41 @@ const nextConfig: any = {
         protocol: 'https',
         hostname: '**.promobit.com.br',
       },
-      // Permitir qualquer CDN comum
+      // Cloudinary
       {
         protocol: 'https',
         hostname: '**.cloudinary.com',
       },
+      // Imgur
       {
         protocol: 'https',
         hostname: '**.imgur.com',
+      },
+      // DuckDuckGo / Bing Images / outros CDNs de imagens lifestyle
+      {
+        protocol: 'https',
+        hostname: '**.duckduckgo.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.bing.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.tcdn.com.br',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.vtexassets.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.vteximg.com.br',
+      },
+      // Fallback: qualquer domínio HTTPS não mapeado acima
+      {
+        protocol: 'https',
+        hostname: '**',
       },
     ],
     // Formatos de imagem otimizados
