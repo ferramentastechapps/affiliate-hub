@@ -865,18 +865,41 @@ app.get('/debug-media', async (req, res) => {
                             steps.push(`9.2 testTypeImageOnly FAILED: ${eImgType.message} | stack: ${eImgType.stack}`);
                         }
 
-                        // Now test with mediaOptions keys
-                        steps.push(`9.3 mediaOptions keys: ${Object.keys(mediaOptions).join(',')}`);
-                        const testObj = { ...baseTextMsg };
-                        for (const k of Object.keys(mediaOptions)) {
-                            try {
-                                testObj[k] = mediaOptions[k];
-                                new MsgModel(testObj);
-                                steps.push(`9.3 key [${k}] ok`);
-                            } catch (eKey) {
-                                steps.push(`9.3 key [${k}] BROKE: ${eKey.message}`);
-                                break;
+                        // Test sanitized media options
+                        steps.push('10. test sanitized media options with MsgModel and addAndSendMsgToChat');
+                        const cleanMedia = mediaOptions.toJSON ? mediaOptions.toJSON() : { ...mediaOptions };
+                        // Strip any internal Backbone or id properties:
+                        delete cleanMedia.id;
+                        delete cleanMedia.__x_id;
+                        for (const k of Object.keys(cleanMedia)) {
+                            if (k.startsWith('__x_') || k.startsWith('_') || k === 'parent' || k === 'collection' || k === 'mirror') {
+                                delete cleanMedia[k];
                             }
+                        }
+                        steps.push(`10.1 cleanMedia keys: ${Object.keys(cleanMedia).join(', ')}`);
+
+                        const candidateMediaMsg = {
+                            ...baseTextMsg,
+                            ...cleanMedia,
+                            id: keyForTest, // explicitly ensure id is newMsgKey!
+                            type: cleanMedia.type || 'image',
+                        };
+                        delete candidateMediaMsg.__x_id;
+
+                        try {
+                            const testModelMedia = new MsgModel(candidateMediaMsg);
+                            steps.push(`10.2 MsgModel(candidateMediaMsg) SUCCEEDED! id=${testModelMedia.id?.$1 || testModelMedia.id?._serialized || testModelMedia.id?.toString?.()}`);
+                            
+                            // Test if addAndSendMsgToChat works!
+                            steps.push('10.3 testing addAndSendMsgToChat with candidateMediaMsg...');
+                            const [msgPromise, sendMsgResultPromise] = window.require('WAWebSendMsgChatAction').addAndSendMsgToChat(chat, candidateMediaMsg);
+                            await msgPromise;
+                            steps.push('10.4 msgPromise RESOLVED! Media message successfully added to chat!');
+                            
+                            const sendResult = await sendMsgResultPromise;
+                            steps.push(`10.5 sendMsgResultPromise RESOLVED! result=${JSON.stringify(sendResult)}`);
+                        } catch (eSend) {
+                            steps.push(`10. ERROR: ${eSend.message} | stack: ${eSend.stack}`);
                         }
 
                     } catch (e9) {
