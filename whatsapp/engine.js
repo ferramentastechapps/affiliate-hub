@@ -827,11 +827,21 @@ app.get('/debug-media', async (req, res) => {
                     steps.push('9. pinpoint which media option breaks MsgModel');
                     try {
                         const MsgModel = window.require('WAWebCollections').Msg.modelClass;
+                        steps.push(`9.0 MsgModel.prototype.initialize snippet: ${MsgModel.prototype.initialize.toString().slice(0, 500)}`);
+                        
+                        const keyForTest = new (window.require('WAWebMsgKey'))({
+                            from: lidUser,
+                            to: chat.id,
+                            id: await window.require('WAWebMsgKey').newId(),
+                            participant: window.require('WAWebWidFactory').asUserWidOrThrow(lidUser),
+                            selfDir: 'out',
+                        });
+
                         const baseTextMsg = {
-                            id: msgKeyLid,
+                            id: keyForTest,
                             ack: 0,
                             body: 'test text',
-                            from: fromLid,
+                            from: lidUser,
                             to: chat.id,
                             local: true,
                             self: 'out',
@@ -842,28 +852,33 @@ app.get('/debug-media', async (req, res) => {
                         };
                         try {
                             const testText = new MsgModel(baseTextMsg);
-                            steps.push('9.1 baseTextMsg SUCCEEDED without mediaOptions!');
+                            steps.push(`9.1 baseTextMsg SUCCEEDED: id=${testText.id?.$1 || testText.id?._serialized}`);
                         } catch (eText) {
-                            steps.push(`9.1 baseTextMsg FAILED: ${eText.message}`);
+                            steps.push(`9.1 baseTextMsg FAILED: ${eText.message} | stack: ${eText.stack}`);
                         }
 
-                        // Test each key of mediaOptions:
-                        const mediaJson = mediaOptions.toJSON ? mediaOptions.toJSON() : {};
-                        const allMediaKeys = Array.from(new Set([...Object.keys(mediaOptions), ...Object.keys(mediaJson)]));
-                        steps.push(`9.2 allMediaKeys: ${allMediaKeys.join(', ')}`);
+                        // Now test baseTextMsg with type: 'image'
+                        try {
+                            const testTypeImageOnly = new MsgModel({ ...baseTextMsg, type: 'image' });
+                            steps.push(`9.2 testTypeImageOnly SUCCEEDED`);
+                        } catch (eImgType) {
+                            steps.push(`9.2 testTypeImageOnly FAILED: ${eImgType.message} | stack: ${eImgType.stack}`);
+                        }
 
-                        let workingMsg = { ...baseTextMsg };
-                        for (const key of allMediaKeys) {
-                            const val = mediaOptions[key] !== undefined ? mediaOptions[key] : mediaJson[key];
-                            const candidate = { ...workingMsg, [key]: val };
+                        // Now test with mediaOptions keys
+                        steps.push(`9.3 mediaOptions keys: ${Object.keys(mediaOptions).join(',')}`);
+                        const testObj = { ...baseTextMsg };
+                        for (const k of Object.keys(mediaOptions)) {
                             try {
-                                new MsgModel(candidate);
-                                workingMsg[key] = val;
-                                steps.push(`key '${key}' OK`);
+                                testObj[k] = mediaOptions[k];
+                                new MsgModel(testObj);
+                                steps.push(`9.3 key [${k}] ok`);
                             } catch (eKey) {
-                                steps.push(`🚨 KEY '${key}' CAUSED CRASH: ${eKey.message}`);
+                                steps.push(`9.3 key [${k}] BROKE: ${eKey.message}`);
+                                break;
                             }
                         }
+
                     } catch (e9) {
                         steps.push(`9. ERROR: ${e9.message}`);
                     }
