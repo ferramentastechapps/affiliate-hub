@@ -802,8 +802,22 @@ app.get('/debug-media', async (req, res) => {
                         } catch (eSerPn) {
                             steps.push(`7.2.2 testModelPn.serialize() ERROR: ${eSerPn.message}`);
                         }
-                    } catch (ePn) {
-                        steps.push(`7.2 msgPn ERROR: ${ePn.message} | stack: ${ePn.stack}`);
+                    steps.push('8. inspect real message in chat.msgs.last()');
+                    try {
+                        const lastMsg = chat.msgs.last();
+                        if (lastMsg) {
+                            steps.push(`8.1 lastMsg keys: ${Object.keys(lastMsg)}`);
+                            steps.push(`8.2 lastMsg id: ${JSON.stringify(lastMsg.id)}`);
+                            steps.push(`8.3 lastMsg from: ${JSON.stringify(lastMsg.from)}, to: ${JSON.stringify(lastMsg.to)}, author: ${JSON.stringify(lastMsg.author)}`);
+                            steps.push(`8.4 lastMsg type: ${lastMsg.type}, isNewMsg: ${lastMsg.isNewMsg}, self: ${lastMsg.self}`);
+                            if (lastMsg.mediaObject) {
+                                steps.push(`8.5 lastMsg has mediaObject!`);
+                            }
+                        } else {
+                            steps.push(`8.1 no lastMsg in chat.msgs`);
+                        }
+                    } catch (e8) {
+                        steps.push(`8. ERROR: ${e8.message}`);
                     }
                 } catch (eMedia) {
                     steps.push(`6. processMediaData ERROR: ${eMedia.message} | stack: ${eMedia.stack}`);
