@@ -1,10 +1,81 @@
+const path = require('path');
+const fs = require('fs');
+
+// Patch whatsapp-web.js internal bug before requiring it
+function applyWhatsappWebJsPatches() {
+    try {
+        const utilsPath = path.join(__dirname, 'node_modules', 'whatsapp-web.js', 'src', 'util', 'Injected', 'Utils.js');
+        if (!fs.existsSync(utilsPath)) return;
+        let content = fs.readFileSync(utilsPath, 'utf8');
+        let modified = false;
+
+        // Patch 1: Clean mediaOptions so internal Model properties (__x_id, etc.) don't overwrite/poison MsgModel
+        if (content.includes('...mediaOptions,') && !content.includes('cleanMedia')) {
+            const targetOld = `            ...ephemeralFields,
+            ...mediaOptions,
+            ...(mediaOptions.toJSON ? mediaOptions.toJSON() : {}),`;
+            const replacement = `            ...ephemeralFields,
+            ...cleanMedia,`;
+            if (content.includes(targetOld)) {
+                content = content.replace(targetOld, replacement);
+                modified = true;
+            }
+
+            const targetHeader = `        const ephemeralFields = window
+            .require('WAWebGetEphemeralFieldsMsgActionsUtils')
+            .getEphemeralFields(chat);`;
+            const replacementHeader = `        const ephemeralFields = window
+            .require('WAWebGetEphemeralFieldsMsgActionsUtils')
+            .getEphemeralFields(chat);
+
+        const cleanMedia = mediaOptions.toJSON ? mediaOptions.toJSON() : { ...mediaOptions };
+        delete cleanMedia.id;
+        delete cleanMedia.__x_id;
+        for (const k of Object.keys(cleanMedia)) {
+            if (k.startsWith('__x_') || k.startsWith('_') || k === 'parent' || k === 'collection' || k === 'mirror') {
+                delete cleanMedia[k];
+            }
+        }`;
+            if (content.includes(targetHeader)) {
+                content = content.replace(targetHeader, replacementHeader);
+                modified = true;
+            }
+
+            const targetOldEnd = `            ...extraOptions,
+        };`;
+            const replacementEnd = `            ...extraOptions,
+            id: newMsgKey,
+        };
+        delete message.__x_id;`;
+            if (content.includes(targetOldEnd)) {
+                content = content.replace(targetOldEnd, replacementEnd);
+                modified = true;
+            }
+        }
+
+        // Patch 2: newMsgKey._serialized is undefined in modern WhatsApp Web, use $1 or toString() fallback
+        if (content.includes('.Msg.get(newMsgKey._serialized);')) {
+            const targetOldKey = `.Msg.get(newMsgKey._serialized);`;
+            const replacementKey = `.Msg.get(newMsgKey._serialized || newMsgKey.$1 || (newMsgKey.toString ? newMsgKey.toString() : '')) || chat.msgs?.last() || { id: newMsgKey, ack: 0 };`;
+            content = content.replace(targetOldKey, replacementKey);
+            modified = true;
+        }
+
+        if (modified) {
+            fs.writeFileSync(utilsPath, content, 'utf8');
+            console.log('✅ Patches aplicados com sucesso em whatsapp-web.js (Utils.js)!');
+        }
+    } catch (e) {
+        console.error('⚠️ Erro ao aplicar patches em whatsapp-web.js:', e.message);
+    }
+}
+applyWhatsappWebJsPatches();
+
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcodeTerminal = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const express = require('express');
 const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const http = require('http');
@@ -658,265 +729,21 @@ app.get('/groups', async (req, res) => {
     }
 });
 
-// Diagnóstico detalhado da sessão e do envio de mídia no Puppeteer
-app.get('/debug-media', async (req, res) => {
+// Endpoint de teste para validação de envio de mídia + texto
+app.post('/test-media', async (req, res) => {
     if (!isReady || !client) return res.status(503).json({ error: 'WhatsApp não está pronto ainda' });
     try {
-        const targetChatId = GROUP_ID || (await resolveTargetChatId(GROUP_ID, GROUP_NAME));
-        const evalResult = await client.pupPage.evaluate(async (chatId) => {
-            const steps = [];
-            try {
-                steps.push('1. getChat');
-                const chat = await window.WWebJS.getChat(chatId, { getAsModel: false });
-                steps.push(`1. ok: chat found = ${!!chat}, isGroup = ${chat?.id?.isGroup?.()}`);
+        const targetChatId = req.body.targetChatId || GROUP_ID || (await resolveTargetChatId(GROUP_ID, GROUP_NAME));
+        if (!targetChatId) return res.status(400).json({ error: 'Grupo não encontrado' });
 
-                steps.push('2. check MeUser');
-                const { getMaybeMeLidUser, getMaybeMePnUser } = window.require('WAWebUserPrefsMeUser');
-                const lidUser = getMaybeMeLidUser();
-                const meUser = getMaybeMePnUser();
-                steps.push(`2. ok: mePn = ${meUser?._serialized || meUser?.$1}, meLid = ${lidUser?._serialized || lidUser?.$1}`);
+        const imageUrl = req.body.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+        const message = req.body.message || '🧪 Teste de imagem + legenda via WhatsApp Engine!';
 
-                steps.push('3. check groupMetadata');
-                const isLidMode = chat?.groupMetadata?.isLidAddressingMode;
-                steps.push(`3. ok: isLidAddressingMode = ${isLidMode}`);
-
-                steps.push('4. check MsgKey properties');
-                const newId = await window.require('WAWebMsgKey').newId();
-                const newMsgKey = new (window.require('WAWebMsgKey'))({
-                    from: meUser,
-                    to: chat.id,
-                    id: newId,
-                    selfDir: 'out',
-                });
-                steps.push(`4. ok: newMsgKey _serialized=${newMsgKey._serialized}, $1=${newMsgKey.$1}, toString=${newMsgKey.toString?.()}`);
-
-                steps.push('5. check Msg.get behavior');
-                try {
-                    const res1 = window.require('WAWebCollections').Msg.get(newMsgKey._serialized);
-                    steps.push(`5.1 Msg.get(_serialized) = ${res1}`);
-                } catch (e1) {
-                    steps.push(`5.1 Msg.get(_serialized) ERROR: ${e1.message}`);
-                }
-                try {
-                    const res2 = window.require('WAWebCollections').Msg.get(newMsgKey.$1);
-                    steps.push(`5.2 Msg.get($1) = ${res2}`);
-                } catch (e2) {
-                    steps.push(`5.2 Msg.get($1) ERROR: ${e2.message}`);
-                }
-
-                steps.push('6. test processMediaData');
-                try {
-                    const dummyMedia = {
-                        mimetype: 'image/jpeg',
-                        data: '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
-                        filename: 'test.jpg'
-                    };
-                    const mediaOptions = await window.WWebJS.processMediaData(dummyMedia, {
-                        forceSticker: false,
-                        forceGif: false,
-                        forceVoice: false,
-                        forceDocument: false,
-                        forceMediaHd: false,
-                        sendToChannel: false,
-                        sendToStatus: false,
-                    });
-                    steps.push(`6. ok: processMediaData success! type=${mediaOptions.type}, filehash=${mediaOptions.filehash}`);
-
-                    steps.push('7. test message build with lidUser vs meUser');
-                    const ephemeralFields = window.require('WAWebGetEphemeralFieldsMsgActionsUtils').getEphemeralFields(chat);
-
-                    // Test with lidUser (what wwebjs currently does)
-                    try {
-                        const fromLid = chat.groupMetadata?.isLidAddressingMode ? lidUser : meUser;
-                        const participantLid = window.require('WAWebWidFactory').asUserWidOrThrow(fromLid);
-                        const msgKeyLid = new (window.require('WAWebMsgKey'))({
-                            from: fromLid,
-                            to: chat.id,
-                            id: await window.require('WAWebMsgKey').newId(),
-                            participant: participantLid,
-                            selfDir: 'out',
-                        });
-                        const msgLid = {
-                            id: msgKeyLid,
-                            ack: 0,
-                            body: mediaOptions.preview,
-                            from: fromLid,
-                            to: chat.id,
-                            local: true,
-                            self: 'out',
-                            t: parseInt(new Date().getTime() / 1000),
-                            isNewMsg: true,
-                            type: 'chat',
-                            ...ephemeralFields,
-                            ...mediaOptions,
-                            ...(mediaOptions.toJSON ? mediaOptions.toJSON() : {}),
-                        };
-                        steps.push(`7.1 msgLid constructed, calling addAndSendMsgToChat test (dry run or check)`);
-                        // Let's see if WAWebSendMsgChatAction or Msg model creation throws:
-                        const MsgModel = window.require('WAWebCollections').Msg.modelClass;
-                        const testModelLid = new MsgModel(msgLid);
-                        steps.push(`7.1.1 MsgModel(msgLid) success: id=${testModelLid.id?.$1 || testModelLid.id?._serialized}`);
-                        // Check if serialize throws:
-                        try {
-                            const serialized = testModelLid.serialize();
-                            steps.push(`7.1.2 testModelLid.serialize() success`);
-                        } catch (eSer) {
-                            steps.push(`7.1.2 testModelLid.serialize() ERROR: ${eSer.message}`);
-                        }
-                    } catch (eLid) {
-                        steps.push(`7.1 msgLid ERROR: ${eLid.message} | stack: ${eLid.stack}`);
-                    }
-
-                    // Test with meUser (forcing meUser instead of lidUser)
-                    try {
-                        const fromPn = meUser;
-                        const participantPn = window.require('WAWebWidFactory').asUserWidOrThrow(fromPn);
-                        const msgKeyPn = new (window.require('WAWebMsgKey'))({
-                            from: fromPn,
-                            to: chat.id,
-                            id: await window.require('WAWebMsgKey').newId(),
-                            participant: participantPn,
-                            selfDir: 'out',
-                        });
-                        const msgPn = {
-                            id: msgKeyPn,
-                            ack: 0,
-                            body: mediaOptions.preview,
-                            from: fromPn,
-                            to: chat.id,
-                            local: true,
-                            self: 'out',
-                            t: parseInt(new Date().getTime() / 1000),
-                            isNewMsg: true,
-                            type: 'chat',
-                            ...ephemeralFields,
-                            ...mediaOptions,
-                            ...(mediaOptions.toJSON ? mediaOptions.toJSON() : {}),
-                        };
-                        const MsgModel = window.require('WAWebCollections').Msg.modelClass;
-                        const testModelPn = new MsgModel(msgPn);
-                        steps.push(`7.2.1 MsgModel(msgPn) success: id=${testModelPn.id?.$1 || testModelPn.id?._serialized}`);
-                        try {
-                            const serializedPn = testModelPn.serialize();
-                            steps.push(`7.2.2 testModelPn.serialize() success`);
-                        } catch (eSerPn) {
-                            steps.push(`7.2.2 testModelPn.serialize() ERROR: ${eSerPn.message}`);
-                        }
-                    } catch (ePn) {
-                        steps.push(`7.2 msgPn ERROR: ${ePn.message} | stack: ${ePn.stack}`);
-                    }
-
-                    steps.push('8. inspect real message in chat.msgs.last()');
-                    try {
-                        const lastMsg = chat.msgs.last();
-                        if (lastMsg) {
-                            steps.push(`8.1 lastMsg keys: ${Object.keys(lastMsg)}`);
-                            steps.push(`8.2 lastMsg id: ${JSON.stringify(lastMsg.id)}`);
-                            steps.push(`8.3 lastMsg from: ${JSON.stringify(lastMsg.from)}, to: ${JSON.stringify(lastMsg.to)}, author: ${JSON.stringify(lastMsg.author)}`);
-                            steps.push(`8.4 lastMsg type: ${lastMsg.type}, isNewMsg: ${lastMsg.isNewMsg}, self: ${lastMsg.self}`);
-                            if (lastMsg.mediaObject) {
-                                steps.push(`8.5 lastMsg has mediaObject!`);
-                            }
-                        } else {
-                            steps.push(`8.1 no lastMsg in chat.msgs`);
-                        }
-                    } catch (e8) {
-                        steps.push(`8. ERROR: ${e8.message}`);
-                    }
-
-                    steps.push('9. pinpoint which media option breaks MsgModel');
-                    try {
-                        const MsgModel = window.require('WAWebCollections').Msg.modelClass;
-                        steps.push(`9.0 MsgModel.prototype.initialize snippet: ${MsgModel.prototype.initialize.toString().slice(0, 500)}`);
-                        
-                        const keyForTest = new (window.require('WAWebMsgKey'))({
-                            from: lidUser,
-                            to: chat.id,
-                            id: await window.require('WAWebMsgKey').newId(),
-                            participant: window.require('WAWebWidFactory').asUserWidOrThrow(lidUser),
-                            selfDir: 'out',
-                        });
-
-                        const baseTextMsg = {
-                            id: keyForTest,
-                            ack: 0,
-                            body: 'test text',
-                            from: lidUser,
-                            to: chat.id,
-                            local: true,
-                            self: 'out',
-                            t: parseInt(new Date().getTime() / 1000),
-                            isNewMsg: true,
-                            type: 'chat',
-                            ...ephemeralFields
-                        };
-                        try {
-                            const testText = new MsgModel(baseTextMsg);
-                            steps.push(`9.1 baseTextMsg SUCCEEDED: id=${testText.id?.$1 || testText.id?._serialized}`);
-                        } catch (eText) {
-                            steps.push(`9.1 baseTextMsg FAILED: ${eText.message} | stack: ${eText.stack}`);
-                        }
-
-                        // Now test baseTextMsg with type: 'image'
-                        try {
-                            const testTypeImageOnly = new MsgModel({ ...baseTextMsg, type: 'image' });
-                            steps.push(`9.2 testTypeImageOnly SUCCEEDED`);
-                        } catch (eImgType) {
-                            steps.push(`9.2 testTypeImageOnly FAILED: ${eImgType.message} | stack: ${eImgType.stack}`);
-                        }
-
-                        // Test sanitized media options
-                        steps.push('10. test sanitized media options with MsgModel and addAndSendMsgToChat');
-                        const cleanMedia = mediaOptions.toJSON ? mediaOptions.toJSON() : { ...mediaOptions };
-                        // Strip any internal Backbone or id properties:
-                        delete cleanMedia.id;
-                        delete cleanMedia.__x_id;
-                        for (const k of Object.keys(cleanMedia)) {
-                            if (k.startsWith('__x_') || k.startsWith('_') || k === 'parent' || k === 'collection' || k === 'mirror') {
-                                delete cleanMedia[k];
-                            }
-                        }
-                        steps.push(`10.1 cleanMedia keys: ${Object.keys(cleanMedia).join(', ')}`);
-
-                        const candidateMediaMsg = {
-                            ...baseTextMsg,
-                            ...cleanMedia,
-                            id: keyForTest, // explicitly ensure id is newMsgKey!
-                            type: cleanMedia.type || 'image',
-                        };
-                        delete candidateMediaMsg.__x_id;
-
-                        try {
-                            const testModelMedia = new MsgModel(candidateMediaMsg);
-                            steps.push(`10.2 MsgModel(candidateMediaMsg) SUCCEEDED! id=${testModelMedia.id?.$1 || testModelMedia.id?._serialized || testModelMedia.id?.toString?.()}`);
-                            
-                            // Test if addAndSendMsgToChat works!
-                            steps.push('10.3 testing addAndSendMsgToChat with candidateMediaMsg...');
-                            const [msgPromise, sendMsgResultPromise] = window.require('WAWebSendMsgChatAction').addAndSendMsgToChat(chat, candidateMediaMsg);
-                            await msgPromise;
-                            steps.push('10.4 msgPromise RESOLVED! Media message successfully added to chat!');
-                            
-                            const sendResult = await sendMsgResultPromise;
-                            steps.push(`10.5 sendMsgResultPromise RESOLVED! result=${JSON.stringify(sendResult)}`);
-                        } catch (eSend) {
-                            steps.push(`10. ERROR: ${eSend.message} | stack: ${eSend.stack}`);
-                        }
-
-                    } catch (e9) {
-                        steps.push(`9. ERROR: ${e9.message}`);
-                    }
-                } catch (eMedia) {
-                    steps.push(`6. processMediaData ERROR: ${eMedia.message} | stack: ${eMedia.stack}`);
-                }
-
-                return { success: true, steps };
-            } catch (err) {
-                return { success: false, error: err.message, stack: err.stack, steps };
-            }
-        }, targetChatId);
-
-        return res.status(200).json(evalResult);
+        console.log(`🧪 Testando envio de mídia para ${targetChatId}...`);
+        await sendOfferMessage(targetChatId, { message, imageUrl });
+        return res.status(200).json({ success: true, message: 'Oferta de teste disparada com sucesso!' });
     } catch (err) {
+        console.error('❌ Erro no teste de mídia:', err);
         return res.status(500).json({ error: err.message, stack: err.stack });
     }
 });
