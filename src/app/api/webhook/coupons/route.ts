@@ -293,6 +293,7 @@ export async function PUT(request: Request) {
       success: true,
       message: `${inserted} cupons criados, ${updated} atualizados com sucesso.`,
       inserted,
+      created: inserted,
       updated,
       total: coupons.length,
     });

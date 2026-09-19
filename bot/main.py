@@ -350,7 +350,8 @@ class PromotionBot:
                 resultado = self.api.adicionar_cupons_lote(cupons_novos)
                 
                 if resultado and resultado.get('success'):
-                    print(f'✅ {resultado["created"]} cupons adicionados no site')
+                    num_adicionados = resultado.get("created") or resultado.get("inserted") or len(cupons_novos)
+                    print(f'✅ {num_adicionados} cupons adicionados no site')
                 else:
                     print('⚠️ Falha ao adicionar cupons no site, mas continuaremos com o envio para Telegram')
                     
