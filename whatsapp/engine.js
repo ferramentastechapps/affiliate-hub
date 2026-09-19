@@ -802,6 +802,10 @@ app.get('/debug-media', async (req, res) => {
                         } catch (eSerPn) {
                             steps.push(`7.2.2 testModelPn.serialize() ERROR: ${eSerPn.message}`);
                         }
+                    } catch (ePn) {
+                        steps.push(`7.2 msgPn ERROR: ${ePn.message} | stack: ${ePn.stack}`);
+                    }
+
                     steps.push('8. inspect real message in chat.msgs.last()');
                     try {
                         const lastMsg = chat.msgs.last();
