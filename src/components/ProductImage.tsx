@@ -74,8 +74,6 @@ export function ProductImage({
         className={className}
         loading="lazy"
         decoding="async"
-        referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
         onError={handleImageError}
       />
     </div>
