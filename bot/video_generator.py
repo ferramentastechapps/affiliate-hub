@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 video_generator.py - Gerador Automatico de Videos de Promocao para Instagram
-Gera 3 videos 9:16 por dia com as melhores promocoes do grupo Telegram.
+Gera 3 videos 9:16 por dia (9h, 12h, 18h) com as 10 melhores promocoes do grupo Telegram.
 
 VIDEO_AI_PROVIDER no .env define qual IA usar:
   ffmpeg   -> FFmpeg local, Ken Burns + overlays animados (padrao, gratis)
@@ -9,7 +9,7 @@ VIDEO_AI_PROVIDER no .env define qual IA usar:
   genmedia -> GenMedia Labs image-to-video via RunComfy (requer RUNCOMFY_API_KEY)
 """
 
-import os, sys, json, time, logging, tempfile, requests, subprocess
+import os, sys, time, logging, tempfile, requests, subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -50,23 +50,45 @@ VIDEO_AI_PROVIDER = os.getenv("VIDEO_AI_PROVIDER", "ffmpeg").lower()
 HEYGEN_API_KEY    = os.getenv("HEYGEN_API_KEY", "")
 RUNCOMFY_API_KEY  = os.getenv("RUNCOMFY_API_KEY", "")
 
-VIDEO_WIDTH    = 1080
-VIDEO_HEIGHT   = 1920
-VIDEO_FPS      = 30
-VIDEO_DURATION = int(os.getenv("VIDEO_DURATION", "10"))
-SCHEDULE_HOURS = [10, 15, 20]
+VIDEO_WIDTH     = 1080
+VIDEO_HEIGHT    = 1920
+VIDEO_FPS       = 30
+SLIDE_DURATION  = float(os.getenv("VIDEO_SLIDE_DURATION", "2.5"))  # seconds per product slide
+CTA_DURATION    = float(os.getenv("VIDEO_CTA_DURATION", "4.0"))    # seconds for CTA slide
+SCHEDULE_HOURS  = [9, 12, 18]  # Executa apenas 3x ao dia (9h, 12h, e 18h)
 
 
-def fetch_top_products(limit=9):
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+}
+
+
+def is_valid_lifestyle_photo(p):
+    enh = p.get("enhancedImageUrl")
+    if not enh or not isinstance(enh, str):
+        return False
+    enh = enh.strip()
+    if not enh or "placeholder" in enh.lower():
+        return False
+    return True
+
+
+def fetch_lifestyle_products(limit=10):
+    """Fetch the most recent products that strictly have a real lifestyle photo (enhancedImageUrl)."""
     try:
         headers = {"x-api-key": API_KEY} if API_KEY else {}
-        url = f"{API_BASE}/api/products?filter=hot&limit={limit}&status=active"
-        res = requests.get(url, headers=headers, timeout=15)
+        url = f"{API_BASE}/api/products?limit=250&status=active"
+        res = requests.get(url, headers=headers, timeout=20)
         res.raise_for_status()
-        data = res.json()
-        return data[:limit] if isinstance(data, list) else []
+        data = res.json() if isinstance(res.json(), list) else []
+        
+        # Filtrar exclusivamente produtos com foto lifestyle real
+        lifestyle_prods = [p for p in data if is_valid_lifestyle_photo(p)]
+        log.info(f"Encontrados {len(lifestyle_prods)} produtos com foto lifestyle real.")
+        return lifestyle_prods[:limit]
     except Exception as e:
-        log.error(f"Erro ao buscar produtos: {e}")
+        log.error(f"Erro ao buscar produtos lifestyle: {e}")
         return []
 
 
@@ -76,7 +98,7 @@ def download_image(url, dest):
             return False
         if url.startswith("/"):
             url = f"{API_BASE.rstrip('/')}{url}"
-        r = requests.get(url, timeout=20, stream=True)
+        r = requests.get(url, headers=DEFAULT_HEADERS, timeout=20, stream=True)
         r.raise_for_status()
         with open(dest, "wb") as f:
             for chunk in r.iter_content(8192):
@@ -133,7 +155,53 @@ def send_telegram_video(chat_id, video_path, caption):
 
 
 def fmt_brl(v):
-    return f"R$ {v:,.2f}".replace(",","X").replace(".",",").replace("X",".")
+    if not v:
+        return "R$ --"
+    try:
+        val = float(v)
+        return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return f"R$ {v}"
+
+
+def get_store_name(product):
+    store = product.get("storeName")
+    if store and str(store).strip():
+        return str(store).strip()
+    links = product.get("links") or {}
+    store_map = {
+        "amazon": "Amazon",
+        "mercadoLivre": "Mercado Livre",
+        "shopee": "Shopee",
+        "aliexpress": "AliExpress",
+        "magalu": "Magalu",
+        "kabum": "KaBuM!",
+        "netshoes": "Netshoes",
+    }
+    for k, v in store_map.items():
+        if links.get(k):
+            return v
+    src = product.get("source") or ""
+    return str(src).capitalize() if src else "Online"
+
+
+def build_collage_caption(products):
+    NUM_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+    lines = ["🎬 <b>ÚLTIMAS 10 PROMOÇÕES DO GRUPO</b>\n"]
+    for i, p in enumerate(products):
+        num = NUM_EMOJIS[i] if i < len(NUM_EMOJIS) else f"{i+1}."
+        raw_name = (p.get("name") or "Produto").strip()
+        if len(raw_name) > 34:
+            raw_name = raw_name[:32] + "..."
+        name = raw_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        store = get_store_name(p).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        price = fmt_brl(p.get("price"))
+        lines.append(f"{num} <b>{name}</b>\n   🏪 {store} • 💰 {price}")
+    lines.append("\n👉 <i>Acesse nosso site ou entre no grupo! Link na bio!</i>")
+    caption = "\n".join(lines)
+    if len(caption) > 1024:
+        caption = caption[:1020] + "..."
+    return caption
 
 
 def build_caption(product):
@@ -160,119 +228,164 @@ def build_caption(product):
     return "\n".join(lines)
 
 
-def generate_video_ffmpeg(product, output_path):
-    name     = product.get("name","Promocao")[:50]
-    price    = product.get("price") or 0
-    orig     = product.get("originalPrice") or 0
-    discount = round(((orig-price)/orig)*100) if orig > price > 0 else 0
-    img_url  = product.get("imageUrl","")
-    coupons  = product.get("coupons",[])
-    coupon   = ""
-    if isinstance(coupons, list) and coupons:
-        c = coupons[0].get("code","")
-        if c and c.upper() != "NORMAL":
-            coupon = c
+def _word_wrap(text, max_chars=26):
+    """Split text into lines of max_chars. Returns list of strings."""
+    words = text.split()
+    lines, cur = [], ""
+    for w in words:
+        if len(cur) + len(w) + (1 if cur else 0) <= max_chars:
+            cur = (cur + " " + w).strip() if cur else w
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    return lines[:3]  # max 3 lines
+
+
+def generate_product_slide(product, output_path):
+    """Generate a single product slide: lifestyle photo at natural size, no text."""
+    img_url = product.get("enhancedImageUrl") or ""
+    if not img_url:
+        log.warning(f"Produto sem foto lifestyle: {product.get('name', '?')}")
+        return False
+
+    dur     = SLIDE_DURATION
+    W, H    = VIDEO_WIDTH, VIDEO_HEIGHT
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp      = Path(tmpdir)
-        img_path = tmp / "product.jpg"
-        if not img_url or not download_image(img_url, img_path):
-            subprocess.run([
-                "ffmpeg","-y","-f","lavfi",
-                "-i",f"color=c=#1a1a2e:size={VIDEO_WIDTH}x{VIDEO_HEIGHT}:rate={VIDEO_FPS}",
-                "-frames:v","1", str(img_path)
-            ], capture_output=True)
+        img_path = Path(tmpdir) / "photo.jpg"
 
-        price_str    = fmt_brl(price) if price > 0 else "Ver Preco"
-        discount_str = f"-{discount}%% OFF" if discount > 0 else ""
-        coupon_str   = f"CUPOM: {clean_text_ffmpeg(coupon)}" if coupon else ""
+        if not download_image(img_url, img_path):
+            return False
 
-        words = name.split()
-        lines_n, cur = [], ""
-        for w in words:
-            if len(cur)+len(w)+1 <= 22:
-                cur = (cur+" "+w).strip()
-            else:
-                if cur: lines_n.append(cur)
-                cur = w
-        if cur: lines_n.append(cur)
-        name_text = clean_text_ffmpeg("\\n".join(lines_n[:3]))
-
-        font_bold_param = get_font_param(bold=True)
-        font_reg_param  = get_font_param(bold=False)
-
-        filters = []
-        # Fundo desfocado com alta performance (downscale -> blur -> upscale bicubic)
-        filters.append(
-            f"[0:v]scale=270:480:force_original_aspect_ratio=increase,"
-            f"crop=270:480,"
-            f"boxblur=6:2,"
-            f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:flags=bicubic[bg]"
-        )
-        filters.append(
-            f"color=c=black@0.45:size={VIDEO_WIDTH}x{VIDEO_HEIGHT}:rate={VIDEO_FPS}[ov]"
-        )
-        filters.append(f"[bg][ov]overlay=0:0[bg_dark]")
-        filters.append(
-            f"[0:v]scale=920:860:force_original_aspect_ratio=decrease[prod_img]"
-        )
-        filters.append(
-            f"[bg_dark][prod_img]overlay=(W-w)/2:(H*0.50-h)/2[base]"
-        )
-        filters.append(
-            f"[base]drawtext=text='{name_text}':fontcolor=white:fontsize=52"
-            f"{font_bold_param}:x=(w-text_w)/2:y=h*0.58:line_spacing=10:"
-            f"shadowcolor=black@0.9:shadowx=2:shadowy=2:"
-            f"alpha='if(lt(t,0.3),0,if(lt(t,1.0),(t-0.3)/0.7,1))'[n]"
-        )
-        filters.append(
-            f"[n]drawtext=text='{price_str}':fontcolor=#FF6B35:fontsize=92"
-            f"{font_bold_param}:x=(w-text_w)/2:y=h*0.72:"
-            f"shadowcolor=black@0.9:shadowx=3:shadowy=3:"
-            f"alpha='if(lt(t,0.7),0,if(lt(t,1.5),(t-0.7)/0.8,1))'[p]"
-        )
-        last = "p"
-        if discount_str:
-            filters.append(
-                f"[{last}]drawtext=text='{discount_str}':fontcolor=white:fontsize=50"
-                f"{font_bold_param}:x=w*0.06:y=h*0.06:"
-                f"box=1:boxcolor=#E53E3E@0.95:boxborderw=18:"
-                f"alpha='if(lt(t,0.2),0,if(lt(t,0.8),(t-0.2)/0.6,1))'[d]"
-            )
-            last = "d"
-        if coupon_str:
-            filters.append(
-                f"[{last}]drawtext=text='{coupon_str}':fontcolor=#1a1a2e:fontsize=44"
-                f"{font_bold_param}:x=(w-text_w)/2:y=h*0.83:"
-                f"box=1:boxcolor=#F6E05E@0.95:boxborderw=20:"
-                f"alpha='if(lt(t,1.1),0,if(lt(t,1.8),(t-1.1)/0.7,1))'[c]"
-            )
-            last = "c"
-        filters.append(
-            f"[{last}]drawtext=text='Link na BIO | Economizei com Jota':fontcolor=white@0.85:"
-            f"fontsize=34{font_reg_param}:x=(w-text_w)/2:y=h*0.93:"
-            f"shadowcolor=black@0.8:shadowx=1:shadowy=1:"
-            f"alpha='if(lt(t,1.4),0,if(lt(t,2.2),(t-1.4)/0.8,1))'[final]"
+        # Scale to fit within frame (no crop), pad black bars if needed
+        filter_chain = (
+            f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
+            f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2:color=black,"
+            f"fade=t=in:st=0:d=0.2,fade=t=out:st={dur-0.2:.2f}:d=0.2[final]"
         )
 
         cmd = [
-            "ffmpeg","-y",
-            "-loop","1","-i",str(img_path),
-            "-f","lavfi","-i","anullsrc=channel_layout=stereo:sample_rate=44100",
-            "-filter_complex",";".join(filters),
-            "-map","[final]","-map","1:a",
-            "-t",str(VIDEO_DURATION),"-r",str(VIDEO_FPS),
-            "-c:v","libx264","-preset","veryfast","-crf","23",
-            "-c:a","aac","-b:a","128k","-shortest",
-            "-pix_fmt","yuv420p","-movflags","+faststart",
+            "ffmpeg", "-y",
+            "-loop", "1", "-t", str(dur), "-i", str(img_path),
+            "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+            "-filter_complex", filter_chain,
+            "-map", "[final]", "-map", "1:a",
+            "-t", str(dur), "-r", str(VIDEO_FPS),
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k", "-shortest",
+            "-pix_fmt", "yuv420p",
             str(output_path),
         ]
-        log.info(f"Gerando video FFmpeg: {name[:40]}...")
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if res.returncode != 0:
-            log.error(f"FFmpeg stderr:\n{res.stderr[-600:]}")
+            log.error(f"Slide FFmpeg error:\n{res.stderr[-400:]}")
             return False
-        log.info(f"Video OK: {output_path} ({output_path.stat().st_size//1024}KB)")
+        return True
+
+
+def generate_cta_slide(output_path):
+    """Generate the final CTA slide with group/site invitation."""
+    font_bold = get_font_param(bold=True)
+    font_reg  = get_font_param(bold=False)
+    dur       = CTA_DURATION
+    W, H      = VIDEO_WIDTH, VIDEO_HEIGHT
+
+    # Each entry: (text, fontsize, color_hex, y_fraction, use_bold)
+    text_layers = [
+        ("Ultimas promocoes",          70,  "white",   0.28, True),
+        ("enviadas no grupo!",          70,  "white",   0.36, True),
+        ("Quer aproveitar?",            50,  "#FFD700", 0.48, False),
+        ("Acesse nosso site ou",        46,  "white",   0.57, False),
+        ("entre no grupo!",             46,  "white",   0.63, False),
+        ("Link na bio!",                58,  "#FF6B35", 0.73, True),
+        ("Economizei com Jota",         36,  "white",   0.89, False),
+    ]
+
+    filters = []
+    # Dark gradient background
+    filters.append(f"color=c=#0d0d1a:size={W}x{H}:rate={VIDEO_FPS}[bg]")
+    # Top accent bar
+    filters.append(f"[bg]drawbox=x=0:y=0:w={W}:h=10:color=#FF6B35@1:t=fill[bar]")
+    # Bottom accent bar
+    filters.append(f"[bar]drawbox=x=0:y={H-10}:w={W}:h=10:color=#FF6B35@1:t=fill[bar2]")
+
+    last = "bar2"
+    for i, (text, fs, color, y_frac, bold) in enumerate(text_layers):
+        fp  = get_font_param(bold=bold)
+        out = f"ct{i}"
+        filters.append(
+            f"[{last}]drawtext=text='{clean_text_ffmpeg(text)}':fontcolor={color}:fontsize={fs}"
+            f"{fp}:x=(w-text_w)/2:y=h*{y_frac:.2f}:"
+            f"shadowcolor=black@0.8:shadowx=2:shadowy=2[{out}]"
+        )
+        last = out
+
+    filters.append(
+        f"[{last}]fade=t=in:st=0:d=0.5,fade=t=out:st={dur-0.5:.1f}:d=0.5[final]"
+    )
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"color=c=#0d0d1a:size={W}x{H}:rate={VIDEO_FPS}",
+        "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+        "-filter_complex", ";".join(filters),
+        "-map", "[final]", "-map", "1:a",
+        "-t", str(dur), "-r", str(VIDEO_FPS),
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k", "-shortest",
+        "-pix_fmt", "yuv420p",
+        str(output_path),
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    if res.returncode != 0:
+        log.error(f"CTA slide error:\n{res.stderr[-400:]}")
+        return False
+    return True
+
+
+def generate_video_collage(products, output_path):
+    """Generate a collage of lifestyle product photos, no text."""
+    log.info(f"Gerando collage com {len(products)} fotos...")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp         = Path(tmpdir)
+        slide_paths = []
+
+        for i, product in enumerate(products):
+            slide_path = tmp / f"slide_{i:02d}.mp4"
+            log.info(f"  Foto {i+1}/{len(products)}: {product.get('name','?')[:50]}")
+            if generate_product_slide(product, slide_path):
+                slide_paths.append(slide_path)
+
+        if not slide_paths:
+            log.error("Nenhum slide gerado!")
+            return False
+
+        # Write concat list
+        concat_file = tmp / "concat.txt"
+        concat_file.write_text(
+            "\n".join(f"file '{p}'" for p in slide_paths),
+            encoding="utf-8"
+        )
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0", "-i", str(concat_file),
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+            "-c:a", "aac", "-b:a", "128k",
+            "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+            str(output_path),
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if res.returncode != 0:
+            log.error(f"FFmpeg concat error:\n{res.stderr[-600:]}")
+            return False
+
+        size_kb = output_path.stat().st_size // 1024
+        log.info(f"Collage OK: {output_path} ({size_kb}KB)")
         return True
 
 
@@ -292,51 +405,43 @@ def generate_video_genmedia(product, output_path):
     return False
 
 
-PROVIDERS = {
-    "ffmpeg":   generate_video_ffmpeg,
-    "heygen":   generate_video_heygen,
-    "genmedia": generate_video_genmedia,
-}
 
 
-def run_batch(slot_index):
-    log.info(f"=== Slot {slot_index+1}/3 iniciado ===")
-    products = fetch_top_products(9)
+
+
+def run_batch(slot_index=0):
+    log.info(f"=== Ciclo de vídeo ({slot_index}h) iniciado ===")
+    products = fetch_lifestyle_products(10)
     if not products:
-        log.warning("Sem produtos. Abortando.")
+        log.warning("Sem produtos com foto lifestyle. Abortando.")
         return
-    product = products[min(slot_index, len(products)-1)]
-    log.info(f"Produto: {product.get('name','?')[:60]}")
+    log.info(f"{len(products)} produtos encontrados para o collage")
     ts          = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = OUTPUT_DIR / f"promo_slot{slot_index}_{ts}.mp4"
-    fn          = PROVIDERS.get(VIDEO_AI_PROVIDER, generate_video_ffmpeg)
-    log.info(f"Provider: {VIDEO_AI_PROVIDER}")
-    success     = fn(product, output_path)
+    output_path = OUTPUT_DIR / f"collage_{ts}.mp4"
+    success     = generate_video_collage(products, output_path)
     if success and output_path.exists():
-        caption = build_caption(product)
+        caption = build_collage_caption(products)
         if VIDEO_OUTPUT_CHAT:
             send_telegram_video(VIDEO_OUTPUT_CHAT, output_path, caption)
         else:
-            log.info(f"Video salvo (sem TELEGRAM_VIDEO_OUTPUT_CHAT): {output_path}")
+            log.info(f"Collage salvo (sem VIDEO_OUTPUT_CHAT): {output_path}")
     else:
-        log.error(f"Falha no slot {slot_index}")
+        log.error(f"Falha no ciclo {slot_index}")
 
 
 def scheduler_loop():
-    log.info(f"Scheduler iniciado | Horarios: {SCHEDULE_HOURS}h | Provider: {VIDEO_AI_PROVIDER}")
-    ran_today = set()
+    log.info(f"Scheduler iniciado | Gerando vídeo nos horários: {SCHEDULE_HOURS} | Provider: {VIDEO_AI_PROVIDER}")
+    last_run_hour = -1
     while True:
         now = datetime.now()
-        for i, h in enumerate(SCHEDULE_HOURS):
-            if now.hour == h and i not in ran_today and now.minute < 5:
-                ran_today.add(i)
+        if now.hour != last_run_hour:
+            last_run_hour = now.hour
+            if now.hour in SCHEDULE_HOURS:
                 try:
-                    run_batch(i)
+                    run_batch(now.hour)
                 except Exception as e:
-                    log.exception(f"Erro slot {i}: {e}")
-        if now.hour == 0 and now.minute < 2:
-            ran_today.clear()
-        time.sleep(60)
+                    log.exception(f"Erro no ciclo das {now.hour}h: {e}")
+        time.sleep(30)
 
 
 if __name__ == "__main__":
