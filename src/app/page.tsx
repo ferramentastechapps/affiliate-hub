@@ -1,5 +1,6 @@
 import { DailyDeals } from "@/components/DailyDeals";
 import { TrendingProducts } from "@/components/TrendingProducts";
+import { TaxonomyLinks } from "@/components/TaxonomyLinks";
 import { Footer } from "@/components/Footer";
 import { Metadata } from "next";
 
@@ -89,6 +90,9 @@ export default async function Home() {
       <div id="ofertas" className="w-full">
         <DailyDeals />
       </div>
+
+      {/* Links de navegação para SEO */}
+      <TaxonomyLinks />
 
       {/* Footer com Grupos e Rodapé */}
       <Footer />

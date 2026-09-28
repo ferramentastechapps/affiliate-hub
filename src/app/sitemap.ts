@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
+import { slugify } from '@/lib/slugify';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🗺️ SITEMAP DINÂMICO
@@ -26,12 +27,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    // Buscar apenas produtos ativos com shortId para gerar URLs /produto/[shortId]
+    // Buscar produtos ativos (para URLs dos produtos, e também inferir categorias/lojas)
     const products = await prisma.product.findMany({
       where: { status: { in: ['active', 'approved'] } },
       select: {
         shortId: true,
         updatedAt: true,
+        category: true,
+        storeName: true,
+        platformType: true,
       },
       orderBy: {
         updatedAt: 'desc',
@@ -45,7 +49,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-    return [...staticPages, ...productPages];
+    // Extrair categorias exclusivas
+    const categoriesSet = new Set<string>();
+    const storesSet = new Set<string>();
+
+    products.forEach((p) => {
+      if (p.category) categoriesSet.add(p.category);
+      if (p.storeName) storesSet.add(p.storeName);
+      if (p.platformType) storesSet.add(p.platformType);
+    });
+
+    const categoryPages: MetadataRoute.Sitemap = Array.from(categoriesSet).map((cat) => ({
+      url: `${baseUrl}/categoria/${slugify(cat)}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    }));
+
+    const storePages: MetadataRoute.Sitemap = Array.from(storesSet).map((store) => ({
+      url: `${baseUrl}/loja/${slugify(store)}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    }));
+
+    return [...staticPages, ...productPages, ...categoryPages, ...storePages];
   } catch (error) {
     console.error('Erro ao gerar sitemap:', error);
     return staticPages;
