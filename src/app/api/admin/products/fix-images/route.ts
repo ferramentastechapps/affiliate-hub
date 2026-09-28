@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { searchDuckDuckGoImages } from '@/lib/scraper';
+import { isUsableImageUrl } from '@/lib/imageUtils';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +19,10 @@ export async function GET(request: Request) {
           { imageUrl: '/placeholder.webp' },
           { imageUrl: { contains: 'placeholder' } },
           { imageUrl: { contains: 'unavailable' } },
+          { imageUrl: { contains: '01rmKvkK-lL' } },
+          { imageUrl: { contains: '31ptVi11gmL' } },
+          { imageUrl: { contains: '41Vok2o740L' } },
+          { imageUrl: { contains: 'no-image' } },
           { imageUrl: '' },
         ],
       },
@@ -34,12 +40,7 @@ export async function GET(request: Request) {
     for (const product of productsToFix) {
       try {
         // Se já tiver enhancedImageUrl válida, usa ela
-        if (
-          product.enhancedImageUrl &&
-          product.enhancedImageUrl !== '/placeholder.webp' &&
-          !product.enhancedImageUrl.includes('placeholder') &&
-          !product.enhancedImageUrl.includes('unavailable')
-        ) {
+        if (isUsableImageUrl(product.enhancedImageUrl)) {
           await prisma.product.update({
             where: { id: product.id },
             data: { imageUrl: product.enhancedImageUrl },

@@ -25,11 +25,9 @@ type ProductCardProps = {
   onClick: (product: Product) => void;
 };
 
-const CARD_FALLBACK_IMAGE = "/placeholder.webp";
+import { isUsableImageUrl } from "@/lib/imageUtils";
 
-function isUsableImageUrl(url?: string | null): boolean {
-  return Boolean(url && url !== CARD_FALLBACK_IMAGE && !url.includes("unavailable"));
-}
+const CARD_FALLBACK_IMAGE = "/placeholder.webp";
 
 function resolveProductCardImage(
   imageUrl: string,

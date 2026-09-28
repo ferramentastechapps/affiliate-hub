@@ -8,6 +8,7 @@ import { CouponModal } from "./CouponModal";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
 import { PriceHistoryChart } from "./PriceHistoryChart";
+import { isUsableImageUrl } from "@/lib/imageUtils";
 import { PriceComparator } from "./PriceComparator";
 import { AlertButton } from "./AlertButton";
 import { ProductReviews } from "./ProductReviews";
@@ -132,13 +133,14 @@ function extractProductCouponAndConditions(product: Product) {
 
 function resolveDetailMainImage(product: Product, currentImageIndex: number): string {
   if (product.images && product.images.length > 0) {
-    return product.images[currentImageIndex]?.url || "/placeholder.webp";
+    const primaryImg = product.images[currentImageIndex]?.url;
+    if (isUsableImageUrl(primaryImg)) return primaryImg;
   }
-  if (product.imageUrl && product.imageUrl !== '/placeholder.webp' && !product.imageUrl.includes('unavailable')) {
+  if (isUsableImageUrl(product.imageUrl)) {
     return product.imageUrl;
   }
-  if (product.enhancedImageUrl && product.enhancedImageUrl !== '/placeholder.webp' && !product.enhancedImageUrl.includes('unavailable')) {
-    return product.enhancedImageUrl;
+  if (isUsableImageUrl(product.enhancedImageUrl)) {
+    return product.enhancedImageUrl!;
   }
   return "/placeholder.webp";
 }
@@ -609,7 +611,7 @@ function ProductImageGallery({
           className="w-full h-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-500 max-h-[350px]"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            if (product.enhancedImageUrl && target.src !== product.enhancedImageUrl && !product.enhancedImageUrl.includes('unavailable')) {
+            if (isUsableImageUrl(product.enhancedImageUrl) && target.src !== product.enhancedImageUrl) {
               target.src = product.enhancedImageUrl;
             } else {
               target.src = "/placeholder.webp";

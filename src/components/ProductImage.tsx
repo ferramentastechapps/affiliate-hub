@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Tag } from "@phosphor-icons/react";
 import { StoreLogo, detectStoreKey } from "./StoreLogos";
+import { sanitizeImageUrl } from "@/lib/imageUtils";
+
 
 interface ProductImageProps {
   src?: string | null;
@@ -15,22 +17,6 @@ interface ProductImageProps {
 }
 
 // Normaliza e limpa URL
-function sanitizeUrl(url?: string | null): string | null {
-  if (!url) return null;
-  let trimmed = url.trim();
-  if (trimmed === "" || trimmed === "/placeholder.webp" || trimmed.includes("unavailable")) {
-    return null;
-  }
-  // Suporte a URLs com protocolo relativo //
-  if (trimmed.startsWith("//")) {
-    trimmed = "https:" + trimmed;
-  }
-  // Forçar https se for http de CDNs conhecidas
-  if (trimmed.startsWith("http://")) {
-    trimmed = trimmed.replace("http://", "https://");
-  }
-  return trimmed;
-}
 
 export function ProductImage({
   src,
@@ -44,8 +30,8 @@ export function ProductImage({
   const [useEnhanced, setUseEnhanced] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const primaryUrl = sanitizeUrl(src);
-  const enhancedUrl = sanitizeUrl(enhancedSrc);
+  const primaryUrl = sanitizeImageUrl(src);
+  const enhancedUrl = sanitizeImageUrl(enhancedSrc);
 
   const initialUrl = primaryUrl || enhancedUrl;
   const currentUrl = !useEnhanced ? initialUrl : (enhancedUrl || initialUrl);
