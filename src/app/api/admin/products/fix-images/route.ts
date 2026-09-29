@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { searchDuckDuckGoImages } from '@/lib/scraper';
+import { searchBingImages } from '@/lib/scraper';
 import { isUsableImageUrl } from '@/lib/imageUtils';
 
 
@@ -54,13 +54,13 @@ export async function GET(request: Request) {
           continue;
         }
 
-        // Busca uma imagem de alta qualidade via DuckDuckGo
+        // Busca uma imagem de alta qualidade via Bing
         const cleanName = product.name
           .replace(/[\(\)\[\]]/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
 
-        const ddgResults = await searchDuckDuckGoImages(cleanName);
+        const ddgResults = await searchBingImages(cleanName);
         if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
           const foundUrl = ddgResults[0].image;
           await prisma.product.update({

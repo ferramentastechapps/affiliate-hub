@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { searchDuckDuckGoImages } from '@/lib/scraper';
+import { searchBingImages } from '@/lib/scraper';
 
 export async function GET(request: Request) {
   try {
@@ -13,8 +13,8 @@ export async function GET(request: Request) {
       );
     }
     
-    console.log(`[Images-Search] Buscando imagens no DDG para: "${query}"`);
-    const results = await searchDuckDuckGoImages(query);
+    console.log(`[Images-Search] Buscando imagens no Bing para: "${query}"`);
+    const results = await searchBingImages(query);
     
     // Mapear apenas os campos que o frontend precisa com proxy seguro
     const formattedResults = results.map(item => {

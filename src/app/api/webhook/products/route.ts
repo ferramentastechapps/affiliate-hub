@@ -4,7 +4,7 @@ import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
-import { getSecondaryLifestyleImage, searchDuckDuckGoImages, scrapeRetailerData } from '@/lib/scraper';
+import { getSecondaryLifestyleImage, searchBingImages, scrapeRetailerData } from '@/lib/scraper';
 import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
@@ -884,9 +884,9 @@ export async function POST(request: Request) {
           console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original.`);
           
           if (isAggregatorImage) {
-            console.log(`[Webhook AI] 🔍 Buscando imagem alternativa de alta qualidade no DuckDuckGo para: ${product.name}`);
+            console.log(`[Webhook AI] 🔍 Buscando imagem alternativa de alta qualidade no Bing para: ${product.name}`);
             try {
-              const ddgResults = await searchDuckDuckGoImages(product.name);
+              const ddgResults = await searchBingImages(product.name);
               if (ddgResults && ddgResults.length > 0) {
                 const ddgUrl = ddgResults[0].image;
                 const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
@@ -1537,9 +1537,9 @@ export async function PUT(request: Request) {
               }
              } else {
                if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
-                 console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no DuckDuckGo...`);
+                 console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no Bing...`);
                  try {
-                   const ddgResults = await searchDuckDuckGoImages(product.name);
+                   const ddgResults = await searchBingImages(product.name);
                    if (ddgResults && ddgResults.length > 0) {
                      const ddgUrl = ddgResults[0].image;
                      const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
