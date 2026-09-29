@@ -650,14 +650,7 @@ export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
     }
 
     const data = await jsonRes.json();
-    return (data.results || []).map((res: any) => {
-      if (res.image) {
-        // Usa o proxy oficial do DuckDuckGo para evitar bloqueios de hotlinking e CORS de sites terceiros
-        res.original_image = res.image;
-        res.image = `https://external-content.duckduckgo.com/iu/?u=${encodeURIComponent(res.image)}`;
-      }
-      return res;
-    });
+    return data.results || [];
   } catch (err: any) {
     console.error('[DDG-Search] Erro ao buscar imagens no DuckDuckGo:', err.message || err);
     return [];

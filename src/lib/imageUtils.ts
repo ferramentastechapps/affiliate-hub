@@ -57,9 +57,9 @@ export function sanitizeImageUrl(url?: string | null): string | null {
   const isFromKnownOrigin = knownOrigins.some(domain => lowerUrl.includes(domain));
 
   if (!isFromKnownOrigin) {
-    // Evita proxyar imagens relativas ou base64
+    // Evita proxyar imagens relativas internas ou base64
     if (sanitized.startsWith('https://') || sanitized.startsWith('http://')) {
-      return `https://external-content.duckduckgo.com/iu/?u=${encodeURIComponent(sanitized)}`;
+      return `/api/proxy-image?url=${encodeURIComponent(sanitized)}`;
     }
   }
 
