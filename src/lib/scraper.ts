@@ -1,5 +1,33 @@
 import * as cheerio from 'cheerio';
 
+
+/**
+ * Unshorten URLs like amzn.to to get the real product slug.
+ */
+async function expandShortUrl(url: string): Promise<string> {
+  try {
+    if (url.includes('amzn.to') || url.includes('s.shopee') || url.includes('a.aliexpress')) {
+      const response = await fetch(url, {
+        method: 'HEAD',
+        redirect: 'manual',
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      });
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location) {
+          if (location.startsWith('/')) {
+             return new URL(location, url).toString();
+          }
+          return location;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao expandir URL curta:', e);
+  }
+  return url;
+}
+
 export type ScrapedProduct = {
   name: string;
   imageUrl: string;
@@ -70,6 +98,8 @@ async function isScraplingAvailable(): Promise<boolean> {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export async function scrapeProductFromUrl(url: string, disableDdgFallback: boolean = false): Promise<ScrapedProduct> {
+  url = await expandShortUrl(url);
+  let finalUrl = url;
   try {
     console.log('🔍 Iniciando scraping:', url);
     
@@ -97,8 +127,9 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
     const html = await response.text();
     const $ = cheerio.load(html);
     
+    finalUrl = response.url || url;
     // Detectar plataforma
-    const platform = detectPlatform(url);
+    const platform = detectPlatform(finalUrl);
     console.log('🏪 Plataforma detectada:', platform);
     
     // Extrair dados usando seletores específicos por plataforma
@@ -153,33 +184,39 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
     console.log('✅ Dados extraídos:', { name, imageUrl, price, category, description: description?.substring(0, 50) });
     
     // Validar dados mínimos
-    if (!name || name.length < 3 || name === 'Robot Check' || name.toLowerCase().includes('captcha')) {
-      console.warn('⚠️ Nome não extraído do HTML, tentando extrair do URL slug...');
-      const slugName = extractNameFromUrl(url);
-      if (slugName) {
-        name = slugName;
-        console.log('✅ Nome extraído do URL slug:', name);
-      } else {
-        throw new Error('Nome do produto não encontrado ou inválido');
-      }
+    const isBotChallenge = !name || name === 'Robot Check' || name.toLowerCase().includes('captcha') || 
+                           ['aliexpress', 'shopee', 'amazon.com.br', 'mercado libre'].includes(name.toLowerCase());
+    
+    if (isBotChallenge) {
+      console.warn('⚠️ Detectado bloqueio ou nome genérico, lançando erro para ativar fallback...');
+      throw new Error('Produto bloqueado por captcha/bot check ou nome inválido');
     }
     
-    if (!disableDdgFallback && (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp') || imageUrl.includes('placeholder'))) {
-      console.warn('⚠️ Imagem não encontrada, tentando buscar no Bing para:', name);
-      try {
-        const ddgResults = await searchBingImages(name);
-        if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
-          imageUrl = ddgResults[0].image;
-          console.log('✅ Imagem encontrada no Bing:', imageUrl);
-        }
-      } catch (ddgErr) {
-        console.error('❌ Erro ao buscar imagem no Bing:', ddgErr);
-      }
-    }
-
     if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp')) {
-      console.warn('⚠️ Imagem ainda não encontrada, usando placeholder');
       imageUrl = '/placeholder.webp';
+      
+      // Tentar buscar imagem no DuckDuckGo pelo nome extraído
+      if (!disableDdgFallback && name && (name.split(' ').length > 1 || name.length > 15)) {
+        console.warn(`⚠️ Imagem original não encontrada. Buscando no DuckDuckGo para: "${name}"`);
+        try {
+          const ddgResults = await searchDuckDuckGoImages(name);
+          if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
+            imageUrl = ddgResults[0].image;
+            console.log('✅ Imagem encontrada no DuckDuckGo:', imageUrl);
+          } else {
+             // Fallback to Bing
+             const bingResults = await searchBingImages(name);
+             if (bingResults && bingResults.length > 0 && bingResults[0].image) {
+               imageUrl = bingResults[0].image;
+               console.log('✅ Imagem encontrada no Bing (fallback):', imageUrl);
+             }
+          }
+        } catch (e) {
+          console.error('❌ Erro na busca de imagem alternativa:', e);
+        }
+      } else {
+        console.warn('⚠️ Nome muito curto ou genérico para busca de imagem segura. Mantendo placeholder.');
+      }
     }
     
     return {
@@ -215,7 +252,42 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
           console.error('❌ Scrapling fallback também falhou:', scraplingError);
         }
       } else {
-        console.warn('⚠️ Scrapling microservice offline (porta 8001) — sem fallback disponível.');
+        console.warn('⚠️ Scrapling microservice offline (porta 8001) — recorrendo a URL slug fallback...');
+      }
+      
+      // Fallback de último recurso: Tentar usar a URL
+      const slugName = extractNameFromUrl(url); // Use original URL because final might be a captcha page
+      if (slugName && (slugName.includes(' ') || slugName.length > 8) && !['aliexpress', 'shopee', 'amazon', 'mercadolivre'].includes(slugName.toLowerCase())) {
+        console.log('✅ Último recurso: Nome extraído do URL slug:', slugName);
+        let fallbackImage = '/placeholder.webp';
+        
+        if (!disableDdgFallback && (slugName.split(' ').length > 1 || slugName.length > 15)) {
+          console.warn('⚠️ Buscando imagem de emergência no DuckDuckGo/Bing para:', slugName);
+          try {
+            const ddgResults = await searchDuckDuckGoImages(slugName);
+            if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
+              fallbackImage = ddgResults[0].image;
+              console.log('✅ Imagem de emergência encontrada no DuckDuckGo:', fallbackImage);
+            } else {
+               const bingResults = await searchBingImages(slugName);
+               if (bingResults && bingResults.length > 0 && bingResults[0].image) {
+                 fallbackImage = bingResults[0].image;
+                 console.log('✅ Imagem de emergência encontrada no Bing:', fallbackImage);
+               }
+            }
+          } catch(e) {
+             console.error('❌ Erro nas buscas de imagens transferenciais:', e);
+          }
+        } else {
+          console.warn(`⚠️ Slug genérico ("${slugName}"), ignorando Bing para evitar imagens falsas.`);
+        }
+        
+        return {
+          name: cleanText(slugName),
+          imageUrl: fallbackImage,
+          price: undefined,
+          category: undefined
+        };
       }
     }
     // ────────────────────────────────────────────────────────────────────
@@ -612,6 +684,40 @@ export async function scrapeRetailerData(links: Record<string, string | undefine
   return { imageUrl: null, price: null };
 }
 
+
+export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
+  try {
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+    const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&iax=images&ia=images`;
+    const res = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': userAgent,
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    const html = await res.text();
+    const vqdMatch = html.match(/vqd=([^&'"]+)/) || html.match(/vqd\s*=\s*['"]([^'"]+)['"]/);
+    
+    if (!vqdMatch) return [];
+    
+    const vqd = vqdMatch[1];
+    const jsonUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,`;
+    const jsonRes = await fetch(jsonUrl, {
+      headers: {
+        'User-Agent': userAgent,
+        'Referer': 'https://duckduckgo.com/',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    const data = await jsonRes.json();
+    return data.results || [];
+  } catch (err) {
+    console.error('❌ Erro no DuckDuckGo search:', err);
+    return [];
+  }
+}
 export async function searchBingImages(query: string): Promise<any[]> {
   try {
     const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
