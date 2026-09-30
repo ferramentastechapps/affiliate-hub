@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { searchBingImages } from '@/lib/scraper';
 import { isUsableImageUrl } from '@/lib/imageUtils';
 
 
@@ -60,23 +59,7 @@ export async function GET(request: Request) {
           .replace(/\s+/g, ' ')
           .trim();
 
-        const ddgResults = await searchBingImages(cleanName);
-        if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
-          const foundUrl = ddgResults[0].image;
-          await prisma.product.update({
-            where: { id: product.id },
-            data: {
-              imageUrl: foundUrl,
-              enhancedImageUrl: ddgResults[1]?.image || null,
-            },
-          });
-          results.push({
-            id: product.id,
-            name: product.name,
-            oldImage: product.imageUrl,
-            newImage: foundUrl,
-          });
-        }
+        // Busca externa foi revogada, mantendo placeholder
       } catch (err) {
         console.error(`Erro ao curar imagem do produto ${product.id}:`, err);
       }

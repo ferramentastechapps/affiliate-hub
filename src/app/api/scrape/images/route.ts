@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { searchBingImages } from '@/lib/scraper';
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +13,7 @@ export async function GET(request: Request) {
     }
     
     console.log(`[Images-Search] Buscando imagens no Bing para: "${query}"`);
-    const results = await searchBingImages(query);
+    const results: any[] = []; // Busca revogada
     
     // Mapear apenas os campos que o frontend precisa com proxy seguro
     const formattedResults = results.map(item => {
