@@ -65,3 +65,34 @@ export function sanitizeImageUrl(url?: string | null): string | null {
 
   return sanitized;
 }
+
+export function isLikelyProductImage(imageUrl?: string | null): boolean {
+  if (!imageUrl || typeof imageUrl !== 'string') return false;
+  
+  // Skip Facebook-style filenames: long number sequences separated by underscores
+  if (/\d{9,}_\d{15,}_\d{15,}/.test(imageUrl)) return false;
+  
+  // Skip social media / promo blog domains which often feature people instead of just products
+  const badDomains = [
+    'adoropromocao.com.br', 
+    'facebook.com', 
+    'fbcdn.net', 
+    'instagram.com',
+    'twitter.com',
+    'twimg.com',
+    'pinterest.com',
+    'tiktok.com',
+    'linkedin.com',
+    'pelando.com.br',
+    'promobit.com.br',
+    'promotop.com.br',
+    'achados.com.br'
+  ];
+  
+  const lowerUrl = imageUrl.toLowerCase();
+  for (const domain of badDomains) {
+    if (lowerUrl.includes(domain)) return false;
+  }
+  
+  return true;
+}

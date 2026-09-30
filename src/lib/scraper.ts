@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { isLikelyProductImage } from './imageUtils';
 
 
 /**
@@ -712,7 +713,7 @@ export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
     });
 
     const data = await jsonRes.json();
-    return data.results || [];
+    return (data.results || []).filter((r: any) => isLikelyProductImage(r.image));
   } catch (err) {
     console.error('❌ Erro no DuckDuckGo search:', err);
     return [];
@@ -751,7 +752,7 @@ export async function searchBingImages(query: string): Promise<any[]> {
     if (images.length === 0) {
       console.warn('[Bing-Search] Nenhuma imagem encontrada');
     }
-    return images;
+    return images.filter((r: any) => isLikelyProductImage(r.image));
     
   } catch (err: any) {
     console.error('[Bing-Search] Erro ao buscar imagens no Bing:', err.message || err);
