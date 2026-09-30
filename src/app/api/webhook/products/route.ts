@@ -1499,10 +1499,10 @@ export async function PUT(request: Request) {
           
           // SEMPRE tentar buscar imagem de alta qualidade do varejista (Amazon, ML, etc.)
           // mesmo se já tiver uma de agregador (Promobit, Gatry)
-          const isAggregatorImage = product.imageUrl.includes('promobit.com.br') || 
+          const isAggregatorImage = product.imageUrl.includes('promobit.com.br') ||
                                      product.imageUrl.includes('gatry.com') ||
                                      product.imageUrl.includes('pelando.com.br') ||
-                                     product.imageUrl.includes('pechinchou.com.br/media/img/products/D_NQ');
+                                     product.imageUrl.includes('pechinchou.com.br');
           
           if ((!finalEnhancedImageUrl || isAggregatorImage) && newStatus !== 'pending' && aiResult.score && aiResult.score >= 8.0) {
             if (isAggregatorImage) {
