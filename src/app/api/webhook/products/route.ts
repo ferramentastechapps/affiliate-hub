@@ -4,7 +4,7 @@ import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
-import { getSecondaryLifestyleImage, searchDuckDuckGoImages, scrapeRetailerData } from '@/lib/scraper';
+import { getSecondaryLifestyleImage, scrapeRetailerData } from '@/lib/scraper';
 import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
@@ -884,20 +884,7 @@ export async function POST(request: Request) {
           console.warn(`[Webhook AI] ⚠️ Não conseguiu buscar imagem do varejista. Mantendo imagem original.`);
           
           if (isAggregatorImage) {
-            console.log(`[Webhook AI] 🔍 Buscando imagem alternativa de alta qualidade no Bing para: ${product.name}`);
-            try {
-              const ddgResults = await searchDuckDuckGoImages(product.name);
-              if (ddgResults && ddgResults.length > 0) {
-                const ddgUrl = ddgResults[0].image;
-                const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
-                if (savedDdgImage) {
-                  finalImageUrl = savedDdgImage;
-                  console.log(`[Webhook AI] ✅ Imagem do agregador substituída com sucesso pelo DDG: ${savedDdgImage}`);
-                }
-              }
-            } catch (err) {
-              console.error(`[Webhook AI] ❌ Erro ao buscar substituta no DDG:`, err);
-            }
+            console.log(`[Webhook AI] 🚫 Imagem do agregador mantida, sem fallback de busca externa.`);
           }
         }
 
@@ -1537,28 +1524,8 @@ export async function PUT(request: Request) {
               }
              } else {
                if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
-                 console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no Bing...`);
-                 try {
-                   const ddgResults = await searchDuckDuckGoImages(product.name);
-                   if (ddgResults && ddgResults.length > 0) {
-                     const ddgUrl = ddgResults[0].image;
-                     const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
-                     if (savedDdgImage) {
-                       finalImageUrl = savedDdgImage;
-                       if (!finalEnhancedImageUrl) {
-                         finalEnhancedImageUrl = savedDdgImage;
-                       }
-                       console.log(`[Webhook Batch AI] ✅ Imagem do Pechinchou substituída com sucesso pelo DDG: ${savedDdgImage}`);
-                     } else {
-                       finalImageUrl = '';
-                     }
-                   } else {
-                     finalImageUrl = '';
-                   }
-                 } catch (err) {
-                   console.error(`[Webhook Batch AI] ❌ Erro ao buscar substituta no DDG:`, err);
-                   finalImageUrl = '';
-                 }
+                 console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Sem fallback habilitado. Usando string vazia (placeholder).`);
+                 finalImageUrl = '';
                }
 
                // Se a imagem original/atualizada é válida e finalEnhancedImageUrl está nulo, promove ela se não for de agregador

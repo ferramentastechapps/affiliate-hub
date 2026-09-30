@@ -195,23 +195,9 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
     
     if (!imageUrl || (!imageUrl.startsWith('http') && imageUrl !== '/placeholder.webp')) {
       imageUrl = '/placeholder.webp';
-      
-      // Tentar buscar imagem no DuckDuckGo pelo nome extraído
-      if (!disableDdgFallback && name && (name.split(' ').length > 1 || name.length > 15)) {
-        console.warn(`⚠️ Imagem original não encontrada. Buscando no DuckDuckGo para: "${name}"`);
-        try {
-          const ddgResults = await searchDuckDuckGoImages(name);
-          if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
-            imageUrl = ddgResults[0].image;
-            console.log('✅ Imagem encontrada no DuckDuckGo:', imageUrl);
-          } else {
-        } catch (e) {
-          console.error('❌ Erro na busca de imagem alternativa:', e);
-        }
-      } else {
-        console.warn('⚠️ Nome muito curto ou genérico para busca de imagem segura. Mantendo placeholder.');
-      }
+      console.warn('⚠️ Imagem original não encontrada. Mantendo placeholder genérico sem usar DuckDuckGo.');
     }
+
     
     return {
       name: cleanText(name),
@@ -255,26 +241,8 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
         console.log('✅ Último recurso: Nome extraído do URL slug:', slugName);
         let fallbackImage = '/placeholder.webp';
         
-        if (!disableDdgFallback && (slugName.split(' ').length > 1 || slugName.length > 15)) {
-          console.warn('⚠️ Buscando imagem de emergência no DuckDuckGo/Bing para:', slugName);
-          try {
-            const ddgResults = await searchDuckDuckGoImages(slugName);
-            if (ddgResults && ddgResults.length > 0 && ddgResults[0].image) {
-              fallbackImage = ddgResults[0].image;
-              console.log('✅ Imagem de emergência encontrada no DuckDuckGo:', fallbackImage);
-            } else {
-               const bingResults = await searchDuckDuckGoImages(slugName);
-               if (bingResults && bingResults.length > 0 && bingResults[0].image) {
-                 fallbackImage = bingResults[0].image;
-                 console.log('✅ Imagem de emergência encontrada no Bing:', fallbackImage);
-               }
-            }
-          } catch(e) {
-             console.error('❌ Erro nas buscas de imagens transferenciais:', e);
-          }
-        } else {
-          console.warn(`⚠️ Slug genérico ("${slugName}"), ignorando Bing para evitar imagens falsas.`);
-        }
+        console.warn('⚠️ Fallback de imagem de busca na web desabilitado permanentemente. Usando placeholder.');
+
         
         return {
           name: cleanText(slugName),
@@ -678,40 +646,6 @@ export async function scrapeRetailerData(links: Record<string, string | undefine
   return { imageUrl: null, price: null };
 }
 
-
-export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
-  try {
-    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-    const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&t=h_&iax=images&ia=images`;
-    const res = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': userAgent,
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    const html = await res.text();
-    const vqdMatch = html.match(/vqd=([^&'"]+)/) || html.match(/vqd\s*=\s*['"]([^'"]+)['"]/);
-    
-    if (!vqdMatch) return [];
-    
-    const vqd = vqdMatch[1];
-    const jsonUrl = `https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,`;
-    const jsonRes = await fetch(jsonUrl, {
-      headers: {
-        'User-Agent': userAgent,
-        'Referer': 'https://duckduckgo.com/',
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    const data = await jsonRes.json();
-    return (data.results || []).filter((r: any) => isLikelyProductImage(r.image));
-  } catch (err) {
-    console.error('❌ Erro no DuckDuckGo search:', err);
-    return [];
-  }
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🛠️ AUXILIARES DE RASPAGEM E REDIRECIONAMENTO
