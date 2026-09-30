@@ -4,7 +4,7 @@ import { validateApiKey, validateWebhookSignature } from '@/lib/auth';
 import { generateAffiliateLink, resolveRedirect } from '@/lib/affiliate';
 import { processProductWithAI } from '@/lib/ai';
 import { saveEnhancedImage } from '@/lib/storage';
-import { getSecondaryLifestyleImage, searchBingImages, scrapeRetailerData } from '@/lib/scraper';
+import { getSecondaryLifestyleImage, searchDuckDuckGoImages, scrapeRetailerData } from '@/lib/scraper';
 import { publishToGroup, publishToQueueTop } from '@/lib/telegram';
 import { verificarEDispararAlertas } from '@/lib/notifications';
 import { fetchAndSaveMLReviews } from '@/lib/reviews';
@@ -886,7 +886,7 @@ export async function POST(request: Request) {
           if (isAggregatorImage) {
             console.log(`[Webhook AI] 🔍 Buscando imagem alternativa de alta qualidade no Bing para: ${product.name}`);
             try {
-              const ddgResults = await searchBingImages(product.name);
+              const ddgResults = await searchDuckDuckGoImages(product.name);
               if (ddgResults && ddgResults.length > 0) {
                 const ddgUrl = ddgResults[0].image;
                 const savedDdgImage = await saveEnhancedImage(ddgUrl, false);
@@ -1539,7 +1539,7 @@ export async function PUT(request: Request) {
                if (product.imageUrl && (product.imageUrl.includes('pechinchou.com.br') || product.imageUrl.includes('assets.pechinchou.com.br'))) {
                  console.log(`[Webhook Batch AI] 🚫 Imagem do Pechinchou bloqueada. Tentando buscar substituta no Bing...`);
                  try {
-                   const ddgResults = await searchBingImages(product.name);
+                   const ddgResults = await searchDuckDuckGoImages(product.name);
                    if (ddgResults && ddgResults.length > 0) {
                      const ddgUrl = ddgResults[0].image;
                      const savedDdgImage = await saveEnhancedImage(ddgUrl, false);

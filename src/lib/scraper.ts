@@ -205,13 +205,6 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
             imageUrl = ddgResults[0].image;
             console.log('✅ Imagem encontrada no DuckDuckGo:', imageUrl);
           } else {
-             // Fallback to Bing
-             const bingResults = await searchBingImages(name);
-             if (bingResults && bingResults.length > 0 && bingResults[0].image) {
-               imageUrl = bingResults[0].image;
-               console.log('✅ Imagem encontrada no Bing (fallback):', imageUrl);
-             }
-          }
         } catch (e) {
           console.error('❌ Erro na busca de imagem alternativa:', e);
         }
@@ -270,7 +263,7 @@ export async function scrapeProductFromUrl(url: string, disableDdgFallback: bool
               fallbackImage = ddgResults[0].image;
               console.log('✅ Imagem de emergência encontrada no DuckDuckGo:', fallbackImage);
             } else {
-               const bingResults = await searchBingImages(slugName);
+               const bingResults = await searchDuckDuckGoImages(slugName);
                if (bingResults && bingResults.length > 0 && bingResults[0].image) {
                  fallbackImage = bingResults[0].image;
                  console.log('✅ Imagem de emergência encontrada no Bing:', fallbackImage);
@@ -716,46 +709,6 @@ export async function searchDuckDuckGoImages(query: string): Promise<any[]> {
     return (data.results || []).filter((r: any) => isLikelyProductImage(r.image));
   } catch (err) {
     console.error('❌ Erro no DuckDuckGo search:', err);
-    return [];
-  }
-}
-export async function searchBingImages(query: string): Promise<any[]> {
-  try {
-    const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
-    const res = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': getRandomUserAgent(),
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    const text = await res.text();
-    // Using string manipulation instead of Cheerio to avoid dependency overhead here?
-    // Actually we have cheerio available at the top of the file!
-    const $ = cheerio.load(text);
-    
-    const images: any[] = [];
-    $('a.iusc').each((i, el) => {
-      const m = $(el).attr('m');
-      if (m) {
-        try {
-          const data = JSON.parse(m);
-          images.push({
-             image: data.murl,
-             thumbnail: data.turl,
-             title: data.t || query
-          });
-        } catch (e) {}
-      }
-    });
-
-    if (images.length === 0) {
-      console.warn('[Bing-Search] Nenhuma imagem encontrada');
-    }
-    return images.filter((r: any) => isLikelyProductImage(r.image));
-    
-  } catch (err: any) {
-    console.error('[Bing-Search] Erro ao buscar imagens no Bing:', err.message || err);
     return [];
   }
 }
