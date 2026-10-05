@@ -8,7 +8,7 @@ import { CouponModal } from "./CouponModal";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
 import { PriceHistoryChart } from "./PriceHistoryChart";
-import { isUsableImageUrl } from "@/lib/imageUtils";
+import { isUsableImageUrl, sanitizeImageUrl } from "@/lib/imageUtils";
 import { PriceComparator } from "./PriceComparator";
 import { AlertButton } from "./AlertButton";
 import { ProductReviews } from "./ProductReviews";
@@ -134,13 +134,13 @@ function extractProductCouponAndConditions(product: Product) {
 function resolveDetailMainImage(product: Product, currentImageIndex: number): string {
   if (product.images && product.images.length > 0) {
     const primaryImg = product.images[currentImageIndex]?.url;
-    if (isUsableImageUrl(primaryImg)) return primaryImg;
+    if (isUsableImageUrl(primaryImg)) return sanitizeImageUrl(primaryImg) ?? "/placeholder.webp";
   }
   if (isUsableImageUrl(product.imageUrl)) {
-    return product.imageUrl;
+    return sanitizeImageUrl(product.imageUrl) ?? "/placeholder.webp";
   }
   if (isUsableImageUrl(product.enhancedImageUrl)) {
-    return product.enhancedImageUrl!;
+    return sanitizeImageUrl(product.enhancedImageUrl) ?? "/placeholder.webp";
   }
   return "/placeholder.webp";
 }
@@ -611,8 +611,9 @@ function ProductImageGallery({
           className="w-full h-full object-contain mix-blend-multiply transition-transform hover:scale-105 duration-500 max-h-[350px]"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            if (isUsableImageUrl(product.enhancedImageUrl) && target.src !== product.enhancedImageUrl) {
-              target.src = product.enhancedImageUrl;
+            const fallback = sanitizeImageUrl(product.enhancedImageUrl) ?? "/placeholder.webp";
+            if (isUsableImageUrl(product.enhancedImageUrl) && target.src !== fallback) {
+              target.src = fallback;
             } else {
               target.src = "/placeholder.webp";
             }
@@ -640,9 +641,9 @@ function ProductImageGallery({
                 currentImageIndex === idx ? 'border-accent scale-105 opacity-100' : 'border-white/10 opacity-50 hover:opacity-100'
               }`}
             >
-              <img 
-                src={img.url} 
-                alt={`Thumbnail ${idx}`} 
+              <img
+                src={sanitizeImageUrl(img.url) ?? "/placeholder.webp"}
+                alt={`Thumbnail ${idx}`}
                 className="w-full h-full object-cover"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.webp"; }}
               />
@@ -833,9 +834,9 @@ function RelatedProductsSection({
             className="group bg-black/40 border border-white/5 hover:border-accent/30 rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:-translate-y-1 duration-300"
           >
             <div className="w-full aspect-square bg-white flex items-center justify-center overflow-hidden p-3 rounded-t-2xl">
-              <img 
-                src={relItem.imageUrl} 
-                alt={relItem.name} 
+              <img
+                src={sanitizeImageUrl(relItem.imageUrl) ?? "/placeholder.webp"}
+                alt={relItem.name}
                 className="w-full h-full object-contain group-hover:scale-105 transition-all duration-500"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/placeholder.webp";
