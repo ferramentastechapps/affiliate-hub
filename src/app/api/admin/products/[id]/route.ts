@@ -12,13 +12,14 @@ export async function PATCH(
     const body = await request.json();
     
     // Extrait campos permitidos
-    const { category, brand, platformProductId, isFixed, imageUrl, enhancedImageUrl, updateSourceUrl, updateAffiliateUrl, platform, userRating } = body;
+    const { category, brand, platformProductId, isFixed, isReel, imageUrl, enhancedImageUrl, updateSourceUrl, updateAffiliateUrl, platform, userRating } = body;
 
     const dataToUpdate: any = {};
     if (category !== undefined) dataToUpdate.category = category;
     if (brand !== undefined) dataToUpdate.brand = brand;
     if (platformProductId !== undefined) dataToUpdate.platformProductId = platformProductId;
     if (isFixed !== undefined) dataToUpdate.isFixed = isFixed;
+    if (isReel !== undefined) dataToUpdate.isReel = isReel;
     if (imageUrl !== undefined) {
       dataToUpdate.imageUrl = imageUrl;
     }

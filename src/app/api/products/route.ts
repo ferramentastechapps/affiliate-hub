@@ -255,8 +255,12 @@ export async function GET(request: Request) {
       whereClause.status = { in: ['active', 'approved'] };
       whereClause.price = { not: null };
       whereClause.priceHistory = { some: {} }; // Tem que ter histórico
-      
+
       orderByClause = { updatedAt: 'desc' }; // Mais recentes primeiro
+    } else if (filterParam === 'reels') {
+      whereClause.isReel = true;
+      whereClause.status = { in: ['active', 'approved'] };
+      orderByClause = { createdAt: 'desc' };
     }
 
     const limitParam = searchParams.get('limit');

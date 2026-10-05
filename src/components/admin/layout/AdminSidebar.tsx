@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { 
-  ChartPieSlice, 
-  Package, 
-  Ticket, 
-  Image as ImageIcon, 
-  ChartLineUp, 
-  Users, 
+  ChartPieSlice,
+  Package,
+  Ticket,
+  Image as ImageIcon,
+  ChartLineUp,
+  Users,
   ListChecks,
   ChatCircleText,
   ChatCircleDots,
@@ -20,7 +20,8 @@ import {
   GearSix,
   Brain,
   ListDashes,
-  Camera
+  Camera,
+  FilmStrip
 } from '@phosphor-icons/react';
 
 type MenuItemConfig = {
@@ -44,6 +45,7 @@ const MENU_SECTIONS: MenuSectionConfig[] = [
   {
     items: [
       { name: 'Produtos', path: '/admin/products', icon: Package, hasBadge: true },
+      { name: 'Reels', path: '/admin/reels', icon: FilmStrip },
       { name: 'Cupons', path: '/admin/coupons', icon: Ticket },
       { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
     ],
