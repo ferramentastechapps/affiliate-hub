@@ -33,6 +33,8 @@ import {
   TrendDown,
   ArrowUpRight,
   Check,
+  PlayCircle,
+  SquaresFour,
 } from "@phosphor-icons/react";
 
 import { Product } from "@/types/product";
@@ -42,7 +44,7 @@ import { ProductImage } from "./ProductImage";
 import { useRouter } from "next/navigation";
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
-  "Todas": Flame,
+  "Todas": SquaresFour,
   "Smartphones e TV": DeviceMobile,
   "Informática e Games": GameController,
   "Casa e Eletrodomésticos": House,
@@ -350,7 +352,7 @@ export function DailyDeals() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const [filterType, setFilterType] = useState<
-    "alertas" | "destaques" | "recentes" | "menorPreco" | "emAlta" | "baratinho"
+    "alertas" | "destaques" | "recentes" | "menorPreco" | "emAlta" | "baratinho" | "reels"
   >("recentes");
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [copiedCouponId, setCopiedCouponId] = useState<string | null>(null);
@@ -595,6 +597,7 @@ export function DailyDeals() {
         );
       case "destaques":
         return disc(b) - disc(a);
+      case "reels":
       case "recentes":
         return (
           new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
@@ -655,53 +658,70 @@ export function DailyDeals() {
       className="w-full max-w-[1400px] mx-auto px-2.5 sm:px-4 md:px-8 pt-0 mb-10"
       onTouchStart={() => (document.activeElement as HTMLElement)?.blur()}
     >
-      {/* ── FILTER TABS ── */}
-      <div className="flex gap-1.5 mt-3 mb-3 overflow-x-auto pb-1 scrollbar-hide">
-        {[
-          { key: "recentes",   label: "Recentes",      Icon: Clock },
-          { key: "emAlta",     label: "Em Alta",       Icon: Flame },
-          { key: "destaques",  label: "Destaques",     Icon: Star },
-          { key: "menorPreco", label: "Menor Preço",   Icon: TrendDown },
-          { key: "baratinho",  label: "Até R$ 50",     Icon: Tag },
-          { key: "alertas",    label: "Meus Alertas", Icon: Bell },
-        ].map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            onClick={() => setFilterType(key as any)}
-            className={`flex items-center gap-1.5 px-3 h-8 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all flex-none ${
-              filterType === key
-                ? "bg-[rgba(255,51,75,0.12)] text-[#ff4b60] border border-[rgba(255,51,75,0.35)] shadow-sm"
-                : "text-[#8e92a4] border border-white/[0.07] hover:border-white/[0.14] hover:text-white"
-            }`}
-          >
-            <Icon size={13} weight={filterType === key ? "fill" : "regular"} />
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ── FILTERS AND CATEGORIES ── */}
+      <div className="flex flex-col gap-4 mt-4 mb-6">
 
-      {/* ── CATEGORY PILLS ── */}
-      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-hide">
-        {categories.map((cat) => {
-          const CatIcon = categoryIconMap[cat] || Package;
-          const color = categoryColors[cat] || "#6b7280";
-          const isActive = selectedCategory === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`cat-pill ${isActive ? "active" : ""}`}
-              style={
-                isActive
-                  ? { borderColor: `${color}60`, color, background: `${color}14` }
-                  : {}
-              }
-            >
-              <CatIcon size={13} weight={isActive ? "fill" : "regular"} />
-              {cat === "Todas" ? "Todas" : cat.split(" ")[0]}
-            </button>
-          );
-        })}
+        {/* Order/Main Filters */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 pl-1">
+            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Filtros</span>
+            <div className="flex-1 h-px bg-white/[0.05]"></div>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {[
+              { key: "recentes",   label: "Recentes",      Icon: Clock },
+              { key: "reels",      label: "Reels",         Icon: PlayCircle },
+              { key: "emAlta",     label: "Em Alta",       Icon: Flame },
+              { key: "destaques",  label: "Destaques",     Icon: Star },
+              { key: "menorPreco", label: "Menor Preço",   Icon: TrendDown },
+              { key: "baratinho",  label: "Até R$ 50",     Icon: Tag },
+              { key: "alertas",    label: "Meus Alertas",  Icon: Bell },
+            ].map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                onClick={() => setFilterType(key as any)}
+                className={`flex items-center gap-1.5 px-3 h-8 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all flex-none border ${
+                  filterType === key
+                    ? "bg-white text-black border-white shadow-sm"
+                    : "text-[#8e92a4] border-white/[0.07] hover:border-white/[0.14] hover:text-white bg-white/[0.02]"
+                }`}
+              >
+                <Icon size={13} weight={filterType === key ? "fill" : "regular"} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 pl-1">
+            <span className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider">Categorias</span>
+            <div className="flex-1 h-px bg-white/[0.05]"></div>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {categories.map((cat) => {
+              const CatIcon = categoryIconMap[cat] || Package;
+              const color = categoryColors[cat] || "#6b7280";
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`cat-pill ${isActive ? "active" : ""}`}
+                  style={
+                    isActive
+                      ? { borderColor: `${color}60`, color, background: `${color}14` }
+                      : {}
+                  }
+                >
+                  <CatIcon size={13} weight={isActive ? "fill" : "regular"} />
+                  {cat === "Todas" ? "Todas" : cat.split(" ")[0]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ── SECTION HEADER ── */}
