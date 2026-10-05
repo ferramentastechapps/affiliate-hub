@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth-utils';
 import { scrapeProductFromUrl } from '@/lib/scraper';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 function detectPlatform(url: string): string {
   const u = url.toLowerCase();
