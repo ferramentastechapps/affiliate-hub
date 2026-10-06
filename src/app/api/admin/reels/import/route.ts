@@ -60,13 +60,18 @@ export async function POST(request: Request) {
     const platform = detectPlatform(url);
     const platformId = `reel_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+    // Garante que campos obrigatórios não sejam null
+    const productName = scraped.name || 'Produto sem nome';
+    const productCategory = scraped.category || 'Reels';
+    const productImage = scraped.imageUrl || '/placeholder.webp';
+
     const product = await prisma.product.create({
       data: {
-        name: scraped.name,
-        imageUrl: scraped.imageUrl,
+        name: productName,
+        imageUrl: productImage,
         price: scraped.price ?? null,
         description: scraped.description ?? null,
-        category: scraped.category ?? null,
+        category: productCategory,
         platformType: platform,
         platformId,
         status: 'active',
