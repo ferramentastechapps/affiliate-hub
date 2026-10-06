@@ -40,7 +40,7 @@ export function sanitizeImageUrl(url?: string | null): string | null {
     'alicdn.com', 'aliexpress.com',
     'kabum.com',
     'magazineluiza.com', 'magalucdn.com', 'zattini.com', 'netshoes.com',
-    'promobit.com',
+    //'promobit.com',
     'duckduckgo.com',
     'bing.net', 'bing.com',
     'tcdn.com',
