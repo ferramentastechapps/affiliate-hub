@@ -1683,7 +1683,7 @@ class PromotionScraper:
                                 produtos.append({
                                     'name': nome[:200],
                                     'category': categoria,
-                                    'description': f"Oferta Shopee Oficial • Comissão: {comissao:.1f}%",
+                                    'description': f"Oferta Shopee Oficial",
                                     'imageUrl': img or 'https://via.placeholder.com/800x1000',
                                     'price': preco,
                                     'originalPrice': None,
