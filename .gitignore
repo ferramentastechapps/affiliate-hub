@@ -62,4 +62,4 @@ videos_output/
 *.mp4
 next_build.tar.gz
 __pycache__/
-*.pyc
+*.pycANALISE_*.md
