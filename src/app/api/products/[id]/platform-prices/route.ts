@@ -67,20 +67,15 @@ export async function GET(
     const mainPlatform = product.source || product.platformType || (storeLinks[0]?.platform || 'amazon');
 
     // Determina preços para cada loja disponível
-    // Loja principal = preço oficial atual do produto
-    // Outras lojas = variação controlada se não houver cotação individual registrada
+    // Todas as lojas mostram o preço oficial atual do produto
+    // Não aplicamos variações artificiais - o preço vem direto da fonte
     const results = storeLinks.map((store, index) => {
       const isMain = store.platform.toLowerCase() === mainPlatform.toLowerCase() || (index === 0 && !seenPlatforms.has(mainPlatform));
       let price = currentPrice;
       let orig = originalPrice;
 
-      if (!isMain && currentPrice > 0) {
-        // Variação determinística leve baseada no ID e plataforma para realismo
-        const hash = (product.id.charCodeAt(0) + store.platform.charCodeAt(0)) % 15;
-        const multiplier = 1 + (hash - 3) * 0.02; // entre -6% e +22%
-        price = Math.round(currentPrice * multiplier * 100) / 100;
-        orig = Math.round(Math.max(price * 1.15, originalPrice * multiplier) * 100) / 100;
-      }
+      // Removida a lógica de variação artificial de preços
+      // Todas as plataformas mostram o preço real do produto
 
       const meta = PLATFORM_META[store.platform] || {
         label: store.platform,
