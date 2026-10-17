@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "rtk --version 2>/dev/null || echo 'RTK not available'"
+          }
+        ]
+      }
+    ]
+  }
+}

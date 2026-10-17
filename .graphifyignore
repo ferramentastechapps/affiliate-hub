@@ -1,0 +1,48 @@
+# Adapt to the actual project. Never index secrets or generated/vendor content.
+.git/
+.next/
+node_modules/
+out/
+dist/
+build/
+coverage/
+graphify-out/
+.agents/
+.claude/
+.codex/
+.vercel/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+auth.json
+credentials.json
+*.log
+*.tsbuildinfo
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+bun.lock
+bun.lockb
+
+# Python virtualenvs
+bot/venv/
+scraper-service/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# PM2
+.pm2/
+ecosystem.config.js
+
+# Large generated docs (include selectively if needed)
+docs/AUDITORIA_TOKENS.md
+docs/ANTES_E_DEPOIS.md
+
+# Temporary analysis files
+*.analysis.md

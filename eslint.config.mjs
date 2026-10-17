@@ -1,18 +1,23 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+// Lightweight Next profile with quality gates
+import config from "./eslint-rules/next-base.mjs";
+import { defineConfig } from "eslint/config";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
+export default defineConfig([
+  ...config,
+  {
+    // Utility/temporary scripts exempt from quality gates
+    files: [
+      "local_scraper.ts",
+      "evolution.ts",
+      "fix_*.ts",
+      "fix_*.js",
+      "examples/**/*.js",
+    ],
+    rules: {
+      "quality/max-lines": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
 ]);
-
-export default eslintConfig;
