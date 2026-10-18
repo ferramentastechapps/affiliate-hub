@@ -1,229 +1,66 @@
-# Architecture
+# Code and architecture
 
-## System Overview
+## Actual stack
 
-Affiliate Hub is a multi-service system combining a Next.js web application with 6 Python services orchestrated by PM2. The architecture separates concerns across web presentation, automated scraping, messaging integrations, and content generation.
+- **Framework:** Next.js 16.2, App Router (`src/app/`), React 19, TypeScript 5
+- **Runtime / package manager:** Node 24.22.0, npm, `package-lock.json`
+- **Persistence:** Prisma 5 + PostgreSQL (requires `DATABASE_URL` and `DIRECT_URL`). `src/lib/prisma.ts` is the single connection entry point.
+- **Styling:** Tailwind CSS v4 (`@tailwindcss/postcss`), `tailwind-merge`, `clsx`
+- **Icons / motion:** `@phosphor-icons/react`, framer-motion
+- **Charts:** recharts (internal analytics)
+- **PWA:** `@ducanh2912/next-pwa`
+- **AI:** Google Gemini (`@google/generative-ai`) in `src/lib/ai.ts`
+- **Scraping:** Cheerio primary, Scrapling Python FastAPI service (`:8001`) fallback
+- **Python services:** 6 processes under PM2, each with its own virtualenv and `.env`
 
-## Service Architecture
+Exceptions to toolkit defaults: no Drizzle ORM (Prisma is the working ORM — migration is separate work), no structured logger installed (uses `console`; full ESLint profile gated on adding one), no Vitest/Playwright (manual validation via dev server and Python bot scripts).
 
-### Next.js Application (Port 3005)
-- **Purpose:** Public catalog, admin panel, API endpoints
-- **Entry:** `npm start` after build
-- **Stack:** Next.js 16.2 App Router, React 19, TypeScript 5
-- **Routes:**
-  - `/` — Public product catalog
-  - `/admin` — Admin CRUD (products, coupons, AI contexts)
-  - `/api/*` — REST endpoints for webhooks, scraping, admin operations
+## Code map
 
-### Python Services
-
-All Python services use separate virtualenvs and `.env` files:
-
-1. **Telegram Listener** (`bot/telegram_listener.py`)
-   - Responds to bot commands
-   - Webhook receiver for product/coupon additions
-   - Authentication via bot token
-
-2. **Affiliate Scraper** (`bot/main.py`)
-   - Periodic scraping loop
-   - Updates existing products (respects `isFixed` flag)
-   - Calls Next.js API for database writes
-
-3. **Telegram Group Monitor** (`bot/telegram_group_monitor.py`)
-   - Monitors deal groups for new offers
-   - Auto-adds detected products
-   - Rate-limited to avoid Telegram API bans
-
-4. **WhatsApp Engine** (`whatsapp/engine.js`)
-   - Node.js service for WhatsApp Business integration
-   - Sends notifications about new deals
-   - Session management for WhatsApp Web
-
-5. **Scrapling Service** (`scraper-service/main.py`)
-   - FastAPI microservice on port 8001
-   - Browser automation via Scrapling library
-   - Cloudflare/TLS fingerprint bypass
-   - Called by Next.js scraper.ts as fallback
-
-6. **Video Generator** (`bot/video_generator.py`)
-   - Scheduled Instagram content creation
-   - Uses product images + templates
-   - Uploads via Instagram API
-
-## Data Flow
-
-### Product Addition Flow
 ```
-Admin UI → /api/products POST → Prisma → PostgreSQL
-                ↓
-         Scraper (Cheerio)
-                ↓
-         [if blocked] → Scrapling Service :8001
-                ↓
-         Product data returned → DB write
+affiliate-hub/
+├── src/
+│   ├── app/                    # App Router
+│   │   ├── page.tsx            # Public catalog
+│   │   ├── admin/              # Admin CRUD (products, coupons, AI contexts); cache-control: no-store
+│   │   └── api/                # REST endpoints (webhooks, scrape, admin)
+│   ├── components/             # ProductCard, ProductGrid, HeroSection, PlatformModal, admin/*
+│   └── lib/                    # prisma.ts, scraper.ts, ai.ts, auth.ts
+├── prisma/                     # schema.prisma (PostgreSQL)
+├── bot/                        # Python: telegram_listener, main (scraper), group_monitor, video_generator
+├── whatsapp/engine.js          # WhatsApp Business integration (Node)
+├── scraper-service/main.py     # FastAPI Scrapling microservice (:8001)
+├── eslint-rules/               # Custom quality rules (core-rules, index, utils, next-base)
+├── scripts/                    # verify-quality-rules.mjs + project scripts
+├── docs/                       # architecture, design, onboarding, quality, setup + 60+ historical
+└── ecosystem.config.js         # PM2 process definitions (7 processes)
 ```
 
-### Automated Scraping Flow
-```
-bot/main.py (cron) → /api/webhook/products (auth: API key)
-                   → Scraper pipeline
-                   → DB update (skip if isFixed=true)
-```
+## Boundaries and flow
 
-### Telegram Bot Flow
-```
-User command → Telegram API → bot/telegram_listener.py
-                            → /api/webhook/* (auth: API key or HMAC)
-                            → Action + response
-```
+- Presentation (`src/app`, `src/components`) must not import the Prisma client directly. Feature modules in `src/lib/` own data access. Enforced by `quality/no-direct-data-access` (modules `@/db`, layers `/src/app/`, `/src/components/`, extensions `.tsx`).
+- `console.*` is banned from production code by `quality/no-direct-console`; test files and `console.error` (when allowed) are exempt.
+- Auth: `validateApiKey()` (header vs `API_SECRET_KEY`/`AFFILIATE_HUB_API_KEY`) and `validateWebhookSignature()` (HMAC-SHA256 via `WEBHOOK_SECRET`, timing-safe; falls back to API key; allows `x-webhook-secret` for testing). Default doc key is blocked.
+- Scraping pipeline: short-URL expansion (`amzn.to`, `s.shopee`, `a.aliexpress`) → Cheerio HTTP fetch → `scrapeWithScrapling()` fallback to the Python service. Returns typed `ScrapedProduct`.
+- AI pipeline: Gemini scoring (`aiScore`) and caption generation with `AiWordSubstitution`, `AiBannedWord`, `AiContext`; token usage tracked in `AiTokenLog`; captions audited in `CaptionHistory`.
 
-## Database Schema
+## Data and migrations
 
-PostgreSQL via Prisma ORM. Key models:
+- Prisma schema in `prisma/schema.prisma`. Deduplication by `platformId` + `platformType`. `isFixed = true` protects products from bot overwrite.
+- Dual link system in migration: `ProductLink` (new: `sourceUrl`, `affiliateUrl`, `generatedAffiliateUrl` per platform) for new code; `Link` (legacy) kept for backward compatibility, not removed until migration completes.
+- `npm run db:push` pushes schema without generating migration files. No `db:generate`/migration workflow in use.
+- No tests exist; database access requires `DATABASE_URL`/`DIRECT_URL`, so `lint` and `tsc --noEmit` run without a live connection.
 
-- **Product:** Main product entity with `platformId` + `platformType` for deduplication
-- **ProductLink:** New multi-platform link system (`sourceUrl`, `affiliateUrl`, `generatedAffiliateUrl`)
-- **Link:** Legacy link model (preserved during migration)
-- **Coupon:** Discount codes with expiration
-- **AiContext:** Per-category instructions for AI caption generation
-- **AiWordSubstitution:** Word replacement rules for captions
-- **AiBannedWord:** Excluded words from captions
-- **AiTokenLog:** Token usage tracking for Gemini API
-- **CaptionHistory:** Audit trail of all generated captions
+## Decisions
 
-Connection: Singleton in `src/lib/prisma.ts`, requires `DATABASE_URL` and `DIRECT_URL`.
+| Decision | Reason | Source / date | Revisit condition |
+| --- | --- | --- | --- |
+| Lite ESLint profile, not full | No Drizzle ORM, no structured logger | toolkit `templates/eslint/next.config.mjs.example` | when a structured logger is added |
+| Copy mode for Vercel skills | Windows junction/symlink unreliable without admin | `docs/tools/16-vercel-skills.md` | when running on a Unix host or via `npx skills update` |
+| Graphify skill only, no graph generated | Graph generated on demand via `/graphify .` | `docs/tools/07-graphify.md` | after significant code changes |
+| Context7 left unconfigured | Requires OAuth browser flow; cannot be scripted | `docs/tools/12-context7.md` | user runs `npx ctx7 setup --claude` |
+| Python services untouched | Each has working config; toolkit targets TS/JS | `docs/setup.md` (prior) | only on explicit request |
 
-## Scraping Pipeline
+## Maintenance
 
-Two-tier system with automatic fallback:
-
-1. **Primary (Cheerio):** Direct HTTP fetch + HTML parsing
-   - Fast, low resource
-   - Handles most sites
-   - Expands short URLs first (amzn.to, s.shopee, a.aliexpress)
-
-2. **Fallback (Scrapling):** Browser automation
-   - Python FastAPI service (:8001)
-   - Full JavaScript execution
-   - Cloudflare bypass
-   - Called when Cheerio fails or gets blocked
-
-Response: Typed `ScrapedProduct` with `name`, `imageUrl`, `price`, `description`, `category`.
-
-## AI Pipeline
-
-Google Gemini integration (`@google/generative-ai`) in `src/lib/ai.ts`:
-
-- **Caption generation:** Product descriptions with substitution rules and banned words
-- **Product scoring:** AI-based quality/relevance scoring for ranking
-- **Token tracking:** All API calls logged in `AiTokenLog` for quota monitoring
-- **Context awareness:** Per-category instructions stored in `AiContext`
-- **History:** All generated captions preserved in `CaptionHistory`
-
-## Authentication & Security
-
-### API Authentication
-Two methods in `src/lib/auth.ts`:
-- `validateApiKey()` — Checks `x-api-key` header against `API_SECRET_KEY` or `AFFILIATE_HUB_API_KEY`
-- `validateWebhookSignature()` — HMAC-SHA256 via `WEBHOOK_SECRET`, falls back to API key if not configured
-
-Security: Default key from docs (`mude-esta-chave...`) is explicitly blocked.
-
-### Route Protection
-- Admin routes (`/admin/*`, `/api/admin/*`, `/api/auth/*`) have `Cache-Control: no-store`
-- Security headers set in `next.config.ts`: X-Frame-Options (DENY), X-Content-Type-Options, HSTS, CSP Permissions-Policy
-
-## Frontend Architecture
-
-### Routing
-App Router pattern:
-- `src/app/page.tsx` — Public home
-- `src/app/admin/` — Admin panel pages
-- `src/app/api/` — API route handlers
-- `src/app/categoria/[slug]/` — Dynamic category pages
-
-### Components
-- `src/components/` — Shared UI components (ProductCard, ProductGrid, HeroSection, PlatformModal)
-- `src/components/admin/` — Admin-specific components
-
-### Styling
-- Tailwind CSS v4 (completely different API from v3 — consult official docs)
-- Animations via Framer Motion
-- Icons via Phosphor Icons (`@phosphor-icons/react`)
-- PWA via `@ducanh2912/next-pwa`
-
-### Analytics
-Recharts for internal admin dashboards (not public-facing analytics).
-
-## Image Handling
-
-- Next.js Image optimization with remote patterns
-- Fallback pattern allows all HTTPS (`hostname: '**'`)
-- Specific CDN patterns for Amazon, ML, Shopee, AliExpress, TikTok, Promobit, Cloudinary
-- Format: AVIF/WebP with 60s TTL minimum cache
-- Some images proxied locally to avoid CORS/hotlink blocking (e.g., Promobit)
-
-## Build & TypeScript
-
-- `typescript.ignoreBuildErrors: true` — Doesn't block builds but errors should be fixed
-- Build: `prisma generate && next build`
-- ESLint 9 flat config (`eslint.config.mjs`)
-- Path aliases: `@/*` → `./src/*`
-
-## Environment Configuration
-
-Three separate environments:
-1. **Next.js:** `.env` at root (DATABASE_URL, API keys, Gemini API key)
-2. **Python bots:** `bot/.env` (Telegram tokens, webhook URLs)
-3. **Scrapling service:** Uses `scraper-service/venv/` with own deps
-
-## PM2 Orchestration
-
-`ecosystem.config.js` defines 7 processes:
-- One Next.js (persistent after build)
-- Six Python services (each with own interpreter/venv)
-
-Commands:
-```bash
-pm2 start ecosystem.config.js  # Start all
-pm2 logs                        # View logs
-pm2 restart all                 # Restart all
-pm2 stop all                    # Stop all
-```
-
-## Key Design Decisions
-
-1. **PostgreSQL over SQLite:** Despite README mentioning SQLite, actual schema uses PostgreSQL for production scale
-2. **Dual link system:** Migration in progress from `Link` to `ProductLink` — new code uses `ProductLink`
-3. **`isFixed` flag:** Prevents bot overwrites of manually curated products
-4. **Multi-service architecture:** Separation allows independent scaling and language-appropriate solutions (Python for scraping, Node for web)
-5. **Fallback scraping:** Two-tier system balances speed (Cheerio) with reliability (Scrapling)
-6. **No automated tests:** Manual validation via dev server and Python test scripts
-7. **API key auth only:** Admin has no UI login — relies on API key validation
-
-## Technology Constraints
-
-- **Next.js 16:** Breaking changes from training data — always consult `node_modules/next/dist/docs/`
-- **Tailwind v4:** Completely new config API from v3
-- **Prisma migrations:** Schema changes via `db:push` (no migration files generated)
-- **No logger:** Uses console (could add structured logger if needed)
-
-## Scalability Considerations
-
-Current architecture supports:
-- Horizontal scaling of Next.js (stateless)
-- Independent Python service scaling
-- Database connection pooling via Prisma
-- Rate limiting needed for scraping endpoints
-
-Bottlenecks:
-- Scrapling service single instance (can horizontally scale FastAPI)
-- PostgreSQL write contention on high-frequency scraping
-- Telegram API rate limits on group monitoring
-
-## Future Architecture Notes
-
-- Unify dual link system when migration completes
-- Add Redis for caching scraped data
-- Consider message queue for scraping jobs (avoid blocking API calls)
-- Separate read replicas for public catalog vs admin writes
+Update this map when directories, dependencies, contracts, or boundaries change. Record verified behavior; remove decisions that no longer apply. Do not present planned architecture as implemented.

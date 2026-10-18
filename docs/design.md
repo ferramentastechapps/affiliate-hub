@@ -208,13 +208,9 @@ Offline behavior:
 
 ## Design Tokens (Tailwind v4)
 
-Note: Tailwind v4 config API is completely different from v3.
+Preserved canonical design doc; content reflects the live UI in `src/components/`.
 
-Configuration lives in `tailwind.config.ts`. Key customizations:
-- Extended color palette if needed
-- Custom spacing values
-- Animation timing functions
-- Breakpoint adjustments
+Tailwind v4 config API differs completely from v3 — there is no `tailwind.config.ts` in this project. Configuration is CSS-first: values are set directly in the stylesheet via the `@theme` directive (e.g. `@theme { --color-brand: #...; }`), with `@plugin` for extensions. See `docs/tools/` Tailwind guidance and the official v4 docs before adding tokens.
 
 ## Icon System
 

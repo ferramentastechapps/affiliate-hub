@@ -23,8 +23,10 @@ Maximum 350 lines per file (excluding blanks and comments).
 - Split by domain/responsibility
 - Use composition over monolithic classes
 
-#### `quality/no-direct-console` (error)
-No `console.log()`, `console.warn()`, etc. in production code.
+#### `quality/no-direct-console` (available, not enabled)
+Bans `console.log()`, `console.warn()`, etc. in production code.
+
+**Status in this project:** defined in `eslint-rules/` and passing its self-check, but **not enabled** in `eslint.config.mjs`. Only `quality/max-lines` is active here. Enable when a structured logger is added or when console cleanup is wanted.
 
 **Rationale:** Console calls lack structure, context, and filtering. Use proper logging.
 
@@ -37,18 +39,20 @@ No `console.log()`, `console.warn()`, etc. in production code.
 - Or suppress temporarily in dev/debug contexts
 - Tests can use console freely
 
-#### `quality/no-direct-data-access` (error)
-Presentation layers cannot import database client directly.
+#### `quality/no-direct-data-access` (available, not enabled)
+Presentation layers cannot import the database client directly.
+
+**Status in this project:** defined and self-checked, but **not enabled** in `eslint.config.mjs`. Enable when the repository layer exists.
 
 **Rationale:** Separates data access from presentation, making code testable and maintainable.
 
 **Configuration:**
 ```js
 {
-  modules: ["@/lib/prisma", "@/db"],  // Modules with db client
-  bindings: ["db", "prisma"],          // Client binding names
-  layers: ["/src/app/", "/src/components/"],  // Guarded paths
-  extensions: [".tsx"]                 // Additional guards by extension
+  modules: ["@/db", "@/db/index"], // Modules with db client
+  bindings: ["db", "prisma"],       // Client binding names
+  layers: ["/src/app/", "/src/components/"], // Guarded paths
+  extensions: [".tsx"]              // Additional guards by extension
 }
 ```
 
