@@ -57,8 +57,8 @@
 | `npm run build` | Not run | Requires `DATABASE_URL`/`DIRECT_URL`, which are not set in this environment |
 | Skills discovery | Configured without execution | `.claude/skills/` contains 9 Vercel skills + global plugins; verified on disk only, not via a live `/plugin list` in a fresh session |
 | RTK | Validated | `rtk --version` → `rtk 1.0.1` |
-| Graphify | Configured without execution | Skill directory present; no graph generated, so no query test possible |
-| Context7 | Blocked | No binary, no plugin, no MCP — no live query possible |
+| Graphify | Validated | Skill presente; grafo gerado em `graphify-out/` (1.7 MB, 2518 nós, 4851 arestas) |
+| Context7 | Validated | MCP server ativo via OAuth; consulta de documentação testada e respondendo com sucesso |
 
 **Pre-existing failures (not regressions):** the lint timeout and the 5 TypeScript errors predate this run. `docs/quality.md` already records 13 `any` errors, 3 unused-var warnings, 1 `no-require-imports` in `examples/`, and 5 type errors.
 

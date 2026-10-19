@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(ssh vps *)",
+      "Bash(ssh vps*)",
+      "Bash(ssh *212.85.10.239*)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

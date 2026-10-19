@@ -62,4 +62,6 @@ videos_output/
 *.mp4
 next_build.tar.gz
 __pycache__/
-*.pycANALISE_*.md
+*.pyc
+ANALISE_*.md
+graphify-out/

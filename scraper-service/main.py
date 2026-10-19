@@ -4,6 +4,7 @@ Fallback scraper usando Scrapling para bypass de Cloudflare e sites com JS.
 Porta: 8001
 """
 
+import asyncio
 import logging
 import re
 from typing import Any, Optional
@@ -277,22 +278,28 @@ async def scrape(url: str = Query(..., description="URL do produto para scraping
     logger.info(f"🏪 Plataforma: {platform}")
 
     try:
-        page, fetcher_used = fetch_page_content(url, platform)
+        # ponytail: executar fetch e extração em worker thread para não conflitar com asyncio loop do Playwright
+        def _execute():
+            page, fetcher_used = fetch_page_content(url, platform)
+            if not page:
+                return None, fetcher_used, None, None
+            extractors = {
+                "amazon": extract_amazon_data,
+                "mercadolivre": extract_mercadolivre_data,
+                "shopee": extract_shopee_data,
+                "aliexpress": extract_aliexpress_data,
+                "generic": extract_generic_data,
+            }
+            extractor = extractors.get(platform, extract_generic_data)
+            data = extractor(page)
+            product_name = resolve_product_name(data, page)
+            return page, fetcher_used, data, product_name
+
+        page, fetcher_used, data, product_name = await asyncio.to_thread(_execute)
         if not page:
             raise HTTPException(status_code=502, detail="Nenhuma resposta do site alvo")
 
-        extractors = {
-            "amazon": extract_amazon_data,
-            "mercadolivre": extract_mercadolivre_data,
-            "shopee": extract_shopee_data,
-            "aliexpress": extract_aliexpress_data,
-            "generic": extract_generic_data,
-        }
-        extractor = extractors.get(platform, extract_generic_data)
-        data = extractor(page)
-
-        product_name = resolve_product_name(data, page)
-        if len(product_name) < 3:
+        if not product_name or len(product_name) < 3:
             raise HTTPException(status_code=422, detail="Não foi possível extrair o nome do produto")
 
         sanitized_image = sanitize_image_url(data.get("imageUrl", ""))
