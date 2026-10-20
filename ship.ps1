@@ -358,11 +358,12 @@ $DeployScript = ".deploy.sh"
 [System.IO.File]::WriteAllText($DeployScript, ($sshCommand -replace "`r", ""), (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "Transferindo script de deploy e build para a VPS..." -ForegroundColor Cyan
-scp -i "$env:USERPROFILE\.ssh\id_ed25519" next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
-scp -i "$env:USERPROFILE\.ssh\id_ed25519" $DeployScript root@212.85.10.239:~/deploy.sh
+$SshKey = if (Test-Path "$env:USERPROFILE\.ssh\vps_key") { "$env:USERPROFILE\.ssh\vps_key" } else { "$env:USERPROFILE\.ssh\id_ed25519" }
+scp -o ControlMaster=no -i "$SshKey" next_build.tar.gz root@212.85.10.239:~/affiliate-hub/
+scp -o ControlMaster=no -i "$SshKey" $DeployScript root@212.85.10.239:~/deploy.sh
 
 Write-Host "Executando script na VPS..." -ForegroundColor Cyan
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519" root@212.85.10.239 "bash ~/deploy.sh && rm -f ~/deploy.sh"
+ssh -o ControlMaster=no -i "$SshKey" root@212.85.10.239 "bash ~/deploy.sh && rm -f ~/deploy.sh"
 
 # Limpa o arquivo local
 Remove-Item $DeployScript -ErrorAction SilentlyContinue
