@@ -703,7 +703,13 @@ Contexto atual:
         return null;
       }
 
-      const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+      // ponytail: gemini-3.8-flash como primeira opcao, seguido de 2.5-flash e 1.5-flash
+      const preferredModel = process.env.GEMINI_CAPTION_MODEL || 'gemini-3.8-flash';
+      const MODELS = [
+        preferredModel,
+        ...(preferredModel !== 'gemini-2.5-flash' ? ['gemini-2.5-flash'] : []),
+        ...(preferredModel !== 'gemini-1.5-flash' ? ['gemini-1.5-flash'] : [])
+      ];
       const genAI = new GoogleGenerativeAI(apiKey);
 
       for (const modelName of MODELS) {

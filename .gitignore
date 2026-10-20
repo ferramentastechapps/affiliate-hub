@@ -26,6 +26,7 @@ whatsapp/state.json
 # misc
 .DS_Store
 *.pem
+*.backup
 
 # debug
 npm-debug.log*

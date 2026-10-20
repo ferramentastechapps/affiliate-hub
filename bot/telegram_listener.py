@@ -445,9 +445,9 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             errors = []
             
             # Tentar Gemini diretamente com fallback de modelos
-            # Nota: gemini-2.0-flash foi descontinuado pelo Google (retorna 404)
+            # Nota: tenta gemini-3.8-flash, com fallback para 2.5-flash e 1.5-flash
             if has_gemini:
-                models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash"]
+                models_to_try = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"]
                 for model in models_to_try:
                     print(f"Tentando extracao via Gemini API ({model})...")
                     try:
