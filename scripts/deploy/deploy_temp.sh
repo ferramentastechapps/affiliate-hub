@@ -33,6 +33,10 @@ npm run build
 echo "🤖 Configurando bot..."
 cd bot
 sed -i 's|AFFILIATE_HUB_URL=.*|AFFILIATE_HUB_URL=http://127.0.0.1:3005|g' ~/affiliate-hub/bot/.env
+grep -q 'NEXT_PUBLIC_SITE_URL' ~/affiliate-hub/.env && sed -i 's|NEXT_PUBLIC_SITE_URL=.*|NEXT_PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"|g' ~/affiliate-hub/.env || echo 'NEXT_PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"' >> ~/affiliate-hub/.env
+grep -q 'PUBLIC_SITE_URL' ~/affiliate-hub/.env && sed -i 's|PUBLIC_SITE_URL=.*|PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"|g' ~/affiliate-hub/.env || echo 'PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"' >> ~/affiliate-hub/.env
+grep -q 'NEXT_PUBLIC_SITE_URL' ~/affiliate-hub/bot/.env && sed -i 's|NEXT_PUBLIC_SITE_URL=.*|NEXT_PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"|g' ~/affiliate-hub/bot/.env || echo 'NEXT_PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"' >> ~/affiliate-hub/bot/.env
+grep -q 'PUBLIC_SITE_URL' ~/affiliate-hub/bot/.env && sed -i 's|PUBLIC_SITE_URL=.*|PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"|g' ~/affiliate-hub/bot/.env || echo 'PUBLIC_SITE_URL="https://economizei.ftech-apps.com.br"' >> ~/affiliate-hub/bot/.env
 sed -i 's|AFFILIATE_HUB_API_KEY=.*|AFFILIATE_HUB_API_KEY=f6c684a41738ecbc7a95d875fcd93db0b8c30e80df6b5fc09bdfd41d0e651598|g' ~/affiliate-hub/bot/.env
 grep -q 'AFFILIATE_HUB_API_KEY' ~/affiliate-hub/bot/.env || echo 'AFFILIATE_HUB_API_KEY=f6c684a41738ecbc7a95d875fcd93db0b8c30e80df6b5fc09bdfd41d0e651598' >> ~/affiliate-hub/bot/.env
 sed -i 's|AFFILIATE_HUB_API_KEY=.*|AFFILIATE_HUB_API_KEY=f6c684a41738ecbc7a95d875fcd93db0b8c30e80df6b5fc09bdfd41d0e651598|g' ~/affiliate-hub/.env

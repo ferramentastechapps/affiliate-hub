@@ -171,7 +171,10 @@ function formatarMensagemAlerta(
   precoNovo: number,
   quedaPercent: number
 ): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://economizei.ftech-apps.com.br";
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://economizei.ftech-apps.com.br";
+  const siteUrl = (rawSiteUrl.includes('127.0.0.1') || rawSiteUrl.includes('localhost') || rawSiteUrl.includes('0.0.0.0'))
+    ? "https://economizei.ftech-apps.com.br"
+    : rawSiteUrl;
   const linkProduto = `${siteUrl.replace(/\/$/, '')}/produto/${product.shortId || product.id}`;
   
   return `

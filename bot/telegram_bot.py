@@ -4,7 +4,7 @@ import requests as _requests
 from telegram import Bot, InputFile
 from telegram.error import RetryAfter
 from telegram.constants import ParseMode
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL, PUBLIC_SITE_URL
 
 import re
 
@@ -26,8 +26,8 @@ def _normalizar_url_imagem(url: str) -> str:
         return ''
     url = url.strip()
     if url.startswith('/'):
-        from config import AFFILIATE_HUB_URL
-        base = (AFFILIATE_HUB_URL or 'http://127.0.0.1:3005').rstrip('/')
+        from config import PUBLIC_SITE_URL
+        base = (PUBLIC_SITE_URL or 'https://economizei.ftech-apps.com.br').rstrip('/')
         return f"{base}{url}"
     return url
 
@@ -222,7 +222,7 @@ class TelegramNotifier:
 📦 Produtos encontrados: {produtos_count}
 🎫 Cupons encontrados: {cupons_count}
 
-🌐 Ver todos: {AFFILIATE_HUB_URL}
+🌐 Ver todos: {PUBLIC_SITE_URL}
 """
             
             await self._send_message_with_retry(
@@ -562,11 +562,13 @@ OU
     def _get_affiliate_link_for_platform(self, platform: str) -> str:
         """Retorna o link de afiliado direto para a plataforma do cupom."""
         from config import (
-            AFFILIATE_HUB_URL,
+            PUBLIC_SITE_URL,
         )
         import os
         p = platform.lower()
-        base_url = AFFILIATE_HUB_URL.rstrip('/')
+        base_url = PUBLIC_SITE_URL.rstrip('/')
+        if any(h in base_url for h in ['127.0.0.1', 'localhost', '0.0.0.0']):
+            base_url = 'https://economizei.ftech-apps.com.br'
 
         if 'amazon' in p:
             amazon_tag = os.getenv('AMAZON_TAG', 'economizei00-20')
@@ -604,7 +606,7 @@ OU
 💰 {cupom['discount']}
 🏷️ {cupom['platform']}{expira}
 
-🌐 Ver mais: {AFFILIATE_HUB_URL}
+🌐 Ver mais: {PUBLIC_SITE_URL}
 """
         return mensagem.strip()
     
@@ -651,10 +653,12 @@ OU
         nome = produto.get('name', 'Produto')
         preco = produto.get('price')
         preco_original = produto.get('originalPrice')
-        
-        from config import AFFILIATE_HUB_URL
-        base_url = AFFILIATE_HUB_URL.rstrip('/')
-        
+
+        from config import PUBLIC_SITE_URL, AFFILIATE_HUB_URL
+        base_url = PUBLIC_SITE_URL.rstrip('/')
+        if any(h in base_url for h in ['127.0.0.1', 'localhost', '0.0.0.0']):
+            base_url = 'https://economizei.ftech-apps.com.br'
+
         enhanced = produto.get('enhancedImageUrl', '')
         
         # Prioridade de foto para o grupo:
@@ -751,12 +755,12 @@ OU
                 try:
                     import os
                     api_key = os.getenv('API_SECRET_KEY') or ''
-                    base_url = AFFILIATE_HUB_URL.rstrip('/')
+                    internal_api_base = (AFFILIATE_HUB_URL or 'http://127.0.0.1:3005').rstrip('/')
                     headers = {'x-api-key': api_key}
-                    
+
                     resp = _requests.post(
-                        f"{base_url}/api/products/{produto.get('id')}/generate-caption", 
-                        headers=headers, 
+                        f"{internal_api_base}/api/products/{produto.get('id')}/generate-caption",
+                        headers=headers,
                         timeout=30
                     )
                     
@@ -960,7 +964,7 @@ OU
 
     async def publicar_cupom_grupo(self, cupom: dict):
         """Publica o cupom no grupo de promoções com link de afiliado direto."""
-        from config import TELEGRAM_PROMO_GROUP_ID, AFFILIATE_HUB_URL
+        from config import TELEGRAM_PROMO_GROUP_ID, PUBLIC_SITE_URL
         if not TELEGRAM_PROMO_GROUP_ID:
             print('⚠️ TELEGRAM_PROMO_GROUP_ID não configurado — pulando publicação de cupom no grupo.')
             return
@@ -968,7 +972,9 @@ OU
         import os
         from datetime import datetime, timezone
 
-        base_url = AFFILIATE_HUB_URL.rstrip('/')
+        base_url = PUBLIC_SITE_URL.rstrip('/')
+        if any(h in base_url for h in ['127.0.0.1', 'localhost', '0.0.0.0']):
+            base_url = 'https://economizei.ftech-apps.com.br'
         platform     = cupom.get('platform', '')
         code         = cupom.get('code', '')
         description  = cupom.get('description', '')

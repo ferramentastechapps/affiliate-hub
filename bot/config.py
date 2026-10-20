@@ -5,12 +5,26 @@ from pathlib import Path
 # Carrega o .env da raiz do projeto (um nível acima da pasta bot/)
 _root = Path(__file__).parent.parent
 load_dotenv(_root / '.env', encoding='utf-8')
-load_dotenv(override=True, encoding='utf-8')  # fallback: .env no diretório atual (sobrescreve se houver conflito)
 
-# Affiliate Hub
-AFFILIATE_HUB_URL = os.getenv('AFFILIATE_HUB_URL', 'http://localhost:3000')
+# Carrega também o .env específico da pasta bot/ (sobrescrevendo se houver conflito)
+_bot_env = Path(__file__).parent / '.env'
+if _bot_env.exists():
+    load_dotenv(_bot_env, override=True, encoding='utf-8')
+
+# Affiliate Hub (API interna / fallback)
+AFFILIATE_HUB_URL = os.getenv('AFFILIATE_HUB_URL', 'http://127.0.0.1:3005')
 AFFILIATE_HUB_API_KEY = os.getenv('AFFILIATE_HUB_API_KEY')
 WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
+
+# Domínio público do site para links enviados para Telegram / WhatsApp
+_site_url = os.getenv('NEXT_PUBLIC_SITE_URL') or os.getenv('PUBLIC_SITE_URL') or os.getenv('SITE_URL')
+if not _site_url or any(h in _site_url for h in ['127.0.0.1', 'localhost', '0.0.0.0']):
+    if AFFILIATE_HUB_URL and not any(h in AFFILIATE_HUB_URL for h in ['127.0.0.1', 'localhost', '0.0.0.0']):
+        _site_url = AFFILIATE_HUB_URL
+    else:
+        _site_url = 'https://economizei.ftech-apps.com.br'
+
+PUBLIC_SITE_URL = _site_url.rstrip('/')
 
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')

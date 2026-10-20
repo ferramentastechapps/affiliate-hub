@@ -185,7 +185,10 @@ function downloadImageToFile(imageUrl, timeoutMs = 20000) {
         try {
             if (!imageUrl) return resolve(null);
             if (imageUrl.startsWith('/')) {
-                const siteBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.AFFILIATE_HUB_URL || 'https://economizei.ftech-apps.com.br';
+                let siteBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.PUBLIC_SITE_URL || process.env.AFFILIATE_HUB_URL || 'https://economizei.ftech-apps.com.br';
+                if (siteBase.includes('127.0.0.1') || siteBase.includes('localhost') || siteBase.includes('0.0.0.0')) {
+                    siteBase = 'https://economizei.ftech-apps.com.br';
+                }
                 imageUrl = `${siteBase.replace(/\/$/, '')}${imageUrl}`;
             }
             const protocol = imageUrl.startsWith('https') ? https : http;

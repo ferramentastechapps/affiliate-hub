@@ -9,6 +9,10 @@ module.exports = {
       autorestart: true,
       restart_delay: 3000,
       max_restarts: 50,
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+      },
     },
     {
       name: 'affiliate-hub-listener',
@@ -19,6 +23,10 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
       max_restarts: 50,
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+      },
     },
     {
       name: 'affiliate-scraper',
@@ -29,6 +37,10 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
       max_restarts: 50,
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+      },
     },
     {
       name: 'whatsapp-engine',
@@ -39,6 +51,10 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
       max_restarts: 50,
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+      },
     },
     {
       name: 'telegram-group-monitor',
@@ -49,6 +65,10 @@ module.exports = {
       autorestart: true,
       restart_delay: 10000,
       max_restarts: 20,
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+      },
     },
     {
       // Scrapling Microservice — fallback scraper com bypass de anti-bot
@@ -83,6 +103,8 @@ module.exports = {
       max_restarts: 20,
       env: {
         PYTHONUNBUFFERED: '1',
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
       },
     }
   ]

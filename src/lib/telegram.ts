@@ -4,7 +4,10 @@ import path from 'path';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const TELEGRAM_PROMO_GROUP_ID = process.env.TELEGRAM_PROMO_GROUP_ID;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://economizei.ftech-apps.com.br";
+const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const SITE_URL = (!rawSiteUrl || /127\.0\.0\.1|localhost|0\.0\.0\.0/.test(rawSiteUrl))
+  ? "https://economizei.ftech-apps.com.br"
+  : rawSiteUrl;
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'Smartphones': '📱',
@@ -302,19 +305,13 @@ export async function publishToGroup(product: any, platform: string, affiliateLi
   if (lojaDetectada) {
     lines.push(`<b>${lojaDetectada}</b>`, "");
   }
-
   if (precoTxt) lines.push(precoTxt);
   if (condicoesMsg) lines.push(condicoesMsg);
   if (cupomMsg) lines.push(cupomMsg);
-
   lines.push("");
 
-  const shortId = product.shortId;
-  const linkProduto = shortId 
-    ? `${SITE_URL.replace(/\/$/, '')}/produto/${shortId}`
-    : product.id 
-      ? `${SITE_URL.replace(/\/$/, '')}/produto/${product.id}`
-      : "";
+  const linkId = product.shortId || product.id;
+  const linkProduto = linkId ? `${SITE_URL.replace(/\/$/, '')}/produto/${linkId}` : "";
 
   const couponLink = product.couponLink;
   if (couponLink) {

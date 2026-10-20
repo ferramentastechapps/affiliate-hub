@@ -40,7 +40,11 @@ def load_env():
 
 load_env()
 
-API_BASE          = os.getenv("AFFILIATE_HUB_URL", "https://economizei.ftech-apps.com.br")
+API_BASE          = os.getenv("AFFILIATE_HUB_URL", "http://127.0.0.1:3005")
+_site_url         = os.getenv('NEXT_PUBLIC_SITE_URL') or os.getenv('PUBLIC_SITE_URL') or os.getenv('SITE_URL') or "https://economizei.ftech-apps.com.br"
+if any(h in _site_url for h in ['127.0.0.1', 'localhost', '0.0.0.0']):
+    _site_url = "https://economizei.ftech-apps.com.br"
+PUBLIC_SITE_URL   = _site_url.rstrip('/')
 API_KEY           = os.getenv("AFFILIATE_HUB_API_KEY", "")
 BOT_TOKEN         = os.getenv("TELEGRAM_BOT_TOKEN", "")
 PROMO_GROUP_ID    = os.getenv("TELEGRAM_PROMO_GROUP_ID", "")
@@ -217,7 +221,7 @@ def build_caption(product):
         if c and c.upper() != "NORMAL":
             coupon = c
     short_id = product.get("shortId") or product.get("id","")
-    link     = f"{API_BASE}/?p={short_id}" if short_id else API_BASE
+    link     = f"{PUBLIC_SITE_URL}/produto/{short_id}" if short_id else PUBLIC_SITE_URL
     lines = [f"🔥 <b>{name}</b>\n"]
     if price > 0: lines.append(f"💰 <b>{fmt_brl(price)}</b>")
     if discount > 0: lines.append(f"🏷️ -{discount}% de desconto")
