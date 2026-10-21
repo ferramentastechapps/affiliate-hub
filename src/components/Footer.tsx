@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { WhatsappLogo, TelegramLogo, InstagramLogo, Heart, FacebookLogo, TwitterLogo, YoutubeLogo } from "@phosphor-icons/react";
 
@@ -170,6 +171,8 @@ export function Footer() {
               <FooterLink href="#categorias">Categorias</FooterLink>
               <FooterLink href="#cupons">Cupons</FooterLink>
               <FooterLink href="#footer">Comunidade</FooterLink>
+              <Link href="/privacidade" className="text-zinc-400 hover:text-white transition-colors text-sm">Privacidade</Link>
+              <Link href="/termos" className="text-zinc-400 hover:text-white transition-colors text-sm">Termos de Uso</Link>
             </div>
  
             {/* Coluna 3: Diversos */}
@@ -221,6 +224,15 @@ export function Footer() {
 
           {/* Copyright e Disclaimer */}
           <div className="border-t border-white/[0.04] pt-8 mt-8 flex flex-col items-center gap-4 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-500">
+              <Link href="/privacidade" className="hover:text-zinc-300 transition-colors">
+                Política de Privacidade
+              </Link>
+              <span>•</span>
+              <Link href="/termos" className="hover:text-zinc-300 transition-colors">
+                Termos de Uso
+              </Link>
+            </div>
             <p className="text-zinc-500 text-xs flex items-center gap-1.5 justify-center">
               © {currentYear} Economizei. Feito com <Heart size={12} weight="fill" className="text-[#ff334b]" /> para você economizar.
             </p>

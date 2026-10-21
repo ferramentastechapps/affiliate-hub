@@ -4,7 +4,7 @@ import requests as _requests
 from telegram import Bot, InputFile
 from telegram.error import RetryAfter
 from telegram.constants import ParseMode
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL, PUBLIC_SITE_URL
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, AFFILIATE_HUB_URL, PUBLIC_SITE_URL, AFFILIATE_HUB_API_KEY
 
 import re
 
@@ -754,14 +754,14 @@ OU
                 print(f"🤖 Gerando legenda just-in-time para o produto {produto.get('id')}...")
                 try:
                     import os
-                    api_key = os.getenv('API_SECRET_KEY') or ''
+                    api_key = os.getenv('API_SECRET_KEY') or AFFILIATE_HUB_API_KEY or os.getenv('AFFILIATE_HUB_API_KEY') or ''
                     internal_api_base = (AFFILIATE_HUB_URL or 'http://127.0.0.1:3005').rstrip('/')
                     headers = {'x-api-key': api_key}
 
                     resp = _requests.post(
                         f"{internal_api_base}/api/products/{produto.get('id')}/generate-caption",
                         headers=headers,
-                        timeout=30
+                        timeout=45
                     )
                     
                     if resp.status_code == 200:
@@ -958,6 +958,23 @@ OU
             except Exception as wpp_err:
                 print(f'⚠️ Aviso: Erro ao enviar para WhatsApp Engine: {wpp_err}')
             # --------------------------
+
+            # --- INTEGRAÇÃO PINTEREST ---
+            try:
+                from pinterest_bot import PinterestNotifier
+                pinterest = PinterestNotifier()
+                if pinterest.enabled:
+                    pinterest_foto = foto_img or (foto_para_grupo if isinstance(foto_para_grupo, str) and foto_para_grupo.startswith('http') else None)
+                    link_site = link_produto if 'link_produto' in locals() else None
+                    pinterest.postar_produto(
+                        produto=produto,
+                        affiliate_link=affiliate_link,
+                        link_site=link_site,
+                        foto_url=pinterest_foto
+                    )
+            except Exception as pin_err:
+                print(f'⚠️ Aviso: Erro ao enviar para Pinterest: {pin_err}')
+            # ----------------------------
 
         except Exception as e:
             print(f'❌ Erro ao publicar no grupo: {e}')

@@ -66,26 +66,39 @@ async function logAiUsage(functionName: string, modelUsed: string, provider: str
  */
 export function cleanAndParseJson(text: string): any {
   if (!text) return null;
-  
-  // 1. Remove tags de pensamento/raciocínio se presentes (comum em modelos de reasoning como Nemotron/DeepSeek)
-  let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-  
+
+  // 1. Remove tags de pensamento/raciocínio se presentes (comum em modelos de reasoning como Nemotron/DeepSeek/Gemini)
+  // Suporta tags abertas sem fechamento caso a resposta tenha sido cortada no meio do raciocínio
+  let cleanText = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, '').trim();
+
   // 2. Remove blocos de código markdown (```json ... ``` ou ``` ... ```)
   cleanText = cleanText.replace(/```json/gi, '').replace(/```/gi, '').trim();
-  
+
+  const stripTrailingCommas = (str: string) => str.replace(/,\s*([\]}])/g, '$1');
+
   try {
     return JSON.parse(cleanText);
   } catch (e) {
+    try {
+      return JSON.parse(stripTrailingCommas(cleanText));
+    } catch {
+      // continua para extração via regex
+    }
+
     // 3. Tenta extrair a primeira estrutura JSON válida {...} usando expressão regular
     const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[0]);
       } catch (innerError) {
-        console.warn('[AI] Falha ao parsear JSON extraído com regex:', innerError);
+        try {
+          return JSON.parse(stripTrailingCommas(jsonMatch[0]));
+        } catch {
+          console.warn('[AI] Falha ao parsear JSON extraído com regex:', innerError);
+        }
       }
     }
-    
+
     // 4. Se todo parse falhar e for um texto não vazio que não parece JSON, trata-o como o título
     // (comum em modo legenda quando o modelo responde apenas a frase)
     if (cleanText.length > 0 && !cleanText.startsWith('{')) {
@@ -97,7 +110,7 @@ export function cleanAndParseJson(text: string): any {
       console.log('[AI] Resposta não-JSON recebida, tratando texto limpo diretamente como título.');
       return { titulo: cleanText };
     }
-    
+
     throw e;
   }
 }
@@ -685,7 +698,10 @@ Contexto atual:
     // Carrega prompt adequado ao modo caption e substituições
     const [systemPrompt, substitutions] = await Promise.all([
       buildDynamicSystemPrompt(),
-      prisma.aiWordSubstitution.findMany(),
+      prisma.aiWordSubstitution.findMany().catch((err) => {
+        console.warn('[AI] Falha ao carregar substituições do banco, continuando sem elas:', err?.message || err);
+        return [];
+      }),
     ]);
 
     let result: {
@@ -703,63 +719,75 @@ Contexto atual:
         return null;
       }
 
-      // ponytail: gemini-3.8-flash como primeira opcao, seguido de 2.5-flash e 1.5-flash
-      const preferredModel = process.env.GEMINI_CAPTION_MODEL || 'gemini-3.8-flash';
-      const MODELS = [
+      // ponytail: modelos ativos do Gemini ordenados por estabilidade e velocidade
+      const preferredModel = process.env.GEMINI_CAPTION_MODEL || 'gemini-3.1-flash-lite';
+      const candidateModels = [
         preferredModel,
-        ...(preferredModel !== 'gemini-2.5-flash' ? ['gemini-2.5-flash'] : []),
-        ...(preferredModel !== 'gemini-1.5-flash' ? ['gemini-1.5-flash'] : [])
+        'gemini-3.1-flash-lite',
+        'gemini-3.8-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.6-flash',
       ];
+      const MODELS = Array.from(new Set(candidateModels));
       const genAI = new GoogleGenerativeAI(apiKey);
 
       for (const modelName of MODELS) {
-        console.log(`[AI] Chamando Gemini (${modelName}) diretamente para criar legenda para: "${productName}"`);
-        try {
-          const model = genAI.getGenerativeModel({
-            model: modelName,
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 1.1,
-              topP: 0.95
-            },
-            systemInstruction: systemPrompt
-          });
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          console.log(`[AI] Chamando Gemini (${modelName}, tentativa ${attempt}) para criar legenda: "${productName}"`);
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: {
+                temperature: 1.0,
+                topP: 0.95
+              },
+              systemInstruction: systemPrompt
+            }, { timeout: 15000 });
 
-          const res = await model.generateContent(promptText);
-          const responseText = res.response.text();
+            const res = await model.generateContent(promptText);
+            const textParts = res.response.candidates?.[0]?.content?.parts?.filter((p: any) => !p.thought) || [];
+            const responseText = textParts.map((p: any) => p.text).join('') || res.response.text();
 
-          if (res.response.usageMetadata) {
-            const { promptTokenCount, candidatesTokenCount } = res.response.usageMetadata;
-            logAiUsage(
-              'generateCaption',
-              modelName,
-              'google',
-              promptTokenCount || 0,
-              candidatesTokenCount || 0
-            ).catch(console.error);
+            if (res.response.usageMetadata) {
+              const { promptTokenCount, candidatesTokenCount } = res.response.usageMetadata;
+              logAiUsage(
+                'generateCaption',
+                modelName,
+                'google',
+                promptTokenCount || 0,
+                candidatesTokenCount || 0
+              ).catch(console.error);
+            }
+
+            if (!responseText) {
+              console.warn(`[AI] Resposta vazia do modelo ${modelName} — tentando próximo.`);
+              break;
+            }
+
+            const parsedData = cleanAndParseJson(responseText);
+            if (!parsedData) {
+              console.warn(`[AI] Resposta limpa do modelo ${modelName} é nula/inválida.`);
+              break;
+            }
+            console.log(`[AI] Sucesso com modelo ${modelName} no modo caption.`);
+
+            return {
+              titulo: parsedData.titulo || null,
+              subtitulo: parsedData.analise || null,
+              score: parsedData.score !== undefined ? Number(parsedData.score) : null,
+              rawJson: JSON.stringify(parsedData)
+            };
+          } catch (modelError: any) {
+            const is503 = modelError?.status === 503 || String(modelError?.message).includes('503');
+            if (is503 && attempt === 1) {
+              console.warn(`[AI] Modelo ${modelName} retornou 503 (alta demanda). Aguardando 1.5s para tentar novamente...`);
+              await new Promise(r => setTimeout(r, 1500));
+              continue;
+            }
+            console.warn(`[AI] Erro no modelo ${modelName}: ${modelError.message || modelError}`);
+            break;
           }
-
-          if (!responseText) {
-            console.warn(`[AI] Resposta vazia do modelo ${modelName} — tentando próximo.`);
-            continue;
-          }
-
-          const parsedData = cleanAndParseJson(responseText);
-          if (!parsedData) {
-            console.warn(`[AI] Resposta limpa do modelo ${modelName} é nula/inválida.`);
-            continue;
-          }
-          console.log(`[AI] Sucesso com modelo ${modelName} no modo caption.`);
-
-          return {
-            titulo: parsedData.titulo || null,
-            subtitulo: parsedData.analise || null,
-            score: parsedData.score !== undefined ? Number(parsedData.score) : null,
-            rawJson: JSON.stringify(parsedData)
-          };
-        } catch (modelError: any) {
-          console.warn(`[AI] Erro no modelo ${modelName}: ${modelError.message || modelError}`);
-          continue;
         }
       }
       return null;

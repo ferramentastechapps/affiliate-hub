@@ -444,10 +444,15 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         def call_ai():
             errors = []
             
-            # Tentar Gemini diretamente com fallback de modelos
-            # Nota: tenta gemini-3.8-flash, com fallback para 2.5-flash e 1.5-flash
+            # Tentar Gemini diretamente com fallback de modelos ativos
             if has_gemini:
-                models_to_try = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"]
+                models_to_try = [
+                    "gemini-3.1-flash-lite",
+                    "gemini-3.8-flash",
+                    "gemini-3.5-flash-lite",
+                    "gemini-3.5-flash",
+                    "gemini-3.6-flash"
+                ]
                 for model in models_to_try:
                     print(f"Tentando extracao via Gemini API ({model})...")
                     try:
@@ -456,25 +461,34 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                             url,
                             headers={"Content-Type": "application/json"},
                             json={
-                                "contents": [{"parts": [{"text": prompt}]}],
-                                "generationConfig": {"responseMimeType": "application/json"}
+                                "contents": [{"parts": [{"text": prompt}]}]
                             },
                             timeout=25
                         )
                         if response.status_code == 200:
-                            text_resp = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-                            if text_resp and text_resp.strip():
-                                return text_resp
+                            data = response.json()
+                            candidates = data.get("candidates", [])
+                            if candidates:
+                                parts = candidates[0].get("content", {}).get("parts", [])
+                                text_parts = [p.get("text", "") for p in parts if not p.get("thought")]
+                                text_resp = "".join(text_parts).strip() or (parts[0].get("text", "").strip() if parts else "")
+                                if text_resp:
+                                    return text_resp
                         elif response.status_code == 429:
-                            # Cota esgotada — nao adianta tentar outros modelos Gemini
                             err_msg = f"Gemini quota esgotada (429) para {model}"
-                            print(f"AVISO: {err_msg} — tentando OpenRouter...")
+                            print(f"AVISO: {err_msg} — tentando próximo modelo...")
                             errors.append(err_msg)
-                            break  # Sai do loop e vai direto pro OpenRouter
+                            continue
+                        elif response.status_code == 503:
+                            err_msg = f"Gemini ({model}) alta demanda (503) — tentando próximo modelo..."
+                            print(f"AVISO: {err_msg}")
+                            errors.append(err_msg)
+                            continue
                         elif response.status_code == 404:
                             err_msg = f"Gemini ({model}) nao encontrado (404) — modelo descontinuado?"
                             print(f"AVISO: {err_msg}")
                             errors.append(err_msg)
+                            continue
                         else:
                             err_msg = f"Gemini ({model}) status {response.status_code}"
                             print(f"AVISO: {err_msg}")
@@ -487,7 +501,8 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
             # Fallback: OpenRouter (usa saldo proprio, nao depende da cota Gemini)
             has_openrouter = OPENROUTER_API_KEY and len(OPENROUTER_API_KEY) > 10
             if has_openrouter:
-                print(f"Tentando extracao via OpenRouter (google/gemini-2.5-flash)...")
+                openrouter_model = os.getenv("OPENROUTER_CAPTION_MODEL") or os.getenv("OPENROUTER_EVALUATE_MODEL") or "google/gemini-3.5-flash"
+                print(f"Tentando extracao via OpenRouter ({openrouter_model})...")
                 try:
                     openrouter_resp = requests.post(
                         "https://openrouter.ai/api/v1/chat/completions",
@@ -498,7 +513,7 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
                             "X-Title": "Affiliate Hub Bot"
                         },
                         json={
-                            "model": "google/gemini-2.5-flash",
+                            "model": openrouter_model,
                             "messages": [
                                 {"role": "user", "content": prompt}
                             ],
@@ -534,7 +549,14 @@ async def handle_forwarded_or_text_promo(update: Update, context: ContextTypes.D
         print(f"✅ Resposta da AI recebida: {response_text[:200]}...")
         
         texto_limpo = response_text.replace('```json', '').replace('```', '').strip()
-        dados = json.loads(texto_limpo)
+        try:
+            dados = json.loads(texto_limpo)
+        except Exception:
+            match = re.search(r'\{[\s\S]*\}', texto_limpo)
+            if match:
+                dados = json.loads(match.group(0))
+            else:
+                raise
         
         print(f"📦 Dados extraídos: {dados}")
         

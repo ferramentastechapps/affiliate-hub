@@ -173,7 +173,7 @@ Responda ESTRITAMENTE em formato JSON com:
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: process.env.OPENROUTER_CAPTION_MODEL || "google/gemini-2.5-flash",
+              model: process.env.OPENROUTER_CAPTION_MODEL || "google/gemini-3.5-flash",
               messages: [{ role: "user", content: promptText }],
               response_format: { type: "json_object" }
             }),

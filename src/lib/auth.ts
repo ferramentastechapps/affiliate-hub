@@ -2,20 +2,24 @@ import crypto from 'crypto';
 
 export function validateApiKey(request: Request): boolean {
   const apiKey = request.headers.get('x-api-key');
-  const validKey = process.env.API_SECRET_KEY || process.env.AFFILIATE_HUB_API_KEY;
-  
-  if (!validKey) {
+  if (!apiKey) return false;
+
+  const validKeys = [process.env.API_SECRET_KEY, process.env.AFFILIATE_HUB_API_KEY]
+    .filter((k): k is string => Boolean(k && k.trim()));
+
+  if (validKeys.length === 0) {
     console.warn('API_SECRET_KEY / AFFILIATE_HUB_API_KEY não configurada no .env');
     return false;
   }
 
   // Verifica se o usuário não alterou a chave padrão do README
-  if (validKey === "mude-esta-chave-por-uma-segura-123456789") {
+  const safeKeys = validKeys.filter(k => k !== "mude-esta-chave-por-uma-segura-123456789");
+  if (safeKeys.length === 0) {
     console.error("ALERTA: O sistema foi bloqueado de validar Webhooks porque sua chave no .env está usando o valor padrão inseguro.");
     return false;
   }
-  
-  return apiKey === validKey;
+
+  return safeKeys.includes(apiKey);
 }
 
 export async function validateWebhookSignature(request: Request): Promise<boolean> {

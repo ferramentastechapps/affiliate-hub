@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { processProductWithAI } from '@/lib/ai';
+import { validateApiKey } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
@@ -8,8 +9,7 @@ export async function POST(
 ) {
   try {
     // Verificar a chave de API
-    const apiKey = request.headers.get('x-api-key');
-    if (apiKey !== process.env.API_SECRET_KEY) {
+    if (!validateApiKey(request)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

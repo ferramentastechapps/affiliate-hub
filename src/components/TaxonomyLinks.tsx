@@ -3,13 +3,19 @@ import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/slugify';
 
 export async function TaxonomyLinks() {
-  // Buscar os 20 produtos mais recentes para pegar as top categorias e lojas ativas
-  const recentProducts = await prisma.product.findMany({
-    where: { status: { in: ['active', 'approved'] } },
-    select: { category: true, storeName: true, platformType: true },
-    orderBy: { updatedAt: 'desc' },
-    take: 50,
-  });
+  let recentProducts: Array<{ category: string | null; storeName: string | null; platformType: string | null }> = [];
+  try {
+    // Buscar os produtos mais recentes para pegar as top categorias e lojas ativas
+    recentProducts = await prisma.product.findMany({
+      where: { status: { in: ['active', 'approved'] } },
+      select: { category: true, storeName: true, platformType: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    });
+  } catch (err) {
+    // Silencia se o banco estiver inacessível durante build local
+    recentProducts = [];
+  }
 
   const categories = new Set<string>();
   const stores = new Set<string>();
