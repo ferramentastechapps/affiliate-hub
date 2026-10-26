@@ -256,6 +256,9 @@ fi
 echo "📦 Instalando dependências..."
 npm install
 
+echo "⚙️  Gerando Prisma Client para Linux..."
+npx prisma generate
+
 echo "🗄️  Sincronizando schema do banco de dados..."
 npx prisma migrate deploy
 
@@ -281,6 +284,20 @@ if [ ! -f ".next/BUILD_ID" ]; then
   exit 1
 fi
 echo "✅ Build OK! BUILD_ID: $(cat .next/BUILD_ID)"
+
+echo "🔗 Ajustando symlinks do Next.js/Turbopack gerados no Windows..."
+if [ -d .next/node_modules ]; then
+  find .next/node_modules -type l | while read -r symlink; do
+    target=$(readlink "$symlink")
+    if [[ "$target" == *"/node_modules/"* ]]; then
+      pkg_rel="${target#*node_modules/}"
+      real_target="/root/affiliate-hub/node_modules/$pkg_rel"
+      if [ -e "$real_target" ]; then
+        ln -sfn "$real_target" "$symlink"
+      fi
+    fi
+  done
+fi
 
 echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrome)..."
 if command -v ffmpeg &>/dev/null; then

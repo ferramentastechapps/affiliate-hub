@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { ProductDetail } from '@/components/ProductDetail';
 import { Footer } from '@/components/Footer';
 import { Metadata } from 'next';
+import { slugify } from '@/lib/slugify';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,16 +30,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const shareImage = rawImage?.startsWith('/')
       ? `${siteUrl}${rawImage}`
       : (rawImage || `${siteUrl}/placeholder.webp`);
+    const canonicalUrl = `${siteUrl}/produto/${product.shortId || product.id}`;
 
     return {
       title: `${product.name} | Economizei`,
       description: product.description || `Compre ${product.name} com o melhor preço. Aproveite cupons de desconto exclusivos!`,
+      alternates: {
+        canonical: canonicalUrl,
+      },
       openGraph: {
         title: product.name,
         description: product.description || `Compre ${product.name} com o melhor preço`,
         images: [{ url: shareImage }],
         type: 'website',
-        url: `${siteUrl}/produto/${product.shortId || product.id}`,
+        url: canonicalUrl,
       },
       twitter: {
         card: 'summary_large_image',
@@ -102,12 +107,17 @@ function buildProductJsonLd(product: any): object {
     });
   }
 
+  const rawImage = product.enhancedImageUrl || product.imageUrl;
+  const absoluteImage = rawImage?.startsWith('/')
+    ? `${siteUrl}${rawImage}`
+    : (rawImage || `${siteUrl}/placeholder.webp`);
+
   const jsonLd: any = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
     name: product.name,
     description: product.description || `${product.name} — oferta exclusiva no Economizei`,
-    image: [product.imageUrl],
+    image: [absoluteImage],
     url: productUrl,
     category: product.category,
     sku: product.platformId || product.platformProductId || String(product.shortId || product.id),
@@ -168,6 +178,46 @@ function buildProductJsonLd(product: any): object {
   }
 
   return jsonLd;
+}
+
+function buildBreadcrumbJsonLd(product: any, siteUrl: string): object {
+  const productUrl = `${siteUrl}/produto/${product.shortId || product.id}`;
+  const items: any[] = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Início',
+      item: siteUrl,
+    },
+  ];
+
+  if (product.category) {
+    items.push({
+      '@type': 'ListItem',
+      position: 2,
+      name: product.category,
+      item: `${siteUrl}/categoria/${slugify(product.category)}`,
+    });
+    items.push({
+      '@type': 'ListItem',
+      position: 3,
+      name: product.name,
+      item: productUrl,
+    });
+  } else {
+    items.push({
+      '@type': 'ListItem',
+      position: 2,
+      name: product.name,
+      item: productUrl,
+    });
+  }
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items,
+  };
 }
 
 interface LowestPriceInfo {
@@ -241,6 +291,8 @@ export default async function ProductPage({ params }: Props) {
     );
 
     const jsonLd = buildProductJsonLd(product);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br';
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd(product, siteUrl);
 
     return (
       <>
@@ -248,6 +300,10 @@ export default async function ProductPage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
         <ProductDetail product={product} lowestPriceInfo={lowestPriceInfo} />
         <Footer />

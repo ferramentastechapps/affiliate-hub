@@ -1,0 +1,34 @@
+# Economizei
+
+> O Economizei é a plataforma brasileira de curadoria em tempo real de ofertas, cupons de desconto validados e monitoramento de menor preço histórico entre as principais redes de e-commerce (Amazon Brasil, Mercado Livre, Shopee Brasil, AliExpress, TikTok Shop, KaBuM! e Magalu).
+
+## URLs Principais
+
+- [Página Inicial / Ofertas do Dia](https://economizei.ftech-apps.com.br): Melhores promoções ativas com menores preços históricos
+- [Central de Cupons](https://economizei.ftech-apps.com.br/cupons): Cupons de desconto válidos, códigos promocionais e regras de uso
+- [Política de Privacidade](https://economizei.ftech-apps.com.br/privacidade): Privacidade de dados e conformidade LGPD
+- [Termos de Uso](https://economizei.ftech-apps.com.br/termos): Termos e diretrizes da plataforma
+
+## Principais Categorias
+
+- [Smartphones e TV](https://economizei.ftech-apps.com.br/categoria/smartphones-e-tv)
+- [Informática e Games](https://economizei.ftech-apps.com.br/categoria/informatica-e-games)
+- [Casa e Eletrodomésticos](https://economizei.ftech-apps.com.br/categoria/casa-e-eletrodomesticos)
+- [Moda e Acessórios](https://economizei.ftech-apps.com.br/categoria/moda-e-acessorios)
+- [Saúde e Beleza](https://economizei.ftech-apps.com.br/categoria/saude-e-beleza)
+- [Esporte e Suplementos](https://economizei.ftech-apps.com.br/categoria/esporte-e-suplementos)
+
+## Lojas Parceiras Oficiais
+
+- Amazon Brasil
+- Mercado Livre
+- Shopee Brasil
+- AliExpress
+- Magalu
+- KaBuM!
+
+## Metodologia e Confiabilidade
+
+- Histórico de Preços: Registro temporal contínuo para atestar menor preço real em 30 e 60 dias.
+- Curadoria com IA: Análise de avaliações reais de compradores e verificação anti-fraude.
+- Transparência de Afiliados: Links monetizados identificados de forma ética e sem custo adicional ao comprador.

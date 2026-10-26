@@ -15,14 +15,28 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: [
-          '/api/',           // Não indexar rotas de API
-          '/admin/login',    // Não indexar página de login
+          '/api/',
+          '/admin/',
+          '/admin/login',
         ],
       },
       {
-        userAgent: 'Googlebot',
+        userAgent: [
+          'Googlebot',
+          'Bingbot',
+          'GPTBot',
+          'ChatGPT-User',
+          'PerplexityBot',
+          'ClaudeBot',
+          'Google-Extended',
+          'Applebot',
+          'Applebot-Extended',
+        ],
         allow: '/',
-        disallow: ['/api/', '/admin/login'],
+        disallow: [
+          '/api/',
+          '/admin/',
+        ],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

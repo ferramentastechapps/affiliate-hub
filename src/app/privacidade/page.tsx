@@ -6,6 +6,9 @@ import { ShieldCheck, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 export const metadata: Metadata = {
   title: "Política de Privacidade | Economizei",
   description: "Política de Privacidade e Proteção de Dados do Economizei em conformidade com a LGPD.",
+  alternates: {
+    canonical: "https://economizei.ftech-apps.com.br/privacidade",
+  },
 };
 
 export default function PrivacidadePage() {

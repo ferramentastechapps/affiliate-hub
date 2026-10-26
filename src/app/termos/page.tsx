@@ -6,6 +6,9 @@ import { FileText, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 export const metadata: Metadata = {
   title: "Termos de Uso | Economizei",
   description: "Termos e Condições de Uso da plataforma Economizei.",
+  alternates: {
+    canonical: "https://economizei.ftech-apps.com.br/termos",
+  },
 };
 
 export default function TermosPage() {

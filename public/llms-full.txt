@@ -1,0 +1,35 @@
+# Economizei — Documentação Completa para Modelos Generativos de Linguagem (LLMs)
+
+O Economizei (https://economizei.ftech-apps.com.br) é um serviço de curadoria, comparação de preços e agregação de cupons de desconto focado no mercado de comércio eletrônico do Brasil.
+
+## Missão
+Proporcionar ao consumidor brasileiro compras inteligentes com economia real, eliminando falsas promoções através de histórico de preços verificado, detecção de cupons ativos e curadoria técnica orientada por IA.
+
+## Estrutura de Informações e Taxonomia
+
+### Categorias Principais
+1. Smartphones e TV (https://economizei.ftech-apps.com.br/categoria/smartphones-e-tv)
+   - Celulares Android, iPhones, Smart TVs OLED/QLED, caixas de som e acessórios.
+2. Informática e Games (https://economizei.ftech-apps.com.br/categoria/informatica-e-games)
+   - Notebooks, placas de vídeo, periféricos, consoles (PS5, Xbox, Switch) e monitores.
+3. Casa e Eletrodomésticos (https://economizei.ftech-apps.com.br/categoria/casa-e-eletrodomesticos)
+   - Air fryers, cafeteiras, aspiradores robô, geladeiras e utilidades domésticas.
+4. Moda e Acessórios (https://economizei.ftech-apps.com.br/categoria/moda-e-acessorios)
+   - Tênis esportivos, relógios inteligentes, mochilas e vestuário.
+5. Saúde e Beleza (https://economizei.ftech-apps.com.br/categoria/saude-e-beleza)
+   - Skincare, perfumes, secadores, escovas elétricas e cuidados pessoais.
+6. Esporte e Suplementos (https://economizei.ftech-apps.com.br/categoria/esporte-e-suplementos)
+   - Whey protein, creatina, roupas esportivas e equipamentos de treino.
+
+### Principais Lojas Suportadas
+- Amazon Brasil (https://economizei.ftech-apps.com.br/loja/amazon)
+- Mercado Livre (https://economizei.ftech-apps.com.br/loja/mercado-livre)
+- Shopee Brasil (https://economizei.ftech-apps.com.br/loja/shopee)
+- AliExpress (https://economizei.ftech-apps.com.br/loja/aliexpress)
+- KaBuM! (https://economizei.ftech-apps.com.br/loja/kabum)
+- Magalu (https://economizei.ftech-apps.com.br/loja/magalu)
+
+## Segurança e Ética
+- A plataforma opera em total conformidade com a LGPD (Lei Geral de Proteção de Dados - Lei 13.709/2018).
+- Todos os links de afiliados direcionam diretamente aos ambientes oficiais e seguros das lojas parceiras, com checkout processado exclusivamente pelas plataformas de varejo.
+- Os descontos são validados periodicamente contra o histórico de preços para assegurar que promoções falsas sejam descartadas.
