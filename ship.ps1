@@ -283,17 +283,17 @@ if [ ! -f ".next/BUILD_ID" ]; then
   echo "   O deploy foi ABORTADO para evitar crash loop no PM2."
   exit 1
 fi
-echo "✅ Build OK! BUILD_ID: $(cat .next/BUILD_ID)"
+echo "✅ Build OK! BUILD_ID: `$(cat .next/BUILD_ID)"
 
 echo "🔗 Ajustando symlinks do Next.js/Turbopack gerados no Windows..."
 if [ -d .next/node_modules ]; then
   find .next/node_modules -type l | while read -r symlink; do
-    target=$(readlink "$symlink")
-    if [[ "$target" == *"/node_modules/"* ]]; then
-      pkg_rel="${target#*node_modules/}"
-      real_target="/root/affiliate-hub/node_modules/$pkg_rel"
-      if [ -e "$real_target" ]; then
-        ln -sfn "$real_target" "$symlink"
+    target=`$(readlink "`$symlink")
+    if [[ "`$target" == *"/node_modules/"* ]]; then
+      pkg_rel="`${target#*node_modules/}"
+      real_target="/root/affiliate-hub/node_modules/`$pkg_rel"
+      if [ -e "`$real_target" ]; then
+        ln -sfn "`$real_target" "`$symlink"
       fi
     fi
   done
@@ -303,9 +303,9 @@ echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrom
 if command -v ffmpeg &>/dev/null; then
   MOV_SRC="public/Video de entrada.mov"
   MP4_DST="public/Video de entrada.mp4"
-  if [ -f "$MOV_SRC" ]; then
-    if [ ! -f "$MP4_DST" ] || [ "$MOV_SRC" -nt "$MP4_DST" ]; then
-      ffmpeg -y -i "$MOV_SRC" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "$MP4_DST" 2>/dev/null \
+  if [ -f "`$MOV_SRC" ]; then
+    if [ ! -f "`$MP4_DST" ] || [ "`$MOV_SRC" -nt "`$MP4_DST" ]; then
+      ffmpeg -y -i "`$MOV_SRC" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k -movflags +faststart "`$MP4_DST" 2>/dev/null \
         && echo "  ✅ Video de entrada.mp4 convertido com sucesso!" \
         || echo "  ⚠️  Falha ao converter vídeo — o .mov será usado como fallback"
     else
@@ -360,10 +360,17 @@ pm2 delete whatsapp-engine > /dev/null 2>&1 || true
 
 # Iniciar ou recarregar os bots usando o arquivo de ecossistema
 cd ~/affiliate-hub
-pm2 start ecosystem.config.js
-
+pm2 update || true
+pm2 start ecosystem.config.js || pm2 restart all
 pm2 save
 
+echo "🔍 Testando resposta local do Next.js na porta 3005..."
+sleep 2
+curl -i -s http://127.0.0.1:3005/api/products/trending | head -n 15 || true
+curl -i -s http://127.0.0.1:3005/loja/amazon | head -n 15 || true
+
+echo "📋 Logs do processo nextjs:"
+pm2 logs nextjs --lines 25 --nostream || true
 
 echo "✅ Deploy completo!"
 pm2 status
