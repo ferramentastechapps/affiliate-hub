@@ -38,7 +38,7 @@ function formatToProduct(p: any): Product {
 // Helper para buscar nome real da categoria no BD via slug
 async function getCategoryNameBySlug(slug: string): Promise<string | null> {
   const products = await prisma.product.findMany({
-    where: { status: { in: ['active', 'approved'] }, category: { not: null } },
+    where: { status: { in: ['active', 'approved'] } },
     select: { category: true },
     distinct: ['category']
   });
