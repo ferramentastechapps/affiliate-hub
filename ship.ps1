@@ -300,15 +300,12 @@ if [ -d .next/node_modules ]; then
 fi
 
 # Mapeia modulos externos com hash do Turbopack (@prisma/client, sharp, etc.)
-grep -hoP 'node_modules/(@?[^"\n]+-[a-f0-9]{8,})' .next/server -r 2>/dev/null | sort -u | while read -r line; do
-  rel="`${line#node_modules/}"
-  base_pkg="`$(echo "`$rel" | sed -E 's/-[a-f0-9]{8,}``$//')"
-  if [ -e "node_modules/`$base_pkg" ]; then
-    mkdir -p "`$(dirname "node_modules/`$rel")"
-    ln -sfn "/root/affiliate-hub/node_modules/`$base_pkg" "node_modules/`$rel"
-    echo "  🔗 Link criado: node_modules/`$rel -> node_modules/`$base_pkg"
-  fi
-done
+mkdir -p /root/affiliate-hub/node_modules/@prisma
+ln -sfn /root/affiliate-hub/node_modules/@prisma/client /root/affiliate-hub/node_modules/@prisma/client-dcc063df019991b5
+ln -sfn /root/affiliate-hub/node_modules/sharp /root/affiliate-hub/node_modules/sharp-03c9e6d01f648d5d
+
+echo "🧪 Testando resolucao do modulo Prisma na VPS..."
+node -e "try { require('@prisma/client-dcc063df019991b5'); console.log('✅ Prisma module resolveu com sucesso!'); } catch(e) { console.error('❌ Falha ao carregar prisma module:', e.message); }"
 
 echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrome)..."
 if command -v ffmpeg &>/dev/null; then
