@@ -299,6 +299,17 @@ if [ -d .next/node_modules ]; then
   done
 fi
 
+# Mapeia modulos externos com hash do Turbopack (@prisma/client, sharp, etc.)
+grep -hoP 'node_modules/(@?[^"\n]+-[a-f0-9]{8,})' .next/server -r 2>/dev/null | sort -u | while read -r line; do
+  rel="`${line#node_modules/}"
+  base_pkg="`$(echo "`$rel" | sed -E 's/-[a-f0-9]{8,}``$//')"
+  if [ -e "node_modules/`$base_pkg" ]; then
+    mkdir -p "`$(dirname "node_modules/`$rel")"
+    ln -sfn "/root/affiliate-hub/node_modules/`$base_pkg" "node_modules/`$rel"
+    echo "  🔗 Link criado: node_modules/`$rel -> node_modules/`$base_pkg"
+  fi
+done
+
 echo "🎬 Convertendo vídeo de entrada para MP4 (compatibilidade Android/Chrome)..."
 if command -v ffmpeg &>/dev/null; then
   MOV_SRC="public/Video de entrada.mov"
