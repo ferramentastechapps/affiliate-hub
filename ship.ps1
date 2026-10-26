@@ -53,7 +53,7 @@ $PwaRelativePaths = @()
 if ($PwaFiles) {
     $PwaRelativePaths = $PwaFiles | ForEach-Object { $_.Replace($PWD.Path + "\", "").Replace("\", "/") }
 }
-$TarArgs = @("-czf", "next_build.tar.gz", ".next") + $PwaRelativePaths
+$TarArgs = @("-czf", "next_build.tar.gz", "--exclude=.next/cache", ".next") + $PwaRelativePaths
 & tar.exe $TarArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Erro ao compactar a pasta. Abortando." -ForegroundColor Red
