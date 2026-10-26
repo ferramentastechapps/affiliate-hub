@@ -42,6 +42,7 @@ import { calculateDealTemperature } from "@/lib/deal-temperature";
 import { StoreLogo, detectStoreKey, STORE_INFOS } from "./StoreLogos";
 import { ProductImage } from "./ProductImage";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const categoryIconMap: Record<string, React.ComponentType<any>> = {
   "Todas": SquaresFour,

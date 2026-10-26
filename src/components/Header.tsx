@@ -93,10 +93,12 @@ export function Header() {
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-14 md:h-16 flex items-center justify-between gap-4">
 
           {/* Logo */}
-          <a href="/" className="flex items-center shrink-0">
+          <a href="/" aria-label="Economizei - Página Inicial" className="flex items-center shrink-0">
             <img
               src="/logo economizei.webp?v=2"
               alt="Economizei"
+              width={150}
+              height={40}
               className="h-9 md:h-10 w-auto object-contain"
             />
           </a>

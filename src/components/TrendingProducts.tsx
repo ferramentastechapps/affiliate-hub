@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Flame, ArrowRight } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ProductImage } from "./ProductImage";
 import { StoreLogo, detectStoreKey } from "./StoreLogos";
 
@@ -19,7 +19,6 @@ const formatBrl = (v?: number | null) =>
     : "Ver oferta";
 
 export function TrendingProducts() {
-  const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -90,14 +89,9 @@ export function TrendingProducts() {
                   : 0;
 
               return (
-                <motion.button
+                <Link
                   key={product.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.03 }}
-                  onClick={() =>
-                    router.push(`/produto/${product.shortId || product.id}`)
-                  }
+                  href={`/produto/${product.shortId || product.id}`}
                   className="flex-none w-[136px] flex flex-col bg-[#0e1018] border border-white/[0.07] rounded-xl overflow-hidden cursor-pointer hover:border-white/[0.14] hover:bg-[#13151f] active:scale-[0.97] transition-all duration-150 text-left group shadow-sm"
                 >
                   {/* Image area */}
@@ -152,7 +146,7 @@ export function TrendingProducts() {
                       {formatBrl(product.price)}
                     </p>
                   </div>
-                </motion.button>
+                </Link>
               );
             })}
       </div>

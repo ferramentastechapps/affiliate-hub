@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
@@ -35,19 +36,29 @@ function formatToProduct(p: any): Product {
   };
 }
 
-// Helper para buscar nome real da loja no BD via slug
-async function getStoreNameBySlug(slug: string): Promise<string | null> {
-  const products = await prisma.product.findMany({
-    where: { status: { in: ['active', 'approved'] } },
-    select: { storeName: true, platformType: true },
-  });
+// Helper com cache para buscar nome real da loja no BD via slug
+const getStoreNameBySlug = cache(async (slug: string): Promise<string | null> => {
+  const [stores, platforms] = await Promise.all([
+    prisma.product.findMany({
+      where: { status: { in: ['active', 'approved'] }, storeName: { not: null } },
+      select: { storeName: true },
+      distinct: ['storeName'],
+    }),
+    prisma.product.findMany({
+      where: { status: { in: ['active', 'approved'] }, platformType: { not: null } },
+      select: { platformType: true },
+      distinct: ['platformType'],
+    }),
+  ]);
 
-  for (const p of products) {
+  for (const p of stores) {
     if (p.storeName && slugify(p.storeName) === slug) return p.storeName;
+  }
+  for (const p of platforms) {
     if (p.platformType && slugify(p.platformType) === slug) return p.platformType;
   }
   return null;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -89,17 +100,23 @@ export default async function StorePage({ params }: Props) {
     notFound();
   }
 
-  const rawProducts = await prisma.product.findMany({
-    where: {
-      status: { in: ['active', 'approved'] },
-      OR: [
-        { storeName: storeName },
-        { platformType: storeName }
-      ]
-    },
-    orderBy: { updatedAt: 'desc' },
-    include: { links: true, coupons: true }
-  });
+  const whereClause = {
+    status: { in: ['active', 'approved'] },
+    OR: [
+      { storeName: storeName },
+      { platformType: storeName },
+    ],
+  };
+
+  const [totalCount, rawProducts] = await Promise.all([
+    prisma.product.count({ where: whereClause }),
+    prisma.product.findMany({
+      where: whereClause,
+      orderBy: { updatedAt: 'desc' },
+      take: 48,
+      include: { links: true, coupons: true },
+    }),
+  ]);
 
   const products = rawProducts.map(formatToProduct);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br';
@@ -154,7 +171,11 @@ export default async function StorePage({ params }: Props) {
         <ProductGridStatic
           products={products}
           title={`Promoções e Cupons: ${storeName}`}
-          subtitle={`Encontramos ${products.length} oferta(s) ativas desta loja.`}
+          subtitle={
+            totalCount > 48
+              ? `Exibindo as 48 melhores ofertas recentes de ${totalCount} disponíveis na plataforma ${storeName}.`
+              : `Encontramos ${totalCount} oferta(s) ativas desta loja.`
+          }
         />
       </main>
       <Footer />

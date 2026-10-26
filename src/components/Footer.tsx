@@ -156,17 +156,17 @@ export function Footer() {
             
             {/* Coluna 1: Info e Social Icons */}
             <div className="flex flex-col gap-4">
-              <a href="#" className="flex items-center gap-3 text-decoration-none select-none">
-                <img src="/logo economizei.webp?v=2" alt="Economizei" className="h-12 w-auto object-contain" />
-              </a>
+              <Link href="/" aria-label="Economizei - Página Inicial" className="flex items-center gap-3 text-decoration-none select-none">
+                <img src="/logo economizei.webp?v=2" alt="Economizei - Melhores Ofertas" width={160} height={48} className="h-12 w-auto object-contain" />
+              </Link>
               <p className="text-zinc-500 text-xs leading-relaxed max-w-[320px]">
                 Encontre as melhores ofertas e cupons de desconto das principais lojas online do Brasil em um só lugar de maneira automatizada e ágil.
               </p>
             </div>
- 
+
             {/* Coluna 2: Links secundários */}
             <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Links secundários</h4>
+              <h3 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Links secundários</h3>
               <FooterLink href="#inicio">Início</FooterLink>
               <FooterLink href="#categorias">Categorias</FooterLink>
               <FooterLink href="#cupons">Cupons</FooterLink>
@@ -174,10 +174,10 @@ export function Footer() {
               <Link href="/privacidade" className="text-zinc-400 hover:text-white transition-colors text-sm">Privacidade</Link>
               <Link href="/termos" className="text-zinc-400 hover:text-white transition-colors text-sm">Termos de Uso</Link>
             </div>
- 
+
             {/* Coluna 3: Diversos */}
             <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Diversos</h4>
+              <h3 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Diversos</h3>
               {[
                 { label: "Moda e Acessórios", query: "Moda" },
                 { label: "Smartphones e TV", query: "TV" },
@@ -196,21 +196,43 @@ export function Footer() {
                 </a>
               ))}
             </div>
- 
+
             {/* Coluna 4: Social */}
             <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Social</h4>
+              <h3 className="text-xs font-bold text-white tracking-wider uppercase mb-2">Social</h3>
               <div className="flex gap-2.5 mb-2">
-                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
-                  <FacebookLogo size={16} weight="fill" />
+                <a
+                  href="https://chat.whatsapp.com/KhAQMtgC4kV4gY06AtaGQK?mode=gi_t"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Comunidade WhatsApp Economizei"
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-[#25d366]/20 hover:text-[#25d366] transition-all duration-200"
+                >
+                  <WhatsappLogo size={16} weight="fill" />
                 </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
-                  <TwitterLogo size={16} weight="fill" />
+                <a
+                  href="https://t.me/+OFDVybtJcc40YmZh"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Canal Telegram Economizei"
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-[#0088cc]/20 hover:text-[#0088cc] transition-all duration-200"
+                >
+                  <TelegramLogo size={16} weight="fill" />
                 </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <a
+                  href="https://www.instagram.com/economizeicomjota"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram Oficial Economizei"
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-rose-500/20 hover:text-rose-400 transition-all duration-200"
+                >
                   <InstagramLogo size={16} weight="bold" />
                 </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200">
+                <a
+                  href="https://economizei.ftech-apps.com.br"
+                  aria-label="Portal Economizei"
+                  className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 hover:text-white transition-all duration-200"
+                >
                   <YoutubeLogo size={16} weight="fill" />
                 </a>
               </div>

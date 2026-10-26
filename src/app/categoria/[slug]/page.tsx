@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
@@ -35,19 +36,19 @@ function formatToProduct(p: any): Product {
   };
 }
 
-// Helper para buscar nome real da categoria no BD via slug
-async function getCategoryNameBySlug(slug: string): Promise<string | null> {
+// Helper com cache para buscar nome real da categoria no BD via slug
+const getCategoryNameBySlug = cache(async (slug: string): Promise<string | null> => {
   const products = await prisma.product.findMany({
     where: { status: { in: ['active', 'approved'] } },
     select: { category: true },
-    distinct: ['category']
+    distinct: ['category'],
   });
 
   for (const p of products) {
     if (p.category && slugify(p.category) === slug) return p.category;
   }
   return null;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -89,14 +90,23 @@ export default async function CategoryPage({ params }: Props) {
     notFound();
   }
 
-  const rawProducts = await prisma.product.findMany({
-    where: {
-      status: { in: ['active', 'approved'] },
-      category: categoryName
-    },
-    orderBy: { updatedAt: 'desc' },
-    include: { links: true, coupons: true }
-  });
+  const [totalCount, rawProducts] = await Promise.all([
+    prisma.product.count({
+      where: {
+        status: { in: ['active', 'approved'] },
+        category: categoryName,
+      },
+    }),
+    prisma.product.findMany({
+      where: {
+        status: { in: ['active', 'approved'] },
+        category: categoryName,
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 48,
+      include: { links: true, coupons: true },
+    }),
+  ]);
 
   const products = rawProducts.map(formatToProduct);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://economizei.ftech-apps.com.br';
@@ -152,7 +162,11 @@ export default async function CategoryPage({ params }: Props) {
         <ProductGridStatic
           products={products}
           title={`Ofertas de ${categoryName}`}
-          subtitle={`Há ${products.length} ofertas ativas para a categoria ${categoryName}. Preços podem alterar a qualquer momento.`}
+          subtitle={
+            totalCount > 48
+              ? `Exibindo as 48 melhores ofertas recentes de ${totalCount} disponíveis para ${categoryName}. Preços atualizados continuamente.`
+              : `Há ${totalCount} ofertas ativas para a categoria ${categoryName}. Preços podem alterar a qualquer momento.`
+          }
         />
       </main>
       <Footer />

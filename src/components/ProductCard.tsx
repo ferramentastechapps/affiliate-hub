@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight, Heart } from "@phosphor-icons/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ProductLinks } from "@/types/product";
 
@@ -134,13 +135,24 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
             {product.category}
           </span>
           <h3 className="text-xl font-semibold tracking-tight text-white leading-tight">
-            {product.name}
+            <Link
+              href={`/produto/${product.shortId || product.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:underline hover:text-accent transition-colors"
+            >
+              {product.name}
+            </Link>
           </h3>
         </div>
-        
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white transition-transform duration-500 group-hover:bg-accent group-hover:-translate-y-1">
+
+        <Link
+          href={`/produto/${product.shortId || product.id}`}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Ver oferta de ${product.name}`}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white transition-transform duration-500 group-hover:bg-accent group-hover:-translate-y-1"
+        >
           <ArrowUpRight size={20} weight="bold" />
-        </div>
+        </Link>
       </div>
     </motion.div>
   );
