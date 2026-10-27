@@ -179,15 +179,26 @@ export default async function Home() {
         <div className="w-full max-w-[1400px] mx-auto px-4 pt-4 pb-1">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
             <div>
-              <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                Melhores Ofertas e Cupons de Desconto
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                  Melhores Ofertas e Cupons de Desconto
+                </h1>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">
                   Ao Vivo
                 </span>
-              </h1>
+              </div>
               <p className="text-xs md:text-sm text-zinc-400 mt-1 max-w-2xl">
                 Compare preços em tempo real nas maiores lojas: Amazon, Mercado Livre, Shopee e AliExpress. Descontos validados.
               </p>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-zinc-400">
+              <span rel="author" className="author font-medium text-zinc-300">
+                Curadoria Economizei
+              </span>
+              <span>•</span>
+              <time dateTime="2026-10-27" className="text-zinc-500">
+                Atualizado em tempo real
+              </time>
             </div>
           </div>
         </div>
@@ -205,7 +216,7 @@ export default async function Home() {
 
         {/* Seção Educacional e FAQ para Autoridade Topical e SEO On-Page */}
         <section className="w-full max-w-[1400px] mx-auto px-4 md:px-8 py-12 border-t border-white/5 font-sans">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
             <div className="space-y-4">
               <h2 className="text-2xl font-extrabold text-white tracking-tight">
                 Como economizar com segurança no Economizei?
@@ -213,9 +224,27 @@ export default async function Home() {
               <p className="text-sm text-zinc-400 leading-relaxed">
                 O <strong>Economizei</strong> monitora os principais marketplaces do Brasil — incluindo <em>Amazon Brasil, Mercado Livre, Shopee, AliExpress, Magalu e KaBuM!</em>. Nosso algoritmo verifica a variação de preços em tempo real, eliminando falsas promoções e destacando apenas ofertas com desconto efetivo.
               </p>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Além de promoções diárias, reunimos códigos de cupons validados pela comunidade e por nossa curadoria automatizada. Assim que uma loja disponibiliza um novo cupom elegível, ele é disponibilizado imediatamente em nossa plataforma para que você aproveite antes que o limite de utilizações se esgote.
-              </p>
+
+              <h3 className="text-base font-bold text-white pt-2">
+                Passo a passo para economizar:
+              </h3>
+              <ol className="list-decimal pl-5 space-y-2 text-sm text-zinc-400 leading-relaxed">
+                <li>
+                  <strong className="text-zinc-200">Escolha a oferta validada:</strong> Navegue pelo feed atualizado de produtos com o selo de Menor Preço comprovado.
+                </li>
+                <li>
+                  <strong className="text-zinc-200">Copie o código promocional:</strong> Clique no botão do cupom ou no link direto para aplicar a promoção automaticamente.
+                </li>
+                <li>
+                  <strong className="text-zinc-200">Finalize na loja oficial:</strong> Conclua a compra com segurança dentro do ambiente verificado do marketplace parceiro.
+                </li>
+              </ol>
+
+              <div className="pt-2">
+                <cite className="text-xs text-zinc-500 block">
+                  Fonte: Dados agregados via APIs de afiliados e histórico de preços dos principais marketplaces brasileiros.
+                </cite>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -250,6 +279,56 @@ export default async function Home() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Tabela Comparativa de Lojas Parceiras para Alta Citabilidade GEO & IAs */}
+          <div className="border border-white/5 bg-white/[0.01] rounded-2xl p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-white">
+                Comparativo de Lojas e Vantagens Parceiras
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                Principais condições de frete, garantias e programas de fidelidade nas redes parceiras do Economizei.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 text-zinc-300 bg-white/[0.03]">
+                    <th className="py-2.5 px-3 font-semibold">Marketplace</th>
+                    <th className="py-2.5 px-3 font-semibold">Destaque Principal</th>
+                    <th className="py-2.5 px-3 font-semibold">Frete Grátis</th>
+                    <th className="py-2.5 px-3 font-semibold">Proteção ao Consumidor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-zinc-400">
+                  <tr>
+                    <td className="py-2.5 px-3 font-medium text-white">Amazon Brasil</td>
+                    <td className="py-2.5 px-3">Entrega expressa Prime e cupons diários</td>
+                    <td className="py-2.5 px-3">Membros Prime</td>
+                    <td className="py-2.5 px-3">Garantia de A a Z</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-medium text-white">Mercado Livre</td>
+                    <td className="py-2.5 px-3">Envio Mercado Envios Full e programa Meli+</td>
+                    <td className="py-2.5 px-3">Acima de R$ 79</td>
+                    <td className="py-2.5 px-3">Compra Garantida</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-medium text-white">Shopee Brasil</td>
+                    <td className="py-2.5 px-3">Cupons mensais de frete e Moedas Shopee</td>
+                    <td className="py-2.5 px-3">Via cupons no app</td>
+                    <td className="py-2.5 px-3">Garantia Shopee</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-medium text-white">AliExpress</td>
+                    <td className="py-2.5 px-3">Preços diretos de fábrica e programa Choice</td>
+                    <td className="py-2.5 px-3">Itens Choice selecionados</td>
+                    <td className="py-2.5 px-3">Remessa Conforme e Reembolso Fácil</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
