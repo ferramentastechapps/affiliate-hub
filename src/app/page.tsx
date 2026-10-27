@@ -5,12 +5,8 @@ import { Footer } from "@/components/Footer";
 import { Metadata } from "next";
 import { getHomeInitialProducts, getHomeTrendingProducts } from "@/lib/home-products";
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🔄 REVALIDAÇÃO (ISR - Incremental Static Regeneration)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Revalida a página a cada 60 segundos
-// Isso significa que novos produtos/cupons aparecerão automaticamente
-export const revalidate = 60;
+// Renderiza dinamicamente no servidor com banco em tempo real (zero skeletons)
+export const dynamic = 'force-dynamic';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📊 METADATA PARA SEO
