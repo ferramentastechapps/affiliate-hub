@@ -11,9 +11,22 @@ export const metadata: Metadata = {
   },
 };
 
+const privacyJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Política de Privacidade | Economizei",
+  "description": "Política de Privacidade e Proteção de Dados do Economizei em conformidade com a LGPD.",
+  "url": "https://economizei.ftech-apps.com.br/privacidade",
+  "inLanguage": "pt-BR",
+};
+
 export default function PrivacidadePage() {
   return (
     <div className="min-h-screen flex flex-col justify-between pt-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(privacyJsonLd) }}
+      />
       <main className="max-w-[900px] mx-auto px-6 py-8 flex-1 w-full text-zinc-300 font-sans">
         <Link
           href="/"

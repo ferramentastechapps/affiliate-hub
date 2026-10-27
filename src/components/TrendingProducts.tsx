@@ -18,28 +18,34 @@ const formatBrl = (v?: number | null) =>
     ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v)
     : "Ver oferta";
 
-export function TrendingProducts() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface TrendingProductsProps {
+  initialTrending?: any[];
+}
+
+export function TrendingProducts({ initialTrending = [] }: TrendingProductsProps) {
+  const [products, setProducts] = useState<any[]>(initialTrending);
+  const [loading, setLoading] = useState(initialTrending.length === 0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
-    fetch("/api/products/trending")
-      .then((r) => r.json())
-      .then((d) => {
-        if (!isMounted) return;
-        if (d.products && Array.isArray(d.products)) setProducts(d.products);
-      })
-      .catch(console.error)
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+    if (initialTrending.length === 0) {
+      fetch("/api/products/trending")
+        .then((r) => r.json())
+        .then((d) => {
+          if (!isMounted) return;
+          if (d.products && Array.isArray(d.products)) setProducts(d.products);
+        })
+        .catch(console.error)
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialTrending.length]);
 
   if (!loading && products.length === 0) return null;
 

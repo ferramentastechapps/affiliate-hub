@@ -31,16 +31,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `${siteUrl}${rawImage}`
       : (rawImage || `${siteUrl}/placeholder.webp`);
     const canonicalUrl = `${siteUrl}/produto/${product.shortId || product.id}`;
+    const priceText = product.price ? ` por R$ ${product.price.toFixed(2)}` : '';
+    const optimizedDescription = product.description && product.description.length >= 70
+      ? product.description.slice(0, 160)
+      : `Compre ${product.name}${priceText} com o melhor preço no Economizei. Compare menores preços históricos e cupons de desconto exclusivos!`.slice(0, 160);
 
     return {
       title: `${product.name} | Economizei`,
-      description: product.description || `Compre ${product.name} com o melhor preço. Aproveite cupons de desconto exclusivos!`,
+      description: optimizedDescription,
       alternates: {
         canonical: canonicalUrl,
       },
       openGraph: {
         title: product.name,
-        description: product.description || `Compre ${product.name} com o melhor preço`,
+        description: optimizedDescription,
         images: [{ url: shareImage }],
         type: 'website',
         url: canonicalUrl,
@@ -48,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       twitter: {
         card: 'summary_large_image',
         title: product.name,
-        description: product.description || `Compre ${product.name} com o melhor preço`,
+        description: optimizedDescription,
         images: [shareImage],
       },
     };

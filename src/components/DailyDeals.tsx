@@ -340,15 +340,19 @@ function DailyDealCard({
   );
 }
 
-export function DailyDeals() {
+interface DailyDealsProps {
+  initialProducts?: Product[];
+}
+
+export function DailyDeals({ initialProducts = [] }: DailyDealsProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(50);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allProducts, setAllProducts] = useState<Product[]>(initialProducts);
+  const [loading, setLoading] = useState(initialProducts.length === 0);
   const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");

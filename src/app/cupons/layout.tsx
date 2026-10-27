@@ -21,6 +21,27 @@ export const metadata: Metadata = {
   },
 };
 
+const cuponsJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  'name': 'Cupons de Desconto e Códigos Promocionais Atualizados | Economizei',
+  'description': 'Lista completa de cupons de desconto válidos e testados para Amazon, Shopee, Mercado Livre e AliExpress.',
+  'url': `${siteUrl}/cupons`,
+  'isPartOf': {
+    '@type': 'WebSite',
+    'name': 'Economizei',
+    'url': siteUrl,
+  },
+};
+
 export default function CuponsLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(cuponsJsonLd) }}
+      />
+      {children}
+    </>
+  );
 }

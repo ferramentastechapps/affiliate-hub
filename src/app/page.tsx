@@ -3,6 +3,7 @@ import { TrendingProducts } from "@/components/TrendingProducts";
 import { TaxonomyLinks } from "@/components/TaxonomyLinks";
 import { Footer } from "@/components/Footer";
 import { Metadata } from "next";
+import { getHomeInitialProducts, getHomeTrendingProducts } from "@/lib/home-products";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🔄 REVALIDAÇÃO (ISR - Incremental Static Regeneration)
@@ -140,11 +141,42 @@ const websiteJsonLd = {
 };
 
 export default async function Home() {
+  const [initialDeals, initialTrending] = await Promise.all([
+    getHomeInitialProducts(36),
+    getHomeTrendingProducts(10),
+  ]);
+
+  const productItemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Principais Ofertas e Produtos em Destaque",
+    "itemListElement": initialDeals.slice(0, 15).map((p: any, idx: number) => ({
+      "@type": "ListItem",
+      "position": idx + 1,
+      "item": {
+        "@type": "Product",
+        "name": p.name,
+        "url": `https://economizei.ftech-apps.com.br/produto/${p.shortId || p.id}`,
+        "image": p.enhancedImageUrl || p.imageUrl,
+        "offers": {
+          "@type": "Offer",
+          "price": p.price ? p.price.toFixed(2) : undefined,
+          "priceCurrency": "BRL",
+          "availability": "https://schema.org/InStock",
+        },
+      },
+    })),
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productItemListJsonLd) }}
       />
       <main id="inicio" className="flex min-h-screen flex-col items-center overflow-x-hidden pt-14 md:pt-16 pb-28 md:pb-8 relative">
         {/* Banner semântico H1 para autoridade topical SEO & AEO */}
@@ -165,11 +197,11 @@ export default async function Home() {
         </div>
 
         {/* Ranking de Produtos em Alta */}
-        <TrendingProducts />
+        <TrendingProducts initialTrending={initialTrending} />
 
         {/* Promocoes do Dia com Filtros */}
         <div id="ofertas" className="w-full">
-          <DailyDeals />
+          <DailyDeals initialProducts={initialDeals} />
         </div>
 
         {/* Links de navegação para SEO */}
