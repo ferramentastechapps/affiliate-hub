@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateApiKey } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth-utils';
+import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
+
+async function checkAdminAuth(req: NextRequest): Promise<boolean> {
+  if (validateApiKey(req)) return true;
+  if (process.env.NODE_ENV !== 'production') return true;
+
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+    if (sessionToken) {
+      const payload = verifyToken(sessionToken);
+      if (payload && ['admin', 'moderator'].includes(payload.role)) return true;
+    }
+    const adminSession = cookieStore.get('admin_session')?.value;
+    if (adminSession === 'authenticated') return true;
+  } catch {}
+
+  return false;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -55,9 +76,52 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const isAuth = await checkAdminAuth(req);
+    if (!isAuth) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { id, coverImage } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID do post é obrigatório' }, { status: 400 });
+    }
+
+    const dataToUpdate: any = {};
+    if (coverImage !== undefined) {
+      dataToUpdate.coverImage = coverImage ? coverImage.trim() : null;
+    }
+
+    const updated = await prisma.blogPost.update({
+      where: { id },
+      data: dataToUpdate,
+    });
+
+    try {
+      revalidatePath('/blog');
+      revalidatePath(`/blog/${updated.slug}`);
+    } catch (e) {
+      console.warn('[API Blog PATCH] Falha ao revalidar caminhos:', e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Post atualizado com sucesso',
+      post: updated,
+    });
+  } catch (error: any) {
+    console.error('[API Blog PATCH] Erro:', error);
+    return NextResponse.json({ error: error?.message || 'Erro ao atualizar post' }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
-    if (!validateApiKey(req) && process.env.NODE_ENV === 'production') {
+    const isAuth = await checkAdminAuth(req);
+    if (!isAuth) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -68,9 +132,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ID do post é obrigatório' }, { status: 400 });
     }
 
-    await prisma.blogPost.delete({
+    const deleted = await prisma.blogPost.delete({
       where: { id },
     });
+
+    try {
+      revalidatePath('/blog');
+      revalidatePath(`/blog/${deleted.slug}`);
+      revalidatePath('/sitemap.xml');
+    } catch (e) {
+      console.warn('[API Blog DELETE] Falha ao revalidar caminhos:', e);
+    }
 
     return NextResponse.json({ success: true, message: 'Post excluído com sucesso' });
   } catch (error: any) {
