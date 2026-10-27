@@ -30,14 +30,26 @@ export async function getHomeInitialProducts(limit = 24) {
         _count: {
           select: {
             comments: true,
-            likes: true,
           },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return JSON.parse(JSON.stringify(products));
+    const mapped = products.map((p) => {
+      const likes = p.votes?.filter((v: any) => v.type === "LIKE").length || 0;
+      const dislikes = p.votes?.filter((v: any) => v.type === "DISLIKE").length || 0;
+      return {
+        ...p,
+        _count: {
+          ...p._count,
+          likes,
+          dislikes,
+        },
+      };
+    });
+
+    return JSON.parse(JSON.stringify(mapped));
   } catch (error) {
     console.error("Erro ao buscar produtos iniciais SSR:", error);
     return [];
