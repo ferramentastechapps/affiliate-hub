@@ -170,6 +170,7 @@ export function Footer() {
               <FooterLink href="#inicio">Início</FooterLink>
               <FooterLink href="#categorias">Categorias</FooterLink>
               <FooterLink href="#cupons">Cupons</FooterLink>
+              <Link href="/blog" className="text-zinc-400 hover:text-white transition-colors text-sm">Blog & Guias</Link>
               <FooterLink href="#footer">Comunidade</FooterLink>
               <Link href="/privacidade" className="text-zinc-400 hover:text-white transition-colors text-sm">Privacidade</Link>
               <Link href="/termos" className="text-zinc-400 hover:text-white transition-colors text-sm">Termos de Uso</Link>

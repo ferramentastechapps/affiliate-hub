@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: "#inicio", label: "Início" },
   { href: "#categorias", label: "Categorias" },
   { href: "/cupons", label: "Cupons" },
+  { href: "/blog", label: "Blog" },
   { href: "/wishlist", label: "Favoritos" },
 ] as const;
 
@@ -165,7 +166,7 @@ export function Header() {
 
 function DesktopNavLink({ href, children }: { href: string; children: React.ReactNode }) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (href === "/cupons" || href === "/wishlist") {
+    if (href === "/cupons" || href === "/wishlist" || href === "/blog") {
       window.location.href = href;
       return;
     }

@@ -539,3 +539,38 @@ model AiTokenLog {
   @@index([provider])
   @@index([createdAt])
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📰 BLOG & ARTIGOS (SEO / GEO / IA)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model BlogPost {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  excerpt         String    @db.Text
+  content         String    @db.Text
+  coverImage      String?   @db.Text
+  category        String    @default("Comparativos")
+  tags            String[]  @default([])
+  author          String    @default("Equipe Economizei")
+  readTimeMinutes Int       @default(4)
+  views           Int       @default(0)
+  status          String    @default("published") // "published", "draft"
+  sourceType      String?   @default("ai-automated")
+  sourceUrl       String?   @db.Text
+
+  // SEO & GEO
+  seoTitle        String?
+  seoDescription  String?   @db.Text
+  keywords        String[]  @default([])
+  structuredData  Json?
+
+  publishedAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@index([status, publishedAt])
+  @@index([publishedAt])
+}

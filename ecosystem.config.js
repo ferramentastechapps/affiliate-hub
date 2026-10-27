@@ -106,6 +106,22 @@ module.exports = {
         NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
         PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
       },
+    },
+    {
+      // Robô de Blog Diário — Notícias, comparativos e artigos SEO/GEO às 18h
+      name: 'blog-generator',
+      script: './bot/blog_generator.py',
+      interpreter: 'python3',
+      cwd: '/root/affiliate-hub',
+      watch: false,
+      autorestart: true,
+      restart_delay: 10000,
+      max_restarts: 20,
+      env: {
+        PYTHONUNBUFFERED: '1',
+        NEXT_PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+        PUBLIC_SITE_URL: 'https://economizei.ftech-apps.com.br',
+      },
     }
   ]
 };

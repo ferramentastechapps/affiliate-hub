@@ -21,7 +21,8 @@ import {
   Brain,
   ListDashes,
   Camera,
-  FilmStrip
+  FilmStrip,
+  Article
 } from '@phosphor-icons/react';
 
 type MenuItemConfig = {
@@ -48,6 +49,7 @@ const MENU_SECTIONS: MenuSectionConfig[] = [
       { name: 'Reels', path: '/admin/reels', icon: FilmStrip },
       { name: 'Cupons', path: '/admin/coupons', icon: Ticket },
       { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
+      { name: 'Blog & SEO', path: '/admin/blog', icon: Article },
     ],
   },
   {
