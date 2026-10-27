@@ -107,7 +107,7 @@ async function fetchFeaturedProductsForContext(): Promise<any[]> {
  */
 async function callGeminiWithFallback(apiKey: string, systemPrompt: string, userPrompt: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+  const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash'];
   let lastError: any = null;
 
   for (const modelName of models) {
