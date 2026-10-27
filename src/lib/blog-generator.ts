@@ -102,6 +102,47 @@ async function fetchFeaturedProductsForContext(): Promise<any[]> {
   }
 }
 
+function resolveCoverImage(title: string, category: string, siteProducts: any[]): string {
+  const lowerTitle = (title || '').toLowerCase();
+
+  // 1. Tenta encontrar um produto no banco cujo nome esteja presente no título do artigo
+  const matchedProduct = siteProducts.find((p) => {
+    if (!p.name) return false;
+    const pName = p.name.toLowerCase();
+    const words = pName.split(/\s+/).filter((w: string) => w.length > 3);
+    return words.some((w: string) => lowerTitle.includes(w));
+  });
+
+  if (matchedProduct && (matchedProduct.enhancedImageUrl || matchedProduct.imageUrl)) {
+    return matchedProduct.enhancedImageUrl || matchedProduct.imageUrl;
+  }
+
+  // 2. Fallbacks temáticos de altíssima qualidade por assunto
+  if (lowerTitle.includes('iphone') || lowerTitle.includes('galaxy') || lowerTitle.includes('celular') || lowerTitle.includes('smartphone') || lowerTitle.includes('motorola') || lowerTitle.includes('xiaomi')) {
+    return 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=1200&q=80';
+  }
+  if (lowerTitle.includes('fone') || lowerTitle.includes('audio') || lowerTitle.includes('headphone') || lowerTitle.includes('earbuds') || lowerTitle.includes('bluetooth') || lowerTitle.includes('som')) {
+    return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&q=80';
+  }
+  if (lowerTitle.includes('tv') || lowerTitle.includes('televis') || lowerTitle.includes('monitor')) {
+    return 'https://images.unsplash.com/photo-1593784991095-a205069470b6?w=1200&q=80';
+  }
+  if (lowerTitle.includes('notebook') || lowerTitle.includes('laptop') || lowerTitle.includes('macbook') || lowerTitle.includes('computador') || lowerTitle.includes('pc')) {
+    return 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=1200&q=80';
+  }
+  if (lowerTitle.includes('game') || lowerTitle.includes('gamer') || lowerTitle.includes('playstation') || lowerTitle.includes('ps5') || lowerTitle.includes('xbox') || lowerTitle.includes('nintendo') || lowerTitle.includes('setup')) {
+    return 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&q=80';
+  }
+  if (lowerTitle.includes('air fryer') || lowerTitle.includes('fritadeira') || lowerTitle.includes('aspirador') || lowerTitle.includes('cozinha') || lowerTitle.includes('eletro')) {
+    return 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=1200&q=80';
+  }
+  if (lowerTitle.includes('cupom') || lowerTitle.includes('desconto') || lowerTitle.includes('oferta') || lowerTitle.includes('promoc') || lowerTitle.includes('shopee') || lowerTitle.includes('mercado livre')) {
+    return 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&q=80';
+  }
+
+  return 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80';
+}
+
 /**
  * Executa geração de conteúdo com Gemini com fallback de modelos
  */
@@ -162,9 +203,6 @@ export async function generateDailyBlogPost(): Promise<any> {
   const productsContext = siteProducts.length > 0
     ? siteProducts.map((p) => `- ${p.name} | Categoria: ${p.category} | Preço: R$ ${p.price?.toFixed(2) || 'N/A'} | Link: /produto/${p.shortId || p.id}`).join('\n')
     : 'Nenhum produto cadastrado atualmente.';
-
-  // Escolhe uma imagem de capa padrão ou do produto mais relevante
-  const candidateCover = siteProducts[0]?.enhancedImageUrl || siteProducts[0]?.imageUrl || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=1200&q=80';
 
   const systemPrompt = `Você é um redator sênior especialista em SEO (Google Search) e GEO (Generative Engine Optimization para ChatGPT, Perplexity, Claude e Google Gemini AI Overviews).
 Seu objetivo é escrever um artigo de blog aprofundado, imparcial, prático e altamente recomendável sobre compras inteligentes, tecnologia ou comparativo de produtos no Brasil.
@@ -248,7 +286,7 @@ Garanta que o conteúdo tenha formatação Markdown impecável com subtítulos (
       title: parsed.title,
       excerpt: parsed.excerpt || parsed.title,
       content: parsed.content,
-      coverImage: candidateCover,
+      coverImage: resolveCoverImage(parsed.title, parsed.category, siteProducts),
       category: parsed.category || 'Comparativos',
       tags: parsed.tags || ['Economia', 'Comparativo', '2026'],
       readTimeMinutes: Number(parsed.readTimeMinutes) || 5,
