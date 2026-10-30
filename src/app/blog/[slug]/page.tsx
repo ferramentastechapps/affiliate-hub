@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         seoTitle: true,
         seoDescription: true,
         keywords: true,
+        status: true,
       },
     });
 
@@ -32,13 +33,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       return { title: 'Artigo não encontrado | Economizei' };
     }
 
+    const isPublished = post.status === 'published';
     const title = post.seoTitle || `${post.title} | Blog Economizei`;
     const description = post.seoDescription || post.excerpt;
     const canonicalUrl = `${siteUrl}/blog/${slug}`;
     const image = post.coverImage || `${siteUrl}/icons/og-image.png?v=2`;
 
     return {
-      title,
+      title: isPublished ? title : `[Prévia] ${title}`,
       description,
       keywords: post.keywords.length > 0 ? post.keywords : ['comparativo', 'guia de compra', 'economia', 'ofertas'],
       alternates: {
@@ -57,16 +59,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description,
         images: [image],
       },
-      robots: {
-        index: true,
-        follow: true,
-        googleBot: {
-          index: true,
-          follow: true,
-          'max-image-preview': 'large',
-          'max-snippet': -1,
-        },
-      },
+      robots: isPublished
+        ? {
+            index: true,
+            follow: true,
+            googleBot: {
+              index: true,
+              follow: true,
+              'max-image-preview': 'large',
+              'max-snippet': -1,
+            },
+          }
+        : {
+            index: false,
+            follow: false,
+            googleBot: {
+              index: false,
+              follow: false,
+            },
+          },
     };
   } catch {
     return { title: 'Artigo | Economizei' };
@@ -192,6 +203,24 @@ export default async function BlogPostPage({ params }: Props) {
 
       <main className="min-h-screen bg-[#080910] text-white pt-20 md:pt-24 pb-20">
         <article className="max-w-[840px] mx-auto px-4 md:px-6">
+
+          {/* ── BANNER DE PRÉ-VISUALIZAÇÃO (SE NÃO PUBLICADO) ── */}
+          {post.status !== 'published' && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-[10px] shrink-0">
+                  {post.status === 'queued' ? 'Na Fila (09h / 19h)' : 'Rascunho (Aguardando Aprovação)'}
+                </span>
+                <span>Este artigo está em modo prévia e ainda não aparece no índice público do blog.</span>
+              </div>
+              <Link
+                href="/admin/blog"
+                className="inline-flex items-center gap-1 font-bold text-amber-200 hover:text-white underline shrink-0"
+              >
+                Painel de Aprovação →
+              </Link>
+            </div>
+          )}
 
           {/* ── BREADCRUMBS ── */}
           <nav aria-label="Navegação estrutural" className="flex items-center gap-2 text-xs text-zinc-500 py-4 mb-4">

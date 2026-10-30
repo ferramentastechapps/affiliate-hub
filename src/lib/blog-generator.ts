@@ -19,25 +19,43 @@ export interface GeneratedPostData {
   sourceUrl?: string;
 }
 
+export interface GenerateBlogOptions {
+  topicType?: 'news' | 'comparison' | 'auto';
+  forceTopic?: string;
+}
+
 /**
- * Busca manchetes recentes do Google News RSS Brasil com timeout e retry de queries
+ * Busca manchetes recentes do Google News RSS Brasil com timeout e retry de queries,
+ * combinando categorias ativas do nosso site com tendências e comparativos nacionais.
  */
-async function fetchTrendingNews(): Promise<{ title: string; link?: string }[]> {
-  const rssQueries = [
-    'tecnologia+smartphones+ofertas+brasil',
-    'compras+online+produtos+eletronicos+promocao',
-    'comparativo+fones+televisores+notebooks+brasil',
+async function fetchTrendingNews(siteCategories: string[] = []): Promise<{ title: string; link?: string }[]> {
+  const cleanCategories = Array.from(new Set(siteCategories.filter(Boolean))).slice(0, 4);
+  const dynamicQueries = cleanCategories.map(
+    (cat) => `comparativo+${encodeURIComponent(cat.toLowerCase())}+brasil`
+  );
+
+  const baseQueries = [
+    'comparativo+smartphones+celulares+brasil',
+    'comparativo+notebooks+fones+televisores+brasil',
+    'melhor+custo+beneficio+eletronicos+brasil',
+    'noticias+tecnologia+lancamentos+brasil',
+    'compras+online+produtos+promocao+brasil',
   ];
 
+  const rssQueries = [...dynamicQueries, ...baseQueries];
+  const allItems: { title: string; link?: string }[] = [];
+
   for (const query of rssQueries) {
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+    if (allItems.length >= 8) break;
+    const url = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 7000);
 
     try {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         },
         signal: controller.signal,
       });
@@ -48,25 +66,30 @@ async function fetchTrendingNews(): Promise<{ title: string; link?: string }[]> 
       const xml = await res.text();
       const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
 
-      const items = itemMatches.slice(0, 5).map((item) => {
-        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+      for (const item of itemMatches.slice(0, 3)) {
+        const titleMatch =
+          item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
         const linkMatch = item.match(/<link>(.*?)<\/link>/);
         const rawTitle = titleMatch ? titleMatch[1] : '';
-        const cleanTitle = rawTitle.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
-        return {
-          title: cleanTitle,
-          link: linkMatch ? linkMatch[1] : undefined,
-        };
-      }).filter((i) => Boolean(i.title));
-
-      if (items.length > 0) return items;
+        const cleanTitle = rawTitle
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .trim();
+        if (cleanTitle && !allItems.some((i) => i.title === cleanTitle)) {
+          allItems.push({
+            title: cleanTitle,
+            link: linkMatch ? linkMatch[1] : undefined,
+          });
+        }
+      }
     } catch {
       clearTimeout(timeout);
       continue;
     }
   }
 
-  return [];
+  return allItems;
 }
 
 /**
@@ -93,7 +116,7 @@ async function fetchFeaturedProductsForContext(): Promise<any[]> {
       orderBy: {
         createdAt: 'desc',
       },
-      take: 12,
+      take: 20,
     });
     return products;
   } catch (err) {
@@ -184,17 +207,20 @@ async function callGeminiWithFallback(apiKey: string, systemPrompt: string, user
 /**
  * Gera um post completo otimizado para SEO & GEO usando o Google Gemini
  */
-export async function generateDailyBlogPost(): Promise<any> {
+export async function generateDailyBlogPost(options?: GenerateBlogOptions): Promise<any> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY não configurada no ambiente.');
   }
 
-  // 1. Coleta contexto externo (notícias/tendências) e interno (produtos reais)
-  const [trendingNews, siteProducts] = await Promise.all([
-    fetchTrendingNews(),
-    fetchFeaturedProductsForContext(),
-  ]);
+  // 1. Coleta produtos do catálogo para contextualizar links e categorias
+  const siteProducts = await fetchFeaturedProductsForContext();
+  const siteCategories = Array.from(
+    new Set(siteProducts.map((p) => p.category).filter(Boolean))
+  ) as string[];
+
+  // 2. Coleta notícias e manchetes externas sincronizadas com as categorias do site
+  const trendingNews = await fetchTrendingNews(siteCategories);
 
   const newsContext = trendingNews.length > 0
     ? trendingNews.map((n, i) => `${i + 1}. ${n.title}`).join('\n')
@@ -204,8 +230,29 @@ export async function generateDailyBlogPost(): Promise<any> {
     ? siteProducts.map((p) => `- ${p.name} | Categoria: ${p.category} | Preço: R$ ${p.price?.toFixed(2) || 'N/A'} | Link: /produto/${p.shortId || p.id}`).join('\n')
     : 'Nenhum produto cadastrado atualmente.';
 
+  // Determina foco editorial (Manhã: Notícias/Tendências às 8h | Tarde: Comparativos às 18h)
+  const currentHour = new Date().getHours();
+  const effectiveType = options?.topicType && options.topicType !== 'auto'
+    ? options.topicType
+    : (currentHour < 13 ? 'news' : 'comparison');
+
+  const editorialFocus = effectiveType === 'news'
+    ? `DIRETRIZ EDITORIAL: NOTÍCIAS, TENDÊNCIAS E LANÇAMENTOS DO MERCADO (Edição Matinal das 08h).
+Aborde notícias quentes, novos lançamentos de tecnologia, movimentações de preço ou tendências de compras no Brasil.
+Conecte o fato aos produtos do catálogo Economizei (abaixo) para orientar o consumidor se vale a pena comprar agora ou aguardar promoções.`
+    : `DIRETRIZ EDITORIAL: COMPARATIVO DIRETO DE PRODUTOS / BATALHA DE MODELOS (Edição da Tarde das 18h).
+Coloque modelos concorrentes frente a frente (ex: 'Modelo A vs Modelo B' ou 'Os Melhores Modelos de 2026').
+Analise especificações técnicas, desempenho real, tabela comparativa com prós e contras e eleja o campeão em custo-benefício.`;
+
+  const customTopicBlock = options?.forceTopic
+    ? `\nTEMA ESPECÍFICO SOLICITADO: "${options.forceTopic}". Desenvolva o artigo centrado neste tópico.`
+    : '';
+
   const systemPrompt = `Você é um redator sênior especialista em SEO (Google Search) e GEO (Generative Engine Optimization para ChatGPT, Perplexity, Claude e Google Gemini AI Overviews).
 Seu objetivo é escrever um artigo de blog aprofundado, imparcial, prático e altamente recomendável sobre compras inteligentes, tecnologia ou comparativo de produtos no Brasil.
+
+${editorialFocus}
+${customTopicBlock}
 
 DIRETRIZES FUNDAMENTAIS DE SEO E GEO:
 1. FOCO NO USUÁRIO E RESPOSTA DIRETA (AEO/GEO): O primeiro parágrafo do artigo deve conter um resumo claro ("Veredito Rápido / TL;DR") respondendo diretamente à pergunta ou tema do artigo, para ser citado como resposta direta por mecanismos de IA.
@@ -242,8 +289,8 @@ PRODUTOS EM DESTAQUE NO ECONOMIZEI PARA REFERÊNCIA E LINKS INTERNOS:
 ${productsContext}
 
 INSTRUÇÃO:
-Crie um artigo de altíssimo nível (aproximadamente 800 a 1400 palavras no campo 'content') abordando um tema quente ou comparativo relevante com base nas tendências acima.
-Garanta que o conteúdo tenha formatação Markdown impecável com subtítulos (## e ###), tabela comparativa, listas de prós e contras, veredito final e FAQ.`;
+Crie um artigo de altíssimo nível (aproximadamente 800 a 1400 palavras no campo 'content') abordando o tema definido acima.
+Garanta que o conteúdo tenha formatação Markdown impecável com subtítulos (## e ###), tabela comparativa, listas de prós e contras, links internos para produtos do catálogo, veredito final e FAQ.`;
 
   const responseText = await callGeminiWithFallback(apiKey, systemPrompt, userPrompt);
   let parsed: any;
@@ -296,7 +343,7 @@ Garanta que o conteúdo tenha formatação Markdown impecável com subtítulos (
       structuredData: structuredData || null,
       sourceType: 'ai-automated',
       sourceUrl: trendingNews[0]?.link || null,
-      status: 'published',
+      status: 'draft',
       publishedAt: new Date(),
     },
   });

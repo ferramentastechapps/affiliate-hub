@@ -108,7 +108,7 @@ module.exports = {
       },
     },
     {
-      // Robô de Blog Diário — Notícias, comparativos e artigos SEO/GEO às 18h
+      // Robô de Blog Diário — Gera às 08h e 18h (Aprovação) e publica fila às 09h e 19h (SEO/GEO)
       name: 'blog-generator',
       script: './bot/blog_generator.py',
       interpreter: 'python3',

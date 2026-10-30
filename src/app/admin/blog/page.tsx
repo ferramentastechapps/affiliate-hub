@@ -12,7 +12,16 @@ import {
   X,
   FloppyDisk,
   Info,
-  LinkSimple,
+  CheckCircle,
+  PinterestLogo,
+  Lightning,
+  Sun,
+  Moon,
+  Queue,
+  ArrowCounterClockwise,
+  Rocket,
+  Hourglass,
+  ArrowsClockwise,
 } from '@phosphor-icons/react';
 import Link from 'next/link';
 
@@ -25,6 +34,8 @@ interface BlogPostSummary {
   coverImage: string | null;
   readTimeMinutes: number;
   publishedAt: string;
+  createdAt: string;
+  status: 'published' | 'draft' | 'queued';
   views: number;
 }
 
@@ -32,7 +43,11 @@ export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPostSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [publishingQueue, setPublishingQueue] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'queued' | 'published'>('all');
+  const [counts, setCounts] = useState({ all: 0, draft: 0, queued: 0, published: 0 });
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   // Estados de edição de imagem
   const [editingPost, setEditingPost] = useState<BlogPostSummary | null>(null);
@@ -43,10 +58,27 @@ export default function AdminBlogPage() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/blog');
+      const res = await fetch('/api/blog?status=all&limit=50');
       if (res.ok) {
         const data = await res.json();
-        setPosts(data.posts || []);
+        const loadedPosts: BlogPostSummary[] = data.posts || [];
+        setPosts(loadedPosts);
+
+        if (data.counts) {
+          setCounts({
+            all: data.counts.all || loadedPosts.length,
+            draft: data.counts.draft || 0,
+            queued: data.counts.queued || 0,
+            published: data.counts.published || 0,
+          });
+        } else {
+          setCounts({
+            all: loadedPosts.length,
+            draft: loadedPosts.filter((p) => p.status === 'draft').length,
+            queued: loadedPosts.filter((p) => p.status === 'queued').length,
+            published: loadedPosts.filter((p) => p.status === 'published').length,
+          });
+        }
       }
     } catch (err) {
       console.error('Erro ao buscar posts:', err);
@@ -59,21 +91,179 @@ export default function AdminBlogPage() {
     fetchPosts();
   }, []);
 
-  const handleGenerateNow = async () => {
+  // 1. Aprovar para Fila (Será postado às 09h ou 19h)
+  const handleApproveToQueue = async (post: BlogPostSummary) => {
+    try {
+      setActionLoadingId(post.id);
+      const res = await fetch('/api/blog', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: post.id,
+          status: 'queued',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPosts(posts.map((p) => (p.id === post.id ? { ...p, status: 'queued' } : p)));
+        setCounts((prev) => ({
+          ...prev,
+          draft: Math.max(0, prev.draft - 1),
+          queued: prev.queued + 1,
+        }));
+        setMessage({
+          type: 'success',
+          text: `Artigo "${post.title}" aprovado e adicionado à fila! Será publicado automaticamente no próximo horário (09:00 ou 19:00).`,
+        });
+      } else {
+        alert(data.error || 'Erro ao aprovar artigo para a fila');
+      }
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // 2. Postar Manualmente / Publicar Imediatamente
+  const handlePublishNow = async (post: BlogPostSummary) => {
+    try {
+      setActionLoadingId(post.id);
+      const res = await fetch('/api/blog', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: post.id,
+          status: 'published',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const oldStatus = post.status;
+        setPosts(
+          posts.map((p) =>
+            p.id === post.id ? { ...p, status: 'published', publishedAt: new Date().toISOString() } : p
+          )
+        );
+        setCounts((prev) => ({
+          ...prev,
+          draft: oldStatus === 'draft' ? Math.max(0, prev.draft - 1) : prev.draft,
+          queued: oldStatus === 'queued' ? Math.max(0, prev.queued - 1) : prev.queued,
+          published: prev.published + 1,
+        }));
+        setMessage({
+          type: 'success',
+          text: `Artigo "${post.title}" publicado imediatamente no site!`,
+        });
+      } else {
+        alert(data.error || 'Erro ao publicar artigo');
+      }
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // 3. Voltar para Rascunho / Remover da Fila
+  const handleMoveToDraft = async (post: BlogPostSummary) => {
+    try {
+      setActionLoadingId(post.id);
+      const res = await fetch('/api/blog', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: post.id,
+          status: 'draft',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const oldStatus = post.status;
+        setPosts(posts.map((p) => (p.id === post.id ? { ...p, status: 'draft' } : p)));
+        setCounts((prev) => ({
+          ...prev,
+          queued: oldStatus === 'queued' ? Math.max(0, prev.queued - 1) : prev.queued,
+          published: oldStatus === 'published' ? Math.max(0, prev.published - 1) : prev.published,
+          draft: prev.draft + 1,
+        }));
+        setMessage({
+          type: 'success',
+          text: `Artigo "${post.title}" movido para rascunhos.`,
+        });
+      } else {
+        alert(data.error || 'Erro ao mover artigo para rascunho');
+      }
+    } catch (err: any) {
+      alert('Erro: ' + err.message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+    }
+  };
+
+  // 4. Publicar Próximo Post da Fila Agora
+  const handlePublishNextFromQueue = async () => {
+    try {
+      setPublishingQueue(true);
+      const res = await fetch('/api/blog/queue/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.published) {
+          setMessage({
+            type: 'success',
+            text: `Post publicado da fila: "${data.post?.title}"!`,
+          });
+          await fetchPosts();
+        } else {
+          setMessage({
+            type: 'error',
+            text: data.message || 'Nenhum post na fila para publicação.',
+          });
+        }
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Falha ao publicar da fila.',
+        });
+      }
+    } catch (err: any) {
+      setMessage({
+        type: 'error',
+        text: err?.message || 'Erro de rede.',
+      });
+    } finally {
+      setPublishingQueue(false);
+    }
+  };
+
+  // 5. Geração sob demanda com IA
+  const handleGenerateNow = async (topicType: 'news' | 'comparison' | 'auto' = 'auto') => {
     try {
       setGenerating(true);
       setMessage(null);
       const res = await fetch('/api/blog/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topicType }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
         setMessage({
           type: 'success',
-          text: `Artigo gerado com sucesso: "${data.post.title}"!`,
+          text: `Artigo gerado com sucesso: "${data.post.title}"! Ele está aguardando sua aprovação.`,
         });
+        setActiveTab('draft');
         await fetchPosts();
       } else {
         setMessage({
@@ -99,7 +289,16 @@ export default function AdminBlogPage() {
         method: 'DELETE',
       });
       if (res.ok) {
+        const deletedPost = posts.find((p) => p.id === id);
         setPosts(posts.filter((p) => p.id !== id));
+        if (deletedPost) {
+          setCounts((prev) => ({
+            ...prev,
+            all: Math.max(0, prev.all - 1),
+            [deletedPost.status]: Math.max(0, (prev as any)[deletedPost.status] - 1),
+          }));
+        }
+        setMessage({ type: 'success', text: `Artigo "${title}" excluído com sucesso.` });
       } else {
         alert('Erro ao excluir artigo.');
       }
@@ -172,6 +371,12 @@ export default function AdminBlogPage() {
     }
   };
 
+  // Filtragem dos posts conforme a aba ativa
+  const filteredPosts = posts.filter((post) => {
+    if (activeTab === 'all') return true;
+    return post.status === activeTab;
+  });
+
   return (
     <div className="space-y-8">
       {/* ── HEADER ── */}
@@ -179,25 +384,125 @@ export default function AdminBlogPage() {
         <div>
           <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
             <Article size={32} className="text-[#ff334b]" />
-            Blog & Automação SEO / GEO
+            Blog & Automação de Conteúdo
           </h1>
           <p className="text-zinc-400 mt-1 text-sm">
-            Gerenciamento de artigos, fotos de capa e acompanhamento do robô diário das 18h.
+            Gerenciamento de notícias, comparativos, aprovação de rascunhos e fila de publicação automática.
           </p>
         </div>
 
-        <button
-          onClick={handleGenerateNow}
-          disabled={generating}
-          className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg transition-all ${
-            generating
-              ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-[#ff334b] to-rose-600 text-white hover:opacity-95 hover:shadow-[#ff334b]/20 hover:scale-[1.02]'
-          }`}
-        >
-          <Sparkle size={18} weight="fill" className={generating ? 'animate-spin' : ''} />
-          {generating ? 'Pesquisando & Redigindo Artigo...' : '⚡ Gerar Post com IA Agora'}
-        </button>
+        <div className="flex items-center gap-2">
+          {counts.queued > 0 && (
+            <button
+              onClick={handlePublishNextFromQueue}
+              disabled={publishingQueue}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all shadow-md"
+              title="Publicar o próximo artigo que está na fila imediatamente"
+            >
+              <Rocket size={16} weight="bold" className={publishingQueue ? 'animate-bounce' : ''} />
+              <span>Publicar Fila Agora ({counts.queued})</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => handleGenerateNow('auto')}
+            disabled={generating}
+            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg transition-all ${
+              generating
+                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-[#ff334b] to-rose-600 text-white hover:opacity-95 hover:shadow-[#ff334b]/20 hover:scale-[1.02]'
+            }`}
+          >
+            <Sparkle size={18} weight="fill" className={generating ? 'animate-spin' : ''} />
+            {generating ? 'Pesquisando Notícias & Redigindo...' : '⚡ Gerar Post com IA Agora'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── CARD: CRONOGRAMA & FLUXO DO ROBÔ ── */}
+      <div className="p-6 rounded-3xl bg-[#13151f] border border-white/[0.08] shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ff334b]/20 to-purple-500/20 border border-[#ff334b]/30 flex items-center justify-center text-[#ff334b] shrink-0">
+              <Clock size={24} weight="bold" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-white">Robô de Conteúdo Diário (SEO / GEO)</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Ativo no PM2
+                </span>
+              </div>
+              <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed max-w-3xl">
+                O robô pesquisa manchetes, comparativos e produtos do site 2x ao dia. Os posts são criados como rascunhos para você aprovar. Quando você aprova, entram na fila para publicação pontual ou você pode postar manualmente na hora.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Linha do tempo dos horários */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-6 border-t border-white/[0.06]">
+          {/* 08:00 */}
+          <div className="p-3.5 rounded-2xl bg-black/40 border border-amber-500/20 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+              <Sun size={18} weight="bold" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-amber-400">08:00 BRT</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 font-semibold">Geração</span>
+              </div>
+              <div className="text-xs font-bold text-white mt-1">Notícias & Tendências</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Cria post matinal e aguarda sua aprovação.</div>
+            </div>
+          </div>
+
+          {/* 09:00 */}
+          <div className="p-3.5 rounded-2xl bg-black/40 border border-blue-500/20 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
+              <Rocket size={18} weight="bold" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-blue-400">09:00 BRT</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-300 font-semibold">Publicação</span>
+              </div>
+              <div className="text-xs font-bold text-white mt-1">Post da Fila no Ar</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Publica o artigo aprovado da fila no site.</div>
+            </div>
+          </div>
+
+          {/* 18:00 */}
+          <div className="p-3.5 rounded-2xl bg-black/40 border border-purple-500/20 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 mt-0.5">
+              <Moon size={18} weight="bold" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-purple-400">18:00 BRT</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-300 font-semibold">Geração</span>
+              </div>
+              <div className="text-xs font-bold text-white mt-1">Comparativos & Duelo</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Cria post da tarde e aguarda sua aprovação.</div>
+            </div>
+          </div>
+
+          {/* 19:00 */}
+          <div className="p-3.5 rounded-2xl bg-black/40 border border-emerald-500/20 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+              <CheckCircle size={18} weight="bold" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-emerald-400">19:00 BRT</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 font-semibold">Publicação</span>
+              </div>
+              <div className="text-xs font-bold text-white mt-1">Post da Fila no Ar</div>
+              <div className="text-[11px] text-zinc-500 mt-0.5">Publica o artigo aprovado da fila no site.</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── GUIA DE DIMENSÕES DE FOTOS ── */}
@@ -237,7 +542,7 @@ export default function AdminBlogPage() {
       {/* ── FEEDBACK ALERT ── */}
       {message && (
         <div
-          className={`p-4 rounded-2xl border text-sm flex items-center justify-between ${
+          className={`p-4 rounded-2xl border text-sm flex items-center justify-between shadow-lg ${
             message.type === 'success'
               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
               : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
@@ -250,75 +555,118 @@ export default function AdminBlogPage() {
         </div>
       )}
 
-      {/* ── ROBÔ STATUS CARD ── */}
-      <div className="p-6 rounded-3xl bg-[#13151f] border border-white/[0.08] shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#ff334b]/10 border border-[#ff334b]/20 flex items-center justify-center text-[#ff334b] shrink-0">
-              <Clock size={24} weight="bold" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white">Robô de Publicação Diária (18:00)</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Ativo no PM2
-                </span>
-              </div>
-              <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
-                O serviço monitora notícias e produtos do site, gera comparativos no Gemini com diretrizes AEO/GEO e posta todo dia pontualmente às 18:00 (Brasília).
-              </p>
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="text-xs text-zinc-500">Horário configurado</div>
-            <div className="text-xl font-black text-white">18:00 BRT</div>
-          </div>
-        </div>
-      </div>
+      {/* ── LISTA DE POSTS & ABAS ── */}
+      <div className="rounded-3xl bg-[#13151f] border border-white/[0.08] p-6 shadow-xl space-y-6">
+        {/* Abas de Navegação */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            {/* Aba Todos */}
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'all'
+                  ? 'bg-white/10 text-white shadow-inner'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <span>Todos os Posts</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-white/[0.08] text-[10px] text-zinc-300 font-mono">
+                {counts.all}
+              </span>
+            </button>
 
-      {/* ── LISTA DE POSTS ── */}
-      <div className="rounded-3xl bg-[#13151f] border border-white/[0.08] p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            Artigos Publicados
-            <span className="text-xs px-2 py-0.5 rounded-md bg-white/[0.06] text-zinc-400">
-              {posts.length}
-            </span>
-          </h2>
+            {/* Aba Aguardando Aprovação */}
+            <button
+              onClick={() => setActiveTab('draft')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'draft'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'text-zinc-400 hover:text-amber-400 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Hourglass size={14} weight="bold" />
+              <span>Aguardando Aprovação</span>
+              {counts.draft > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-mono animate-pulse">
+                  {counts.draft}
+                </span>
+              )}
+            </button>
+
+            {/* Aba Na Fila */}
+            <button
+              onClick={() => setActiveTab('queued')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'queued'
+                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                  : 'text-zinc-400 hover:text-blue-400 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Queue size={14} weight="bold" />
+              <span>Na Fila (09h / 19h)</span>
+              {counts.queued > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-blue-500/30 text-blue-200 text-[10px] font-mono">
+                  {counts.queued}
+                </span>
+              )}
+            </button>
+
+            {/* Aba Publicados */}
+            <button
+              onClick={() => setActiveTab('published')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'published'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'text-zinc-400 hover:text-emerald-400 hover:bg-white/[0.04]'
+              }`}
+            >
+              <CheckCircle size={14} weight="bold" />
+              <span>Publicados</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">
+                {counts.published}
+              </span>
+            </button>
+          </div>
+
           <button
             onClick={fetchPosts}
-            className="text-xs text-zinc-400 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors self-end sm:self-center"
           >
-            Atualizar lista
+            <ArrowsClockwise size={14} />
+            <span>Atualizar lista</span>
           </button>
         </div>
 
+        {/* Lista dos Artigos */}
         {loading ? (
           <div className="py-12 text-center text-zinc-500 text-sm">
             Carregando artigos...
           </div>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <div className="py-12 text-center text-zinc-500 text-sm">
-            Nenhum artigo encontrado no banco. Clique em "Gerar Post com IA Agora" para criar o primeiro!
+            {activeTab === 'draft' && 'Nenhum artigo aguardando aprovação no momento.'}
+            {activeTab === 'queued' && 'Nenhum artigo na fila de publicação para 09h ou 19h.'}
+            {activeTab === 'published' && 'Nenhum artigo publicado no site ainda.'}
+            {activeTab === 'all' && 'Nenhum artigo encontrado. Clique em "Gerar Post com IA Agora" para criar o primeiro!'}
           </div>
         ) : (
           <div className="space-y-4">
-            {posts.map((post) => (
+            {filteredPosts.map((post) => (
               <div
                 key={post.id}
                 className="p-4 rounded-2xl bg-[#0c0d14] border border-white/[0.04] hover:border-white/[0.1] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
+                {/* Detalhes do Artigo */}
                 <div className="flex items-start gap-4 flex-1">
                   <div className="relative group/thumb shrink-0">
                     {post.coverImage ? (
                       <img
                         src={post.coverImage}
                         alt={post.title}
-                        className="w-20 h-16 rounded-xl object-cover bg-zinc-900 border border-white/[0.08]"
+                        className="w-24 h-18 rounded-xl object-cover bg-zinc-900 border border-white/[0.08]"
                       />
                     ) : (
-                      <div className="w-20 h-16 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-700 text-xs border border-white/[0.08]">
+                      <div className="w-24 h-18 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-700 text-xs border border-white/[0.08]">
                         Sem foto
                       </div>
                     )}
@@ -333,15 +681,43 @@ export default function AdminBlogPage() {
                   </div>
 
                   <div>
-                    <div className="flex items-center gap-2 text-[11px] text-zinc-500 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 mb-1">
                       <span className="px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 font-semibold">
                         {post.category}
                       </span>
+
+                      {/* Status Badges */}
+                      {post.status === 'draft' && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold text-[10px] flex items-center gap-1">
+                          <Hourglass size={12} weight="bold" />
+                          Aguardando Sua Aprovação
+                        </span>
+                      )}
+
+                      {post.status === 'queued' && (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 font-bold text-[10px] flex items-center gap-1">
+                          <Queue size={12} weight="bold" />
+                          Na Fila (Postagem às 09h ou 19h)
+                        </span>
+                      )}
+
+                      {post.status === 'published' && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle size={12} weight="bold" />
+                          Publicado
+                        </span>
+                      )}
+
                       <span>•</span>
-                      <span>{new Date(post.publishedAt).toLocaleDateString('pt-BR')}</span>
+                      <span>
+                        {post.status === 'published'
+                          ? `Publicado em: ${new Date(post.publishedAt).toLocaleDateString('pt-BR')}`
+                          : `Criado em: ${new Date(post.createdAt || post.publishedAt).toLocaleDateString('pt-BR')}`}
+                      </span>
                       <span>•</span>
-                      <span>{post.readTimeMinutes} min</span>
+                      <span>{post.readTimeMinutes} min de leitura</span>
                     </div>
+
                     <h4 className="text-sm md:text-base font-bold text-white line-clamp-1">
                       {post.title}
                     </h4>
@@ -351,21 +727,107 @@ export default function AdminBlogPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                {/* Ações por Status */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-center">
+                  {/* SE RASCUNHO (PENDENTE DE APROVAÇÃO) */}
+                  {post.status === 'draft' && (
+                    <>
+                      <button
+                        onClick={() => handleApproveToQueue(post)}
+                        disabled={actionLoadingId === post.id}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors border border-blue-500/30 shadow-sm ${
+                          actionLoadingId === post.id
+                            ? 'bg-blue-500/20 text-blue-300 opacity-60 cursor-not-allowed'
+                            : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400'
+                        }`}
+                        title="Aprovar e enviar para a fila de publicação das 09h ou 19h"
+                      >
+                        <Queue size={16} weight="bold" className={actionLoadingId === post.id ? 'animate-spin' : ''} />
+                        <span>Aprovar p/ Fila (09h/19h)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handlePublishNow(post)}
+                        disabled={actionLoadingId === post.id}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-md ${
+                          actionLoadingId === post.id
+                            ? 'bg-emerald-700 opacity-60 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95'
+                        }`}
+                        title="Publicar manualmente imediatamente no site"
+                      >
+                        <Lightning size={16} weight="fill" className={actionLoadingId === post.id ? 'animate-bounce' : ''} />
+                        <span>Postar Agora</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* SE NA FILA (AGUARDANDO HORÁRIO 09H/19H) */}
+                  {post.status === 'queued' && (
+                    <>
+                      <button
+                        onClick={() => handlePublishNow(post)}
+                        disabled={actionLoadingId === post.id}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-md ${
+                          actionLoadingId === post.id
+                            ? 'bg-emerald-700 opacity-60 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95'
+                        }`}
+                        title="Antecipar e publicar agora manualmente"
+                      >
+                        <Lightning size={16} weight="fill" className={actionLoadingId === post.id ? 'animate-bounce' : ''} />
+                        <span>Publicar Agora</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleMoveToDraft(post)}
+                        disabled={actionLoadingId === post.id}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-bold transition-colors border border-white/[0.06] disabled:opacity-50"
+                        title="Retirar da fila e voltar para rascunhos"
+                      >
+                        <ArrowCounterClockwise size={16} className={actionLoadingId === post.id ? 'animate-spin' : ''} />
+                        <span>Voltar p/ Rascunho</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* SE PUBLICADO */}
+                  {post.status === 'published' && (
+                    <>
+                      <Link
+                        href={`/admin/pinterest`}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#E60023]/10 hover:bg-[#E60023]/20 text-[#E60023] text-xs font-bold transition-colors border border-[#E60023]/20"
+                        title="Pinar no Pinterest"
+                      >
+                        <PinterestLogo size={16} weight="fill" />
+                        <span>Pinar</span>
+                      </Link>
+
+                      <button
+                        onClick={() => handleMoveToDraft(post)}
+                        className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors"
+                        title="Despublicar / Mover para Rascunho"
+                      >
+                        <ArrowCounterClockwise size={18} />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Ações Comuns a Todos os Status */}
                   <button
                     onClick={() => openEditModal(post)}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#ff334b]/10 hover:bg-[#ff334b]/20 text-[#ff334b] text-xs font-bold transition-colors border border-[#ff334b]/20"
                     title="Editar foto de capa"
                   >
                     <ImageIcon size={16} weight="bold" />
-                    <span>Alterar Foto</span>
+                    <span>Foto</span>
                   </button>
 
                   <Link
                     href={`/blog/${post.slug}`}
                     target="_blank"
                     className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] text-zinc-300 hover:text-white transition-colors"
-                    title="Ver no site"
+                    title={post.status === 'published' ? 'Ver no site' : 'Pré-visualizar artigo'}
                   >
                     <ArrowSquareOut size={18} />
                   </Link>
@@ -384,79 +846,61 @@ export default function AdminBlogPage() {
         )}
       </div>
 
-      {/* ── MODAL DE EDIÇÃO DE FOTO ── */}
+      {/* ── MODAL DE EDIÇÃO DE CAPA ── */}
       {editingPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#13151f] border border-white/[0.1] rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            {/* Cabeçalho do Modal */}
-            <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] pb-4">
-              <div>
-                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  <ImageIcon size={22} className="text-[#ff334b]" weight="bold" />
-                  Editar Foto de Capa
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                  {editingPost.title}
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#13151f] border border-white/[0.1] rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <ImageIcon size={20} className="text-[#ff334b]" />
+                Alterar Foto de Capa
+              </h3>
               <button
                 onClick={() => setEditingPost(null)}
-                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06]"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Guia Rápido de Dimensões */}
-            <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs space-y-1">
-              <div className="font-bold text-blue-300 flex items-center gap-1.5">
-                <Info size={16} weight="bold" />
-                Dimensões recomendadas para esta imagem:
-              </div>
-              <div className="text-zinc-300">
-                • <strong>Tamanho ideal:</strong> 1200 × 630 px (proporção 1.91:1) ou 1280 × 720 px (16:9).
-              </div>
-              <div className="text-zinc-400">
-                • Mantenha o conteúdo principal centralizado para não cortar nos cards do celular.
-              </div>
-            </div>
-
-            {/* Preview da Imagem */}
-            <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                Pré-visualização da Capa
-              </label>
-              <div className="w-full h-52 rounded-2xl overflow-hidden bg-[#0c0d14] border border-white/[0.08] relative flex items-center justify-center">
-                {coverUrl ? (
-                  <img
-                    src={coverUrl}
-                    alt="Preview da capa"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80';
-                    }}
-                  />
-                ) : (
-                  <span className="text-xs text-zinc-600">Nenhuma imagem selecionada</span>
-                )}
-                <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] text-zinc-300 font-mono">
-                  Aspecto 16:9
-                </span>
-              </div>
-            </div>
-
-            {/* Opções de Alteração: Upload ou URL */}
             <div className="space-y-4">
-              {/* Opção 1: Upload de Arquivo */}
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                  Opção 1: Enviar arquivo do computador / celular
+                <label className="text-xs text-zinc-400 mb-1.5 block">
+                  Artigo selecionado:
                 </label>
-                <label className="flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-dashed border-white/[0.1] hover:border-[#ff334b]/50 bg-white/[0.02] hover:bg-white/[0.04] cursor-pointer transition-all">
-                  <UploadSimple size={20} className="text-[#ff334b]" weight="bold" />
-                  <span className="text-xs font-bold text-zinc-200">
-                    {uploading ? 'Processando e otimizando imagem...' : 'Clique para selecionar imagem (WebP/JPG/PNG)'}
-                  </span>
+                <p className="text-sm font-semibold text-white line-clamp-1">
+                  {editingPost.title}
+                </p>
+              </div>
+
+              {/* Preview da Imagem */}
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">
+                  Visualização da capa:
+                </label>
+                {coverUrl ? (
+                  <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden bg-black/40 border border-white/[0.1]">
+                    <img
+                      src={coverUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-[16/9] w-full rounded-2xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center text-zinc-600 text-xs">
+                    Nenhuma foto definida
+                  </div>
+                )}
+              </div>
+
+              {/* Upload de Imagem */}
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">
+                  Enviar imagem do computador:
+                </label>
+                <label className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border border-dashed border-white/[0.15] hover:border-white/[0.3] cursor-pointer text-xs font-semibold text-zinc-300 hover:text-white transition-all bg-white/[0.02]">
+                  <UploadSimple size={18} />
+                  <span>{uploading ? 'Enviando...' : 'Escolher arquivo (1200x630 recomendado)'}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -467,39 +911,35 @@ export default function AdminBlogPage() {
                 </label>
               </div>
 
-              {/* Opção 2: Inserir URL Direta */}
+              {/* URL Manual */}
               <div>
-                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                  Opção 2: Ou colar URL de imagem externa
+                <label className="text-xs text-zinc-400 mb-1.5 block">
+                  Ou cole o link direto da imagem:
                 </label>
-                <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-black/50 border border-white/[0.08] focus-within:border-[#ff334b]/50">
-                  <LinkSimple size={18} className="text-zinc-500 shrink-0 ml-1" />
-                  <input
-                    type="text"
-                    value={coverUrl}
-                    onChange={(e) => setCoverUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/... ou https://..."
-                    className="w-full bg-transparent text-xs text-white focus:outline-none"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={coverUrl}
+                  onChange={(e) => setCoverUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/[0.1] text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-[#ff334b]"
+                />
               </div>
             </div>
 
-            {/* Botões de Ação */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.06]">
               <button
                 onClick={() => setEditingPost(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/[0.04]"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveCover}
-                disabled={savingCover || uploading || !coverUrl}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#ff334b] to-rose-600 text-white text-xs font-bold shadow-lg hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={savingCover || uploading}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-[#ff334b] hover:opacity-90 text-white transition-all disabled:opacity-50 shadow-lg shadow-[#ff334b]/20"
               >
-                <FloppyDisk size={16} weight="bold" />
-                {savingCover ? 'Salvando...' : 'Salvar Nova Foto'}
+                <FloppyDisk size={16} />
+                <span>{savingCover ? 'Salvando...' : 'Salvar Capa'}</span>
               </button>
             </div>
           </div>

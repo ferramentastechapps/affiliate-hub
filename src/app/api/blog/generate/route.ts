@@ -45,7 +45,13 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[API Blog] Iniciando geração automática de post...');
-    const post = await generateDailyBlogPost();
+    const body = await req.json().catch(() => ({}));
+    const { topicType, forceTopic } = body;
+
+    const post = await generateDailyBlogPost({
+      topicType: topicType || 'auto',
+      forceTopic,
+    });
 
     // Revalida páginas estáticas no Next.js
     try {
@@ -58,13 +64,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Post de blog gerado e publicado com sucesso!',
+      message: 'Post de blog gerado e salvo como rascunho (aguardando aprovação)!',
       post: {
         id: post.id,
         slug: post.slug,
         title: post.title,
         category: post.category,
+        status: post.status,
         publishedAt: post.publishedAt,
+        createdAt: post.createdAt,
       },
     });
   } catch (error: any) {

@@ -29,22 +29,31 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
+    const statusParam = searchParams.get('status'); // 'all', 'draft', 'queued', 'published'
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const page = parseInt(searchParams.get('page') || '1', 10);
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      status: 'published',
-    };
+    const where: any = {};
+
+    if (statusParam === 'all') {
+      // Retorna todos para o painel admin
+    } else if (statusParam === 'draft') {
+      where.status = 'draft';
+    } else if (statusParam === 'queued') {
+      where.status = 'queued';
+    } else {
+      where.status = 'published';
+    }
 
     if (category && category !== 'todos') {
       where.category = { equals: category, mode: 'insensitive' };
     }
 
-    const [posts, total] = await Promise.all([
+    const [posts, total, draftCount, queuedCount, publishedCount] = await Promise.all([
       prisma.blogPost.findMany({
         where,
-        orderBy: { publishedAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }],
         skip,
         take: limit,
         select: {
@@ -58,10 +67,15 @@ export async function GET(req: NextRequest) {
           author: true,
           readTimeMinutes: true,
           publishedAt: true,
+          createdAt: true,
+          status: true,
           views: true,
         },
       }),
       prisma.blogPost.count({ where }),
+      prisma.blogPost.count({ where: { status: 'draft' } }),
+      prisma.blogPost.count({ where: { status: 'queued' } }),
+      prisma.blogPost.count({ where: { status: 'published' } }),
     ]);
 
     return NextResponse.json({
@@ -69,6 +83,12 @@ export async function GET(req: NextRequest) {
       total,
       page,
       totalPages: Math.ceil(total / limit),
+      counts: {
+        all: draftCount + queuedCount + publishedCount,
+        draft: draftCount,
+        queued: queuedCount,
+        published: publishedCount,
+      },
     });
   } catch (error: any) {
     console.error('[API Blog GET] Erro:', error);
@@ -84,7 +104,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, coverImage } = body;
+    const { id, coverImage, status, title, excerpt } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID do post é obrigatório' }, { status: 400 });
@@ -93,6 +113,18 @@ export async function PATCH(req: NextRequest) {
     const dataToUpdate: any = {};
     if (coverImage !== undefined) {
       dataToUpdate.coverImage = coverImage ? coverImage.trim() : null;
+    }
+    if (title !== undefined && title.trim()) {
+      dataToUpdate.title = title.trim();
+    }
+    if (excerpt !== undefined) {
+      dataToUpdate.excerpt = excerpt.trim();
+    }
+    if (status !== undefined) {
+      dataToUpdate.status = status;
+      if (status === 'published') {
+        dataToUpdate.publishedAt = new Date();
+      }
     }
 
     const updated = await prisma.blogPost.update({
@@ -103,6 +135,8 @@ export async function PATCH(req: NextRequest) {
     try {
       revalidatePath('/blog');
       revalidatePath(`/blog/${updated.slug}`);
+      revalidatePath('/sitemap.xml');
+      revalidatePath('/blog/rss.xml');
     } catch (e) {
       console.warn('[API Blog PATCH] Falha ao revalidar caminhos:', e);
     }
