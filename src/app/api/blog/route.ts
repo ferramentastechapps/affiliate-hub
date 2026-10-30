@@ -34,13 +34,15 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const skip = (page - 1) * limit;
 
+    const isAdmin = await checkAdminAuth(req);
     const where: any = {};
 
-    if (statusParam === 'all') {
+    // Usuários públicos veem estritamente artigos publicados; rascunhos e fila apenas para admins
+    if (isAdmin && statusParam === 'all') {
       // Retorna todos para o painel admin
-    } else if (statusParam === 'draft') {
+    } else if (isAdmin && statusParam === 'draft') {
       where.status = 'draft';
-    } else if (statusParam === 'queued') {
+    } else if (isAdmin && statusParam === 'queued') {
       where.status = 'queued';
     } else {
       where.status = 'published';
@@ -83,12 +85,19 @@ export async function GET(req: NextRequest) {
       total,
       page,
       totalPages: Math.ceil(total / limit),
-      counts: {
-        all: draftCount + queuedCount + publishedCount,
-        draft: draftCount,
-        queued: queuedCount,
-        published: publishedCount,
-      },
+      counts: isAdmin
+        ? {
+            all: draftCount + queuedCount + publishedCount,
+            draft: draftCount,
+            queued: queuedCount,
+            published: publishedCount,
+          }
+        : {
+            all: publishedCount,
+            draft: 0,
+            queued: 0,
+            published: publishedCount,
+          },
     });
   } catch (error: any) {
     console.error('[API Blog GET] Erro:', error);

@@ -732,30 +732,30 @@ export default function AdminBlogPage() {
                     <>
                       <button
                         onClick={() => handleApproveToQueue(post)}
-                        disabled={actionLoadingId === post.id}
+                        disabled={actionLoadingId !== null}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors border border-blue-500/30 shadow-sm ${
-                          actionLoadingId === post.id
+                          actionLoadingId !== null
                             ? 'bg-blue-500/20 text-blue-300 opacity-60 cursor-not-allowed'
                             : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400'
                         }`}
                         title="Aprovar e enviar para a fila de publicação das 09h ou 19h"
                       >
                         <Queue size={16} weight="bold" className={actionLoadingId === post.id ? 'animate-spin' : ''} />
-                        <span>Aprovar p/ Fila (09h/19h)</span>
+                        <span>{actionLoadingId === post.id ? 'Aprovando...' : 'Aprovar p/ Fila (09h/19h)'}</span>
                       </button>
 
                       <button
                         onClick={() => handlePublishNow(post)}
-                        disabled={actionLoadingId === post.id}
+                        disabled={actionLoadingId !== null}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-md ${
-                          actionLoadingId === post.id
+                          actionLoadingId !== null
                             ? 'bg-emerald-700 opacity-60 cursor-not-allowed'
                             : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95'
                         }`}
                         title="Publicar manualmente imediatamente no site"
                       >
                         <Lightning size={16} weight="fill" className={actionLoadingId === post.id ? 'animate-bounce' : ''} />
-                        <span>Postar Agora</span>
+                        <span>{actionLoadingId === post.id ? 'Publicando...' : 'Postar Agora'}</span>
                       </button>
                     </>
                   )}
@@ -765,26 +765,26 @@ export default function AdminBlogPage() {
                     <>
                       <button
                         onClick={() => handlePublishNow(post)}
-                        disabled={actionLoadingId === post.id}
+                        disabled={actionLoadingId !== null}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-md ${
-                          actionLoadingId === post.id
+                          actionLoadingId !== null
                             ? 'bg-emerald-700 opacity-60 cursor-not-allowed'
                             : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95'
                         }`}
                         title="Antecipar e publicar agora manualmente"
                       >
                         <Lightning size={16} weight="fill" className={actionLoadingId === post.id ? 'animate-bounce' : ''} />
-                        <span>Publicar Agora</span>
+                        <span>{actionLoadingId === post.id ? 'Publicando...' : 'Publicar Agora'}</span>
                       </button>
 
                       <button
                         onClick={() => handleMoveToDraft(post)}
-                        disabled={actionLoadingId === post.id}
+                        disabled={actionLoadingId !== null}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-bold transition-colors border border-white/[0.06] disabled:opacity-50"
                         title="Retirar da fila e voltar para rascunhos"
                       >
                         <ArrowCounterClockwise size={16} className={actionLoadingId === post.id ? 'animate-spin' : ''} />
-                        <span>Voltar p/ Rascunho</span>
+                        <span>{actionLoadingId === post.id ? 'Movendo...' : 'Voltar p/ Rascunho'}</span>
                       </button>
                     </>
                   )}
@@ -803,10 +803,11 @@ export default function AdminBlogPage() {
 
                       <button
                         onClick={() => handleMoveToDraft(post)}
-                        className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors"
+                        disabled={actionLoadingId !== null}
+                        className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
                         title="Despublicar / Mover para Rascunho"
                       >
-                        <ArrowCounterClockwise size={18} />
+                        <ArrowCounterClockwise size={18} className={actionLoadingId === post.id ? 'animate-spin' : ''} />
                       </button>
                     </>
                   )}

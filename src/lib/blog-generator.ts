@@ -129,15 +129,22 @@ function resolveCoverImage(title: string, category: string, siteProducts: any[])
   const lowerTitle = (title || '').toLowerCase();
 
   // 1. Tenta encontrar um produto no banco cujo nome esteja presente no título do artigo
+  const isValidUrl = (url: any) => typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'));
+
   const matchedProduct = siteProducts.find((p) => {
     if (!p.name) return false;
+    const hasValidImg = isValidUrl(p.enhancedImageUrl) || isValidUrl(p.imageUrl);
+    if (!hasValidImg) return false;
     const pName = p.name.toLowerCase();
     const words = pName.split(/\s+/).filter((w: string) => w.length > 3);
     return words.some((w: string) => lowerTitle.includes(w));
   });
 
-  if (matchedProduct && (matchedProduct.enhancedImageUrl || matchedProduct.imageUrl)) {
-    return matchedProduct.enhancedImageUrl || matchedProduct.imageUrl;
+  if (matchedProduct) {
+    const candidateImg = isValidUrl(matchedProduct.enhancedImageUrl)
+      ? matchedProduct.enhancedImageUrl
+      : matchedProduct.imageUrl;
+    if (isValidUrl(candidateImg)) return candidateImg;
   }
 
   // 2. Fallbacks temáticos de altíssima qualidade por assunto
