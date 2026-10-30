@@ -15,6 +15,7 @@ import sys
 import time
 import logging
 import argparse
+import html
 import requests
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -41,10 +42,15 @@ def load_bot_state() -> dict:
             pass
     return {"last_gen_slot": "", "last_pub_slot": ""}
 
-def save_bot_state(state: dict):
+def save_bot_state(new_values: dict):
+    """Salva estado do robô atomicamente prevenindo corrupção de arquivo"""
     try:
         import json
-        STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        state = load_bot_state()
+        state.update(new_values)
+        tmp_file = STATE_FILE.with_suffix(".tmp")
+        tmp_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        tmp_file.replace(STATE_FILE)
     except Exception as e:
         log.warning(f"Erro ao salvar estado do robô: {e}")
 
@@ -149,11 +155,14 @@ def trigger_blog_generation(topic_type: str = "auto") -> bool:
                 hour_str = now_brt.strftime("%H:%M")
                 next_pub_hour = "09:00" if now_brt.hour < 12 else "19:00"
 
+                safe_title = html.escape(str(title))
+                safe_cat = html.escape(str(category))
+
                 # Notifica admin sobre novo post gerado aguardando aprovação
                 msg = (
                     f"📝 <b>ROBÔ DO BLOG ({hour_str} BRT) — NOVO POST GERADO!</b>\n\n"
-                    f"<b>Título:</b> {title}\n"
-                    f"<b>Categoria:</b> {category}\n"
+                    f"<b>Título:</b> {safe_title}\n"
+                    f"<b>Categoria:</b> {safe_cat}\n"
                     f"<b>Status:</b> ⏳ Aguardando sua aprovação\n\n"
                     f"👉 <a href=\"{admin_url}\">Clique aqui para Aprovar no Painel</a>\n\n"
                     f"ℹ️ <i>Quando você aprovar, o artigo vai para a fila e será postado às {next_pub_hour} (ou você pode clicar em 'Postar Manualmente' para publicar na hora).</i>"
@@ -203,10 +212,12 @@ def trigger_publish_queue() -> bool:
                     log.info(f"Post da fila publicado com sucesso! '{title}' | Link: {post_url} (Restantes na fila: {remaining})")
 
                     now_brt = get_now_brt()
+                    safe_title = html.escape(str(title))
+                    safe_cat = html.escape(str(post.get('category', 'Geral')))
                     msg = (
                         f"🚀 <b>POST PUBLICADO NO BLOG ({now_brt.strftime('%H:%M')} BRT)!</b>\n\n"
-                        f"<b>Título:</b> {title}\n"
-                        f"<b>Categoria:</b> {post.get('category', 'Geral')}\n"
+                        f"<b>Título:</b> {safe_title}\n"
+                        f"<b>Categoria:</b> {safe_cat}\n"
                         f"<b>Link:</b> <a href=\"{post_url}\">{post_url}</a>\n\n"
                         f"✅ <i>Artigo aprovado previamente publicado automaticamente da fila!</i>"
                     )
@@ -271,7 +282,7 @@ def scheduler_loop():
                     success = trigger_blog_generation(topic_type=topic)
                     if success:
                         last_gen_slot = slot_key
-                        save_bot_state({"last_gen_slot": last_gen_slot, "last_pub_slot": last_pub_slot})
+                        save_bot_state({"last_gen_slot": last_gen_slot})
                         log.info(f"Geração das {current_hour:02d}h concluída. Post aguardando aprovação no painel.")
                     else:
                         log.warning(f"Tentativa de geração das {current_hour:02d}h falhou. Tentando novamente em 3 minutos...")
@@ -285,7 +296,7 @@ def scheduler_loop():
                     log.info(f"Horário de publicação atingido ({current_hour:02d}:00 BRT)! Checando fila de aprovados...")
                     trigger_publish_queue()
                     last_pub_slot = slot_key
-                    save_bot_state({"last_gen_slot": last_gen_slot, "last_pub_slot": last_pub_slot})
+                    save_bot_state({"last_pub_slot": last_pub_slot})
 
             # Aguarda 30 segundos até a próxima checagem de relógio
             time.sleep(30)

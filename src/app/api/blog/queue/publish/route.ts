@@ -80,12 +80,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { id } = body;
 
-    // Transação atômica para evitar race conditions em disparos simultâneos
+    // Transação atômica com bloqueio otimista contra concorrência
     const publishedPost = await prisma.$transaction(async (tx) => {
       let candidate = null;
 
       if (id) {
-        candidate = await tx.blogPost.findFirst({
+        candidate = await tx.blogPost.findUnique({
           where: { id },
         });
       } else {
@@ -97,12 +97,24 @@ export async function POST(req: NextRequest) {
 
       if (!candidate) return null;
 
-      return await tx.blogPost.update({
-        where: { id: candidate.id },
+      // Lock otimista: garante que apenas um processo altera o status
+      const updated = await tx.blogPost.updateMany({
+        where: {
+          id: candidate.id,
+          status: candidate.status,
+        },
         data: {
           status: 'published',
-          publishedAt: new Date(),
+          publishedAt: candidate.status === 'published' && candidate.publishedAt ? candidate.publishedAt : new Date(),
         },
+      });
+
+      if (updated.count === 0) {
+        return null; // Outro processo publicou concorrentemente
+      }
+
+      return await tx.blogPost.findUnique({
+        where: { id: candidate.id },
       });
     });
 
