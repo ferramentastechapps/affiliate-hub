@@ -203,8 +203,6 @@ export default function AdminBlogPage() {
       setActionLoadingId(null);
     }
   };
-    }
-  };
 
   // 4. Publicar Próximo Post da Fila Agora
   const handlePublishNextFromQueue = async () => {
